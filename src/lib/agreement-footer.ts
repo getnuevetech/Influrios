@@ -6,7 +6,7 @@
 import { contractFundingCta } from "@/lib/signed-funding";
 
 export type AgreementFooterAction = {
-  label: "Review and sign" | "Fund collaboration" | "Open workspace";
+  label: "Review and sign" | "Fund collaboration" | "Open workspace" | "Open deliverables" | "Continue draft";
   href: string;
 };
 
@@ -21,6 +21,7 @@ export function agreementFooterAction(input: {
   fundingStatus?: string | null;
 }): AgreementFooterAction | null {
   if (input.signHref) return { label: "Review and sign", href: input.signHref };
+  if (input.contractStatus === "draft") return { label: "Continue draft", href: input.contractHref };
   const funding = contractFundingCta({
     role: input.role,
     status: input.contractStatus,
@@ -29,6 +30,6 @@ export function agreementFooterAction(input: {
   });
   if (funding.kind === "start") return { label: "Fund collaboration", href: input.contractHref };
   if (funding.kind === "resume" && input.depositHref) return { label: "Fund collaboration", href: input.depositHref };
-  if (input.workspaceHref) return { label: "Open workspace", href: input.workspaceHref };
+  if (input.workspaceHref) return { label: "Open deliverables", href: input.workspaceHref };
   return null;
 }

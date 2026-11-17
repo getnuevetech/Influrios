@@ -102,13 +102,14 @@ Campaign  {{title}}
 Business  {{business_name}}
 Service Level  {{service_level}}
 Currency  {{currency}}
-Gross Contract Value  {{gross}}
-Influrios Platform Fee  {{platform_fee}}
-Influencer Compensation Pool  {{creator_compensation}}
+Gross influencer compensation  {{gross}}
+Business platform fee  {{business_platform_fee}}
+Influencer platform fee  {{influencer_platform_fee}}
+Net compensation  {{net_compensation}}
 Campaign Period  {{campaign_period}}
 
 1. Parties
-This Collaboration Agreement (the "Agreement") is entered into by and between the following parties for the campaign identified above.
+This Collaboration Agreement (the "Agreement") is entered into by and between the following parties for the campaign identified above. Influrios is the platform that records this collaboration; it is not a contracting party to an ordinary business–influencer agreement.
 
 Party Type  Legal / Display Name  Email
 Business  {{business_name}}  {{business_email}}
@@ -127,12 +128,13 @@ Exclusivity, if any  {{exclusivity}}
 The Influencer will create and submit the agreed deliverables in accordance with this Agreement, the campaign brief, applicable law, platform rules and any written brand requirements incorporated into the campaign record.
 
 3. Compensation and Platform Fee
-The Business agrees to fund the Gross Contract Value shown in the Commercial Summary. The Gross Contract Value consists of the Influencer compensation and the applicable Influrios platform fee allocated under the milestone schedule.
+The Business agrees to fund the gross influencer compensation shown in the Commercial Summary. Platform fees recorded below are the Business platform fee and the Influencer platform fee allocated under the milestone schedule. Both parties sign the same financial schedule.
 
 Commercial Item  Amount / Rule
-Gross Contract Value  {{gross}}
-Influrios Platform Fee  {{platform_fee}}
-Influencer Compensation Pool  {{creator_compensation}}
+Gross influencer compensation  {{gross}}
+Business platform fee  {{business_platform_fee}}
+Influencer platform fee  {{influencer_platform_fee}}
+Net compensation  {{net_compensation}}
 Fee Rule  {{fee_disclosure}}
 
 Fee Earning Rule. The applicable portion of the platform fee is earned only when the corresponding milestone is released or otherwise becomes earned under the campaign rules.
@@ -286,6 +288,10 @@ export type ContractRenderInput = {
   grossLabel: string;
   platformFeeLabel: string;
   creatorCompensationLabel: string;
+  /** Explicit shared schedule labels — both parties sign the same figures. */
+  businessPlatformFeeLabel?: string;
+  influencerPlatformFeeLabel?: string;
+  netCompensationLabel?: string;
   businessName: string;
   businessEmail: string;
   parties: ContractPartyInput[];
@@ -365,9 +371,16 @@ export function signatureBlock(parties: ContractPartyInput[]): string {
   return parties
     .map((party, index) => {
       const role = party.role === "business" ? "Business" : "Influencer";
-      return `${role}  ${party.name}  ${party.email}  Pending Signature\n[[SIG_INK:${index + 1}]]\n/sig${index + 1}/`;
+      const capacity = party.role === "business" ? "Authorized representative" : "Influencer";
+      return `${role}  ${party.name}  ${party.email}  Pending Signature\nCapacity  ${capacity}\n[[SIG_INK:${index + 1}]]\n/sig${index + 1}/`;
     })
     .join("\n\n");
+}
+
+/** Assign before issue so reader, PDF, signing request, and audit share one reference. */
+export function allocateAgreementReference(documentId: string): string {
+  const compact = documentId.replace(/[^a-zA-Z0-9]/g, "").slice(-8).toUpperCase();
+  return `IC-${compact || documentId.slice(0, 8).toUpperCase()}`;
 }
 
 export function buildContractValues(input: ContractRenderInput): Record<string, string> {
@@ -380,9 +393,9 @@ export function buildContractValues(input: ContractRenderInput): Record<string, 
     .join("\n");
   const milestonesBlock =
     input.milestones.length === 0
-      ? "Milestone  Share  Gross Amount  Platform Fee  Influencer Amount\n(None scheduled.)"
+      ? "Milestone  Share  Gross compensation  Influencer fee  Net compensation\n(None scheduled.)"
       : [
-          "Milestone  Share  Gross Amount  Platform Fee  Influencer Amount",
+          "Milestone  Share  Gross compensation  Influencer fee  Net compensation",
           ...input.milestones.map(
             (row, index) =>
               `${index + 1}. ${row.title}  ${row.shareLabel}  ${row.grossLabel}  ${row.feeLabel}  ${row.creatorShares}`,
@@ -400,7 +413,8 @@ export function buildContractValues(input: ContractRenderInput): Record<string, 
         ].join("\n");
   const usage =
     input.usageSummary?.trim() ||
-    "Usage Field  Agreed Right\nOrganic Brand Use  Per campaign record\nPaid Advertising / Whitelisting  Not granted unless stated in the campaign record\nTerritory  Per campaign record\nDuration  Per campaign record\nEditing / Adaptation  Per campaign record\nOwnership / Buyout  Influencer retains ownership; license only as stated";
+    "Usage Field  Agreed Right\nOrganic Brand Use  As stated in the campaign rights schedule incorporated into this Agreement\nPaid Advertising / Whitelisting  Not granted unless stated in the campaign rights schedule\nTerritory  As stated in the campaign rights schedule\nDuration  As stated in the campaign rights schedule\nEditing / Adaptation  As stated in the campaign rights schedule\nOwnership / Buyout  Influencer retains ownership; license only as stated";
+  const agreementId = input.agreementId?.trim() || "";
   return {
     title: input.title,
     scope: input.scope,
@@ -411,6 +425,9 @@ export function buildContractValues(input: ContractRenderInput): Record<string, 
     gross: input.grossLabel,
     platform_fee: input.platformFeeLabel,
     creator_compensation: input.creatorCompensationLabel,
+    business_platform_fee: input.businessPlatformFeeLabel?.trim() || input.platformFeeLabel,
+    influencer_platform_fee: input.influencerPlatformFeeLabel?.trim() || "—",
+    net_compensation: input.netCompensationLabel?.trim() || input.creatorCompensationLabel,
     business_name: input.businessName,
     business_email: input.businessEmail,
     parties_block: partiesBlock || "Influencer  (listed in campaign record)  —",
@@ -419,16 +436,16 @@ export function buildContractValues(input: ContractRenderInput): Record<string, 
     fee_disclosure: input.feeDisclosure,
     generated_at: formatContractDisplayDate(input.generatedAt),
     signature_block: signatureBlock(input.parties),
-    agreement_id: input.agreementId?.trim() || "Pending assignment",
+    agreement_id: agreementId || "Pending assignment",
     agreement_status: input.agreementStatus?.trim() || "Ready for Signature",
-    campaign_period: input.campaignPeriod?.trim() || "Per campaign record",
+    campaign_period: input.campaignPeriod?.trim() || "As stated in the campaign period on this Agreement",
     usage_block: usage,
     exclusivity: input.exclusivity?.trim() || "None",
-    approval_period: input.approvalPeriod?.trim() || "Per campaign workflow",
-    revision_allowance: input.revisionAllowance?.trim() || "Per campaign workflow",
-    cure_period: input.curePeriod?.trim() || "Per campaign workflow",
-    dispute_window: input.disputeWindow?.trim() || "Per campaign workflow",
-    dispute_forum: input.disputeForum?.trim() || input.jurisdiction || "Per campaign record",
+    approval_period: input.approvalPeriod?.trim() || "As stated in the review schedule on this Agreement",
+    revision_allowance: input.revisionAllowance?.trim() || "As stated in the revision schedule on this Agreement",
+    cure_period: input.curePeriod?.trim() || "As stated in the cancellation schedule on this Agreement",
+    dispute_window: input.disputeWindow?.trim() || "As stated in the dispute schedule on this Agreement",
+    dispute_forum: input.disputeForum?.trim() || input.jurisdiction || "As stated in the jurisdiction on this Agreement",
     esign_provider: input.esignProvider?.trim() || "Influrios in-app signing",
   };
 }
@@ -927,28 +944,10 @@ export async function sendCollaborationContract(input: {
     return { ok: false as const, error: duplicate, existingId: existing?.id ?? null };
   }
   const template = await ensureContractTemplate();
-  const renderedBody = renderContractBody(template.body, {
-    ...input.render,
-    agreementStatus: input.render.agreementStatus ?? "Ready for Signature",
-    esignProvider: input.render.esignProvider,
-  });
-  const pdfBytes = renderContractPdf(renderedBody, {
-    title: input.render.title,
-    agreementId: input.render.agreementId,
-    signatures: [],
-    endorsementSlots: endorsementSlotsFromParties(
-      input.render.parties.map((party) => ({
-        role: party.role,
-        attestation: null,
-        status: "pending",
-        name: party.name,
-      })),
-    ),
-    pageEndorsements: true,
-  });
   const signingChannel = "native" as const;
   let envelopeId = "";
 
+  // Create the row first so the agreement reference is assigned before the body and PDF are frozen.
   const document = await prisma.contractDocument.create({
     data: {
       workspaceId: input.workspaceId,
@@ -956,9 +955,12 @@ export async function sendCollaborationContract(input: {
       teamProposalId: input.teamProposalId || null,
       applicationId: input.applicationId || null,
       title: input.render.title.slice(0, 160),
-      renderedBody,
-      contentDigest: contractContentDigest(renderedBody),
-      pdfBytes: new Uint8Array(pdfBytes),
+      agreementRef: "",
+      documentType: "collaboration",
+      versionLabel: "v1.0",
+      renderedBody: " ",
+      contentDigest: "",
+      pdfBytes: new Uint8Array(),
       status: "sent",
       signingChannel,
       envelopeId,
@@ -972,11 +974,36 @@ export async function sendCollaborationContract(input: {
           email: party.email,
           userId: party.userId || null,
           creatorSlug: party.creatorSlug || null,
+          legalEntityName: party.role === "business" ? input.render.businessName : party.name,
+          capacity: party.role === "business" ? "Authorized representative" : "Influencer",
+          handle: party.creatorSlug ? `@${party.creatorSlug}` : "",
           shareBps: party.shareBps ?? 0,
           status: "pending",
         })),
       },
     },
+  });
+
+  const agreementRef = input.render.agreementId?.trim() || allocateAgreementReference(document.id);
+  const renderedBody = renderContractBody(template.body, {
+    ...input.render,
+    agreementId: agreementRef,
+    agreementStatus: input.render.agreementStatus ?? "Ready for Signature",
+    esignProvider: input.render.esignProvider,
+  });
+  const pdfBytes = renderContractPdf(renderedBody, {
+    title: input.render.title,
+    agreementId: agreementRef,
+    signatures: [],
+    endorsementSlots: endorsementSlotsFromParties(
+      input.render.parties.map((party) => ({
+        role: party.role,
+        attestation: null,
+        status: "pending",
+        name: party.name,
+      })),
+    ),
+    pageEndorsements: true,
   });
 
   const { linkSupersededContract } = await import("@/lib/signed-funding-apply");
@@ -989,11 +1016,18 @@ export async function sendCollaborationContract(input: {
 
   if (signingChannel === "native" && !envelopeId) {
     envelopeId = nativeEnvelopeId(document.id);
-    await prisma.contractDocument.update({
-      where: { id: document.id },
-      data: { envelopeId },
-    });
   }
+
+  await prisma.contractDocument.update({
+    where: { id: document.id },
+    data: {
+      agreementRef,
+      renderedBody,
+      contentDigest: contractContentDigest(renderedBody),
+      pdfBytes: new Uint8Array(pdfBytes),
+      envelopeId,
+    },
+  });
 
   await notifyContractStage({
     documentId: document.id,

@@ -762,12 +762,22 @@ model SignatureRequest {
   @@index([collaborationId])
 }
 
-/// Admin-edited collaboration agreement. Variables are filled when a contract is generated.
+/// Admin-edited or workspace agreement template. Variables are filled when a contract is generated.
 model ContractTemplate {
-  id        String   @id @default("collaboration")
-  name      String
-  body      String
-  updatedAt DateTime @updatedAt
+  id           String   @id @default("collaboration")
+  name         String
+  body         String
+  /// collaboration | statement_of_work | change_order | nda
+  documentType String   @default("collaboration")
+  /// platform | workspace
+  scope        String   @default("platform")
+  workspaceId  String?
+  versionLabel String   @default("v1.0")
+  description  String   @default("")
+  published    Boolean  @default(true)
+  updatedAt    DateTime @updatedAt
+
+  @@index([scope, workspaceId, documentType])
 }
 
 /// One generated agreement. Native in-app signing is primary; DocuSign is optional.
@@ -780,6 +790,11 @@ model ContractDocument {
   applicationId   String?
   application     MarketplaceApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
   title           String
+  /// Human agreement reference assigned before issue (e.g. IC-AB12CD34).
+  agreementRef    String            @default("")
+  /// collaboration | statement_of_work | change_order | nda
+  documentType    String            @default("collaboration")
+  versionLabel    String            @default("v1.0")
   renderedBody    String
   /// SHA-256 of renderedBody. Empty on historical rows until an operator reviews them.
   contentDigest   String            @default("")
@@ -793,6 +808,8 @@ model ContractDocument {
   sourceJson      Json?
   /// Locked commercial terms captured when the agreement is sent. Funding reads this, not the wizard form.
   termsSnapshotJson Json?
+  /// Frozen Confirm parties snapshot when the draft is issued for signature.
+  partiesSnapshotJson Json?
   voidReason      String            @default("")
   voidedAt        DateTime?
   supersededById  String?
@@ -812,6 +829,8 @@ model ContractDocument {
   @@index([collaborationId])
   @@index([teamProposalId])
   @@index([status, createdAt])
+  @@index([agreementRef])
+  @@index([documentType, status])
 }
 
 /// An approved change to signed commercial terms before funding starts.
@@ -839,6 +858,12 @@ model ContractParty {
   email       String
   userId      String?
   creatorSlug String?
+  /// Contracting entity when different from the signer display name.
+  legalEntityName String       @default("")
+  /// Capacity in which the person signs (e.g. Authorized representative, Influencer).
+  capacity    String           @default("")
+  /// Public handle shown separately from the contracting name.
+  handle      String           @default("")
   shareBps    Int              @default(0)
   /// pending | signed | declined
   status      String           @default("pending")

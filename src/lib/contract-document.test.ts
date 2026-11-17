@@ -75,8 +75,8 @@ describe("contract documents", () => {
     assert.equal(adminList.includes("href={`/collaboration/contracts/${document.id}`}"), false);
     assert.match(adminView, /contracts\.view/);
     assert.equal(adminView.includes("actionSign"), false);
-    assert.match(memberList, /href=\{`\/collaboration\/contracts\/\$\{contract\.id\}`\}/);
-    assert.match(memberList, /Deliverables/);
+    assert.match(memberList, /open=\$\{contract\.id\}/);
+    assert.match(memberList, /Open deliverables|Deliverables/);
   });
 
   it("fills the template with every party and keeps an unknown variable visible", () => {

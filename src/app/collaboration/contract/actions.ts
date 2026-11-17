@@ -40,7 +40,7 @@ import {
 import { hasCurrentLegalRecord, recordLegalEvent } from "@/lib/legal";
 import { formatMoney } from "@/lib/money";
 import { resolveCreatorParties, sendCollaborationContract } from "@/lib/contract-document";
-import { creatorAmountsForMilestone } from "@/lib/team-proposal";
+import { buildMilestoneSchedule, milestoneRenderRows } from "@/lib/contract-milestone-schedule";
 import { ensureMarketplaceDefaults, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { computePayoutReadiness } from "@/lib/payout-readiness";
 import { collectionPayoutBlocker, collectionPayoutReady, paymentRoutes } from "@/lib/providers";
@@ -687,7 +687,19 @@ export async function actionSubmitContractWizard(formData: FormData) {
           currency: plan.contractCurrency,
           grossLabel: formatMoney(plan.grossContractValueCents, plan.contractCurrency),
           platformFeeLabel: formatMoney(plan.businessPlatformFeeCents ?? plan.totalPlatformFeeCents, plan.contractCurrency),
-          creatorCompensationLabel: formatMoney(plan.grossContractValueCents, plan.contractCurrency),
+          creatorCompensationLabel: formatMoney(
+            Math.max(0, plan.grossContractValueCents - (plan.influencerPlatformFeeCents ?? plan.milestones.reduce((sum, row) => sum + row.platformFeeCents, 0))),
+            plan.contractCurrency,
+          ),
+          businessPlatformFeeLabel: formatMoney(plan.businessPlatformFeeCents ?? plan.totalPlatformFeeCents, plan.contractCurrency),
+          influencerPlatformFeeLabel: formatMoney(
+            plan.influencerPlatformFeeCents ?? plan.milestones.reduce((sum, row) => sum + row.platformFeeCents, 0),
+            plan.contractCurrency,
+          ),
+          netCompensationLabel: formatMoney(
+            Math.max(0, plan.grossContractValueCents - (plan.influencerPlatformFeeCents ?? plan.milestones.reduce((sum, row) => sum + row.platformFeeCents, 0))),
+            plan.contractCurrency,
+          ),
           businessName,
           businessEmail: account.email,
           parties: [
@@ -699,23 +711,19 @@ export async function actionSubmitContractWizard(formData: FormData) {
             },
             ...creators.parties,
           ],
-          milestones: plan.milestones.map((milestone) => {
-            const shares = teamShares
-              ? creatorAmountsForMilestone(
-                  milestone.creatorCents,
-                  teamShares.map((row) => ({ creatorSlug: row.label, shareBps: row.shareBps })),
-                )
-              : [{ creatorSlug, amountCents: milestone.creatorCents }];
-            return {
-              title: milestone.title,
-              shareLabel: `${(milestone.shareBps / 100).toFixed(0)}%`,
-              grossLabel: formatMoney(milestone.grossCents, plan.contractCurrency),
-              feeLabel: "Your fee breakdown",
-              creatorShares:
-                shares?.map((share) => `${share.creatorSlug} ${formatMoney(share.amountCents, plan.contractCurrency)}`).join(", ") ??
-                "",
-            };
-          }),
+          milestones: milestoneRenderRows(
+            buildMilestoneSchedule({
+              currency: plan.contractCurrency,
+              grossCents: plan.grossContractValueCents,
+              influencerFeeCents:
+                plan.influencerPlatformFeeCents ??
+                plan.milestones.reduce((sum, row) => sum + row.platformFeeCents, 0),
+              milestones: plan.milestones.map((milestone) => ({
+                title: milestone.title,
+                shareBps: milestone.shareBps,
+              })),
+            }),
+          ),
           feeDisclosure: buildFeeDisclosureSummary(disclosureGate.record),
           generatedAt: new Date().toISOString(),
         },
@@ -770,7 +778,19 @@ export async function actionSubmitContractWizard(formData: FormData) {
         currency: plan.contractCurrency,
         grossLabel: formatMoney(plan.grossContractValueCents, plan.contractCurrency),
         platformFeeLabel: formatMoney(plan.businessPlatformFeeCents ?? plan.totalPlatformFeeCents, plan.contractCurrency),
-        creatorCompensationLabel: formatMoney(plan.grossContractValueCents, plan.contractCurrency),
+        creatorCompensationLabel: formatMoney(
+          Math.max(0, plan.grossContractValueCents - (plan.influencerPlatformFeeCents ?? plan.milestones.reduce((sum, row) => sum + row.platformFeeCents, 0))),
+          plan.contractCurrency,
+        ),
+        businessPlatformFeeLabel: formatMoney(plan.businessPlatformFeeCents ?? plan.totalPlatformFeeCents, plan.contractCurrency),
+        influencerPlatformFeeLabel: formatMoney(
+          plan.influencerPlatformFeeCents ?? plan.milestones.reduce((sum, row) => sum + row.platformFeeCents, 0),
+          plan.contractCurrency,
+        ),
+        netCompensationLabel: formatMoney(
+          Math.max(0, plan.grossContractValueCents - (plan.influencerPlatformFeeCents ?? plan.milestones.reduce((sum, row) => sum + row.platformFeeCents, 0))),
+          plan.contractCurrency,
+        ),
         businessName,
         businessEmail: account.email,
         parties: [
@@ -782,23 +802,19 @@ export async function actionSubmitContractWizard(formData: FormData) {
           },
           ...creators.parties,
         ],
-        milestones: plan.milestones.map((milestone) => {
-          const shares = teamShares
-            ? creatorAmountsForMilestone(
-                milestone.creatorCents,
-                teamShares.map((row) => ({ creatorSlug: row.label, shareBps: row.shareBps })),
-              )
-            : [{ creatorSlug, amountCents: milestone.creatorCents }];
-          return {
-            title: milestone.title,
-            shareLabel: `${(milestone.shareBps / 100).toFixed(0)}%`,
-            grossLabel: formatMoney(milestone.grossCents, plan.contractCurrency),
-            feeLabel: "Your fee breakdown",
-            creatorShares:
-              shares?.map((share) => `${share.creatorSlug} ${formatMoney(share.amountCents, plan.contractCurrency)}`).join(", ") ??
-              "",
-          };
-        }),
+        milestones: milestoneRenderRows(
+            buildMilestoneSchedule({
+              currency: plan.contractCurrency,
+              grossCents: plan.grossContractValueCents,
+              influencerFeeCents:
+                plan.influencerPlatformFeeCents ??
+                plan.milestones.reduce((sum, row) => sum + row.platformFeeCents, 0),
+              milestones: plan.milestones.map((milestone) => ({
+                title: milestone.title,
+                shareBps: milestone.shareBps,
+              })),
+            }),
+          ),
         feeDisclosure: buildFeeDisclosureSummary(disclosureGate.record),
         generatedAt: new Date().toISOString(),
       },
