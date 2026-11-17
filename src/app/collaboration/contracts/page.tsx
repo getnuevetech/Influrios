@@ -572,15 +572,12 @@ async function SelectedAgreementDialog({
   const influencers = selected.parties.filter((party) => party.role === "creator" || party.role === "influencer");
   const agreementRef = displayAgreementReference({ id: selected.id, agreementRef: selectedBody.agreementRef });
   const versionLabel = displayAgreementVersion(selectedBody.versionLabel);
-  const scope =
-    (selectedBody.sourceJson &&
-    typeof selectedBody.sourceJson === "object" &&
-    !Array.isArray(selectedBody.sourceJson) &&
-    typeof (selectedBody.sourceJson as Record<string, unknown>).scope === "string"
-      ? String((selectedBody.sourceJson as Record<string, unknown>).scope)
-      : "") ||
-    terms?.title ||
-    "";
+  const documentBody = stripSignatureTokens(selectedBody.renderedBody);
+  const businessLegalName =
+    (terms?.businessName || "").trim() ||
+    business?.legalEntityName?.trim() ||
+    business?.name ||
+    "—";
   const mine = selected.parties.find((party) => {
     if (party.userId && party.userId === accountId) return true;
     if (party.email.trim().toLowerCase() !== accountEmail.trim().toLowerCase()) return false;
@@ -635,7 +632,7 @@ async function SelectedAgreementDialog({
   return (
     <ContractAgreementDialog
       title={selected.title}
-      subtitle={`${business?.name || "Business"} × ${influencers.map((party) => party.name).join(", ") || "Influencer"}`}
+      subtitle={`${businessLegalName} × ${influencers.map((party) => party.legalEntityName || party.name).join(", ") || "Influencer"}`}
       signatureProgress={`${progress} of ${total} signed`}
       fundingLabel={fundingLabel}
       amounts={amounts}
@@ -644,19 +641,28 @@ async function SelectedAgreementDialog({
         campaign: selected.title,
         agreementRef,
         versionLabel,
+        body: documentBody,
         parties: [
           ...(business
             ? [
                 {
                   role: "business" as const,
-                  legalName: business.legalEntityName || business.name,
+                  legalName: businessLegalName,
                   signerName: business.name,
                   capacity: business.capacity || "Authorized representative",
                   signed: business.status === "signed",
                   signedAtLabel: readableSignedAt(business.signedAt),
                 },
               ]
-            : []),
+            : [
+                {
+                  role: "business" as const,
+                  legalName: businessLegalName,
+                  signerName: businessLegalName,
+                  capacity: "Authorized representative",
+                  signed: false,
+                },
+              ]),
           ...influencers.map((party) => ({
             role: "influencer" as const,
             legalName: party.legalEntityName || party.name,
@@ -667,7 +673,6 @@ async function SelectedAgreementDialog({
             signedAtLabel: readableSignedAt(party.signedAt),
           })),
         ],
-        scope: scope || stripSignatureTokens(selectedBody.renderedBody).slice(0, 280),
         compensation: formalCompensation,
         milestones: schedule
           ? schedule.rows.map((row) => ({
@@ -680,7 +685,7 @@ async function SelectedAgreementDialog({
           : [],
         draft: selected.status === "draft",
       }}
-      bodyFallback={stripSignatureTokens(selectedBody.renderedBody)}
+      bodyFallback={documentBody}
       activities={activities.map((event) => ({
         id: event.id,
         atLabel: shortDate(event.at),

@@ -234,9 +234,11 @@ describe("contracts UI redesign surfaces", () => {
     assert.match(dialog, /Document/);
     assert.match(dialog, /Signers/);
     assert.match(dialog, /Activity/);
-    assert.match(formal, /\{title\}/);
+    assert.match(formal, /body:/);
+    assert.match(formal, /parseAgreementBodySections/);
     assert.match(formal, /Schedule A/);
     assert.match(formal, /not a contracting party/i);
     assert.match(page, /Collaboration Agreement/);
+    assert.match(page, /documentBody/);
   });
 });
