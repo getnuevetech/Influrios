@@ -68,5 +68,11 @@ describe("agreement body sections", () => {
     assert.match(formal, /body:/);
     assert.match(formal, /parseAgreementBodySections/);
     assert.match(formal, /ExecutionSection/);
+    const bodySections = readFileSync("src/lib/contract-body-sections.ts", "utf8");
+    assert.match(bodySections, /contract-signature-text/);
+    assert.equal(bodySections.includes("contract-reader"), false);
+    assert.equal(bodySections.includes("contract-document"), false);
+    assert.equal(formal.includes("contract-document"), false);
+    assert.equal(formal.includes("contract-reader"), false);
   });
 });
