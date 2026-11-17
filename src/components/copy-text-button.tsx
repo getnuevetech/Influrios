@@ -14,7 +14,7 @@ export function CopyTextButton({ value, label = "Copy link" }: { value: string; 
           window.setTimeout(() => setCopied(false), 1600);
         });
       }}
-      className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-[#E4E9F5] bg-white px-3 py-2 text-sm font-semibold text-[#1B1464]"
+      className="inline-flex items-center justify-center gap-2 rounded-full border border-[#E4E9F5] bg-white px-3 py-2 text-sm font-semibold text-[#1B1464]"
     >
       <IconCopy size={14} />
       {copied ? "Copied" : label}

@@ -62,7 +62,12 @@ describe("dashboard influencer card", () => {
     assert.match(page, /DashboardInfluencerCard/);
     assert.match(panel, /PublicInfluencerCard/);
     assert.match(panel, /hideCta/);
-    assert.match(panel, /CardPreviewDialog/);
+    assert.match(panel, /CopyTextButton/);
+    assert.equal(panel.includes("CardPreviewDialog"), false);
+    assert.equal(panel.includes("Open full card"), false);
+    assert.equal(panel.includes("This is a preview"), false);
+    const visibleCard = panel.slice(panel.indexOf("creator ? ("), panel.indexOf(") : ("));
+    assert.equal(visibleCard.includes("View card"), false);
     assert.equal(panel.includes("actionRecordCardCta"), false);
     assert.equal(panel.includes("Contact"), false);
     assert.match(publicCard, /PublicInfluencerCard/);

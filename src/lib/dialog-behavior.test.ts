@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import { isDismissKey, listReturnQuery, nextFocusIndex, nextTabIndex } from "./dialog-behavior";
 
@@ -32,20 +32,22 @@ describe("shared popup behavior", () => {
     );
   });
 
-  it("uses one dialog behavior for payments, admin records, notices, and card preview", () => {
+  it("uses one dialog behavior for payments, admin records, and notices", () => {
     const payments = readFileSync("src/components/collaboration-payments-dialog.tsx", "utf8");
     const admins = readFileSync("src/components/admin-users-ui.tsx", "utf8");
     const accounts = readFileSync("src/components/admin-accounts-ui.tsx", "utf8");
-    const card = readFileSync("src/components/card-preview-dialog.tsx", "utf8");
     const notice = readFileSync("src/components/notice-dialog.tsx", "utf8");
     const centre = readFileSync("src/components/notification-centre.tsx", "utf8");
     const read = readFileSync("src/lib/account-notices.ts", "utf8");
+    const dashboard = readFileSync("src/app/creator/dashboard-card.tsx", "utf8");
+    assert.equal(existsSync("src/components/card-preview-dialog.tsx"), false);
+    assert.equal(dashboard.includes("Open full card"), false);
+    assert.equal(dashboard.includes("AccountDialog"), false);
     assert.match(payments, /useAccountDialogBehavior/);
     assert.match(payments, /data-account-dialog-root/);
     assert.match(payments, /role="tablist"/);
     assert.match(admins, /useAccountDialogBehavior/);
     assert.match(accounts, /useAccountDialogBehavior/);
-    assert.match(card, /AccountDialog/);
     assert.match(notice, /AccountDialog/);
     assert.match(centre, /NoticeDialog/);
     assert.equal(centre.includes('role="dialog"'), false);

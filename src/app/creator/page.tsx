@@ -224,9 +224,6 @@ export default async function CreatorHomePage({
             slug={home.slug}
             cardHref={home.cardHref}
             shareUrl={shareUrl}
-            name={home.displayName}
-            title={home.title}
-            image={home.avatar}
             identityVerified={home.identityVerified}
           />
         </div>
