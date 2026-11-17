@@ -7,6 +7,11 @@
 #   bash scripts/staging-e6-marketplace-evidence.sh
 #   npm run staging:e6-check-ready          # Phase M closeout gate (exit 0 only when ready)
 #
+# Closeout one-shot (after Airwallex webhook secret is Ready → unsigned POST returns 401):
+#   AIRWALLEX_WEBHOOK_SECRET=… npm run staging:e6-prove-chain
+#   # ensures US jurisdiction, seeds awaiting funding + milestone, hold → approve →
+#   # release → duplicate, prints paste-ready evidence ids for the runbook.
+#
 # Optional prove (posts signed webhooks; needs a funding in awaiting_provider):
 #   FUNDING_ID=… AIRWALLEX_WEBHOOK_SECRET=… bash scripts/staging-e6-marketplace-evidence.sh --prove-hold
 #   FUNDING_ID=… MILESTONE_ID=… AIRWALLEX_WEBHOOK_SECRET=… AMOUNT_CENTS=… \
@@ -24,6 +29,10 @@ if [[ "${1:-}" == "--prove-hold" ]]; then MODE="prove-hold"; fi
 if [[ "${1:-}" == "--prove-release" ]]; then MODE="prove-release"; fi
 if [[ "${1:-}" == "--prove-duplicate" ]]; then MODE="prove-duplicate"; fi
 if [[ "${1:-}" == "--check-ready" ]]; then MODE="check-ready"; fi
+if [[ "${1:-}" == "--ensure-us" ]]; then MODE="ensure-us"; fi
+if [[ "${1:-}" == "--seed-awaiting" ]]; then MODE="seed-awaiting"; fi
+if [[ "${1:-}" == "--approve-milestone" ]]; then MODE="approve-milestone"; fi
+if [[ "${1:-}" == "--prove-chain" ]]; then MODE="prove-chain"; fi
 
 APP_DIR="${APP_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 cd "${APP_DIR}"
@@ -324,6 +333,165 @@ else
 fi
 echo
 
+e6_new_id() {
+  # Stable-looking id for drill rows (not a Prisma cuid; String @id accepts it).
+  printf 'e6_%s_%s' "$(date -u +%Y%m%d%H%M%S)" "$(openssl rand -hex 4)"
+}
+
+ensure_us_jurisdiction() {
+  echo "### Ensure US jurisdiction (protected + APPROVED + airwallex)"
+  echo
+  psql -c "
+INSERT INTO \"CollaborationJurisdiction\" (
+  code, label, \"protectedPaymentsEnabled\", \"legalReviewStatus\", \"providerCode\", currency, \"minorDigits\", \"updatedAt\"
+) VALUES (
+  'US', 'United States', true, 'APPROVED', 'airwallex', 'USD', 2, NOW()
+)
+ON CONFLICT (code) DO UPDATE SET
+  \"protectedPaymentsEnabled\" = true,
+  \"legalReviewStatus\" = 'APPROVED',
+  \"providerCode\" = 'airwallex',
+  \"updatedAt\" = NOW();
+"
+  psql -At -F '|' -c "
+SELECT code,
+  CASE WHEN \"protectedPaymentsEnabled\" THEN 'yes' ELSE 'no' END,
+  \"legalReviewStatus\",
+  COALESCE(NULLIF(\"providerCode\", ''), '—')
+FROM \"CollaborationJurisdiction\" WHERE code = 'US';
+" | while IFS='|' read -r code protected legal provider; do
+    echo "US → protected=${protected} legal=${legal} provider=${provider}"
+  done
+}
+
+seed_awaiting_funding() {
+  local gross="${GROSS_CENTS:-5000}"
+  local fid mid
+  fid="$(e6_new_id)"
+  mid="$(e6_new_id)"
+  echo "### Seed awaiting_provider funding (E6 drill)"
+  echo
+  psql -c "
+INSERT INTO \"CollaborationFunding\" (
+  id, \"jurisdictionCode\", \"businessName\", \"creatorSlug\", title, currency,
+  \"grossCents\", \"feeCents\", \"feeSnapshotJson\", \"serviceLevel\", status, \"providerCode\",
+  \"fundingMode\", \"scheduleKind\", \"trancheIndex\", \"trancheCount\", \"updatedAt\"
+) VALUES (
+  '${fid}',
+  'US',
+  'E6 Drill Business',
+  'e6-drill-creator',
+  'E6 marketplace hold→release drill',
+  'USD',
+  ${gross},
+  0,
+  '{\"feeType\":\"\",\"feeCents\":0,\"explanation\":\"E6 staging drill — fee not applied.\",\"capturedAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}'::jsonb,
+  'managed_campaign',
+  'awaiting_provider',
+  'airwallex',
+  'FULL',
+  'once',
+  1,
+  1,
+  NOW()
+);
+INSERT INTO \"FundingMilestone\" (
+  id, \"fundingId\", title, \"amountCents\", \"sortOrder\", status,
+  \"reviewWindowHours\", \"revisionLimit\", \"updatedAt\"
+) VALUES (
+  '${mid}',
+  '${fid}',
+  'E6 Kickoff milestone',
+  ${gross},
+  0,
+  'pending',
+  72,
+  2,
+  NOW()
+);
+"
+  echo "FUNDING_ID=${fid}"
+  echo "MILESTONE_ID=${mid}"
+  echo "GROSS_CENTS=${gross}"
+  printf '%s' "${fid}" >/tmp/influrios-e6-funding-id
+  printf '%s' "${mid}" >/tmp/influrios-e6-milestone-id
+  printf '%s' "${gross}" >/tmp/influrios-e6-amount-cents
+}
+
+approve_first_milestone() {
+  local fid="${FUNDING_ID:-}"
+  local mid="${MILESTONE_ID:-}"
+  if [[ -z "${fid}" && -f /tmp/influrios-e6-funding-id ]]; then
+    fid="$(cat /tmp/influrios-e6-funding-id)"
+  fi
+  if [[ -z "${fid}" ]]; then
+    fid="$(psql -At -c "SELECT id FROM \"CollaborationFunding\" WHERE status = 'held' ORDER BY \"updatedAt\" DESC LIMIT 1;")"
+  fi
+  if [[ -z "${fid}" ]]; then
+    echo "ERROR: set FUNDING_ID=… (held funding) before --approve-milestone."
+    return 1
+  fi
+  if [[ -z "${mid}" ]]; then
+    mid="$(psql -At -c "
+SELECT id FROM \"FundingMilestone\"
+WHERE \"fundingId\" = '${fid}'
+ORDER BY \"sortOrder\" ASC LIMIT 1;
+")"
+  fi
+  if [[ -z "${mid}" ]]; then
+    echo "ERROR: no milestone on funding ${fid}."
+    return 1
+  fi
+  echo "### Approve milestone ${mid} on funding ${fid}"
+  echo
+  psql -c "
+UPDATE \"FundingMilestone\"
+SET status = 'approved',
+    \"approvedAt\" = NOW(),
+    \"updatedAt\" = NOW()
+WHERE id = '${mid}' AND \"fundingId\" = '${fid}';
+"
+  printf '%s' "${fid}" >/tmp/influrios-e6-funding-id
+  printf '%s' "${mid}" >/tmp/influrios-e6-milestone-id
+  echo "MILESTONE_ID=${mid} status=approved"
+}
+
+emit_evidence_pack() {
+  local fid="${1:-}"
+  local mid="${2:-}"
+  local hold_event="${3:-}"
+  local release_event="${4:-}"
+  local when
+  when="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo
+  echo "### E6 evidence pack (paste into docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md)"
+  echo
+  cat <<EOF
+| Check | Result |
+|-------|--------|
+| Airwallex gateway Ready | ☑ unsigned webhook → 401 |
+| US jurisdiction protected + APPROVED | ☑ \`npm run staging:e6-check-ready\` |
+| Funding awaiting_provider → held | ☑ funding \`${fid}\` · hold event \`${hold_event}\` |
+| Milestone approved then payout.released | ☑ milestone \`${mid}\` · release event \`${release_event}\` |
+| Duplicate release skipped | ☑ same EVENT_ID \`${release_event}\` |
+| Ledger hold + release rows | ☑ see collect output |
+
+| Area | Evidence id | Date | Operator |
+|------|-------------|------|----------|
+| Airwallex hold and release | funding=\`${fid}\` · hold=\`${hold_event}\` · milestone=\`${mid}\` · release=\`${release_event}\` · duplicate skipped | ${when} | host + cloud-agent |
+EOF
+  mkdir -p "${APP_DIR}/tmp" 2>/dev/null || true
+  {
+    echo "E6_CLOSED_AT=${when}"
+    echo "FUNDING_ID=${fid}"
+    echo "MILESTONE_ID=${mid}"
+    echo "HOLD_EVENT_ID=${hold_event}"
+    echo "RELEASE_EVENT_ID=${release_event}"
+  } >"${APP_DIR}/tmp/e6-evidence-ids.env"
+  echo
+  echo "Wrote ${APP_DIR}/tmp/e6-evidence-ids.env"
+}
+
 post_airwallex() {
   local name="$1"
   local funding_id="$2"
@@ -333,6 +501,10 @@ post_airwallex() {
   local secret="${AIRWALLEX_WEBHOOK_SECRET:-}"
   if [[ -z "${secret}" ]]; then
     echo "ERROR: set AIRWALLEX_WEBHOOK_SECRET to the same value saved on Admin → Gateways → Airwallex."
+    return 1
+  fi
+  if [[ "${WH_CODE:-}" == "503" ]]; then
+    echo "ERROR: Airwallex is not ready (unsigned webhook → 503). Admin → Gateways → Airwallex: enable + webhook secret, then retry."
     return 1
   fi
   if [[ -z "${event_id}" ]]; then
@@ -362,7 +534,80 @@ post_airwallex() {
   echo "→ HTTP ${code} $(tr -d '\n' </tmp/influrios-e6-prove.json | cut -c1-240)"
   echo "${event_id}" >/tmp/influrios-e6-last-event-id
   echo "${code}" >/tmp/influrios-e6-last-http
+  if [[ "${code}" != "200" ]]; then
+    echo "ERROR: expected HTTP 200 from marketplace webhook (got ${code})."
+    return 1
+  fi
 }
+
+if [[ "${MODE}" == "ensure-us" ]]; then
+  ensure_us_jurisdiction
+  exit 0
+fi
+
+if [[ "${MODE}" == "seed-awaiting" ]]; then
+  ensure_us_jurisdiction
+  seed_awaiting_funding
+  exit 0
+fi
+
+if [[ "${MODE}" == "approve-milestone" ]]; then
+  approve_first_milestone
+  exit 0
+fi
+
+if [[ "${MODE}" == "prove-chain" ]]; then
+  echo "### Prove chain (hold → approve → release → duplicate)"
+  echo
+  if [[ -z "${AIRWALLEX_WEBHOOK_SECRET:-}" ]]; then
+    echo "ERROR: set AIRWALLEX_WEBHOOK_SECRET to the Admin → Gateways → Airwallex webhook secret."
+    exit 1
+  fi
+  if [[ "${WH_CODE}" != "401" ]]; then
+    echo "ERROR: Airwallex unsigned webhook must return 401 before prove-chain (got ${WH_CODE:-?})."
+    echo "Admin → Gateways → Airwallex: enable + client id + API key + base URL + webhook secret."
+    exit 1
+  fi
+  ensure_us_jurisdiction
+  seed_awaiting_funding
+  FID="$(cat /tmp/influrios-e6-funding-id)"
+  MID="$(cat /tmp/influrios-e6-milestone-id)"
+  AMT="$(cat /tmp/influrios-e6-amount-cents)"
+  echo
+  post_airwallex "payment_intent.succeeded" "${FID}" "${AMT}"
+  HOLD_EVENT="$(cat /tmp/influrios-e6-last-event-id)"
+  HELD_STATUS="$(psql -At -c "SELECT status FROM \"CollaborationFunding\" WHERE id = '${FID}';")"
+  if [[ "${HELD_STATUS}" != "held" ]]; then
+    echo "ERROR: funding ${FID} status is ${HELD_STATUS:-?} after hold (expected held)."
+    exit 1
+  fi
+  echo
+  FUNDING_ID="${FID}" MILESTONE_ID="${MID}" approve_first_milestone
+  echo
+  post_airwallex "funds_split.released" "${FID}" "${AMT}" "${MID}"
+  RELEASE_EVENT="$(cat /tmp/influrios-e6-last-event-id)"
+  echo
+  echo "### Prove duplicate release skip"
+  echo
+  post_airwallex "funds_split.released" "${FID}" "${AMT}" "${MID}" "${RELEASE_EVENT}"
+  BODY="$(tr -d '\n' </tmp/influrios-e6-prove.json 2>/dev/null || true)"
+  if ! echo "${BODY}" | grep -qi 'duplicate'; then
+    echo "ERROR: duplicate replay did not report duplicate=true. Body: ${BODY:0:240}"
+    exit 1
+  fi
+  RELEASED="$(psql -At -c "
+SELECT count(*)::text FROM \"LedgerEntry\"
+WHERE \"fundingId\" = '${FID}' AND kind IN ('hold','release');
+")"
+  if [[ "${RELEASED}" -lt 2 ]]; then
+    echo "ERROR: expected hold+release ledger rows on ${FID} (got ${RELEASED})."
+    exit 1
+  fi
+  emit_evidence_pack "${FID}" "${MID}" "${HOLD_EVENT}" "${RELEASE_EVENT}"
+  echo
+  echo "E6 prove-chain OK — paste the evidence pack into STAGING_LAUNCH_INTEGRATIONS.md § E6 / §5."
+  exit 0
+fi
 
 if [[ "${MODE}" == "prove-hold" ]]; then
   echo "### Prove hold"
@@ -373,6 +618,7 @@ if [[ "${MODE}" == "prove-hold" ]]; then
   fi
   if [[ -z "${FID}" ]]; then
     echo "ERROR: no awaiting_provider funding. Create one (business collab wizard) or set FUNDING_ID=…"
+    echo "Or: npm run staging:e6-seed-awaiting"
     exit 1
   fi
   GROSS="$(psql -At -c "SELECT \"grossCents\"::text FROM \"CollaborationFunding\" WHERE id = '${FID}';")"

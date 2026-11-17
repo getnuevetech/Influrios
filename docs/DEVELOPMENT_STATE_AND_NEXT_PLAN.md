@@ -233,11 +233,11 @@ Shipped on `main`: directory helpers, matching/collab/business/intelligence/agen
 3. ~~Stripe sandbox: Checkout → webhook → plan; duplicate skipped.~~ **Done (E4).**  
 4. ~~One social OAuth.~~ **Done (E3).**  
 5. ~~Meilisearch counts.~~ **Done (E5).** · Sweep clock **Done (E1).**  
-6. **Marketplace hold → release (E6)** — **active closeout** · `npm run staging:e6-check-ready` then `--prove-*`.
+6. **Marketplace hold → release (E6)** — **active closeout** · restore Airwallex Ready (unsigned → 401; currently 503 as of 2026-11-17) · then `AIRWALLEX_WEBHOOK_SECRET=… npm run staging:e6-prove-chain` and paste evidence ids.
 
 **Closeout order (remaining exit-table rows after E6):** Airwallex hold/release → recurring tranche 2 → team proposal → DocuSign → Flutterwave/M-Pesa → intro fee + paid mentorship.
 
-**Artifacts:** [`docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md`](./deploy/STAGING_LAUNCH_INTEGRATIONS.md), `scripts/staging-checklist.ts`, `scripts/staging-evidence-probe.mjs`, `scripts/marketplace-webhook-fixture.ts`, `scripts/staging-e6-marketplace-evidence.sh`.
+**Artifacts:** [`docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md`](./deploy/STAGING_LAUNCH_INTEGRATIONS.md), `scripts/staging-checklist.ts`, `scripts/staging-evidence-probe.mjs`, `scripts/marketplace-webhook-fixture.ts`, `scripts/staging-e6-marketplace-evidence.sh` (`--prove-chain` / `--ensure-us` / `--seed-awaiting`).
 
 **Exit:** staging operator fills every green evidence cell in that runbook; production switches match the policy table. **Not complete until evidence is signed — CI alone does not finish Phase M.** Phase O polish waits until this exit is signed.
 
