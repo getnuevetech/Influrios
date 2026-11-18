@@ -142,12 +142,15 @@ export function WorkspacePanel({
                   paymentStatus: decision.paymentStatus,
                   bankLine: decision.bankLine,
                   actionLabel: decision.action.label,
-                  actionHref: workspaceHref(funding.id, {
-                    tab,
-                    focus: milestone.id,
-                    intent: intentFor(decision.action.kind),
-                    ...(decision.action.kind === "review" ? { version: String(decision.action.version) } : {}),
-                  }),
+                  actionHref:
+                    decision.action.kind === "recover_payout" || decision.action.kind === "view_payment"
+                      ? decision.action.href
+                      : workspaceHref(funding.id, {
+                          tab,
+                          focus: milestone.id,
+                          intent: intentFor(decision.action.kind),
+                          ...(decision.action.kind === "review" ? { version: String(decision.action.version) } : {}),
+                        }),
                   nextActor: decision.nextActor,
                   note: decision.hold ? decision.holdReason : milestone.disputeNote,
                 }))}

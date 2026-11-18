@@ -24,7 +24,7 @@ import { feeLevelForSignedTerms } from "@/lib/paid-agreement-fee";
 import { prisma } from "@/lib/db";
 import { ContractDiscountReview } from "@/app/collaboration/contracts/[id]/discount-review";
 import { memberDealView } from "@/lib/member-deal-money";
-import { formatMoney } from "@/lib/money";
+import { formatContractMoney } from "@/lib/money";
 import { contractFundingCta, readSignedTermsSnapshot, signedFundingNotice } from "@/lib/signed-funding";
 import { SERVICE_LEVEL_LABELS, type ServiceLevel } from "@/lib/collaboration-fees";
 
@@ -293,7 +293,7 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
               {dealView.lines.map((line) => (
                 <div key={line.label}>
                   <dt className="text-xs text-muted">{line.label}</dt>
-                  <dd className="font-bold text-indigo">{formatMoney(line.amountCents, terms.currency)}</dd>
+                  <dd className="font-bold text-indigo">{formatContractMoney(line.amountCents, terms.currency)}</dd>
                 </div>
               ))}
             </dl>
@@ -308,15 +308,15 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
             <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-xs text-muted">Gross compensation</dt>
-                <dd className="font-bold text-indigo">{formatMoney(influencerQuote.grossInfluencerCompensationCents, terms.currency)}</dd>
+                <dd className="font-bold text-indigo">{formatContractMoney(influencerQuote.grossInfluencerCompensationCents, terms.currency)}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted">Your platform fee</dt>
-                <dd className="font-bold text-indigo">{formatMoney(influencerQuote.feeCents, terms.currency)}</dd>
+                <dd className="font-bold text-indigo">{formatContractMoney(influencerQuote.feeCents, terms.currency)}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted">You receive</dt>
-                <dd className="font-bold text-indigo">{formatMoney(influencerQuote.totalCents, terms.currency)}</dd>
+                <dd className="font-bold text-indigo">{formatContractMoney(influencerQuote.totalCents, terms.currency)}</dd>
               </div>
             </dl>
           </section>
