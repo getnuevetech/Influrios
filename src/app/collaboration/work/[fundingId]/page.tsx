@@ -4,7 +4,7 @@ import { getAccountSession } from "@/lib/accounts";
 import { assertFundingAccess } from "@/lib/funding-access";
 import { memberDealView } from "@/lib/member-deal-money";
 import { visibleSubmissions } from "@/lib/milestone-delivery";
-import { formatMoney } from "@/lib/money";
+import { formatContractMoney } from "@/lib/money";
 import { readSignedDealMoney } from "@/lib/payment-engine";
 import { prisma } from "@/lib/db";
 import {
@@ -106,7 +106,7 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
       contractHref={contract ? `/collaboration/contracts/${contract.id}` : null}
       summary={workspaceSummaryLines(money).map((line) => ({
         label: line.label,
-        amount: formatMoney(line.amountCents, funding.currency),
+        amount: formatContractMoney(line.amountCents, funding.currency),
       }))}
       amountHeading={amountHeading}
       milestones={ordered.map((milestone, index) => {
@@ -132,9 +132,11 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
         return {
           id: milestone.id,
           title: milestone.title,
-          amountLabel: formatMoney(milestone.amountCents, funding.currency),
+          amountLabel: formatContractMoney(milestone.amountCents, funding.currency),
           state: milestoneState,
-          disputeNote: openDispute ? `A dispute holds ${formatMoney(milestone.amountCents, funding.currency)} on this milestone.` : null,
+          disputeNote: openDispute
+            ? `A dispute holds ${formatContractMoney(milestone.amountCents, funding.currency)} on this milestone.`
+            : null,
           grossCents: Number(allocation?.grossCents ?? milestone.amountCents),
           businessFeeCents: Number(allocation?.businessCollaborationFeeCents ?? 0),
         };

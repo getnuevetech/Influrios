@@ -439,6 +439,19 @@ Operator path:
 3. Paste the printed evidence pack into this section + the §5 table (also `tmp/e6-evidence-ids.env` on the host).
 4. Optional manual path: `staging:e6-check-ready`, business prefund UI, `--prove-hold` / UI approve / `--prove-release` / `--prove-duplicate`.
 
+### Contract → delivery → payout journey (host prove)
+
+**Goal:** One collaboration with delivery revision history, release + duplicate skip, and a payout-failed recovery marker. UI screenshots still need business + influencer staging logins (`STAGING_*` secrets).
+
+```bash
+cd /var/www/influrios
+AIRWALLEX_WEBHOOK_SECRET=… npm run staging:collab-journey-evidence
+# Optional recovery marker for workspace next-action checks:
+FUNDING_ID=… MILESTONE_ID=… bash scripts/staging-collab-journey-evidence.sh --mark-payout-failed
+```
+
+Writes `tmp/collab-journey-evidence-ids.env`. Does not rewrite unrelated signed agreements.
+
 ### E8 progress (Recurring tranche 2) — **product path ready** (host evidence blank)
 
 **Goal:** 2+ tranche series · tranche 1 held · sweep opens tranche 2 `awaiting_provider` · stop → no tranche 3 · business payments UI shows series label + **Stop later tranches**.

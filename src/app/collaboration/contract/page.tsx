@@ -43,7 +43,7 @@ import {
 } from "@/lib/jurisdiction-capabilities";
 import { buildFeeDisclosureSummary } from "@/lib/fee-disclosure";
 import { hasCurrentLegalRecord } from "@/lib/legal";
-import { formatMoney } from "@/lib/money";
+import { formatContractMoney } from "@/lib/money";
 import { publicStoredImage } from "@/lib/seed-data";
 import { ensureMarketplaceDefaults, marketplaceConfig } from "@/lib/marketplace-ledger";
 import { acceptedContractChoices, applicationForContract, listWorkspaceBusinessRequests } from "@/lib/marketplace-listings";
@@ -706,7 +706,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                     <div>
                       <dt className="text-xs text-muted">Your fee rule</dt>
                       <dd className="font-semibold text-indigo">{quote.rule.name} · v{quote.rule.version}</dd>
-                      <dd className="text-xs text-muted">{feeRuleRateLabel(quote.rule)} · {formatMoney(quote.feeCents, plan.contractCurrency)} added on top</dd>
+                      <dd className="text-xs text-muted">{feeRuleRateLabel(quote.rule)} · {formatContractMoney(quote.feeCents, plan.contractCurrency)} added on top</dd>
                     </div>
                   </dl>
                   <QuoteDiscountBox
@@ -874,20 +874,20 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                   <div>
                     <dt className="text-muted">Gross compensation</dt>
                     <dd className="font-bold text-indigo">
-                      {formatMoney(plan.grossContractValueCents, plan.contractCurrency)}
+                      {formatContractMoney(plan.grossContractValueCents, plan.contractCurrency)}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-muted">Your platform fee</dt>
                     <dd className="font-bold text-indigo">
-                      {formatMoney(plan.businessPlatformFeeCents ?? 0, plan.contractCurrency)}
+                      {formatContractMoney(plan.businessPlatformFeeCents ?? 0, plan.contractCurrency)}
                     </dd>
                   </div>
                   {plan.activationFeeCents != null ? (
                     <div>
                       <dt className="text-muted">Activation fee</dt>
                       <dd className="font-bold text-indigo">
-                        {formatMoney(plan.activationFeeCents, plan.contractCurrency)}
+                        {formatContractMoney(plan.activationFeeCents, plan.contractCurrency)}
                       </dd>
                     </div>
                   ) : null}
@@ -895,7 +895,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                     <div>
                       <dt className="text-muted">Collaboration service fee</dt>
                       <dd className="font-bold text-indigo">
-                        {formatMoney(plan.businessCollaborationFeeCents, plan.contractCurrency)}
+                        {formatContractMoney(plan.businessCollaborationFeeCents, plan.contractCurrency)}
                       </dd>
                     </div>
                   ) : null}
@@ -903,7 +903,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                     <div>
                       <dt className="text-muted">Tax</dt>
                       <dd className="font-bold text-indigo">
-                        {formatMoney(fundedTax.lines.find((line) => line.label === "Tax")?.amountCents ?? 0, plan.contractCurrency)}
+                        {formatContractMoney(fundedTax.lines.find((line) => line.label === "Tax")?.amountCents ?? 0, plan.contractCurrency)}
                         {fundedTax.lines.find((line) => line.label === "Tax")?.reason ? ` · ${fundedTax.lines.find((line) => line.label === "Tax")?.reason}` : ""}
                       </dd>
                     </div>
@@ -911,7 +911,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                   <div>
                     <dt className="text-muted">You pay</dt>
                     <dd className="font-bold text-indigo">
-                      {formatMoney(priceWithTax ?? plan.businessPaysCents ?? plan.grossContractValueCents, plan.contractCurrency)}
+                      {formatContractMoney(priceWithTax ?? plan.businessPaysCents ?? plan.grossContractValueCents, plan.contractCurrency)}
                     </dd>
                   </div>
                   <div>
@@ -934,15 +934,15 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                           {m.title} · {(m.shareBps / 100).toFixed(0)}%
                         </span>
                         <span className="text-muted">
-                          {formatMoney(m.grossCents, plan.contractCurrency)} (collaboration fee{" "}
-                          {formatMoney(m.businessPlatformFeeCents ?? 0, plan.contractCurrency)})
+                          {formatContractMoney(m.grossCents, plan.contractCurrency)} (collaboration fee{" "}
+                          {formatContractMoney(m.businessPlatformFeeCents ?? 0, plan.contractCurrency)})
                         </span>
                       </div>
                       {creatorShares ? (
                         <ul className="mt-1 text-xs text-muted">
                           {creatorShares.map((share) => (
                             <li key={share.creatorSlug}>
-                              {share.creatorSlug} · {formatMoney(share.amountCents, plan.contractCurrency)}
+                              {share.creatorSlug} · {formatContractMoney(share.amountCents, plan.contractCurrency)}
                             </li>
                           ))}
                         </ul>

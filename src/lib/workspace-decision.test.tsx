@@ -143,7 +143,31 @@ describe("workspace decision", () => {
     assert.equal(released.paymentStatus, "Release requested");
     assert.equal(released.bankLine, null);
     assert.equal(released.action.kind, "view_details");
-    assert.equal(released.nextActor, null);
+    assert.equal(released.nextActor, "Next step: Waiting for bank confirmation");
+  });
+
+  it("points creator and business at payout recovery after a failed bank payout", () => {
+    const failed = state({
+      milestoneStatus: "payout_failed",
+      submissions: [
+        { version: 1, status: "approved", note: "Final cut", linkUrl: "https://example.com/v1", reviewNote: "" },
+      ],
+    });
+    const creator = workspaceDecision(failed, actor);
+    assert.equal(creator.action.kind, "recover_payout");
+    assert.equal(creator.action.label, "Update payout details");
+    assert.equal(creator.nextActor, "Next step: Update payout details");
+    if (creator.action.kind === "recover_payout") {
+      assert.equal(creator.action.href, "/creator/earnings#payouts");
+    }
+    assert.equal(creator.paymentStatus, "Payout failed");
+    const biz = workspaceDecision(failed, business);
+    assert.equal(biz.action.kind, "view_payment");
+    assert.equal(biz.action.label, "View payment history");
+    assert.equal(biz.nextActor, "Next step: Wait for influencer payout update");
+    if (biz.action.kind === "view_payment") {
+      assert.equal(biz.action.href, "/payments");
+    }
   });
 
   it("holds a release that cannot be tied to a version and shows the history", () => {
@@ -290,9 +314,15 @@ describe("workspace decision", () => {
     assert.match(panel, /id="milestones"/);
     assert.match(readFileSync("src/components/workspace-milestones.tsx", "utf8"), /name="files"/);
     assert.match(page, /WorkspacePanel/);
+    assert.match(page, /formatContractMoney/);
+    assert.equal(page.includes("formatMoney("), false);
     assert.equal(panel.includes("3570"), false);
     assert.equal(page.includes("8%"), false);
+    assert.match(panel, /recover_payout|view_payment/);
     assert.match(readFileSync("src/app/collaboration/work/[fundingId]/layout.tsx", "utf8"), /getAccountSession/);
     assert.match(readFileSync("src/app/collaboration/work/[fundingId]/messages-panel.tsx", "utf8"), /id="messages"/);
+    const contractPage = readFileSync("src/app/collaboration/contracts/[id]/page.tsx", "utf8");
+    assert.match(contractPage, /formatContractMoney/);
+    assert.equal(contractPage.includes("formatMoney("), false);
   });
 });

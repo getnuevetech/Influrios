@@ -45,7 +45,9 @@ export type WorkspaceAction =
   | { kind: "submit_first"; version: number; label: "Submit version"; nextActor: string }
   | { kind: "submit_revision"; version: number; label: "Submit revision"; nextActor: string }
   | { kind: "review"; version: number; label: string; nextActor: string }
-  | { kind: "view_details"; label: "View details"; nextActor: null };
+  | { kind: "recover_payout"; label: "Update payout details"; nextActor: string; href: string }
+  | { kind: "view_payment"; label: "View payment history"; nextActor: string; href: string }
+  | { kind: "view_details"; label: "View details"; nextActor: string | null };
 
 const RELEASE_STATUSES = new Set([
   "approved",
@@ -163,6 +165,7 @@ export function workspaceDecision(state: WorkspaceMilestoneState, actor: Workspa
   });
 
   const openForReview = state.fundingStatus === "held" || state.fundingStatus === "completed";
+  const payoutNeedsRecovery = state.milestoneStatus === "payout_failed" || state.milestoneStatus === "returned";
   let action: WorkspaceAction = { kind: "view_details", label: "View details", nextActor: null };
   if (!hold && state.fundingStatus === "held" && state.milestoneStatus === "pending" && actor.audience === "creator" && actor.assigned) {
     const version = nextVersion(state);
@@ -175,6 +178,26 @@ export function workspaceDecision(state: WorkspaceMilestoneState, actor: Workspa
       version: waitingVersion,
       label: `Review version ${waitingVersion}`,
       nextActor: `Next step: Review version ${waitingVersion}`,
+    };
+  } else if (!hold && payoutNeedsRecovery && actor.audience === "creator" && actor.assigned) {
+    action = {
+      kind: "recover_payout",
+      label: "Update payout details",
+      nextActor: "Next step: Update payout details",
+      href: "/creator/earnings#payouts",
+    };
+  } else if (!hold && payoutNeedsRecovery && actor.audience === "business") {
+    action = {
+      kind: "view_payment",
+      label: "View payment history",
+      nextActor: "Next step: Wait for influencer payout update",
+      href: "/payments",
+    };
+  } else if (!hold && (state.milestoneStatus === "approved" || state.milestoneStatus === "release_scheduled" || state.milestoneStatus === "release_requested" || state.milestoneStatus === "released") && !state.payoutConfirmed && !state.bankPayoutConfirmed) {
+    action = {
+      kind: "view_details",
+      label: "View details",
+      nextActor: "Next step: Waiting for bank confirmation",
     };
   }
 
