@@ -31,7 +31,7 @@ export type CampaignBrief = {
   distribution?: string;
   draftRecipients?: string;
   createdAt: string;
-  status: "draft" | "active" | "closed";
+  status: "draft" | "active" | "closed" | "cancelled";
 };
 
 export type Inquiry = {
@@ -66,7 +66,7 @@ export const PUBLIC_BUSINESS_WORKSPACE: BusinessWorkspace = {
   inquiries: [],
 };
 
-const BRIEF_STATUSES = ["draft", "active", "closed"] as const;
+const BRIEF_STATUSES = ["draft", "active", "closed", "cancelled"] as const;
 
 export const LEAD_STATUSES = ["lead_created", "contacted", "qualified", "won", "lost", "dormant"] as const;
 

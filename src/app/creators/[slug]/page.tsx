@@ -1,42 +1,20 @@
-import Image from "next/image";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { GuestGateBanner } from "@/components/guest-gate-banner";
-import { PublicInfluencerCard } from "@/components/public-influencer-card";
+import { PublicProfileLayout } from "@/components/public-profile-layout";
+import { getAccountSession } from "@/lib/accounts";
+import { getWorkspace } from "@/lib/business";
 import { consumeGuestQuota, type GuestQuota } from "@/lib/guest-usage";
-import {
-  IconBag,
-  IconCake,
-  IconCalendar,
-  IconCamera,
-  IconEye,
-  IconGlobe,
-  IconHandshake,
-  IconHeart,
-  IconLang,
-  IconMail,
-  IconMapPin,
-  IconMegaphone,
-  IconPlane,
-  IconPlayBadge,
-  IconPlaySolid,
-  IconShare,
-  IconUserPlus,
-  IconUsers,
-  IconVerified,
-  SocialIcon,
-} from "@/components/icons";
-import {
-  formatFollowers,
-  publicStoredImage,
-  specialtyLabel,
-} from "@/lib/seed-data";
-import { directoryLabels, getDirectory, getDirectoryCreator, profilePlace, recordDirectoryEvent } from "@/lib/directory";
-import { metricFreshnessLabel, profileNeedLines, profileOfferLines, visibleFollowerCount } from "@/lib/profile-notes";
+import { publicStoredImage, specialtyLabel } from "@/lib/seed-data";
+import { getDirectoryCreator, recordDirectoryEvent } from "@/lib/directory";
+import { profileNeedLines, profileOfferLines } from "@/lib/profile-notes";
 import { creatorShareMetadata } from "@/lib/creator-og";
-import { demoCreatorBySlug, demoCreators } from "@/lib/presentation-demo";
+import { demoCreatorBySlug } from "@/lib/presentation-demo";
+import { listMarketplaceApplications, listWorkspaceBusinessRequests } from "@/lib/marketplace-listings";
+import { prisma } from "@/lib/db";
 
-type Props = { params: Promise<{ slug: string }> };
+type Props = {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ invite?: string; card?: string }>;
+};
 
 export const dynamic = "force-dynamic";
 
@@ -47,28 +25,9 @@ export async function generateMetadata({ params }: Props) {
   return creatorShareMetadata(creator, { surface: "profile" });
 }
 
-function facetLabels(names: string[] | undefined, slugs: string[] | undefined) {
-  if (names?.length) return names;
-  return (slugs ?? []).filter(Boolean).map((slug) => slug.replace(/-/g, " "));
-}
-
-function socialMetricLabel(platform: string) {
-  if (platform === "WEBSITE") return "Monthly Visits";
-  if (platform === "YOUTUBE") return "Subscribers";
-  return "Followers";
-}
-
-const COLLAB_ICON_MAP: Record<string, typeof IconCamera> = {
-  "Sponsored Content": IconCamera,
-  "Events & Experiences": IconCalendar,
-  "Product Reviews": IconBag,
-  "Travel Partnerships": IconPlane,
-  "Brand Campaigns": IconMegaphone,
-  "Long-term Ambassadorships": IconHeart,
-};
-
-export default async function CreatorProfilePage({ params }: Props) {
+export default async function CreatorProfilePage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const query = await searchParams;
   const preview = demoCreatorBySlug(slug);
   const creator = preview ?? (await getDirectoryCreator(slug));
   if (!creator) notFound();
@@ -81,644 +40,74 @@ export default async function CreatorProfilePage({ params }: Props) {
     await recordDirectoryEvent("influencer_profile_viewed", { slug, surface: "profile" });
   }
 
-  const related = preview
-    ? demoCreators().filter((row) => row.slug !== creator.slug).slice(0, 4)
-    : (await getDirectory()).creators.filter((row) => row.slug !== creator.slug).slice(0, 4);
+  const account = await getAccountSession().catch(() => null);
+  const ownedCreator = account
+    ? await prisma.creator.findFirst({ where: { userId: account.id }, select: { slug: true } }).catch(() => null)
+    : null;
+  const isOwner = Boolean(ownedCreator?.slug === slug);
+  const isBusiness = account?.role === "BUSINESS" || account?.role === "AGENCY";
+  let requestsForInvite: { id: string; title: string }[] = [];
+  let existingInviteStatus: string | null = null;
+  if (account && isBusiness) {
+    const workspace = await getWorkspace(account.id).catch(() => null);
+    if (workspace) {
+      const published = await listWorkspaceBusinessRequests(workspace.businessId).catch(() => []);
+      requestsForInvite = published
+        .filter((row) => row.status === "published")
+        .map((row) => ({ id: row.id, title: row.brand || "Untitled request" }));
+      const apps = await listMarketplaceApplications({
+        businessRequestIds: published.map((row) => row.id),
+        briefIds: workspace.briefs.map((brief) => brief.id),
+        limit: 100,
+      }).catch(() => []);
+      const existing = apps.find(
+        (row) => row.toSlug === slug && row.status !== "WITHDRAWN" && row.status !== "DECLINED" && row.status !== "EXPIRED",
+      );
+      existingInviteStatus = existing?.status ?? null;
+    }
+  }
+
   const content = (creator.featuredContent ?? []).flatMap((item) => {
     const image = preview ? item.image : publicStoredImage(item.image);
-    return image ? [{ ...item, image }] : [];
+    return image ? [{ image, caption: item.category || "Work", title: item.category }] : [];
   });
-  const polaroids = (creator.polaroids ?? []).flatMap((item) => {
-    const image = preview ? item.image : publicStoredImage(item.image);
-    return image ? [{ ...item, image }] : [];
-  });
-  const stats = creator.stats;
-  const demo = creator.demographics;
-  const firstName = creator.displayName.split(" ")[0] || creator.displayName;
-  const tagline = (creator.bannerTagline ?? creator.title).trim();
-  const place = profilePlace(creator.locationCity, creator.locationCountry);
-  const languages = creator.languages.map((language) => language.trim()).filter(Boolean);
-  const bio = creator.bio.trim();
-  const offerLines = profileOfferLines(creator);
-  const needLines = profileNeedLines(creator);
-  const partnership = directoryLabels(creator.openToCollab).statusLabel;
-  const scriptLines = (
-    creator.bannerScriptTags ??
-    creator.specialties
-      .slice(0, 4)
-      .map((s) => specialtyLabel(s))
-      .join(" / ")
-  )
-    .split(/\s*\/\s*/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-  const statTiles = stats
-    ? [
-        {
-          label: "Engagement Rate",
-          value: stats.engagementRate,
-          delta: stats.engagementDelta,
-          Icon: IconHeart,
-          tone: "text-blue",
-        },
-        {
-          label: "Total Reach",
-          value: stats.totalReach,
-          delta: stats.reachDelta,
-          Icon: IconUsers,
-          tone: "text-blue",
-        },
-        {
-          label: "Average Views",
-          value: stats.avgViews,
-          delta: stats.viewsDelta,
-          Icon: IconPlaySolid,
-          tone: "text-violet",
-        },
-        {
-          label: "Collaborations",
-          value: stats.collaborations,
-          delta: stats.collabDelta,
-          Icon: IconHandshake,
-          tone: "text-violet",
-        },
-      ]
-    : [];
+  const offerLines = profileOfferLines(creator).map((row) => row.summary);
+  const needLines = profileNeedLines(creator).map((row) => row.summary);
+  const services = [...new Set([...offerLines, ...creator.specialties.map((item) => specialtyLabel(item))])];
+  const interests = [...new Set(needLines)];
 
   return (
-    <div className="bg-[#F5F8FF]">
-      {preview ? (
-        <p className="bg-[#EAE4FF] px-4 py-2 text-center text-sm font-semibold text-indigo">
-          Demo profile. This card is a preview and is not a live influencer.
-        </p>
-      ) : null}
-      <GuestGateBanner copy={gate.decision === "soft" ? gate.copy : ""} next={`/creators/${slug}`} />
-      {/* —— Hero banner —— */}
-      <section className="relative">
-        <div className="relative h-[220px] overflow-hidden sm:h-[280px] lg:h-[340px]">
-          <Image
-            src={creator.coverImage ?? creator.image}
-            alt=""
-            fill
-            className="object-cover object-[center_35%]"
-            priority
-            sizes="100vw"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#1a0b3a]/65 via-[#3a1a6a]/30 to-[#1a0b3a]/15" />
-
-          <div className="pointer-events-none absolute bottom-0 left-[2%] z-[1] hidden h-[108%] w-[250px] sm:block lg:left-[5%] lg:w-[300px]">
-            <div
-              className="relative h-full w-full"
-              style={{
-                WebkitMaskImage:
-                  "linear-gradient(90deg, transparent 0%, #000 14%, #000 78%, transparent 100%)",
-                maskImage:
-                  "linear-gradient(90deg, transparent 0%, #000 14%, #000 78%, transparent 100%)",
-              }}
-            >
-              <Image
-                src={creator.image}
-                alt=""
-                fill
-                className="object-cover object-[center_12%]"
-                sizes="300px"
-                priority
-              />
-            </div>
-          </div>
-
-          <div className="pointer-events-none absolute left-3 top-1/2 hidden -translate-y-1/2 flex-col gap-0.5 xl:left-5 xl:flex">
-            {scriptLines.map((line) => (
-              <p key={line} className="font-script text-[14px] font-semibold leading-tight text-white/90">
-                {line}
-              </p>
-            ))}
-          </div>
-
-          <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center sm:items-start sm:pl-[38%] lg:pl-[40%]">
-            <h1 className="font-script text-[2.4rem] font-semibold leading-[0.95] text-[#F4E9FF] drop-shadow-[0_3px_14px_rgba(40,10,80,0.55)] sm:text-[3rem] lg:text-[3.4rem]">
-              {creator.displayName}
-              <span className="ml-1.5 align-middle text-[1.2rem] text-[#FF8EC8]" aria-hidden>
-                ♡
-              </span>
-            </h1>
-            {tagline ? (
-              <span className="mt-2 inline-flex rounded-full bg-gradient-to-r from-[#633CFF] to-[#8B5CFF] px-3 py-1 text-[10px] font-semibold tracking-wide text-white shadow-lg sm:text-[11px]">
-                {tagline}
-              </span>
-            ) : null}
-          </div>
-
-          {polaroids.length > 0 ? (
-            <div className="absolute bottom-3 right-2 hidden items-end gap-1.5 md:flex lg:right-8 lg:gap-2">
-              {polaroids.map((p, i) => (
-                <div
-                  key={p.caption}
-                  className={`w-[66px] overflow-hidden rounded-[3px] bg-white p-1 shadow-xl lg:w-[84px] ${
-                    i === 0
-                      ? "-rotate-6 translate-y-1"
-                      : i === 1
-                        ? "rotate-1 -translate-y-1"
-                        : "rotate-6 translate-y-2"
-                  }`}
-                >
-                  <div className="relative aspect-[3/4]">
-                    <Image src={p.image} alt={p.caption} fill className="object-cover" sizes="84px" />
-                  </div>
-                  <p className="font-script mt-0.5 truncate px-0.5 text-center text-[8px] font-semibold text-indigo lg:text-[9px]">
-                    {p.caption}
-                  </p>
-                </div>
-              ))}
-            </div>
-          ) : null}
-        </div>
-
-        {/* —— Identity strip (template) —— */}
-        <div className="relative z-10 mx-auto max-w-[90rem] px-4 sm:px-6 lg:px-10">
-          <div className="relative -mt-8 rounded-[1.35rem] border border-[#E6ECFF] bg-white px-4 py-4 shadow-[0_14px_40px_rgba(17,26,90,0.08)] sm:-mt-12 sm:px-5 sm:py-5 lg:px-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-5">
-              <div className="relative mx-auto -mt-12 h-[96px] w-[96px] shrink-0 sm:mx-0 sm:-mt-14 sm:h-[108px] sm:w-[108px]">
-                <div className="relative h-full w-full overflow-hidden rounded-full shadow-md ring-[4px] ring-white">
-                  <Image
-                    src={creator.image}
-                    alt={creator.displayName}
-                    fill
-                    className="object-cover"
-                    sizes="108px"
-                    priority
-                  />
-                </div>
-                {creator.verified ? (
-                  <span className="absolute bottom-1 right-1 rounded-full bg-white p-0.5 shadow">
-                    <IconVerified size={18} />
-                  </span>
-                ) : null}
-              </div>
-
-              <div className="min-w-0 flex-1 text-center sm:text-left">
-                <div className="flex flex-wrap items-center justify-center gap-1 sm:justify-start">
-                  <h2 className="font-display text-[1.35rem] font-bold leading-tight text-indigo sm:text-[1.5rem]">
-                    {creator.displayName}
-                  </h2>
-                  {creator.verified ? <IconVerified size={15} /> : null}
-                </div>
-                {creator.title.trim() ? (
-                  <p className="mt-0.5 text-[12px] font-medium text-indigo/80">{creator.title}</p>
-                ) : null}
-                {place ? (
-                  <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted">
-                    <IconMapPin size={11} className="text-[#F97316]" />
-                    {place}
-                  </p>
-                ) : null}
-                {bio ? (
-                  <p className="mx-auto mt-2 max-w-xl text-[12px] leading-relaxed text-muted sm:mx-0">
-                    {bio}
-                  </p>
-                ) : null}
-                <div className="mt-2.5 flex flex-wrap justify-center gap-1.5 sm:justify-start">
-                  {creator.specialties.map((s) => (
-                    <span key={s} className="profile-tag !text-[10px] !px-2.5 !py-0.5">
-                      {specialtyLabel(s)}
-                    </span>
-                  ))}
-                </div>
-                {facetLabels(creator.contentStyleNames, creator.contentStyles).length ||
-                facetLabels(creator.commercialModeNames, creator.commercialModes).length ? (
-                  <div className="mt-2 flex flex-wrap justify-center gap-1.5 sm:justify-start">
-                    {facetLabels(creator.contentStyleNames, creator.contentStyles).map((label) => (
-                      <span key={`style-${label}`} className="profile-tag !text-[10px] !px-2.5 !py-0.5">
-                        {label}
-                      </span>
-                    ))}
-                    {facetLabels(creator.commercialModeNames, creator.commercialModes).map((label) => (
-                      <span key={`mode-${label}`} className="profile-tag !text-[10px] !px-2.5 !py-0.5">
-                        {label}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="flex w-full shrink-0 flex-col items-center gap-2.5 lg:w-auto lg:items-end">
-                <div className="flex flex-wrap justify-center gap-3 sm:gap-4 lg:justify-end">
-                  {creator.socials.map((s) => (
-                    <a
-                      key={s.platform}
-                      href={s.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1.5"
-                    >
-                      <SocialIcon platform={s.platform} size={14} className="text-indigo" />
-                      <span className="leading-tight">
-                        <span className="block text-[12px] font-bold text-indigo">
-                          {visibleFollowerCount(s) ?? "—"}
-                        </span>
-                        <span className="block text-[9px] font-medium text-muted">
-                          {socialMetricLabel(s.platform)}
-                        </span>
-                        {metricFreshnessLabel(s) ? (
-                          <span className="block text-[9px] font-medium text-muted">{metricFreshnessLabel(s)}</span>
-                        ) : null}
-                      </span>
-                    </a>
-                  ))}
-                </div>
-                <div className="flex flex-wrap justify-center gap-1.5 lg:justify-end">
-                  <a
-                    href="#about"
-                    className="btn-primary !gap-1 !px-3.5 !py-1.5 text-[12px]"
-                  >
-                    <IconMail size={13} />
-                    About
-                  </a>
-                  <Link
-                    href={`/collaboration?from=${creator.slug}`}
-                    className="inline-flex items-center gap-1 rounded-full border border-[#D8E0F5] bg-white px-3 py-1.5 text-[12px] font-semibold text-indigo"
-                  >
-                    <IconUserPlus size={13} className="text-violet" />
-                    Invite to Collaborate
-                  </Link>
-                  <Link
-                    href={`/c/${creator.slug}`}
-                    className="inline-flex items-center gap-1 rounded-full border border-[#D8E0F5] bg-white px-3 py-1.5 text-[12px] font-semibold text-indigo"
-                  >
-                    <IconShare size={13} className="text-blue" />
-                    Share Card
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* —— Influencer Card | Key Stats + About —— */}
-      <div className="mx-auto mt-5 grid max-w-[90rem] gap-5 px-4 sm:px-6 lg:mt-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-6 lg:px-10">
-        {/* Horizontal glass Influencer Card */}
-        <aside>
-          <PublicInfluencerCard creator={creator} qrDisplay="large" hideCta />
-        </aside>
-
-        <div className="space-y-4">
-          {stats ? (
-            <section className="rounded-[1.2rem] border border-[#E6ECFF] bg-white p-3.5 shadow-sm sm:p-4">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="font-display text-[1rem] font-bold text-indigo">Key Stats</h3>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
-                {statTiles.map(({ label, value, delta, Icon, tone }) => (
-                  <div
-                    key={label}
-                    className="rounded-xl border border-[#E8EEFF] bg-[#FBFCFF] px-2.5 py-2.5"
-                  >
-                    <Icon size={14} className={tone} />
-                    <p className="mt-1.5 font-display text-[1.15rem] font-bold leading-none text-indigo sm:text-[1.25rem]">
-                      {value}
-                    </p>
-                    <p className="mt-1 text-[9px] font-semibold uppercase tracking-wide text-muted">
-                      {label}
-                    </p>
-                    {delta ? <p className="mt-1 text-[9px] font-semibold text-emerald-600">{delta}</p> : null}
-                  </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          <section
-            id="about"
-            className="rounded-[1.2rem] border border-[#E6ECFF] bg-[#F7F9FF] p-4 sm:p-5"
-          >
-            <h3 className="font-display text-[1rem] font-bold text-indigo">About {firstName}</h3>
-            <div className="mt-2.5 grid gap-4 sm:grid-cols-[1.35fr_0.9fr]">
-              <div>
-                {bio ? <p className="text-[12px] leading-relaxed text-muted">{bio}</p> : null}
-              </div>
-              <ul className="space-y-2 text-[11px] text-muted">
-                <li className="flex items-center gap-2">
-                  <IconHandshake size={13} className="text-violet" />
-                  <span className="font-semibold text-indigo">{partnership}</span>
-                </li>
-                {creator.age ? (
-                  <li className="flex items-center gap-2">
-                    <IconCake size={13} className="text-violet" />
-                    <span className="font-semibold text-indigo">{creator.age} years old</span>
-                  </li>
-                ) : null}
-                {place ? (
-                  <li className="flex items-center gap-2">
-                    <IconMapPin size={13} className="text-[#F97316]" />
-                    <span className="font-semibold text-indigo">{place}</span>
-                  </li>
-                ) : null}
-                {languages.length > 0 ? (
-                  <li className="flex items-center gap-2">
-                    <IconLang size={13} className="text-blue" />
-                    <span className="font-semibold text-indigo">{languages.join(", ")}</span>
-                  </li>
-                ) : null}
-                {creator.linktree ? (
-                  <li className="flex items-center gap-2">
-                    <IconGlobe size={13} className="text-blue" />
-                    <a
-                      href={`https://${creator.linktree}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-semibold text-blue hover:underline"
-                    >
-                      {creator.linktree}
-                    </a>
-                  </li>
-                ) : null}
-              </ul>
-            </div>
-          </section>
-
-          {offerLines.length ? (
-            <section className="rounded-[1.2rem] border border-[#E6ECFF] bg-white p-4 sm:p-5">
-              <h3 className="font-display text-[1rem] font-bold text-indigo">I offer</h3>
-              <ul className="mt-2 space-y-3">
-                {offerLines.map((line) => (
-                  <li key={line.summary}>
-                    <p className="text-[12px] font-semibold text-indigo">{line.summary}</p>
-                    {line.details ? <p className="mt-1 text-[12px] leading-relaxed text-muted">{line.details}</p> : null}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-          {needLines.length ? (
-            <section className="rounded-[1.2rem] border border-[#E6ECFF] bg-white p-4 sm:p-5">
-              <h3 className="font-display text-[1rem] font-bold text-indigo">I need</h3>
-              <ul className="mt-2 space-y-3">
-                {needLines.map((line) => (
-                  <li key={line.summary}>
-                    <p className="text-[12px] font-semibold text-indigo">{line.summary}</p>
-                    {line.details ? <p className="mt-1 text-[12px] leading-relaxed text-muted">{line.details}</p> : null}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-        </div>
-      </div>
-
-      {/* —— Featured Content horizontal strip —— */}
-      {content.length > 0 ? (
-        <section className="w-full py-7">
-          <div className="mx-auto mb-3 flex max-w-[90rem] flex-wrap items-end justify-between gap-2 px-4 sm:px-6 lg:px-10">
-            <div>
-              <h3 className="font-display text-[1.1rem] font-bold text-indigo">Featured Content</h3>
-              <p className="mt-0.5 text-[11px] text-muted">
-                Content saved on {firstName}&apos;s profile.
-              </p>
-            </div>
-          </div>
-
-          <div className="no-scrollbar flex w-full gap-3 overflow-x-auto px-4 pb-2 sm:px-6 lg:px-10">
-            {content.map((item) => (
-              <article
-                key={item.id}
-                className="w-[148px] shrink-0 overflow-hidden rounded-2xl border border-[#E6ECFF] bg-white shadow-sm sm:w-[160px]"
-              >
-                {/* Height reduced ~20% vs prior 4/5 aspect (now square) */}
-                <div className="relative aspect-square">
-                  <Image
-                    src={item.image}
-                    alt={item.category}
-                    fill
-                    className="object-cover"
-                    sizes="160px"
-                  />
-                  <span className="absolute right-2 top-2">
-                    <IconPlayBadge size={30} />
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-1.5 px-2.5 py-2">
-                  <SocialIcon
-                    platform={item.platform.toUpperCase()}
-                    size={15}
-                    className="text-indigo"
-                  />
-                  <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-muted">
-                    <IconEye size={11} />
-                    {item.views}
-                  </span>
-                  <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-muted">
-                    <IconHeart size={11} className="text-[#E11D48]" />
-                    {item.likes}
-                  </span>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {/* —— Demographics + Collab prefs —— */}
-      {demo ? (
-        <section className="mx-auto max-w-[90rem] px-4 pb-5 sm:px-6 lg:px-10">
-          <div className="grid gap-4 rounded-[1.25rem] border border-[#E6ECFF] bg-white p-4 shadow-sm sm:p-5 lg:grid-cols-[1.35fr_0.9fr]">
-            <div>
-              <h3 className="font-display text-[1.05rem] font-bold text-indigo">
-                Audience Demographics
-              </h3>
-              <p className="mt-0.5 text-[11px] text-muted">
-                Where {firstName}&apos;s followers are from.
-              </p>
-
-              <div className="mt-4 grid gap-5 sm:grid-cols-[auto_1fr_1.1fr] sm:items-start">
-                <div className="flex items-center gap-3">
-                  <div className="relative h-[92px] w-[92px] shrink-0">
-                    <div
-                      className="h-full w-full rounded-full"
-                      style={{
-                        background: `conic-gradient(#633CFF 0 ${demo.female}%, #9EC5FF ${demo.female}% 100%)`,
-                      }}
-                      aria-hidden
-                    />
-                    <div className="absolute inset-[18px] flex flex-col items-center justify-center rounded-full bg-white text-center">
-                      <p className="text-[12px] font-bold text-violet">{demo.female}%</p>
-                      <p className="text-[8px] text-muted">Female</p>
-                    </div>
-                  </div>
-                  <div className="space-y-1.5 text-[11px]">
-                    <p className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-violet" />
-                      Female
-                    </p>
-                    <p className="flex items-center gap-1.5">
-                      <span className="h-2 w-2 rounded-full bg-[#9EC5FF]" />
-                      Male
-                    </p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-[11px] font-bold text-indigo">Top Locations</p>
-                  <ul className="mt-2 space-y-1.5">
-                    {demo.locations.map((loc, i) => (
-                      <li key={loc.name} className="flex items-center justify-between gap-2 text-[11px]">
-                        <span className="flex items-center gap-1.5 text-muted">
-                          <span
-                            className={`h-1.5 w-1.5 rounded-full ${i === 0 ? "bg-violet" : "bg-[#C7D2FE]"}`}
-                          />
-                          {loc.name}
-                        </span>
-                        <span className="font-semibold text-indigo">{loc.pct}%</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div>
-                  <p className="text-[11px] font-bold text-indigo">Audience Age Range</p>
-                  <div className="mt-2 space-y-1.5">
-                    {demo.ages.map((a) => (
-                      <div key={a.range} className="flex items-center gap-2 text-[10px]">
-                        <span className="w-9 shrink-0 text-muted">{a.range}</span>
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#EEF2FF]">
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-[#633CFF] to-[#2979FF]"
-                            style={{ width: `${Math.min(100, a.pct * 2.4)}%` }}
-                          />
-                        </div>
-                        <span className="w-7 text-right font-semibold text-indigo">{a.pct}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {creator.collabPrefs ? (
-              <div className="rounded-2xl border border-[#E6ECFF] bg-[#FAFBFF] p-3.5 sm:p-4">
-                <h3 className="font-display text-[1.05rem] font-bold text-indigo">
-                  Collaboration Preferences
-                </h3>
-                <p className="mt-0.5 text-[11px] text-muted">{partnership}</p>
-                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {creator.collabPrefs.map((p) => {
-                    const Icon = COLLAB_ICON_MAP[p] ?? IconHeart;
-                    return (
-                      <div
-                        key={p}
-                        className="flex items-center gap-2 rounded-full border border-[#E0E7FF] bg-white px-2.5 py-2"
-                      >
-                        <Icon size={13} className="shrink-0 text-violet" />
-                        <span className="h-3 w-px bg-[#E0E7FF]" aria-hidden />
-                        <p className="text-[10px] font-semibold leading-snug text-indigo">{p}</p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
-
-      {/* —— Brands named on the published profile —— */}
-      {(creator.brands ?? []).filter((b) => b.name.trim() && !b.logo.includes("/demo/")).length > 0 ? (
-        <section className="mx-auto max-w-[90rem] px-4 pb-5 sm:px-6 lg:px-10">
-          <div className="flex flex-wrap items-center gap-4 rounded-[1.1rem] border border-[#E6ECFF] bg-white px-4 py-3.5 shadow-sm sm:px-5">
-            <h3 className="min-w-[120px] shrink-0 font-display text-[0.95rem] font-bold text-indigo">
-              Brands
-            </h3>
-            <div className="flex min-w-0 flex-1 flex-wrap items-center justify-center gap-x-6 gap-y-2">
-              {(creator.brands ?? [])
-                .filter((b) => b.name.trim() && !b.logo.includes("/demo/"))
-                .map((b) => (
-                  <Image
-                    key={b.name}
-                    src={b.logo}
-                    alt={b.name}
-                    width={90}
-                    height={28}
-                    className="h-5 w-auto object-contain"
-                  />
-                ))}
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      {/* —— You Might Also Like strip —— */}
-      <section className="mx-auto max-w-[90rem] px-4 py-6 sm:px-6 lg:px-10">
-        <div className="mb-3 flex items-end justify-between gap-3">
-          <div>
-            <h3 className="font-display text-[1.15rem] font-bold text-indigo">
-              You Might Also Like
-            </h3>
-            <p className="mt-0.5 text-[11px] text-muted">Discover more amazing influencers.</p>
-          </div>
-          <Link href="/discover" className="text-[11px] font-semibold text-blue hover:underline">
-            View More Influencers →
-          </Link>
-        </div>
-        <div className="flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:thin]">
-          {related.map((c) => (
-            <article
-              key={c.slug}
-              className="flex w-[260px] shrink-0 gap-2.5 rounded-2xl border border-[#E6ECFF] bg-white p-2.5 shadow-sm sm:w-[280px]"
-            >
-              <Link
-                href={`/creators/${c.slug}`}
-                className="relative h-[84px] w-[84px] shrink-0 overflow-hidden rounded-xl"
-              >
-                <Image src={c.image} alt={c.displayName} fill className="object-cover" sizes="84px" />
-              </Link>
-              <div className="flex min-w-0 flex-1 flex-col">
-                <p className="flex items-center gap-1 text-[12px] font-bold text-indigo">
-                  {c.displayName}
-                  {c.verified ? <IconVerified size={12} /> : null}
-                </p>
-                {c.title.trim() ? <p className="text-[10px] text-muted">{c.title}</p> : null}
-                {profilePlace(c.locationCity, c.locationCountry) ? (
-                  <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-muted">
-                    <IconMapPin size={10} className="text-[#E11D48]" />
-                    {profilePlace(c.locationCity, c.locationCountry)}
-                  </p>
-                ) : null}
-                <Link
-                  href={`/creators/${c.slug}`}
-                  className="mt-auto inline-flex justify-center rounded-full bg-[#EAE4FF] px-3 py-1 text-[11px] font-semibold text-violet"
-                >
-                  View profile
-                </Link>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {/* Join CTA */}
-      <section className="mx-auto max-w-[90rem] px-4 pb-12 sm:px-6 lg:px-10">
-        <div className="overflow-hidden rounded-[1.4rem] bg-gradient-to-r from-[#1B1464] via-[#3B2B9A] to-[#2979FF] px-6 py-8 text-center text-white sm:px-10 sm:py-9">
-          <h3 className="font-display text-[1.35rem] font-bold sm:text-[1.55rem]">Join Influrios</h3>
-          <p className="mx-auto mt-1.5 max-w-lg text-[12px] text-white/80">
-            Create your free Influencer Card or find influencers for your next campaign.
-          </p>
-          <div className="mt-5 flex flex-wrap justify-center gap-2.5">
-            <Link
-              href="/claim"
-              className="ink-on-light rounded-full bg-white px-5 py-2 text-[12px] font-semibold shadow"
-            >
-              Join as an Influencer
-            </Link>
-            <Link
-              href="/business"
-              className="rounded-full border border-white/55 bg-white/10 px-5 py-2 text-[12px] font-semibold text-white backdrop-blur"
-            >
-              Join as a Business
-            </Link>
-          </div>
-        </div>
-      </section>
-    </div>
+    <PublicProfileLayout
+      creator={{
+        ...creator,
+        image: preview ? creator.image : publicStoredImage(creator.image) || creator.image,
+        coverImage: preview
+          ? creator.coverImage
+          : creator.coverImage
+            ? publicStoredImage(creator.coverImage) || creator.coverImage
+            : creator.coverImage,
+      }}
+      specialties={creator.specialties}
+      services={services}
+      interests={interests}
+      languages={creator.languages.map((language) => language.trim()).filter(Boolean)}
+      socials={creator.socials.map((social) => ({
+        platform: social.platform,
+        url: social.url,
+        handle: social.handle,
+        followers: social.followers,
+        source: "self",
+      }))}
+      portfolio={content}
+      isOwner={isOwner}
+      isBusiness={Boolean(isBusiness)}
+      loggedIn={Boolean(account)}
+      inviteOpen={query.invite === "1"}
+      cardOpen={query.card === "1"}
+      requestsForInvite={requestsForInvite}
+      existingInviteStatus={existingInviteStatus}
+      demo={Boolean(preview)}
+      guestCopy={gate.decision === "soft" ? gate.copy : ""}
+    />
   );
 }

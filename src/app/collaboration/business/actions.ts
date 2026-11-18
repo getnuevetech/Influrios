@@ -521,6 +521,7 @@ export async function actionInviteCreatorToRequest(formData: FormData) {
       `${HUB}?error=${encodeURIComponent("Publish a business request before inviting creators.")}#create-request`,
     );
   }
+  const next = String(formData.get("next") ?? "").trim();
   const invited = await inviteCreatorsIndependently({
     workspaceId: ws.businessId,
     actorUserId: account.id,
@@ -529,10 +530,10 @@ export async function actionInviteCreatorToRequest(formData: FormData) {
     note: enteredNote(note),
   });
   if (!invited.ok) {
-    redirect(`${HUB}?error=${encodeURIComponent(invited.error)}#suggestions`);
+    redirect(`${next || HUB}?error=${encodeURIComponent(invited.error)}${next ? "" : "#suggestions"}`);
   }
   revalidateHub();
-  redirect(`${HUB}?invited=${encodeURIComponent(creatorSlug)}#applicants`);
+  redirect(next || `${HUB}?invited=${encodeURIComponent(creatorSlug)}#applicants`);
 }
 
 /** Several independent invitations for one campaign. One response does not change the others. */
@@ -630,4 +631,193 @@ export async function actionTransitionMarketplaceApplication(formData: FormData)
     );
   }
   redirect(`/collaboration/applications/${applicationId}?app=${encodeURIComponent(toStatus)}`);
+}
+
+/** Business withdraws an invitee’s participation with reason + message; notifies the influencer once. */
+export async function actionWithdrawParticipation(formData: FormData) {
+  const { account, ws } = await requireBusinessAccount();
+  const applicationId = String(formData.get("applicationId") ?? "").trim();
+  const briefId = String(formData.get("briefId") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+  const message = String(formData.get("message") ?? "").trim();
+  const returnTab = String(formData.get("returnTab") ?? "requests");
+  const close = `${HUB}?tab=${encodeURIComponent(returnTab)}&request=${encodeURIComponent(briefId)}`;
+  const existing = await getMarketplaceApplication(applicationId);
+  const ownedIds = (await listWorkspaceBusinessRequests(ws.businessId)).map((row) => row.id);
+  const ownedBriefIds = ws.briefs.map((brief) => brief.id);
+  if (!existing || !businessOwnsApplication(existing, ownedIds, ownedBriefIds)) {
+    redirect(`${close}&error=${encodeURIComponent("You can only withdraw invitations on your requests.")}`);
+  }
+  const contracts = await prisma.contractDocument.findMany({
+    where: { applicationId, status: { notIn: ["voided", "declined"] } },
+    select: { id: true, status: true, fundingId: true },
+  }).catch(() => []);
+  const signed = contracts.some((row) => row.status === "signed");
+  const fundingIds = contracts.map((row) => row.fundingId).filter((id): id is string => Boolean(id));
+  const fundingRows = fundingIds.length
+    ? await prisma.collaborationFunding.findMany({ where: { id: { in: fundingIds } }, select: { id: true, status: true } }).catch(() => [])
+    : [];
+  const funded = fundingRows.some((row) => row.status === "held" || row.status === "completed" || row.status === "awaiting_provider");
+  const { withdrawParticipationPlan } = await import("@/lib/request-lifecycle");
+  const plan = withdrawParticipationPlan({
+    invitationStatus: existing.status,
+    hasSignedAgreement: signed,
+    hasFundingOrPaymentHistory: funded,
+    alreadyWithdrawn: existing.status === "WITHDRAWN",
+    reason,
+    message,
+  });
+  if (!plan.ok) {
+    redirect(`${close}&withdraw=${encodeURIComponent(applicationId)}&error=${encodeURIComponent(plan.error)}`);
+  }
+  // Recheck eligibility at confirmation — an acceptance mid-flight must not be silently removed.
+  const fresh = await getMarketplaceApplication(applicationId);
+  if (!fresh || fresh.status !== existing.status) {
+    redirect(`${close}&error=${encodeURIComponent("This invitation changed. Refresh and try again. Nothing was withdrawn.")}`);
+  }
+  const note = `[Withdrawn by business] ${reason}. ${message}`.slice(0, 2_000);
+  try {
+    await transitionMarketplaceApplication({
+      id: applicationId,
+      toStatus: "WITHDRAWN",
+      actorUserId: account.id,
+      note,
+    });
+  } catch (error) {
+    redirect(
+      `${close}&error=${encodeURIComponent(error instanceof Error ? error.message : "Withdrawal failed.")}`,
+    );
+  }
+  const slug = (fresh.toSlug || fresh.fromSlug || "").trim();
+  if (slug) {
+    const creator = await prisma.creator.findUnique({
+      where: { slug },
+      include: { user: { select: { email: true } } },
+    }).catch(() => null);
+    const brief = ws.briefs.find((item) => item.id === (briefId || fresh.briefId || ""));
+    const { deliverCatalogEmail, liveMailLinks } = await import("@/lib/email-live");
+    const links = liveMailLinks();
+    if (creator?.user?.email) {
+      await deliverCatalogEmail({
+        templateId: "invite.collaboration",
+        to: creator.user.email,
+        vars: {
+          first_name: creator.displayName.split(/\s+/)[0] || creator.displayName,
+          business_name: ws.name || "A business",
+          campaign_name: brief?.title || "a collaboration request",
+          collaboration_name: brief?.title || "a collaboration request",
+          reason,
+          message,
+          action_url: `${links.origin}/collaboration/hub`,
+        },
+      }).catch(() => undefined);
+    }
+    await prisma.auditLog
+      .create({
+        data: {
+          actor: account.email,
+          action: "invitation_withdrawn_by_business",
+          objectType: "MarketplaceApplication",
+          objectId: applicationId,
+          after: { reason, message, creatorSlug: slug, briefId: brief?.id ?? null },
+        },
+      })
+      .catch(() => undefined);
+  }
+  revalidateHub();
+  redirect(`${close}&saved=withdrawn`);
+}
+
+/** Delete or close a request using server-side eligibility rules. */
+export async function actionDeleteBusinessRequest(formData: FormData) {
+  const { account, ws } = await requireBusinessAccount();
+  const briefId = String(formData.get("briefId") ?? "").trim();
+  const brief = ws.briefs.find((item) => item.id === briefId);
+  if (!brief) {
+    redirect(`${HUB}?tab=requests&error=${encodeURIComponent("That request was not found.")}`);
+  }
+  const deliveries = await prisma.marketplaceApplication.findMany({
+    where: { briefId, kind: "business_request" },
+    select: { id: true, status: true, toSlug: true },
+  }).catch(() => []);
+  const invites = deliveries.filter((row) => row.toSlug);
+  const pending = invites.filter((row) => !["WITHDRAWN", "DECLINED", "EXPIRED", "ACCEPTED", "COLLABORATION_DRAFTED"].includes(row.status));
+  const accepted = invites.filter((row) => row.status === "ACCEPTED" || row.status === "COLLABORATION_DRAFTED");
+  const contracts = accepted.length
+    ? await prisma.contractDocument.findMany({
+        where: { applicationId: { in: accepted.map((row) => row.id) }, status: { notIn: ["voided", "declined"] } },
+        select: { id: true, status: true, fundingId: true, applicationId: true },
+      }).catch(() => [])
+    : [];
+  const signed = contracts.some((row) => row.status === "signed");
+  const fundingIds = contracts.map((row) => row.fundingId).filter((id): id is string => Boolean(id));
+  const fundingRows = fundingIds.length
+    ? await prisma.collaborationFunding.findMany({ where: { id: { in: fundingIds } }, select: { status: true } }).catch(() => [])
+    : [];
+  const funded = fundingRows.some((row) => ["held", "completed", "awaiting_provider"].includes(row.status));
+  const completed = fundingRows.some((row) => row.status === "completed");
+  const acceptedWithoutAgreement = accepted.filter((row) => !contracts.some((contract) => contract.applicationId === row.id && contract.status === "signed")).length;
+  const { requestDeletePlan } = await import("@/lib/request-lifecycle");
+  const plan = requestDeletePlan({
+    briefStatus: brief.status,
+    inviteCount: invites.length,
+    pendingInviteCount: pending.length,
+    acceptedWithoutAgreementCount: acceptedWithoutAgreement,
+    hasSignedAgreement: signed,
+    hasFundingOrPaymentHistory: funded,
+    collaborationCompleted: completed,
+  });
+  if (plan.kind === "block") {
+    redirect(`${HUB}?tab=requests&request=${encodeURIComponent(briefId)}&error=${encodeURIComponent(plan.reason)}`);
+  }
+  if (plan.kind === "cancel_settlement") {
+    redirect(`${HUB}?tab=active&error=${encodeURIComponent(plan.reason)}`);
+  }
+  if (plan.kind === "archive") {
+    await updateBrief(briefId, { ...brief, status: "closed" }, ws.businessId).catch(() => undefined);
+    revalidateHub();
+    redirect(`${HUB}?tab=requests&saved=archived`);
+  }
+  if (plan.kind === "delete" && plan.confirm === "remove_draft") {
+    await prisma.marketplaceApplication.deleteMany({ where: { briefId } }).catch(() => undefined);
+    await prisma.businessBrief.delete({ where: { id: briefId } }).catch(() => undefined);
+    await prisma.auditLog
+      .create({
+        data: {
+          actor: account.email,
+          action: "business_request_deleted",
+          objectType: "BusinessBrief",
+          objectId: briefId,
+          after: { title: brief.title },
+        },
+      })
+      .catch(() => undefined);
+    revalidateHub();
+    redirect(`${HUB}?tab=requests&saved=deleted`);
+  }
+  // Revoke pending invitations, then close the request.
+  for (const row of pending) {
+    await transitionMarketplaceApplication({
+      id: row.id,
+      toStatus: "WITHDRAWN",
+      actorUserId: account.id,
+      note: "[Request deleted] Pending invitation revoked.",
+    }).catch(() => undefined);
+  }
+  await updateBrief(briefId, { ...brief, status: "closed" }, ws.businessId);
+  revalidateHub();
+  redirect(`${HUB}?tab=requests&saved=closed`);
+}
+
+export async function actionCloseBusinessRequest(formData: FormData) {
+  const { ws } = await requireBusinessAccount();
+  const briefId = String(formData.get("briefId") ?? "").trim();
+  const brief = ws.briefs.find((item) => item.id === briefId);
+  if (!brief) redirect(`${HUB}?tab=requests&error=${encodeURIComponent("That request was not found.")}`);
+  if (brief.status === "closed" || brief.status === "cancelled") {
+    redirect(`${HUB}?tab=requests&request=${encodeURIComponent(briefId)}`);
+  }
+  await updateBrief(briefId, { ...brief, status: "closed" }, ws.businessId);
+  revalidateHub();
+  redirect(`${HUB}?tab=requests&saved=closed`);
 }

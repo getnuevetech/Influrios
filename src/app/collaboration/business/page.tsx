@@ -25,6 +25,8 @@ type Props = {
     q?: string;
     request?: string;
     deal?: string;
+    panel?: string;
+    withdraw?: string;
     error?: string;
     saved?: string;
     intent?: string;
@@ -141,6 +143,9 @@ export default async function BusinessCollaborationPage({ searchParams }: Props)
       query={params.q ?? ""}
       requestId={params.request ?? ""}
       dealId={params.deal ?? ""}
+      requestPanel={params.panel}
+      withdrawId={params.withdraw}
+      businessName={workspace.name}
       error={params.error}
       saved={params.saved}
       briefs={workspace.briefs}
@@ -164,10 +169,11 @@ export default async function BusinessCollaborationPage({ searchParams }: Props)
           fundingStatus: fundingStatusById.get(contractByApplication.get(application.id)?.fundingId ?? "") ?? null,
           contractId: contractByApplication.get(application.id)?.id ?? null,
           note: application.note ?? "",
+          updatedAt: application.createdAt,
         };
       })}
       creators={creators}
-      requestsForInvite={workspace.briefs.filter((brief) => brief.status !== "closed").map((brief) => ({ id: brief.id, title: brief.title || "Untitled request" }))}
+      requestsForInvite={workspace.briefs.filter((brief) => brief.status !== "closed" && brief.status !== "cancelled").map((brief) => ({ id: brief.id, title: brief.title || "Untitled request" }))}
       openBriefIds={openRequests.briefIds}
       orphanRequests={openRequests.orphanRequests}
     />

@@ -46,6 +46,7 @@ describe("profile offer, need, and metric freshness", () => {
   it("does not invent an offer or a sync time", () => {
     const directory = readFileSync("src/lib/directory.ts", "utf8");
     const profile = readFileSync("src/app/creators/[slug]/page.tsx", "utf8");
+    const profileLayout = readFileSync("src/components/public-profile-layout.tsx", "utf8");
     const profileSave = readFileSync("src/app/claim/actions.ts", "utf8");
     const notesSave = readFileSync("src/app/dashboard/offer-actions.ts", "utf8");
     const offerForm = readFileSync("src/components/creator-profile/forms.tsx", "utf8");
@@ -53,7 +54,7 @@ describe("profile offer, need, and metric freshness", () => {
     assert.equal(directory.includes("collaborationOffer.update"), false);
     assert.equal(directory.includes('|| "Collaboration"'), false);
     assert.match(profile, /profileOfferLines/);
-    assert.match(profile, /metricFreshnessLabel/);
+    assert.match(profileLayout, /metricFreshnessLabel/);
     const dashboardSave = profileSave.slice(
       profileSave.indexOf("export async function actionUpdateDashboardProfile"),
       profileSave.indexOf("export async function actionUpdateProfileMedia"),
