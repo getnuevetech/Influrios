@@ -394,6 +394,10 @@ describe("contract wizard fields", () => {
     assert.equal(page.includes("Request funding"), false);
     assert.match(page, /requireBusinessSession\("\/collaboration\/contract"\)/);
     assert.match(actions, /requireBusinessSession\(BASE\)/);
+    assert.match(page, /formatContractMoney/);
+    assert.equal(page.includes("formatMoney("), false);
+    assert.match(detail, /formatContractMoney/);
+    assert.equal(detail.includes("formatMoney("), false);
   });
 
   it("fills a contract from the accepted request and locks admin milestone templates", () => {
