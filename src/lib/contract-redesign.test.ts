@@ -226,7 +226,8 @@ describe("contracts UI redesign surfaces", () => {
   it("uses Agreements and Templates tabs with Overview Document Signers Activity popup", () => {
     const page = readFileSync("src/app/collaboration/contracts/page.tsx", "utf8");
     const dialog = readFileSync("src/components/contract-agreement-dialog.tsx", "utf8");
-    const formal = readFileSync("src/components/formal-agreement-document.tsx", "utf8");
+    const formalUi = readFileSync("src/components/formal-agreement-document.tsx", "utf8");
+    const markup = readFileSync("src/lib/formal-agreement-markup.ts", "utf8");
     assert.match(page, /Agreements/);
     assert.match(page, /Templates/);
     assert.match(page, /Counterparty/);
@@ -234,11 +235,12 @@ describe("contracts UI redesign surfaces", () => {
     assert.match(dialog, /Document/);
     assert.match(dialog, /Signers/);
     assert.match(dialog, /Activity/);
-    assert.match(formal, /body:/);
-    assert.match(formal, /parseAgreementBodySections/);
-    assert.match(formal, /Schedule A/);
-    assert.match(formal, /not a contracting party/i);
-    assert.match(formal, /InfluriosWordmark/);
+    assert.match(formalUi, /\bbody\b/);
+    assert.match(formalUi, /renderFormalAgreementArticleHtml/);
+    assert.match(markup, /parseAgreementBodySections/);
+    assert.match(markup, /Schedule A/);
+    assert.match(markup, /not a contracting party/i);
+    assert.match(markup, /influriosWordmarkHtml|Influrios/);
     const wordmark = readFileSync("src/components/influrios-wordmark.tsx", "utf8");
     assert.match(wordmark, /brand-gradient/);
     assert.match(wordmark, /∞/);

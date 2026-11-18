@@ -31,6 +31,14 @@ export type FormalAgreementHtmlMilestone = {
   netLabel?: string;
 };
 
+export type FormalAgreementHtmlCommercial = {
+  serviceLevel?: string;
+  currency?: string;
+  period?: string;
+  /** When set, shown as a separate business fee row (Document keeps both fee labels). */
+  businessFeeLabel?: string;
+};
+
 export type FormalAgreementHtmlInput = {
   title: string;
   campaign: string;
@@ -44,6 +52,8 @@ export type FormalAgreementHtmlInput = {
     taxLabel?: string;
     netLabel: string;
   };
+  /** Optional commercial-summary fields; always preferred over raw body rows. */
+  commercial?: FormalAgreementHtmlCommercial;
   milestones: FormalAgreementHtmlMilestone[];
   showFeeColumns?: boolean;
   draft?: boolean;
@@ -257,6 +267,15 @@ html, body {
   font-weight: 700;
   color: var(--indigo);
 }
+.formal-purpose-label {
+  margin: 0 0 8px;
+  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 .signature-ink {
   margin: 16px 0 8px;
   font-family: Caveat, Georgia, serif;
@@ -338,6 +357,7 @@ function bodyLinesHtml(lines: string[]): string {
       continue;
     }
     if (isFieldRow(line)) {
+      const start = index;
       const rows: { label: string; value: string }[] = [];
       while (index < lines.length && isFieldRow(lines[index] ?? "")) {
         const split = splitFieldRow(lines[index] ?? "");
@@ -355,11 +375,46 @@ function bodyLinesHtml(lines: string[]): string {
         );
         continue;
       }
+      // Header-only field rows were consumed — do not re-emit the stale first line.
+      if (index > start) continue;
     }
     parts.push(`<p>${escapeHtml(line)}</p>`);
     index += 1;
   }
   return parts.join("");
+}
+
+/** Structured Commercial Summary — never depends on fragile body field spacing. */
+export function commercialSummaryHtml(input: FormalAgreementHtmlInput): string {
+  const business = input.parties.find((party) => party.role === "business");
+  const commercial = input.commercial ?? {};
+  const fee = input.compensation.feeLabel.replace(/^-/, "");
+  const rows: { label: string; value: string }[] = [
+    { label: "Campaign", value: input.campaign || "—" },
+    { label: "Business", value: business?.legalName?.trim() || "—" },
+  ];
+  if (commercial.serviceLevel?.trim()) {
+    rows.push({ label: "Service Level", value: commercial.serviceLevel.trim() });
+  }
+  if (commercial.currency?.trim()) {
+    rows.push({ label: "Currency", value: commercial.currency.trim() });
+  }
+  rows.push({ label: "Gross influencer compensation", value: input.compensation.grossLabel || "—" });
+  if (commercial.businessFeeLabel?.trim()) {
+    rows.push({ label: "Business platform fee", value: commercial.businessFeeLabel.trim() });
+  }
+  rows.push({ label: "Influencer platform fee", value: fee || "—" });
+  rows.push({ label: "Net compensation", value: input.compensation.netLabel || "—" });
+  if (commercial.period?.trim()) {
+    rows.push({ label: "Campaign Period", value: commercial.period.trim() });
+  }
+  const body = rows
+    .map(
+      (row) =>
+        `<tr><td class="label">${escapeHtml(row.label)}</td><td class="value">${escapeHtml(row.value)}</td></tr>`,
+    )
+    .join("");
+  return `<section class="formal-section">${sectionBar("Commercial Summary")}<div class="formal-section-body"><table class="formal-kv"><tbody>${body}</tbody></table></div></section>`;
 }
 
 function partiesHtml(parties: FormalAgreementHtmlParty[]): string {
@@ -450,12 +505,24 @@ ${ink}
   return `<section class="formal-section">${sectionBar("Execution")}<div class="formal-section-body"><div class="execution-grid">${cols}</div></div></section>`;
 }
 
-function sectionKind(section: AgreementBodySection): "parties" | "compensation" | "milestones" | "other" {
+function sectionKind(
+  section: AgreementBodySection,
+): "purpose" | "commercial" | "parties" | "compensation" | "milestones" | "other" {
   const heading = (section.heading ?? "").toLowerCase();
+  if (/^agreement purpose$/i.test(heading)) return "purpose";
+  if (/^commercial summary$/i.test(heading)) return "commercial";
   if (/^1\.\s+parties/.test(heading)) return "parties";
   if (/^3\.\s+compensation/.test(heading)) return "compensation";
   if (/^4\.\s+milestone/.test(heading)) return "milestones";
   return "other";
+}
+
+function purposeHtml(lines: string[]): string {
+  const text = lines.map((line) => line.trim()).filter(Boolean).join(" ");
+  const body = text
+    ? `<p>${escapeHtml(text)}</p>`
+    : `<p>This Collaboration Agreement sets out the campaign scope, commercial terms, milestone payments, content rights, approvals, obligations and signatures between the Business and the Influencer(s) identified below. Influrios provides the platform workflow and records associated with the collaboration.</p>`;
+  return `<section class="formal-section"><div class="formal-section-body"><p class="formal-purpose-label">Agreement purpose</p>${body}</div></section>`;
 }
 
 /** Inner article HTML used by both the Document tab and PDF print. */
@@ -475,10 +542,19 @@ export function renderFormalAgreementArticleHtml(input: FormalAgreementHtmlInput
   ${input.draft ? `<p class="formal-draft">Draft — not executed</p>` : ""}
 </header>`);
 
+  if (!kinds.has("commercial")) chunks.push(commercialSummaryHtml(input));
   if (!kinds.has("parties")) chunks.push(partiesHtml(input.parties));
 
   for (const section of sections) {
     const kind = sectionKind(section);
+    if (kind === "purpose") {
+      chunks.push(purposeHtml(section.lines));
+      continue;
+    }
+    if (kind === "commercial") {
+      chunks.push(commercialSummaryHtml(input));
+      continue;
+    }
     if (kind === "parties") {
       chunks.push(partiesHtml(input.parties));
       continue;

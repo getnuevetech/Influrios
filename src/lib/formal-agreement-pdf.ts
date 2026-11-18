@@ -50,6 +50,12 @@ export type FormalPdfInput = {
     taxLabel?: string;
     netLabel: string;
   };
+  commercial?: {
+    serviceLevel?: string;
+    currency?: string;
+    period?: string;
+    businessFeeLabel?: string;
+  };
   milestones: FormalPdfMilestone[];
   showFeeColumns?: boolean;
   draft?: boolean;

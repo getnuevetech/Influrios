@@ -64,15 +64,18 @@ describe("agreement body sections", () => {
       );
     }
     assert.equal(headings.some((heading) => /^19\.\s+Electronic Signature/i.test(heading)), false);
-    const formal = readFileSync("src/components/formal-agreement-document.tsx", "utf8");
-    assert.match(formal, /body:/);
-    assert.match(formal, /parseAgreementBodySections/);
-    assert.match(formal, /ExecutionSection/);
+    const formalUi = readFileSync("src/components/formal-agreement-document.tsx", "utf8");
+    assert.match(formalUi, /\bbody\b/);
+    assert.match(formalUi, /renderFormalAgreementArticleHtml/);
+    assert.equal(formalUi.includes("contract-document"), false);
+    assert.equal(formalUi.includes("contract-reader"), false);
+    const markup = readFileSync("src/lib/formal-agreement-markup.ts", "utf8");
+    assert.match(markup, /parseAgreementBodySections/);
+    assert.match(markup, /commercialSummaryHtml|Commercial Summary/);
+    assert.match(markup, /executionHtml|Execution/);
     const bodySections = readFileSync("src/lib/contract-body-sections.ts", "utf8");
     assert.match(bodySections, /contract-signature-text/);
     assert.equal(bodySections.includes("contract-reader"), false);
     assert.equal(bodySections.includes("contract-document"), false);
-    assert.equal(formal.includes("contract-document"), false);
-    assert.equal(formal.includes("contract-reader"), false);
   });
 });

@@ -17,6 +17,8 @@ import {
   resolveContractBodyForChrome,
   resolveContractPartyForAccount,
 } from "@/lib/contract-document";
+import { stripLeadingChrome } from "@/lib/contract-body-sections";
+import { stripSignatureTokens } from "@/lib/contract-signature-text";
 import { resolvePartyPlatformFee } from "@/lib/dual-platform-fees";
 import { feeLevelForSignedTerms } from "@/lib/paid-agreement-fee";
 import { prisma } from "@/lib/db";
@@ -177,13 +179,20 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
       : null;
   const influencerFeeBlocked = viewerRole === "influencer" && !dealView?.feeReady && !influencerQuote?.ok;
   const showSign = partyCanSign && !influencerFeeBlocked;
+  // Strip title/meta chrome so the cramped "Agreement ID Status Generated Jurisdiction"
+  // row cannot mis-align labels (Jurisdiction showing a timestamp) on this page.
+  const plainBody = stripLeadingChrome(stripSignatureTokens(agreementBody));
   const shownBody = party
-    ? await agreementForParty({
-        body: agreementBody,
-        role: party.role,
-        termsSnapshotJson: document.termsSnapshotJson,
-      })
-    : agreementBody;
+    ? stripLeadingChrome(
+        stripSignatureTokens(
+          await agreementForParty({
+            body: agreementBody,
+            role: party.role,
+            termsSnapshotJson: document.termsSnapshotJson,
+          }),
+        ),
+      )
+    : plainBody;
 
   return (
     <div className="bg-[#F7FAFF]">

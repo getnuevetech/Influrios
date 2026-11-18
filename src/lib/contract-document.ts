@@ -506,8 +506,11 @@ export function isLegacyContractBody(body: string): boolean {
 
 function fieldFromLegacy(body: string, label: string): string {
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = body.match(new RegExp(`${escaped}:\\s*(.+)`, "i"));
-  return match?.[1]?.trim() ?? "";
+  const colon = body.match(new RegExp(`${escaped}:\\s*(.+)`, "i"));
+  if (colon?.[1]?.trim()) return colon[1].trim();
+  // Current template uses two-or-more spaces between label and value (Commercial Summary).
+  const spaced = body.match(new RegExp(`^${escaped}[ \\t]{2,}(.+)$`, "im"));
+  return spaced?.[1]?.trim() ?? "";
 }
 
 function parseLegacyMilestones(body: string): ContractRenderInput["milestones"] {
@@ -722,11 +725,19 @@ function formalPdfInputFromDocument(document: ContractChromeDocument, body: stri
   const taxLabel = amounts.find((row) => /tax/i.test(row.label))?.amount;
   const business = document.parties.find((party) => party.role === "business");
   const influencers = document.parties.filter((party) => party.role === "creator" || party.role === "influencer");
+  const fromBodyBusiness = fieldFromLegacy(body, "Business")?.replace(/\s*\(.*\)$/, "").trim();
   const businessLegalName =
     (terms?.businessName || "").trim() ||
     business?.legalEntityName?.trim() ||
+    fromBodyBusiness ||
     business?.name ||
     "—";
+  const serviceLevelRaw = (terms?.serviceLevel || fieldFromLegacy(body, "Service Level") || "").trim();
+  const serviceLevelLabel =
+    serviceLevelRaw && (SERVICE_LEVEL_LABELS as Record<string, string>)[serviceLevelRaw]
+      ? SERVICE_LEVEL_LABELS[serviceLevelRaw as ServiceLevel]
+      : serviceLevelRaw;
+  const businessFeeLabel = amounts.find((row) => /business platform fee/i.test(row.label))?.amount;
 
   return {
     title: "Collaboration Agreement",
@@ -741,6 +752,12 @@ function formalPdfInputFromDocument(document: ContractChromeDocument, body: stri
       feeLabel,
       taxLabel,
       netLabel,
+    },
+    commercial: {
+      serviceLevel: serviceLevelLabel || undefined,
+      currency: terms?.currency || fieldFromLegacy(body, "Currency") || undefined,
+      period: fieldFromLegacy(body, "Campaign Period") || "Per campaign record",
+      businessFeeLabel: businessFeeLabel || undefined,
     },
     milestones: schedule
       ? schedule.rows.map((row) => ({

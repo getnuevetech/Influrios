@@ -39,6 +39,7 @@ import { drawnInkHasContent, drawnInkToSvg, parseDrawnInk } from "@/lib/signing/
 import { readSignedTermsSnapshot } from "@/lib/signed-funding";
 import { repairSignedAgreements } from "@/lib/signed-funding-apply";
 import { isContractDocumentTypeId } from "@/lib/contract-catalog";
+import { SERVICE_LEVEL_LABELS, type ServiceLevel } from "@/lib/collaboration-fees";
 
 function partyDrawnInkSvg(signatureInkJson?: string | null): { signatureInkSvg?: string } {
   const ink = signatureInkJson ? parseDrawnInk(signatureInkJson) : null;
@@ -580,11 +581,23 @@ async function SelectedAgreementDialog({
   const agreementRef = displayAgreementReference({ id: selected.id, agreementRef: selectedBody.agreementRef });
   const versionLabel = displayAgreementVersion(selectedBody.versionLabel);
   const documentBody = stripSignatureTokens(selectedBody.renderedBody);
+  const bodyBusiness = (() => {
+    const spaced = documentBody.match(/^Business[ \t]{2,}(.+)$/im);
+    if (spaced?.[1]?.trim()) return spaced[1].trim().replace(/\s*\(.*\)$/, "");
+    const colon = documentBody.match(/Business:\s*(.+)/i);
+    return colon?.[1]?.trim().replace(/\s*\(.*\)$/, "") || "";
+  })();
   const businessLegalName =
     (terms?.businessName || "").trim() ||
     business?.legalEntityName?.trim() ||
+    bodyBusiness ||
     business?.name ||
     "—";
+  const serviceLevelRaw = (terms?.serviceLevel || "").trim();
+  const serviceLevelLabel =
+    serviceLevelRaw && (SERVICE_LEVEL_LABELS as Record<string, string>)[serviceLevelRaw]
+      ? SERVICE_LEVEL_LABELS[serviceLevelRaw as ServiceLevel]
+      : serviceLevelRaw;
   const mine = selected.parties.find((party) => {
     if (party.userId && party.userId === accountId) return true;
     if (party.email.trim().toLowerCase() !== accountEmail.trim().toLowerCase()) return false;
@@ -649,6 +662,12 @@ async function SelectedAgreementDialog({
         agreementRef,
         versionLabel,
         body: documentBody,
+        commercial: {
+          serviceLevel: serviceLevelLabel || undefined,
+          currency: terms?.currency || undefined,
+          period: "Per campaign record",
+          businessFeeLabel: amounts.find((row) => /business platform fee/i.test(row.label))?.amount,
+        },
         parties: [
           ...(business
             ? [
