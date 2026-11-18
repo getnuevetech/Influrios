@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Design — Mobile public nav</title>
+  <link rel="stylesheet" href="_design-system.css" />
+</head>
+<body>
+  <div class="page" style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:900px;">
+    <div>
+      <div class="frame-label">PROPOSED · Mobile closed</div>
+      <div class="mobile-shell">
+        <div class="mobile-top">
+          <strong style="font-family:var(--font-display);font-size:18px;">Influrios</strong>
+          <div style="display:flex;gap:8px;">
+            <span class="icon-btn" title="Search">⌕</span>
+            <span class="icon-btn" title="Menu" aria-label="Open menu">☰</span>
+          </div>
+        </div>
+        <div style="padding:20px;min-height:420px;background:linear-gradient(180deg,#f1ecff 0%,#fff 55%);">
+          <h1 style="font-size:28px;">Find influencers.<br/>Collaborate with clarity.</h1>
+          <p style="color:var(--muted);">Menu exposes Discover, Categories, Collaboration, For Businesses, Pricing, Log in, Join.</p>
+          <button class="btn btn-primary" style="margin-top:12px;">Join Influrios</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="frame-label">PROPOSED · Mobile menu open</div>
+      <div class="mobile-shell">
+        <div class="mobile-top">
+          <strong style="font-family:var(--font-display);font-size:18px;">Influrios</strong>
+          <span class="icon-btn" aria-label="Close menu">✕</span>
+        </div>
+        <div class="menu-sheet">
+          <a href="#">Home</a>
+          <a href="#">Discover</a>
+          <a href="#">Categories</a>
+          <a href="#">Collaboration</a>
+          <a href="#">For Businesses</a>
+          <a href="#">Pricing</a>
+          <div style="display:flex;gap:10px;margin-top:18px;">
+            <button class="btn btn-secondary" style="flex:1;">Log in</button>
+            <button class="btn btn-primary" style="flex:1;">Join</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

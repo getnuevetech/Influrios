@@ -4,4 +4,4 @@ Immutable baseline lives in `/cursor/stores/self/docs/visual-audit/` and `/curso
 
 New media goes under `media/visual-audit-deltas/YYYY-MM-DD/` (repo) and the matching project-store path.
 
-- **[2026-11-18](../../../media/visual-audit-deltas/2026-11-18/README.md)** — no new captures; gaps documented in [coverage-gaps.md](../coverage-gaps.md). Full browse/download map: [evidence.md](../evidence.md).
+- **[2026-11-18](../../../media/visual-audit-deltas/2026-11-18/README.md)** — safe deltas: requests (list/detail/edit), active overview, contract viewer (no sign), tax settings/edit (unsaved). Still blocked: money / notifications / signing completion. See [coverage-gaps.md](../coverage-gaps.md) · [evidence.md](../evidence.md).

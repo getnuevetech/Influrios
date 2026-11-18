@@ -38,10 +38,12 @@ Observable pass/fail per correction. Run on staging with `AUDIT_*` accounts; no 
 
 | Gate | Ready? |
 |------|--------|
-| Coverage statuses assigned | Yes — [coverage-matrix.md](./coverage-matrix.md) |
-| Gaps/blocked listed | Yes — [coverage-gaps.md](./coverage-gaps.md) |
-| Nav map current→proposed | Yes — [navigation-map.md](./navigation-map.md) |
-| Shared UI + designs | Yes — [shared-ui-spec.md](./shared-ui-spec.md), [designs/](./designs/) |
-| Backlog with acceptance IDs | Yes — [implementation-backlog.md](./implementation-backlog.md) |
+| Coverage statuses assigned | **In progress** — overstated `reviewed` rows demoted; see [coverage-matrix.md](./coverage-matrix.md) |
+| Gaps/blocked vs observed defects | **Yes structure** — [coverage-gaps.md](./coverage-gaps.md) + [issue-register.md](./issue-register.md) |
+| Nav map current→proposed | Draft for Ola — [navigation-map.md](./navigation-map.md) |
+| Shared UI + **visual** designs | **Partial** — critical HTML/PNG mockups added; messages/pricing/card still notes-only — [designs/](./designs/) |
+| Safe delta captures (requests/active/contracts/tax) | **Partial** — read-only deltas added; blocked workflows remain |
+| Backlog with acceptance IDs | Draft — [implementation-backlog.md](./implementation-backlog.md) |
+| **Package complete / implementation-ready** | **No** |
 
-**Awaiting:** Ola review before broad redesign implementation.
+**Awaiting:** Ola review. Do **not** start broad redesign / product UI implementation from this PR alone.

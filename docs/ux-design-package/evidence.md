@@ -19,7 +19,8 @@ This page is the **one-stop GitHub browse/download map** for the UX design packa
 | Manifest | [`../../media/visual-audit/manifest.json`](../../media/visual-audit/manifest.json) |
 | Screenshots root | [`../../media/visual-audit/screenshots/`](../../media/visual-audit/screenshots/) |
 | Recordings root | [`../../media/visual-audit/recordings/`](../../media/visual-audit/recordings/) |
-| Second-audit deltas (2026-11-18) | [`../../media/visual-audit-deltas/2026-11-18/`](../../media/visual-audit-deltas/2026-11-18/README.md) — **no new captures** |
+| Second-audit deltas (2026-11-18) | [`../../media/visual-audit-deltas/2026-11-18/`](../../media/visual-audit-deltas/2026-11-18/README.md) — **safe captures** for requests / active / contracts / tax |
+| Visual design mockups | [`designs/`](./designs/README.md) + [`designs/previews/`](./designs/previews/) |
 
 ### Screenshots by role
 

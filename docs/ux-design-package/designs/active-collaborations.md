@@ -1,5 +1,11 @@
 # Design — Active collaborations
 
+**Visual design:** [active-collaborations.html](./active-collaborations.html) · [previews/active-collaborations.png](./previews/active-collaborations.png)  
+**Delta evidence (safe):** `media/visual-audit-deltas/2026-11-18/screenshots/{business,influencer}/*/active-*.png`
+
+![Proposed active overview](./previews/active-collaborations.png)
+
+
 **Objective:** Consistent Active list + overview popup with path to workroom.  
 **Roles:** Influencer & Business  
 **Evidence:** `influencer/desktop/collab-hub.png`, business Collaborations tabs on `biz-collab.png`  
@@ -25,18 +31,7 @@ Influencer hub may keep Overview dashboard **and** Active tab — Active tab is 
 
 ## 2. Overview popup
 
-```
-╔ Active collaboration ══════════════════════╗
-║ 4th Test Campaign After Pay Engine…     ✕ ║
-║ Status: Funded                             ║
-║ Participants: ABC Holdings · Ag Olomola    ║
-║ Next action: Submit content                ║
-║ Milestones: [1 of N] short table           ║
-║ Links: [Open workroom] [View contract]     ║
-║────────────────────────────────────────────║
-║ [Message]              [Open workroom]     ║
-╚════════════════════════════════════════════╝
-```
+Rendered proposal: [active-collaborations.html](./active-collaborations.html). Staging read-only evidence: delta `active-overview-popup.png` / `active-detail.png`.
 
 - Centered; not right rail (hub’s “Upcoming deadlines” widgets may remain on page, but **row detail** is popup)  
 - Workroom = dedicated `/collaboration/work/[fundingId]` (full page)

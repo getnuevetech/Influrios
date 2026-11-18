@@ -1,24 +1,26 @@
 # Visual audit deltas — 2026-11-18
 
 **Purpose:** Dated folder for captures taken *after* baseline PR #532.  
-**This pass:** No new screenshots or recordings were added.
+**Do not alter** `#532` media under `media/visual-audit/`.
 
-Evidence review for the UX design package reused:
+## This revision (PR #533)
 
-- Repo baseline media: [`../../visual-audit/`](../../visual-audit/) (275 screenshots + 4 recordings + `manifest.json`, from PR #532)
-- Repo audit docs: [`../../../docs/staging-visual-audit/`](../../../docs/staging-visual-audit/)
-- UX design package: [`../../../docs/ux-design-package/`](../../../docs/ux-design-package/)
-- Project store baseline (agent workspace): `/cursor/stores/self/media/visual-audit/`
+Safe **read-only** captures added for Ola’s revision ask. No accept / withdraw / delete / sign / fund / save / email / SMS.
 
-Missing workflows (request edit popup states, invitation accept/withdraw, workroom milestones, contract PDF/signing completion, checkout totals with discount+tax, tax edit/preview) are marked **blocked** or **gap** in the design package coverage docs rather than captured here — money/notification actions require isolated mocks, and Discover remains in sample mode.
+| Workflow | Captures | Notes |
+|----------|----------|-------|
+| Business requests | `screenshots/business/{desktop,mobile}/requests-list.png`, `request-detail-popup.png`, `request-edit.png` | View + edit opened; unsaved |
+| Active collaborations | `.../active-list.png`, `active-overview-popup.png` (business); influencer `active-list.png`, `active-detail.png` | Open/overview only |
+| Contract viewing | `.../contracts-list.png`, `contract-viewer.png` (business + influencer) | **Did not** submit signature |
+| Tax editing | `screenshots/admin/{desktop,mobile}/tax-settings.png`, `tax-edit.png` | Add/edit form opened; **no** Save/Delete/Sync |
 
-When new captures are added later, record for each file:
+Manifest: [`manifest.json`](./manifest.json)
 
-| Field | Value |
-|-------|-------|
-| Environment | e.g. https://influrios.com |
-| App commit | SHA if known |
-| Viewport | 1440×900 or 390×844 |
-| Role | public / influencer / business / admin |
-| URL | full URL |
-| Capture date | ISO date |
+## Still blocked / not captured
+
+- Invitation accept/withdraw, request delete  
+- Milestone submit, funding, payouts, checkout totals  
+- Contract signing completion / customer emails  
+- Agency journeys · Payment Standard v2  
+
+See [`docs/ux-design-package/coverage-gaps.md`](../../../docs/ux-design-package/coverage-gaps.md).

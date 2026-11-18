@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Design — Business requests</title>
+  <link rel="stylesheet" href="_design-system.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="frame-label">PROPOSED · Business · Requests list + centered detail · Example labels from staging</div>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">Influrios</div>
+        <a class="nav-item" href="#">Dashboard</a>
+        <a class="nav-item" href="#">Action inbox</a>
+        <a class="nav-item active" href="#">Collaborations</a>
+        <a class="nav-item" href="#">Discover Influencers</a>
+        <a class="nav-item" href="#">Contracts</a>
+        <a class="nav-item" href="#">Billing &amp; Plans</a>
+        <a class="nav-item" href="#">Collaboration Payments</a>
+      </aside>
+      <section class="main" style="position:relative; min-height:640px;">
+        <div class="header">
+          <div>
+            <p style="margin:0;color:var(--muted);font-size:12px;font-weight:700;">Funded to date · label from account</p>
+            <h1 style="font-size:28px;margin-top:4px;">Collaborations</h1>
+          </div>
+          <button class="btn btn-primary">+ New request</button>
+        </div>
+        <div class="tabs">
+          <div class="tab active">Requests</div>
+          <div class="tab">Opportunities</div>
+          <div class="tab">Active Collaborations</div>
+        </div>
+        <div class="filters">
+          <span class="pill on">All</span>
+          <span class="pill">Open</span>
+          <span class="pill">Drafts</span>
+          <span class="pill">Published</span>
+          <span class="pill">Invite only</span>
+          <span class="pill">Closed</span>
+          <span class="search">Search requests</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Request</th><th>Status</th><th>Visibility</th><th>Responses</th><th>Updated</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Fashion to Tech…</strong></td>
+              <td><span class="badge open">Open</span></td>
+              <td>Public</td>
+              <td>No invites</td>
+              <td>Nov 17</td>
+              <td class="actions"><a href="#">View</a><span style="color:var(--muted)">⋯</span></td>
+            </tr>
+            <tr>
+              <td><strong>4th Test Campaign…</strong></td>
+              <td><span class="badge closed">Closed</span></td>
+              <td>Public</td>
+              <td>3 inv · 1 ok</td>
+              <td>Nov 10</td>
+              <td class="actions"><a href="#">View</a><a href="#">Open collab</a></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="scrim" aria-hidden="false">
+          <div class="dialog wide">
+            <div class="dialog-head">
+              <div>
+                <h2 style="font-size:22px;">Fashion to Tech Campaign and Onboarding</h2>
+                <div class="dialog-meta">Status: <span class="badge open">Open</span> · Visibility: Public</div>
+              </div>
+              <button class="btn btn-secondary" style="padding:6px 10px;">✕</button>
+            </div>
+            <div class="tabs" style="margin-top:12px;">
+              <div class="tab active">Overview</div>
+              <div class="tab">Invitations (0)</div>
+              <div class="tab">Activity</div>
+            </div>
+            <div class="dialog-body grid-2">
+              <div>
+                <p><strong>Brief</strong><br/>Objective from staging example — Fashion to Tech Campaign and Onboarding.</p>
+                <p><strong>Deliverables</strong><br/>1. Awareness of the Program<br/>2. Onboarding new users</p>
+              </div>
+              <div>
+                <p><strong>Budget label</strong><br/>USD 5000</p>
+                <p><strong>Response deadline</strong><br/>2026-11-24</p>
+              </div>
+            </div>
+            <div class="dialog-foot">
+              <button class="btn btn-primary">Edit request</button>
+              <button class="btn btn-secondary">Close request</button>
+              <button class="btn btn-secondary">More actions</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+    <p class="note">Centered AccountDialog pattern. List filters/scroll restore on close. Withdraw/delete remain confirmation flows (not exercised in safe captures).</p>
+  </div>
+</body>
+</html>

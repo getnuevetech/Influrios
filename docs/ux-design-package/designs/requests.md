@@ -5,25 +5,17 @@
 **Data source:** Business workspace briefs / marketplace requests (staging examples: Fashion to Tech…, 4th Test Campaign…)  
 **After action:** Return to filtered list; scroll/filters preserved  
 **Roles:** Business owner/admin seat  
-**Evidence today:** `/cursor/stores/self/media/visual-audit/screenshots/business/desktop/biz-collab.png`
+**Visual design:** [requests.html](./requests.html) · [previews/requests.png](./previews/requests.png)  
+**Baseline evidence:** `media/visual-audit/screenshots/business/desktop/biz-collab.png` (#532)  
+**Delta evidence (safe):** `media/visual-audit-deltas/2026-11-18/screenshots/business/*/requests-list.png`, `request-detail-popup.png`, `request-edit.png`
 
 ---
 
 ## 1. Desktop list (default)
 
-```
-┌ Sidebar … Collaborations ─────────────────────────────┐
-│ Funded to date [label from account]                    │
-│ Collaborations                        [+ New request]  │
-│ [Requests] Opportunities  Active Collaborations        │
-│ [All] Open Drafts Published Invite only Closed         │
-│ [Search requests……………………]                              │
-│ ┌ Request │ Status │ Visibility │ Responses │ Updated │ Actions ┐
-│ │ Fashion…│ Open   │ Public     │ No invites│ date    │ View ⋯ │
-│ │ 4th Test│ Closed │ Public     │ 3 inv·1 ok│ date    │ View Open collab ⋯ │
-│ └──────────────────────────────────────────────────────┘
-└────────────────────────────────────────────────────────┘
-```
+![Proposed requests list + detail](./previews/requests.png)
+
+See interactive layout in [requests.html](./requests.html).
 
 - **View** → centered detail popup  
 - **⋯** → Edit (if eligible), Close, Withdraw participants…, Delete (if eligible), Open collaboration (if signed/funded)

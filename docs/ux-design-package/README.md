@@ -1,14 +1,14 @@
 # Influrios UX design package
 
-**Status:** Ready for Ola review  
+**Status:** In revision for Ola — **not complete / not implementation-ready**  
 **Date:** 2026-11-18  
 **Baseline:** PR #532 visual audit (immutable) — [../staging-visual-audit/README.md](../staging-visual-audit/README.md)  
-**Policy:** Agency deferred · Payment Standard v2 paused · No product UI redesign PRs in this phase  
+**Policy:** Agency deferred · Payment Standard v2 paused · No product UI redesign / broad implementation in this phase  
 **Staging:** https://influrios.com  
 
-This package turns the staging visual audit into a coordinated redesign brief: evidence-linked coverage, journeys, issues, navigation, shared UI, critical designs, backlog, and acceptance checks.
+This package turns the staging visual audit into a coordinated redesign brief: evidence-linked coverage, journeys, issues, navigation, shared UI, critical designs, backlog, and acceptance checks. Use [coverage-gaps.md](./coverage-gaps.md) + [issue-register.md](./issue-register.md) to separate **observed defects** from **untested/blocked** workflows. Do not treat `reviewed` rows with open gaps as done.
 
-**Visual evidence (screenshots + recordings + download zips):** start at [evidence.md](./evidence.md). Baseline media lives at [`../../media/visual-audit/`](../../media/visual-audit/) (275 PNGs + 4 WebMs + manifest; from [#532](https://github.com/getnuevetech/Influrios/pull/532)). Second-audit deltas: [`../../media/visual-audit-deltas/2026-11-18/`](../../media/visual-audit-deltas/2026-11-18/README.md) (no new captures this pass).
+**Visual evidence (screenshots + recordings + download zips):** start at [evidence.md](./evidence.md). Baseline media: [`../../media/visual-audit/`](../../media/visual-audit/) (275 PNGs + 4 WebMs + manifest; [#532](https://github.com/getnuevetech/Influrios/pull/532)). **Safe deltas:** [`../../media/visual-audit-deltas/2026-11-18/`](../../media/visual-audit-deltas/2026-11-18/README.md) (requests / active / contracts / tax). **Visual designs:** [`designs/`](./designs/README.md) (HTML + PNG previews — not product code).
 
 ---
 
@@ -69,8 +69,9 @@ This package turns the staging visual audit into a coordinated redesign brief: e
 
 ## What this phase did **not** do
 
-- No product UI code changes / redesign PRs  
+- No product UI code changes / redesign implementation  
 - No Payment Standard v2 work  
 - No Agency role audit  
 - No real charges, payouts, invitations, emails, or SMS  
-- No alteration of PR #532 captures (delta folder noted empty for 2026-11-18)
+- No alteration of PR #532 baseline media (new evidence only under `media/visual-audit-deltas/2026-11-18/`)  
+- Does **not** mark the design package complete or implementation-ready

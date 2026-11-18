@@ -1,36 +1,38 @@
 # Issue register (expanded)
 
 Severity ladder (Ola §4): **P0** security/money/data loss · **P1** blocks core task · **P2** nav/status/steps/hierarchy/mobile · **P3** cosmetic.  
-Baseline issues from `/cursor/stores/self/docs/visual-audit/issues.md` retained and remapped. Do not invent causes from screenshots alone.
+Baseline issues from `docs/staging-visual-audit/issues.md` retained and remapped. Do not invent causes from screenshots alone.
 
-Evidence paths under `/cursor/stores/self/media/visual-audit/screenshots/` unless noted.
+**Class column:** `observed-defect` = evidenced failure · `evidence-gap` = incomplete proof · `blocked` = policy prevents proof · `deferred` = Agency / paused work.
+
+Evidence: baseline `media/visual-audit/screenshots/` · deltas `media/visual-audit-deltas/2026-11-18/` unless noted.
 
 ---
 
 ## Summary
 
-| ID | P | Roles | Title | Root cause family |
-|----|---|-------|-------|-------------------|
-| MOBILE-NAV-001 | P1 | public | Mobile marketing header hides primary nav | Public mobile chrome |
-| MOBILE-LOGIN-001 | P1 | public, influencer, business | Mobile home has no visible Log in | Public mobile chrome |
-| MEMBER-MOBILE-NAV-001 | P2 | influencer, business | Member sidebar replaced by dense chip scroller only | Member mobile chrome |
-| ADMIN-MOBILE-001 | P3 | admin | Admin chrome dense on phone | Admin mobile chrome |
-| ADMIN-KPI-001 | P2 | admin | KPI ↓100% / Active Collabs 0 vs member reality | Metrics definition |
-| ADMIN-WEBHOOK-001 | P2 | admin | Marketplace webhook ATTENTION | Ops health surfacing |
-| DISCOVER-SAMPLE-001 | P2 | public, business | Discover sample mode blocks live booking | Guest gates / directory |
-| CARD-VANITY-001 | P3 | public, influencer | `/c/ag` 404 on primary host | Vanity routing |
-| INBOX-DUP-001 | P2 | influencer | Duplicate action-inbox rows for same campaigns | Task aggregation |
-| BADGE-COUNT-001 | P2 | influencer | Sidebar Collaborations badge ≠ Active count | Badge semantics |
-| REQUEST-POPUP-001 | P1 | business | Request detail/edit not evidenced as centered popup from list | List→popup pattern |
-| ACTIVE-OVERVIEW-001 | P1 | influencer, business | Active collab overview popup + workroom states missing | List→popup / workspace |
-| MSG-REPLY-001 | P2 | influencer | Messages lack evidenced reply flow | Messages completeness |
-| CONTRACT-VIEW-001 | P2 | influencer, business | Agreement preview/sign/PDF not evidenced | Contract viewer |
-| TAX-MODEL-001 | P2 | admin | Tax UI denser than Country+Product model | Tax admin IA |
-| CHECKOUT-TOTALS-001 | P1 | public, business, influencer | Discount+tax+total consistency unproven | Checkout evidence blocked |
-| AGENCY-PLAN-001 | P2 | business | Agency plan offered while Agency deferred | Entitlement surfacing |
-| TERM-CREATOR-001 | P3 | business | “Creators” in nav vs Influencer terminology | Terminology |
-| DUAL-CHROME-001 | P2 | admin | Marketing header + admin sidebar dual chrome | Chrome separation |
-| FOOTER-AGENCY-001 | P3 | public | Footer advertises Agency workspace while deferred | Marketing vs readiness |
+| ID | P | Class | Roles | Title | Root cause family |
+|----|---|-------|-------|-------|-------------------|
+| MOBILE-NAV-001 | P1 | observed-defect | public | Mobile marketing header hides primary nav | Public mobile chrome |
+| MOBILE-LOGIN-001 | P1 | observed-defect | public, influencer, business | Mobile home has no visible Log in | Public mobile chrome |
+| MEMBER-MOBILE-NAV-001 | P2 | observed-defect | influencer, business | Member sidebar replaced by dense chip scroller only | Member mobile chrome |
+| ADMIN-MOBILE-001 | P3 | observed-defect | admin | Admin chrome dense on phone | Admin mobile chrome |
+| ADMIN-KPI-001 | P2 | observed-defect | admin | KPI ↓100% / Active Collabs 0 vs member reality | Metrics definition |
+| ADMIN-WEBHOOK-001 | P2 | observed-defect | admin | Marketplace webhook ATTENTION | Ops health surfacing |
+| DISCOVER-SAMPLE-001 | P2 | observed-defect | public, business | Discover sample mode blocks live booking | Guest gates / directory |
+| CARD-VANITY-001 | P3 | observed-defect | public, influencer | `/c/ag` 404 on primary host | Vanity routing |
+| INBOX-DUP-001 | P2 | observed-defect | influencer | Duplicate action-inbox rows for same campaigns | Task aggregation |
+| BADGE-COUNT-001 | P2 | observed-defect | influencer | Sidebar Collaborations badge ≠ Active count | Badge semantics |
+| REQUEST-POPUP-001 | P1 | evidence-gap→partial | business | Request detail/edit: list→popup now evidenced in deltas; empty/error + withdraw still open | List→popup pattern |
+| ACTIVE-OVERVIEW-001 | P1 | evidence-gap→partial | influencer, business | Active overview evidenced in deltas; workroom submit states still missing | List→popup / workspace |
+| MSG-REPLY-001 | P2 | evidence-gap | influencer | Messages lack evidenced reply flow | Messages completeness |
+| CONTRACT-VIEW-001 | P2 | evidence-gap→partial | influencer, business | Agreement viewer evidenced read-only; sign/PDF completion untested/blocked | Contract viewer |
+| TAX-MODEL-001 | P2 | observed-defect / partial | admin | Tax UI: Country+Product form present; denser legacy patterns may remain — Ola verify | Tax admin IA |
+| CHECKOUT-TOTALS-001 | P1 | blocked | public, business, influencer | Discount+tax+total consistency unproven | Checkout evidence blocked |
+| AGENCY-PLAN-001 | P2 | observed-defect | business | Agency plan offered while Agency deferred | Entitlement surfacing |
+| TERM-CREATOR-001 | P3 | observed-defect | business | “Creators” in nav vs Influencer terminology | Terminology |
+| DUAL-CHROME-001 | P2 | observed-defect | admin | Marketing header + admin sidebar dual chrome | Chrome separation |
+| FOOTER-AGENCY-001 | P3 | observed-defect | public | Footer advertises Agency workspace while deferred | Marketing vs readiness |
 
 ---
 
@@ -130,19 +132,19 @@ Evidence paths under `/cursor/stores/self/media/visual-audit/screenshots/` unles
 
 ### REQUEST-POPUP-001 — Request detail/edit as centered popup
 
-- **Priority:** P1 · **Roles:** business · **§7** Requests  
-- **Evidence:** List `biz-collab.png`; code route `/collaboration/business/request/[id]` uses centered overlay — **open-from-list states not in baseline pack**.  
+- **Priority:** P1 · **Roles:** business · **§7** Requests · **Class:** evidence-gap→partial  
+- **Evidence:** Baseline list `biz-collab.png`; **delta** `request-detail-popup.png`, `request-edit.png` (safe, unsaved). Withdraw/delete still **blocked**.  
 - **Expected:** View/Edit open centered popup (not under-table, not right rail); lifecycle actions visible; filters/scroll preserved.  
 - **Acceptance:** A-REQ-01 … A-REQ-04  
-- **Deps:** UX-P1 Requests package · designs in `designs/requests.md`
+- **Deps:** UX-P1 Requests package · designs in `designs/requests.md` + `requests.html`
 
 ### ACTIVE-OVERVIEW-001 — Active collaboration overview popup + workroom
 
-- **Priority:** P1 · **Roles:** influencer, business · **§7** Active collaborations  
-- **Evidence:** Lists in `collab-hub.png`, business Collaborations tabs; workroom `/collaboration/work/[fundingId]` **uncaptured**.  
+- **Priority:** P1 · **Roles:** influencer, business · **§7** Active collaborations · **Class:** evidence-gap→partial  
+- **Evidence:** Baseline lists; **delta** business `active-overview-popup.png`, influencer `active-detail.png` (read-only). Milestone submit still **gap**/blocked.  
 - **Expected:** Overview popup with status, participants, next action, milestones, workroom link; workroom for complex work.  
 - **Acceptance:** A-ACTIVE-01 … A-ACTIVE-03  
-- **Deps:** UX-P1 Active collabs package
+- **Deps:** UX-P1 Active collabs package · `designs/active-collaborations.html`
 
 ### MSG-REPLY-001 — Messages reply flow incomplete in evidence
 
@@ -154,19 +156,19 @@ Evidence paths under `/cursor/stores/self/media/visual-audit/screenshots/` unles
 
 ### CONTRACT-VIEW-001 — Contract preview / integrity not evidenced
 
-- **Priority:** P2 · **Roles:** influencer, business · **§7** Contracts  
-- **Evidence:** lists only  
+- **Priority:** P2 · **Roles:** influencer, business · **§7** Contracts · **Class:** evidence-gap→partial  
+- **Evidence:** Baseline lists; **delta** `contract-viewer.png` (business + influencer, **no sign**). PDF / signing completion still untested/**blocked**.  
 - **Expected:** Professional document viewer; no contradictory statuses; signing/PDF paths clear.  
 - **Acceptance:** A-CONTRACT-01  
-- **Deps:** UX-P2 Contracts · signing completion may be blocked on staging policy
+- **Deps:** UX-P2 Contracts · `designs/contracts.html`
 
 ### TAX-MODEL-001 — Tax admin not Country+Product simple model
 
-- **Priority:** P2 · **Roles:** admin · **§7** Tax  
-- **Evidence:** `admin-payment-fees.png` / payment-settings density; tax tab not isolated in dedicated capture.  
+- **Priority:** P2 · **Roles:** admin · **§7** Tax · **Class:** observed-defect / partial  
+- **Evidence:** Baseline payment-settings density; **delta** `tax-settings.png`, `tax-edit.png` (Add rule: Country + Product/charge + Tax calculation — unsaved). Checkout preview totals still **blocked**.  
 - **Expected:** Country + Product/charge selection; one tax line in previews; no filing-owner in calc setup; zero/exempt allowed.  
 - **Acceptance:** A-TAX-01 … A-TAX-03  
-- **Deps:** UX-P2 Tax · Payment v2 remains paused for broader payment work
+- **Deps:** UX-P2 Tax · Payment v2 remains paused for broader payment work · `designs/tax-admin-plans.html`
 
 ### CHECKOUT-TOTALS-001 — Discount + tax + total consistency unproven
 
