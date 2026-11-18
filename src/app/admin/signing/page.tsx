@@ -69,17 +69,16 @@ export default async function AdminSigningPage({ searchParams }: Props) {
       </Link>
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Document signing</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted">
-        Choose <strong className="text-indigo">one</strong> signing channel. Enable Influrios in-app signing{" "}
-        <em>or</em> DocuSign — not both. Enabling one automatically disables the other. Influrios needs no API keys
-        (parties type their legal name on the contract page). DocuSign needs the integration key, user id, account id,
-        RSA private key, and API base URL. Active:{" "}
+        <strong className="text-indigo">Influrios in-app signing is primary</strong> — collaboration agreements send
+        and complete on the contract page (parties type their legal name). DocuSign is optional and only used when a
+        send explicitly opts in with DocuSign Ready. Enable one channel at a time (enabling one disables the other).
+        DocuSign needs the integration key, user id, account id, RSA private key, and API base URL. Active:{" "}
         <span className="font-semibold text-indigo">
           {providers.some((p) => p.enabled)
             ? signingModeLabel(activeCode, signingIdentity(providers.find((provider) => provider.enabled)))
-            : "None — enable one channel below"}
+            : "None — enable Influrios in-app signing below"}
         </span>
-        . DocuSign webhook (when DocuSign is the active channel):{" "}
-        <code className="text-xs">POST /api/signing/webhook</code>.
+        . Optional DocuSign webhook: <code className="text-xs">POST /api/signing/webhook</code>.
       </p>
       {params.saved ? <p className="mt-4 text-sm font-semibold text-emerald-700">Saved.</p> : null}
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">{params.error}</p> : null}

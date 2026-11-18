@@ -63,6 +63,7 @@ describe("signing lifecycle", () => {
     const providers = readFileSync("src/lib/providers.ts", "utf8");
     const route = readFileSync("src/app/api/signing/webhook/route.ts", "utf8");
     const contract = readFileSync("src/lib/contract-document.ts", "utf8");
+    const admin = readFileSync("src/app/admin/signing/page.tsx", "utf8");
     assert.equal(signing.includes("demosign_"), false);
     assert.equal(signing.includes("ensureDemoSigningProvider"), false);
     assert.equal(providers.includes("demosign_"), false);
@@ -71,12 +72,15 @@ describe("signing lifecycle", () => {
     assert.match(contract, /signNativeContractParty/);
     assert.match(contract, /signingChannel/);
     assert.match(contract, /resolveContractSigningChannel/);
+    assert.match(contract, /preferDocuSign/);
+    assert.match(contract, /in-app signing is primary/);
     assert.match(contract, /openDocuSignEnvelope/);
+    assert.match(admin, /in-app signing is primary/);
     assert.match(route, /Nothing was signed/);
     assert.equal(route.split("applyContractEnvelopeEvent(").length - 1, 1);
   });
 
-  it("wires the E10 DocuSign host evidence script", () => {
+  it("wires the optional E10 DocuSign host evidence script", () => {
     assert.match(readFileSync("scripts/staging-e10-docusign-evidence.sh", "utf8"), /prove-chain/);
     assert.match(readFileSync("package.json", "utf8"), /staging:e10-prove-chain/);
     assert.match(readFileSync("src/lib/providers.ts", "utf8"), /contract wizard/);
