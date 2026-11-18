@@ -1016,8 +1016,15 @@ export async function deleteContractDocumentAsSuperAdmin(id: string) {
   return { ok: true as const };
 }
 
-/** Resolve the admin-enabled signing channel before a contract row is created. */
-export async function resolveContractSigningChannel(fetchImpl?: typeof fetch): Promise<
+/**
+ * Resolve the signing channel before a contract row is created.
+ * Influrios in-app signing is primary. DocuSign is optional and only used when
+ * the caller opts in (`preferDocuSign`) and DocuSign credentials are Ready.
+ */
+export async function resolveContractSigningChannel(input?: {
+  preferDocuSign?: boolean;
+  fetchImpl?: typeof fetch;
+}): Promise<
   | { ok: true; channel: "native"; providerId: string | null }
   | {
       ok: true;
@@ -1028,8 +1035,18 @@ export async function resolveContractSigningChannel(fetchImpl?: typeof fetch): P
     }
   | { ok: false; error: string }
 > {
+  const preferDocuSign = Boolean(input?.preferDocuSign);
   const provider = await activeSigningProvider().catch(() => null);
-  if (!provider) return { ok: true, channel: "native", providerId: null };
+  if (!preferDocuSign) {
+    return { ok: true, channel: "native", providerId: provider?.id ?? null };
+  }
+  if (!provider) {
+    return {
+      ok: false,
+      error:
+        "DocuSign was requested but no signing provider is enabled. Enable DocuSign in Admin → Document signing, or send with Influrios in-app signing. Nothing was sent.",
+    };
+  }
   const secret = (provider.secretCipher ? decryptSecret(provider.secretCipher) : "") || "";
   const mode = resolveSigningMode(provider.code, {
     integrationKey: provider.integrationKey,
@@ -1038,12 +1055,18 @@ export async function resolveContractSigningChannel(fetchImpl?: typeof fetch): P
     privateKey: secret,
     baseUrl: provider.baseUrl,
   });
-  if (mode === "native") return { ok: true, channel: "native", providerId: provider.id };
+  if (mode === "native") {
+    return {
+      ok: false,
+      error:
+        "DocuSign was requested but Influrios in-app signing is the enabled channel. Enable DocuSign in Admin → Document signing to opt in, or send with in-app signing. Nothing was sent.",
+    };
+  }
   if (mode !== "docusign") {
     return {
       ok: false,
       error:
-        "DocuSign is enabled but credentials are incomplete. Save the integration key, user id, account id, private key, and API base URL in Admin → Document signing, or enable Influrios in-app signing. Nothing was sent.",
+        "DocuSign was requested but credentials are incomplete. Save the integration key, user id, account id, private key, and API base URL in Admin → Document signing, or send with Influrios in-app signing. Nothing was sent.",
     };
   }
   const assembled = assembleDocuSignCredentials({
@@ -1062,7 +1085,7 @@ export async function resolveContractSigningChannel(fetchImpl?: typeof fetch): P
     channel: "docusign",
     providerId: provider.id,
     credentials: assembled,
-    fetchImpl,
+    fetchImpl: input?.fetchImpl,
   };
 }
 
@@ -1075,6 +1098,11 @@ export async function sendCollaborationContract(input: {
   createdByUserId: string;
   source: Record<string, string>;
   termsSnapshot?: import("@/lib/signed-funding").SignedTermsSnapshot | null;
+  /**
+   * Optional DocuSign send. Default is Influrios in-app signing (primary).
+   * Set only when an operator explicitly opts into DocuSign.
+   */
+  preferDocuSign?: boolean;
   /** Test-only DocuSign HTTP. */
   fetchImpl?: typeof fetch;
 }) {
@@ -1092,7 +1120,10 @@ export async function sendCollaborationContract(input: {
   if (duplicate) {
     return { ok: false as const, error: duplicate, existingId: existing?.id ?? null };
   }
-  const signing = await resolveContractSigningChannel(input.fetchImpl);
+  const signing = await resolveContractSigningChannel({
+    preferDocuSign: input.preferDocuSign,
+    fetchImpl: input.fetchImpl,
+  });
   if (!signing.ok) return signing;
   const signingChannel = signing.channel;
   const template = await ensureContractTemplate();

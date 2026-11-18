@@ -1,5 +1,6 @@
 /**
- * Document signing lifecycle. Native in-app signing is primary; DocuSign is optional.
+ * Document signing lifecycle. Influrios in-app signing is primary and the default
+ * collaboration send path. DocuSign is optional opt-in only.
  * Status stays a free-form string on SignatureRequest (no Prisma enum).
  */
 import { createHmac, timingSafeEqual } from "crypto";

@@ -235,7 +235,7 @@ Shipped on `main`: directory helpers, matching/collab/business/intelligence/agen
 5. ~~Meilisearch counts.~~ **Done (E5).** · Sweep clock **Done (E1).**  
 6. **Marketplace hold → release (E6)** — **active closeout** · restore Airwallex Ready (unsigned → 401; currently 503 as of 2026-11-17) · then `AIRWALLEX_WEBHOOK_SECRET=… npm run staging:e6-prove-chain` and paste evidence ids.
 
-**Closeout order (remaining exit-table rows after E6):** Airwallex hold/release → recurring tranche 2 (E8) → team proposal (E9) → DocuSign (E10 product path + host prove script) → Flutterwave/M-Pesa → intro fee + paid mentorship.
+**Closeout order (remaining exit-table rows after E6):** Airwallex hold/release → recurring tranche 2 (E8) → team proposal (E9) → DocuSign optional (E10; **in-app signing is primary**) → Flutterwave/M-Pesa → intro fee + paid mentorship.
 
 **Artifacts:** [`docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md`](./deploy/STAGING_LAUNCH_INTEGRATIONS.md), `scripts/staging-checklist.ts`, `scripts/staging-evidence-probe.mjs`, `scripts/marketplace-webhook-fixture.ts`, `scripts/staging-e6-marketplace-evidence.sh` (`--prove-chain` / `--ensure-us` / `--seed-awaiting`), `scripts/staging-e8-recurring-evidence.sh` (`staging:e8-prove-chain`), `scripts/staging-e9-team-proposal-evidence.sh` (`staging:e9-prove-chain`), `scripts/staging-e10-docusign-evidence.sh` (`staging:e10-prove-chain`).
 
