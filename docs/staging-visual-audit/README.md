@@ -21,6 +21,8 @@
 
 Media root: [`../../media/visual-audit/`](../../media/visual-audit/) (screenshots + recordings + `manifest.json`).
 
+**Second-audit UX design package:** [`../ux-design-package/`](../ux-design-package/README.md) · evidence hub [`../ux-design-package/evidence.md`](../ux-design-package/evidence.md) · deltas [`../../media/visual-audit-deltas/2026-11-18/`](../../media/visual-audit-deltas/2026-11-18/README.md).
+
 **Downloads** (split so chat can fetch them; all under [downloads/](./downloads/)):
 
 1. [docs.zip](./downloads/influrios-visual-audit-docs.zip) (24KB)

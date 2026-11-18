@@ -8,12 +8,15 @@
 
 This package turns the staging visual audit into a coordinated redesign brief: evidence-linked coverage, journeys, issues, navigation, shared UI, critical designs, backlog, and acceptance checks.
 
+**Visual evidence (screenshots + recordings + download zips):** start at [evidence.md](./evidence.md). Baseline media lives at [`../../media/visual-audit/`](../../media/visual-audit/) (275 PNGs + 4 WebMs + manifest; from [#532](https://github.com/getnuevetech/Influrios/pull/532)). Second-audit deltas: [`../../media/visual-audit-deltas/2026-11-18/`](../../media/visual-audit-deltas/2026-11-18/README.md) (no new captures this pass).
+
 ---
 
 ## Start here
 
 | # | Deliverable | Link |
 |---|-------------|------|
+| — | **Evidence hub (browse + downloads)** | [evidence.md](./evidence.md) |
 | 0 | Baseline & commit caveat | [baseline.md](./baseline.md) |
 | 1 | Coverage matrix | [coverage-matrix.md](./coverage-matrix.md) |
 | 2 | Journey reviews | [journey-reviews.md](./journey-reviews.md) |
@@ -31,10 +34,13 @@ This package turns the staging visual audit into a coordinated redesign brief: e
 
 | Kind | Path |
 |------|------|
+| **In-repo evidence hub** | [evidence.md](./evidence.md) |
+| Audit docs (repo) | [../staging-visual-audit/](../staging-visual-audit/) |
+| Screenshots + recordings (repo) | [../../media/visual-audit/](../../media/visual-audit/) |
+| Role-split download zips | [../staging-visual-audit/downloads/](../staging-visual-audit/downloads/) |
+| Second-audit deltas | [../../media/visual-audit-deltas/2026-11-18/](../../media/visual-audit-deltas/2026-11-18/README.md) |
 | Project store audit docs | `/cursor/stores/self/docs/visual-audit/` |
 | Project store screenshots/recordings | `/cursor/stores/self/media/visual-audit/` |
-| Repo mirror (main) | [../staging-visual-audit/](../staging-visual-audit/), [../../media/visual-audit/](../../media/visual-audit/) |
-| New captures only | `/cursor/stores/self/media/visual-audit-deltas/YYYY-MM-DD/` (not mirrored in-repo unless added) |
 
 ---
 
