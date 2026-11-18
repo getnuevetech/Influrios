@@ -184,6 +184,7 @@ describe("contract documents", () => {
 
   it("describes in-app signing in the default template and stamps native attestations", () => {
     assert.match(DEFAULT_CONTRACT_TEMPLATE, /19\. Electronic Signature/);
+    assert.match(DEFAULT_CONTRACT_TEMPLATE, /writing an original signature on screen/);
     assert.match(DEFAULT_CONTRACT_TEMPLATE, /page-endorsement initials/);
     assert.match(DEFAULT_CONTRACT_TEMPLATE, /Commercial Summary/);
     const stamped = applyNativeSignatureAnchor(
@@ -207,6 +208,23 @@ describe("contract documents", () => {
 
   it("draws signature ink and page endorsement markers into the PDF stream", () => {
     const body = "COLLABORATION AGREEMENT\n\n1. Parties\n[[SIG_INK:1]]\nSigned in Influrios - business: North Co\n";
+    const drawn = JSON.stringify({
+      version: 1,
+      width: 400,
+      height: 120,
+      strokes: [
+        [
+          { x: 20, y: 70 },
+          { x: 40, y: 40 },
+          { x: 80, y: 75 },
+          { x: 120, y: 45 },
+          { x: 160, y: 70 },
+          { x: 200, y: 50 },
+          { x: 240, y: 65 },
+          { x: 280, y: 55 },
+        ],
+      ],
+    });
     const pdf = renderContractPdf(body, {
       agreementId: "doc_test",
       signatures: [
@@ -216,6 +234,7 @@ describe("contract documents", () => {
           role: "business",
           email: "north@example.com",
           signedAt: "2026-10-18T12:00:00.000Z",
+          signatureInkJson: drawn,
         },
       ],
       pageEndorsements: true,

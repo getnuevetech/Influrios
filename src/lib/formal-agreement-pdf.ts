@@ -10,6 +10,7 @@ import {
 } from "@/lib/contract-body-sections";
 import { asciiForPdf } from "@/lib/contract-pdf";
 import { stripSignatureTokens } from "@/lib/contract-signature-text";
+import { drawnInkHasContent, drawnInkToPdfPath, parseDrawnInk } from "@/lib/signing/drawn-ink";
 import {
   renderNameSignature,
   signatureToPdfPath,
@@ -24,6 +25,8 @@ export type FormalPdfParty = {
   capacity?: string;
   signedAtLabel?: string;
   signed?: boolean;
+  signatureInkJson?: string;
+  signatureInkSvg?: string;
 };
 
 export type FormalPdfMilestone = {
@@ -91,6 +94,20 @@ function drawInk(commands: string[], signature: RenderedSignature, x: number, y:
   commands.push("q", "1.35 w", "0.08 0.08 0.14 RG", "1 J", "1 j");
   for (const op of signatureToPdfPath(signature, x, y)) commands.push(op);
   commands.push("S", "Q");
+}
+
+function drawPartyFormalInk(commands: string[], party: FormalPdfParty, x: number, y: number) {
+  const drawn = party.signatureInkJson ? parseDrawnInk(party.signatureInkJson) : null;
+  if (drawnInkHasContent(drawn) && drawn) {
+    commands.push("q", "1.35 w", "0.08 0.08 0.14 RG", "1 J", "1 j");
+    for (const op of drawnInkToPdfPath(drawn, x, y - 8, { targetWidth: 220 })) commands.push(op);
+    commands.push("S", "Q");
+    return;
+  }
+  if (party.signerName) {
+    const ink = renderNameSignature(party.signerName, { emSize: 15 });
+    drawInk(commands, ink, x, y - 8);
+  }
 }
 
 type Page = { commands: string[] };
@@ -351,8 +368,7 @@ class FormalPdfBuilder {
       this.push("BT", "/F2 11 Tf", `${INDIGO} rg`, `${x} ${this.y} Td`, `(${esc(heading)}) Tj`, "ET");
       let localY = this.y - 22;
       if (party.signed && party.signerName) {
-        const ink = renderNameSignature(party.signerName, { emSize: 15 });
-        drawInk(this.page.commands, ink, x, localY - 8);
+        drawPartyFormalInk(this.page.commands, party, x, localY);
         localY -= 28;
         this.push("BT", "/F1 10 Tf", `${BODY} rg`, `${x} ${localY} Td`, `(${esc(`Printed name: ${party.signerName}`)}) Tj`, "ET");
         localY -= 14;

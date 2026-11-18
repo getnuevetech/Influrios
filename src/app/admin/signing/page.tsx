@@ -70,9 +70,10 @@ export default async function AdminSigningPage({ searchParams }: Props) {
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Document signing</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted">
         <strong className="text-indigo">Influrios in-app signing is primary</strong> — collaboration agreements send
-        and complete on the contract page (parties type their legal name). DocuSign is optional and only used when a
-        send explicitly opts in with DocuSign Ready. Enable one channel at a time (enabling one disables the other).
-        DocuSign needs the integration key, user id, account id, RSA private key, and API base URL. Active:{" "}
+        and complete on the contract page (parties type their legal name and write an original signature on screen).
+        DocuSign is optional and only used when a send explicitly opts in with DocuSign Ready. Enable one channel at a
+        time (enabling one disables the other). DocuSign needs the integration key, user id, account id, RSA private
+        key, and API base URL. Active:{" "}
         <span className="font-semibold text-indigo">
           {providers.some((p) => p.enabled)
             ? signingModeLabel(activeCode, signingIdentity(providers.find((provider) => provider.enabled)))

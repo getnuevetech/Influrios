@@ -19,6 +19,8 @@ export type FormalAgreementHtmlParty = {
   capacity?: string;
   signedAtLabel?: string;
   signed?: boolean;
+  /** Safe SVG markup for an original screen-written signature, when present. */
+  signatureInkSvg?: string;
 };
 
 export type FormalAgreementHtmlMilestone = {
@@ -264,6 +266,16 @@ html, body {
   color: #2979FF;
   line-height: 1.1;
 }
+.signature-ink-draw {
+  margin: 12px 0 8px;
+  max-width: 100%;
+  overflow: hidden;
+}
+.signature-ink-draw svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
 .execution-party p {
   margin: 6px 0;
   font-size: 13px;
@@ -420,8 +432,11 @@ function executionHtml(parties: FormalAgreementHtmlParty[]): string {
       const heading =
         party.role === "business" ? `For ${party.legalName}` : party.legalName || "Influencer";
       if (party.signed && party.signerName) {
+        const ink = party.signatureInkSvg
+          ? `<div class="signature-ink-draw">${party.signatureInkSvg}</div>`
+          : `<p class="signature-ink">${escapeHtml(party.signerName)}</p>`;
         return `<div class="execution-party"><h4>${escapeHtml(heading)}</h4>
-<p class="signature-ink">${escapeHtml(party.signerName)}</p>
+${ink}
 <p>Printed name: ${escapeHtml(party.signerName)}</p>
 <p>Capacity: ${escapeHtml(party.capacity || (party.role === "business" ? "Authorized representative" : "Influencer"))}</p>
 <p>Date: ${escapeHtml(party.signedAtLabel || "—")}</p></div>`;

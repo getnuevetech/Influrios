@@ -1,7 +1,8 @@
 /**
  * Influrios in-app signing helpers (primary signing channel).
- * Parties attest with a typed legal name; the name-to-signature engine draws
- * cursive ink on the PDF and page-endorsement initials on every page.
+ * Parties attest with a typed legal name and an original screen-written
+ * signature. Drawn ink is stamped on the PDF when present; otherwise the
+ * name-to-signature engine supplies styled cursive. Page endorsements use initials.
  */
 
 import { signatureInitials } from "@/lib/signing/signature-engine";

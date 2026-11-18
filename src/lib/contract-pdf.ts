@@ -3,6 +3,7 @@
  * Matches the approved template: header, numbered sections, signature ink,
  * and per-page endorsement initials.
  */
+import { drawnInkHasContent, drawnInkToPdfPath, parseDrawnInk } from "@/lib/signing/drawn-ink";
 import {
   renderInitialsSignature,
   renderNameSignature,
@@ -50,6 +51,8 @@ export type ContractPdfSignature = {
   role: string;
   email: string;
   signedAt: string;
+  /** Original screen-written ink JSON when the party drew on the pad. */
+  signatureInkJson?: string;
 };
 
 export type ContractPdfEndorsementSlot = {
@@ -272,6 +275,34 @@ function drawInk(commands: string[], signature: RenderedSignature, x: number, y:
   }
   commands.push("S");
   commands.push("Q");
+}
+
+function drawPartyInk(
+  commands: string[],
+  party: ContractPdfSignature | undefined,
+  x: number,
+  y: number,
+  strokeWidth = 1.35,
+) {
+  if (!party) return;
+  const drawn = party.signatureInkJson ? parseDrawnInk(party.signatureInkJson) : null;
+  if (drawnInkHasContent(drawn) && drawn) {
+    commands.push("q");
+    commands.push(`${strokeWidth} w`);
+    commands.push("0.08 0.08 0.14 RG");
+    commands.push("1 J");
+    commands.push("1 j");
+    for (const op of drawnInkToPdfPath(drawn, x, y, { targetWidth: 280 })) {
+      commands.push(op);
+    }
+    commands.push("S");
+    commands.push("Q");
+    return;
+  }
+  if (party.typedName) {
+    const ink = renderNameSignature(party.typedName, { emSize: 16 });
+    drawInk(commands, ink, x, y, strokeWidth);
+  }
 }
 
 function headerCommands(input: {
@@ -535,9 +566,8 @@ export function renderContractPdf(text: string, options: ContractPdfOptions = {}
         endText();
         const party = findSignature(signatures, line.signatureParty ?? 0);
         const inkY = y - 28;
-        if (party?.typedName) {
-          const ink = renderNameSignature(party.typedName, { emSize: 16 });
-          drawInk(commands, ink, 56, inkY, 1.45);
+        if (party?.typedName || party?.signatureInkJson) {
+          drawPartyInk(commands, party, 56, inkY, 1.45);
         } else {
           commands.push("q");
           commands.push("0.55 0.55 0.6 RG");
@@ -663,6 +693,7 @@ export function signaturesFromParties(
     signedAt: Date | null;
     status: string;
     name?: string | null;
+    signatureInkJson?: string | null;
   }[],
 ): ContractPdfSignature[] {
   const out: ContractPdfSignature[] = [];
@@ -676,6 +707,7 @@ export function signaturesFromParties(
       role: party.role,
       email: party.email,
       signedAt: party.signedAt?.toISOString() ?? "",
+      signatureInkJson: party.signatureInkJson?.trim() || undefined,
     });
   });
   return out;
