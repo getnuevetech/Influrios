@@ -86,6 +86,12 @@ describe("signing lifecycle", () => {
     assert.match(readFileSync("src/lib/providers.ts", "utf8"), /contract wizard/);
   });
 
+  it("keeps drawn-ink helpers for original screen writing", () => {
+    assert.match(readFileSync("src/lib/signing/drawn-ink.ts", "utf8"), /drawnInkToPdfPath/);
+    assert.match(readFileSync("src/components/signature-pad.tsx", "utf8"), /Original signature/);
+    assert.match(readFileSync("src/lib/contract-document.ts", "utf8"), /signatureInkJson/);
+  });
+
   it("formats native attestation and replaces signature anchors", () => {
     assert.equal(isNativeSigningCode("influrios"), true);
     assert.equal(isNativeSigningCode("docusign"), false);

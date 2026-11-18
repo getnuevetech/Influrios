@@ -45,6 +45,7 @@ export async function GET(_request: Request, { params }: Props) {
             name: true,
             status: true,
             attestation: true,
+            signatureInkJson: true,
             signedAt: true,
             creatorSlug: true,
             shareBps: true,

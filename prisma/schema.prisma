@@ -869,6 +869,8 @@ model ContractParty {
   status      String           @default("pending")
   /// Typed legal name recorded when the party signs in-app.
   attestation String           @default("")
+  /// Freehand screen-written signature ink JSON (DrawnInk) for original marks.
+  signatureInkJson String      @default("")
   signedAt    DateTime?
   createdAt   DateTime         @default(now())
 

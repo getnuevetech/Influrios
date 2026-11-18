@@ -35,9 +35,16 @@ import {
   listMarketplaceApplications,
   listWorkspaceBusinessRequests,
 } from "@/lib/marketplace-listings";
+import { drawnInkHasContent, drawnInkToSvg, parseDrawnInk } from "@/lib/signing/drawn-ink";
 import { readSignedTermsSnapshot } from "@/lib/signed-funding";
 import { repairSignedAgreements } from "@/lib/signed-funding-apply";
 import { isContractDocumentTypeId } from "@/lib/contract-catalog";
+
+function partyDrawnInkSvg(signatureInkJson?: string | null): { signatureInkSvg?: string } {
+  const ink = signatureInkJson ? parseDrawnInk(signatureInkJson) : null;
+  if (!drawnInkHasContent(ink) || !ink) return {};
+  return { signatureInkSvg: drawnInkToSvg(ink, { stroke: "#1a1440", maxWidth: 280, maxHeight: 90 }) };
+}
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Contracts" };
@@ -648,10 +655,11 @@ async function SelectedAgreementDialog({
                 {
                   role: "business" as const,
                   legalName: businessLegalName,
-                  signerName: business.name,
+                  signerName: business.attestation?.trim() || business.name,
                   capacity: business.capacity || "Authorized representative",
                   signed: business.status === "signed",
                   signedAtLabel: readableSignedAt(business.signedAt),
+                  ...partyDrawnInkSvg(business.signatureInkJson),
                 },
               ]
             : [
@@ -667,10 +675,11 @@ async function SelectedAgreementDialog({
             role: "influencer" as const,
             legalName: party.legalEntityName || party.name,
             handle: party.handle || (party.creatorSlug ? `@${party.creatorSlug}` : undefined),
-            signerName: party.name,
+            signerName: party.attestation?.trim() || party.name,
             capacity: party.capacity || "Influencer",
             signed: party.status === "signed",
             signedAtLabel: readableSignedAt(party.signedAt),
+            ...partyDrawnInkSvg(party.signatureInkJson),
           })),
         ],
         compensation: formalCompensation,

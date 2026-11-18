@@ -40,6 +40,13 @@ import {
   formatNativeAttestation,
   nativeEnvelopeId,
 } from "@/lib/signing/native";
+import {
+  drawnInkHasContent,
+  drawnInkPayloadTooLarge,
+  drawnInkToSvg,
+  parseDrawnInk,
+  serializeDrawnInk,
+} from "@/lib/signing/drawn-ink";
 import { SERVICE_LEVEL_LABELS, type ServiceLevel } from "@/lib/collaboration-fees";
 
 export const CONTRACT_TEMPLATE_ID = "collaboration";
@@ -241,7 +248,7 @@ This Agreement is governed by the law stated in the campaign record: {{jurisdict
 Material changes to the parties, compensation, milestone amounts, usage rights, service level or core scope require a written amendment or replacement agreement accepted by all affected parties. No party may assign this Agreement in a manner that materially increases another party's obligations without any consent required by applicable law or the governing terms. This Agreement, together with incorporated campaign records and applicable Influrios terms, constitutes the agreement of the parties regarding this collaboration and supersedes inconsistent prior campaign communications.
 
 19. Electronic Signature
-This Agreement becomes executed when all required signers complete the electronic-signature process through {{esign_provider}} and the signature provider confirms completion. Each party signs by typing their legal name; Influrios converts that name into a handwritten signature mark and stamps page-endorsement initials on every page of this Agreement.
+This Agreement becomes executed when all required signers complete the electronic-signature process through {{esign_provider}} and the signature provider confirms completion. Each party signs by typing their legal name and writing an original signature on screen; Influrios stamps that ink mark and page-endorsement initials on every page of this Agreement.
 
 Party  Signer  Email  Signature Status
 {{signature_block}}
@@ -541,12 +548,25 @@ export type ContractChromeDocument = {
     shareBps?: number | null;
     status: string;
     attestation?: string | null;
+    signatureInkJson?: string | null;
     signedAt?: Date | string | null;
     legalEntityName?: string | null;
     capacity?: string | null;
     handle?: string | null;
   }[];
 };
+
+function formalPartyInkFields(signatureInkJson?: string | null): {
+  signatureInkJson?: string;
+  signatureInkSvg?: string;
+} {
+  const ink = signatureInkJson ? parseDrawnInk(signatureInkJson) : null;
+  if (!drawnInkHasContent(ink) || !ink) return {};
+  return {
+    signatureInkJson: serializeDrawnInk(ink),
+    signatureInkSvg: drawnInkToSvg(ink, { stroke: "#1a1440", maxWidth: 280, maxHeight: 90 }),
+  };
+}
 
 /** A signature, or a terminal status, freezes the stored words and PDF. */
 export function contractTermsAreFrozen(document: {
@@ -733,12 +753,13 @@ function formalPdfInputFromDocument(document: ContractChromeDocument, body: stri
       : [],
     parties: [
       {
-        role: "business",
+        role: "business" as const,
         legalName: businessLegalName,
         signerName: business?.attestation?.trim() || business?.name,
         capacity: business?.capacity || "Authorized representative",
         signed: business?.status === "signed",
         signedAtLabel: business?.signedAt ? formatContractDisplayDate(business.signedAt) : undefined,
+        ...formalPartyInkFields(business?.signatureInkJson),
       },
       ...influencers.map((party) => ({
         role: "influencer" as const,
@@ -748,6 +769,7 @@ function formalPdfInputFromDocument(document: ContractChromeDocument, body: stri
         capacity: party.capacity || "Influencer",
         signed: party.status === "signed",
         signedAtLabel: party.signedAt ? formatContractDisplayDate(party.signedAt) : undefined,
+        ...formalPartyInkFields(party.signatureInkJson),
       })),
     ],
   };
@@ -1262,6 +1284,8 @@ export async function signNativeContractParty(input: {
   userId: string;
   email?: string | null;
   typedName: string;
+  /** Optional JSON for an original screen-written signature (DrawnInk). */
+  signatureInkJson?: string | null;
 }) {
   const typedName = input.typedName.trim();
   if (typedName.length < 2) {
@@ -1270,6 +1294,18 @@ export async function signNativeContractParty(input: {
   if (typedName.length > 160) {
     return { ok: false as const, error: "Keep the typed name under 160 characters. Nothing was signed." };
   }
+  const inkRaw = (input.signatureInkJson ?? "").trim();
+  if (inkRaw && drawnInkPayloadTooLarge(inkRaw)) {
+    return { ok: false as const, error: "That signature drawing is too large. Clear the pad and try again." };
+  }
+  const drawnInk = inkRaw ? parseDrawnInk(inkRaw) : null;
+  if (inkRaw && !drawnInkHasContent(drawnInk)) {
+    return {
+      ok: false as const,
+      error: "Draw your original signature on the pad to sign. Nothing was signed.",
+    };
+  }
+  const signatureInkJson = drawnInkHasContent(drawnInk) && drawnInk ? serializeDrawnInk(drawnInk) : "";
 
   const document = await prisma.contractDocument.findUnique({
     where: { id: input.documentId },
@@ -1364,7 +1400,13 @@ export async function signNativeContractParty(input: {
     await tx.$queryRaw`SELECT "id" FROM "ContractDocument" WHERE "id" = ${document.id} FOR UPDATE`;
     const partyWrite = await tx.contractParty.updateMany({
       where: { id: party.id, status: "pending" },
-      data: { status: "signed", attestation: typedName.slice(0, 160), signedAt, userId: input.userId },
+      data: {
+        status: "signed",
+        attestation: typedName.slice(0, 160),
+        signatureInkJson,
+        signedAt,
+        userId: input.userId,
+      },
     });
     if (partyWrite.count !== 1) return null;
     const fresh = await tx.contractDocument.findUnique({

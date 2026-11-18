@@ -339,13 +339,15 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
             <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-violet">Action required</p>
             <h2 className="mt-1 font-display text-2xl font-bold text-indigo">Sign this agreement</h2>
             <p className="mt-2 text-sm text-indigo">
-              You are listed as <strong>{party?.role}</strong> ({party?.email}). Type your legal name — Influrios
-              converts it into a handwritten signature and page-endorsement initials on every page of the PDF.
+              You are listed as <strong>{party?.role}</strong> ({party?.email}). Type your legal name, then write your
+              original signature on screen — Influrios stamps that ink and page-endorsement initials on every page of
+              the PDF.
             </p>
             <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-muted">
               <li>Review the parties and agreement text below</li>
-              <li>Type your legal name exactly as you intend to sign — watch the live signature preview</li>
-              <li>Confirm and submit — ink + initials are stamped on every contract page</li>
+              <li>Type your legal name exactly as you intend to appear as the printed name</li>
+              <li>Write your original signature on the pad with finger, stylus, or mouse</li>
+              <li>Confirm and submit — your drawn ink + initials are stamped on every contract page</li>
             </ol>
             <form action={actionSignNativeContract} className="mt-5 space-y-3 rounded-xl bg-white p-4">
               <input type="hidden" name="documentId" value={document.id} />
@@ -353,8 +355,9 @@ export default async function ContractDocumentPage({ params, searchParams }: Pro
               <label className="flex items-start gap-2 text-sm text-indigo">
                 <input type="checkbox" name="agree" value="1" required className="mt-0.5 accent-violet" />
                 <span>
-                  I agree to the terms of this agreement and intend this typed name to be my electronic signature for{" "}
-                  {document.title}, including page endorsements on each page of the PDF.
+                  I agree to the terms of this agreement and intend my typed legal name and on-screen written signature
+                  to be my electronic signature for {document.title}, including page endorsements on each page of the
+                  PDF.
                 </span>
               </label>
               <button type="submit" className="btn-primary w-full !py-3 text-base sm:w-auto">

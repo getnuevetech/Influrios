@@ -28,6 +28,7 @@ export async function actionSignNativeContract(formData: FormData) {
     userId: account.id,
     email: account.email,
     typedName: String(formData.get("typedName") ?? ""),
+    signatureInkJson: String(formData.get("signatureInk") ?? ""),
   });
   if (!result.ok) {
     redirect(`/collaboration/contracts/${documentId}?error=${encodeURIComponent(result.error)}`);

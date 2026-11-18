@@ -479,7 +479,7 @@ npm run staging:e9-prove-chain
 
 ### E10 progress (DocuSign, optional) — **adapter ready** (host evidence blank)
 
-**Primary product path:** Influrios **in-app signing** (parties type their legal name on the contract page). DocuSign is optional opt-in only (`preferDocuSign`) when credentials are Ready — not the default wizard send.
+**Primary product path:** Influrios **in-app signing** (parties type their legal name and write an original signature on screen). DocuSign is optional opt-in only (`preferDocuSign`) when credentials are Ready — not the default wizard send.
 
 **Optional DocuSign goal:** Connect webhook completes a DocuSign-channel contract · duplicate delivery leaves a single completion.
 
@@ -487,6 +487,7 @@ npm run staging:e9-prove-chain
 |-------|--------|
 | Wizard default = in-app (native) | ☑ `resolveContractSigningChannel` without `preferDocuSign` |
 | DocuSign only on explicit opt-in + Ready credentials | ☑ `preferDocuSign` + `openDocuSignEnvelope` |
+| Native pad captures original screen-written ink | ☑ `SignaturePad` + `signatureInkJson` on `ContractParty` |
 | Admin cannot mark signed from a form | ☑ `advanceSignatureRequest` refuses `signed` |
 | Unit wiring | ☑ `src/lib/signing.test.ts` + DocuSign adapter tests |
 | Host: unsigned webhook → 401 when Ready | ☐ `npm run staging:e10-docusign-evidence` |
