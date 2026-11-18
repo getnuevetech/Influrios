@@ -70,8 +70,16 @@ describe("signing lifecycle", () => {
     assert.match(providers, /Influrios in-app signing/);
     assert.match(contract, /signNativeContractParty/);
     assert.match(contract, /signingChannel/);
+    assert.match(contract, /resolveContractSigningChannel/);
+    assert.match(contract, /openDocuSignEnvelope/);
     assert.match(route, /Nothing was signed/);
     assert.equal(route.split("applyContractEnvelopeEvent(").length - 1, 1);
+  });
+
+  it("wires the E10 DocuSign host evidence script", () => {
+    assert.match(readFileSync("scripts/staging-e10-docusign-evidence.sh", "utf8"), /prove-chain/);
+    assert.match(readFileSync("package.json", "utf8"), /staging:e10-prove-chain/);
+    assert.match(readFileSync("src/lib/providers.ts", "utf8"), /contract wizard/);
   });
 
   it("formats native attestation and replaces signature anchors", () => {
