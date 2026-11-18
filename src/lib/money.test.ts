@@ -1,13 +1,20 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { formatMoney, formatStoredMoney, storedCurrencyCode } from "./money";
+import { formatContractMoney, formatMoney, formatStoredMoney, storedCurrencyCode } from "./money";
 
 describe("formatMoney", () => {
   it("formats USD cents without fractional digits by default", () => {
     assert.equal(formatMoney(0), "$0");
     assert.equal(formatMoney(1_500), "$15");
     assert.equal(formatMoney(450_000), "$4,500");
+  });
+
+  it("keeps cents on contract money so milestone fees reconcile", () => {
+    assert.equal(formatContractMoney(21_420), "$214.20");
+    assert.equal(formatContractMoney(20_790), "$207.90");
+    assert.equal(formatContractMoney(420_000), "$4,200.00");
+    assert.equal(formatContractMoney(63_000), "$630.00");
   });
 
   it("respects a non-USD currency code", () => {

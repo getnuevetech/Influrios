@@ -38,7 +38,7 @@ import {
   requireFeeDisclosureAccepted,
 } from "@/lib/fee-disclosure";
 import { hasCurrentLegalRecord, recordLegalEvent } from "@/lib/legal";
-import { formatMoney } from "@/lib/money";
+import { formatContractMoney } from "@/lib/money";
 import { resolveCreatorParties, sendCollaborationContract } from "@/lib/contract-document";
 import { buildMilestoneSchedule, milestoneRenderRows } from "@/lib/contract-milestone-schedule";
 import { ensureMarketplaceDefaults, marketplaceConfig } from "@/lib/marketplace-ledger";
@@ -685,18 +685,18 @@ export async function actionSubmitContractWizard(formData: FormData) {
           jurisdiction: jurisdictionCode,
           serviceLevel,
           currency: plan.contractCurrency,
-          grossLabel: formatMoney(plan.grossContractValueCents, plan.contractCurrency),
-          platformFeeLabel: formatMoney(plan.businessPlatformFeeCents ?? plan.totalPlatformFeeCents, plan.contractCurrency),
-          creatorCompensationLabel: formatMoney(
+          grossLabel: formatContractMoney(plan.grossContractValueCents, plan.contractCurrency),
+          platformFeeLabel: formatContractMoney(plan.businessPlatformFeeCents ?? plan.totalPlatformFeeCents, plan.contractCurrency),
+          creatorCompensationLabel: formatContractMoney(
             Math.max(0, plan.grossContractValueCents - (plan.influencerPlatformFeeCents ?? plan.milestones.reduce((sum, row) => sum + row.platformFeeCents, 0))),
             plan.contractCurrency,
           ),
-          businessPlatformFeeLabel: formatMoney(plan.businessPlatformFeeCents ?? plan.totalPlatformFeeCents, plan.contractCurrency),
-          influencerPlatformFeeLabel: formatMoney(
+          businessPlatformFeeLabel: formatContractMoney(plan.businessPlatformFeeCents ?? plan.totalPlatformFeeCents, plan.contractCurrency),
+          influencerPlatformFeeLabel: formatContractMoney(
             plan.influencerPlatformFeeCents ?? plan.milestones.reduce((sum, row) => sum + row.platformFeeCents, 0),
             plan.contractCurrency,
           ),
-          netCompensationLabel: formatMoney(
+          netCompensationLabel: formatContractMoney(
             Math.max(0, plan.grossContractValueCents - (plan.influencerPlatformFeeCents ?? plan.milestones.reduce((sum, row) => sum + row.platformFeeCents, 0))),
             plan.contractCurrency,
           ),
@@ -776,18 +776,18 @@ export async function actionSubmitContractWizard(formData: FormData) {
         jurisdiction: jurisdictionCode,
         serviceLevel,
         currency: plan.contractCurrency,
-        grossLabel: formatMoney(plan.grossContractValueCents, plan.contractCurrency),
-        platformFeeLabel: formatMoney(plan.businessPlatformFeeCents ?? plan.totalPlatformFeeCents, plan.contractCurrency),
-        creatorCompensationLabel: formatMoney(
+        grossLabel: formatContractMoney(plan.grossContractValueCents, plan.contractCurrency),
+        platformFeeLabel: formatContractMoney(plan.businessPlatformFeeCents ?? plan.totalPlatformFeeCents, plan.contractCurrency),
+        creatorCompensationLabel: formatContractMoney(
           Math.max(0, plan.grossContractValueCents - (plan.influencerPlatformFeeCents ?? plan.milestones.reduce((sum, row) => sum + row.platformFeeCents, 0))),
           plan.contractCurrency,
         ),
-        businessPlatformFeeLabel: formatMoney(plan.businessPlatformFeeCents ?? plan.totalPlatformFeeCents, plan.contractCurrency),
-        influencerPlatformFeeLabel: formatMoney(
+        businessPlatformFeeLabel: formatContractMoney(plan.businessPlatformFeeCents ?? plan.totalPlatformFeeCents, plan.contractCurrency),
+        influencerPlatformFeeLabel: formatContractMoney(
           plan.influencerPlatformFeeCents ?? plan.milestones.reduce((sum, row) => sum + row.platformFeeCents, 0),
           plan.contractCurrency,
         ),
-        netCompensationLabel: formatMoney(
+        netCompensationLabel: formatContractMoney(
           Math.max(0, plan.grossContractValueCents - (plan.influencerPlatformFeeCents ?? plan.milestones.reduce((sum, row) => sum + row.platformFeeCents, 0))),
           plan.contractCurrency,
         ),
