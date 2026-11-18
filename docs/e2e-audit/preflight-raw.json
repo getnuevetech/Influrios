@@ -1,0 +1,271 @@
+{
+  "runId": "AUDIT_20261118170047",
+  "baseUrl": "https://influrios.com",
+  "startedAt": "2026-11-18T17:00:47.472Z",
+  "health": {
+    "ok": true,
+    "status": "ok",
+    "checks": {
+      "web": {
+        "ok": true
+      },
+      "db": {
+        "ok": true,
+        "latencyMs": 3
+      }
+    },
+    "secrets": {
+      "authConfigured": true
+    },
+    "revision": "ada9c7f5d90d4d61e78627da2765cbe14004cbc4",
+    "ts": "2026-11-18T17:00:47.112Z"
+  },
+  "adminLoginExposure": {
+    "pageShowsDefaultSuperAdminHint": true,
+    "pageReferencesEnvVarNames": true,
+    "pageAppearsToRenderConcreteEmail": true,
+    "severity": "P0",
+    "note": "Values not recorded. Do not attempt exposed password against live admin."
+  },
+  "logins": {
+    "admin": {
+      "finalUrl": "https://influrios.com/admin",
+      "ok": true
+    },
+    "business": {
+      "finalUrl": "https://influrios.com/business/home",
+      "ok": true,
+      "path": "/business/home"
+    },
+    "influencer": {
+      "finalUrl": "https://influrios.com/creator",
+      "ok": true,
+      "path": "/creator"
+    }
+  },
+  "providers": {
+    "mail": {
+      "url": "https://influrios.com/admin/mail",
+      "title": "Email · Admin · Influrios",
+      "summary": {
+        "mentionsLiveKey": false,
+        "mentionsTestKey": false,
+        "mentionsStripe": false,
+        "mentionsAirwallex": false,
+        "mentionsDocusign": true,
+        "mentionsSmtp": true,
+        "mentionsDemoPayments": false
+      },
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\n← Admin\nEmail\n\nConfigure SMTP and manage auto/manual templates. Each template can keep a short SMS body (max 320 characters) for a later provider. SMS is not sent.\n\nSMTP settings\n\nReady (admin)\n\nCollapse\n\nSMTP is ready to send via the admin settings.\n\nHo"
+    },
+    "mailHealth": {
+      "url": "https://influrios.com/admin/mail/health",
+      "title": "Email health · Admin · Influrios",
+      "summary": {
+        "mentionsLiveKey": false,
+        "mentionsTestKey": false,
+        "mentionsStripe": false,
+        "mentionsAirwallex": false,
+        "mentionsDocusign": true,
+        "mentionsSmtp": true,
+        "mentionsDemoPayments": false
+      },
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\n← Email settings\nEmail health\n\nSMTP, category switches, and paused templates. A category that is on sends the catalog. A category that is off keeps the older plain-text sender. Pausing an essential template stops that message.\n\nProvider\n\nSMTP is ready (a"
+    },
+    "jobs": {
+      "url": "https://influrios.com/admin/jobs",
+      "title": "Jobs · Admin · Influrios",
+      "summary": {
+        "mentionsLiveKey": false,
+        "mentionsTestKey": false,
+        "mentionsStripe": false,
+        "mentionsAirwallex": false,
+        "mentionsDocusign": true,
+        "mentionsSmtp": true,
+        "mentionsDemoPayments": false
+      },
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\n← Admin\nJobs\n\nMail, verification, milestone auto-approval, and provider records. A failed mail job can be queued again. Invitation mail is marked delivered only after SMTP accepts it. The sweep clock enqueues each money sweep from POST /api/cron/sweeps. "
+    },
+    "paymentSettings": {
+      "url": "https://influrios.com/admin/payment-settings",
+      "title": "Payment settings · Admin · Influrios",
+      "summary": {
+        "mentionsLiveKey": false,
+        "mentionsTestKey": true,
+        "mentionsStripe": true,
+        "mentionsAirwallex": true,
+        "mentionsDocusign": true,
+        "mentionsSmtp": true,
+        "mentionsDemoPayments": false
+      },
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\nPayment settings\n\nProviders and connections, account roles, country routes, fees, and tax settings. Saving a form does not start a charge or move money that is already with a provider.\n\nProviders\nAccount roles\nCountry routes\nFees & policies\nTax\nDiscount "
+    },
+    "paymentProviders": {
+      "url": "https://influrios.com/admin/payment-settings?section=providers",
+      "title": "Payment settings · Admin · Influrios",
+      "summary": {
+        "mentionsLiveKey": false,
+        "mentionsTestKey": false,
+        "mentionsStripe": true,
+        "mentionsAirwallex": true,
+        "mentionsDocusign": true,
+        "mentionsSmtp": true,
+        "mentionsDemoPayments": false
+      },
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\nPayment settings\n\nProviders and connections, account roles, country routes, fees, and tax settings. Saving a form does not start a charge or move money that is already with a provider.\n\nProviders\nAccount roles\nCountry routes\nFees & policies\nTax\nDiscount "
+    },
+    "signing": {
+      "url": "https://influrios.com/admin/signing",
+      "title": "Document signing · Admin · Influrios",
+      "summary": {
+        "mentionsLiveKey": false,
+        "mentionsTestKey": false,
+        "mentionsStripe": false,
+        "mentionsAirwallex": false,
+        "mentionsDocusign": true,
+        "mentionsSmtp": true,
+        "mentionsDemoPayments": false
+      },
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\n← Admin\nDocument signing\n\nInflurios in-app signing is primary — collaboration agreements send and complete on the contract page (parties type their legal name and write an original signature on screen). DocuSign is optional and only used when a send expl"
+    },
+    "billing": {
+      "url": "https://influrios.com/admin/billing",
+      "title": "Billing activity · Admin · Influrios",
+      "summary": {
+        "mentionsLiveKey": false,
+        "mentionsTestKey": true,
+        "mentionsStripe": true,
+        "mentionsAirwallex": false,
+        "mentionsDocusign": true,
+        "mentionsSmtp": true,
+        "mentionsDemoPayments": false
+      },
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\n\nAdmin / Subscriptions\n\nPlans & features\nBilling activity\nBilling activity\nS\nStripe\n·\nSandbox\nCustomer portal\n·\nOn\nBilling settings\nManage account overrides\nCheckout sessions\nStatus: All\nStatus: Completed\nStatus: Open\nStatus: Expired\nDate range\nDate rang"
+    },
+    "plans": {
+      "url": "https://influrios.com/admin/plans",
+      "title": "Plans & features · Admin · Influrios",
+      "summary": {
+        "mentionsLiveKey": false,
+        "mentionsTestKey": false,
+        "mentionsStripe": false,
+        "mentionsAirwallex": false,
+        "mentionsDocusign": true,
+        "mentionsSmtp": true,
+        "mentionsDemoPayments": false
+      },
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\n\nAdmin / Subscriptions\n\nPlans & features\nBilling activity\nPlans & features\nCreate plan\nAudience\nInfluencers\nBusinesses\nPreview country\nAfghanistan\nAland Islands\nAlbania\nAlgeria\nAmerican Samoa\nAndorra\nAngola\nAnguilla\nAntarctica\nAntigua And Barbuda\nArgenti"
+    },
+    "marketplace": {
+      "url": "https://influrios.com/admin/marketplace",
+      "title": "Admin · Marketplace ledger · Influrios",
+      "summary": {
+        "mentionsLiveKey": false,
+        "mentionsTestKey": false,
+        "mentionsStripe": true,
+        "mentionsAirwallex": false,
+        "mentionsDocusign": true,
+        "mentionsSmtp": true,
+        "mentionsDemoPayments": false
+      },
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\n← Admin\nMarketplace ledger\n\nProvider, jurisdictions, rates, and templates →\n\nSweep results\n\nOpening this page does not approve milestones or create a recurring prefund. Those run from the queued jobs below.\n\n2026-10-13T15:36:12.839Z · recurring_cycle_swe"
+    },
+    "businessBilling": {
+      "url": "https://influrios.com/business/billing",
+      "summary": {
+        "mentionsLiveKey": false,
+        "mentionsTestKey": false,
+        "mentionsStripe": false,
+        "mentionsAirwallex": false,
+        "mentionsDocusign": false,
+        "mentionsSmtp": false,
+        "mentionsDemoPayments": false
+      },
+      "excerpt": "∞\nInflurios\nDashboard\nAction inbox\nCompany Profile\nDiscover Creators\nCollaborations\n1\nContracts\nAnalytics\nTeam\nBilling & Plans\nCollaboration Payments\nVerification\nSettings\nLog out\n\n© 2026 Influrios. All rights reserved.\n\n1\nA\n\nAgboola Olomola\n\nABC Holdings\n\nBUSINESS WORKSPACE\n\nBusiness billing & plans\n\nManage your Influrios plan, billing, and payment details.\n\nBusiness Pro\n\n$99/month\n\nChange plan\n\nChoose a plan and billing cadence that works for you.\n\nMonthly\nAnnual\nBusiness Free\n\nFree\n\n✓\nShortlist of 5\n✓\n3 inquiries per month\n✓\n1 team seat\nManage downgrade\n\nCancelling a paid subscription stays in billing and is separate from this plan.\n\nBusiness Pro\n\n$99/month\n\n✓\nShortlist of 100\n✓\n50 inquiries per month\n✓\n3 team seats\nCurrent plan\nAgency\n\n$349/month\n\n✓\nShortlist of 500\n✓\n200 inquiries per"
+    },
+    "influencerBilling": {
+      "url": "https://influrios.com/billing",
+      "summary": {
+        "mentionsLiveKey": false,
+        "mentionsTestKey": false,
+        "mentionsStripe": true,
+        "mentionsAirwallex": false,
+        "mentionsDocusign": false,
+        "mentionsSmtp": false,
+        "mentionsDemoPayments": false
+      },
+      "excerpt": "∞\nInflurios\nDashboard\nAction inbox\nMy Profile\nCollaborations\n1\nContracts\nEarnings & Payouts\n1\nMessages\nSettings\nPlus\nBilling & Plan\nLog out\n\n© 2026 Influrios. All rights reserved.\n\n2\nA\n\nAg Olomola\n\nInfluencer\n\nINFLUENCER\n\nBilling & plan\n\nManage your Influrios plan, billing, and payment details.\n\nPlus · Monthly\n\n$25/month\n\nActive\n\nChange plan\n\nChoose a plan and billing cadence that works for you.\n\nMonthly\nAnnual\nStarter\n\nFree\n\n✓\n1 social link\n✓\n1 specialty\n✓\nContact: Limited\nManage downgrade\n\nCancelling a paid subscription stays in billing and is separate from this plan.\n\nCurrent plan (monthly)\nPlus\n\n$25/month\n\nTax $2.50 (10%) · Total $27.50\n\n✓\n4 social links\n✓\n3 specialties\n✓\n6 portfolio items\nCurrent plan\nPro\n\n$29/month\n\nTax $2.90 (10%) · Total $31.90\n\n✓\n8 social links\n✓\n8 specialties\n✓\n2"
+    }
+  },
+  "mail": {
+    "testSendAttempted": false,
+    "reason": "MAIL_SINK_TO not set — refusing unsolicited mail send"
+  },
+  "screenshots": [
+    "/cursor/stores/self/media/e2e-audit/preflight/01-admin-login-public.png",
+    "/cursor/stores/self/media/e2e-audit/preflight/02-admin-home.png",
+    "/cursor/stores/self/media/e2e-audit/preflight/03-admin-mail.png",
+    "/cursor/stores/self/media/e2e-audit/preflight/04-admin-mail-health.png",
+    "/cursor/stores/self/media/e2e-audit/preflight/05-admin-jobs.png",
+    "/cursor/stores/self/media/e2e-audit/preflight/06-admin-payment-settings.png",
+    "/cursor/stores/self/media/e2e-audit/preflight/07-admin-providers.png",
+    "/cursor/stores/self/media/e2e-audit/preflight/08-admin-signing.png",
+    "/cursor/stores/self/media/e2e-audit/preflight/09-admin-billing.png",
+    "/cursor/stores/self/media/e2e-audit/preflight/10-admin-plans.png",
+    "/cursor/stores/self/media/e2e-audit/preflight/11-admin-marketplace.png",
+    "/cursor/stores/self/media/e2e-audit/preflight/13-business-home.png",
+    "/cursor/stores/self/media/e2e-audit/preflight/14-business-billing.png",
+    "/cursor/stores/self/media/e2e-audit/preflight/13-influencer-home.png",
+    "/cursor/stores/self/media/e2e-audit/preflight/14-influencer-billing.png"
+  ],
+  "blockers": [
+    {
+      "id": "BLK-MAIL-SINK",
+      "dependency": "Controlled notification sink / allowlisted audit inbox",
+      "affected": [
+        "J01",
+        "J02",
+        "J05",
+        "J07",
+        "J08",
+        "J11",
+        "J16",
+        "J23"
+      ],
+      "action": "Provide MAIL_SINK_TO (or confirm admin SMTP test recipient is an audit-only mailbox) and prove interception before invitation/signing/withdrawal/billing notification cases.",
+      "owner": "Operator / Ola"
+    },
+    {
+      "id": "BLK-ISOLATION",
+      "dependency": "Confirmed isolated staging DB/tenant (AUDIT_ISOLATION_CONFIRMED=1) or dedicated staging host",
+      "affected": [
+        "All mutating journeys (J04–J20, withdrawals, deletions, invitations, sandbox checkout)"
+      ],
+      "action": "Operator confirms customer-data isolation and test-provider routing on this host, then set AUDIT_ISOLATION_CONFIRMED=1 for the audit agent — or provide a dedicated staging URL.",
+      "owner": "Operator / Ola"
+    },
+    {
+      "id": "BLK-ADMIN-CRED-EXPOSURE",
+      "dependency": "Remove default admin credential rendering from /admin/login",
+      "affected": [
+        "Security baseline; admin auth regression"
+      ],
+      "action": "Hotfix: stop rendering concrete default credentials on the login page. Validate rejection via isolated auth unit/regression tests — do not attempt exposed password on live admin.",
+      "owner": "Engineering",
+      "severity": "P0"
+    }
+  ],
+  "isolation": {
+    "dedicatedStagingHostname": false,
+    "host": "influrios.com",
+    "note": "influrios.com is not presumed isolated. Mutations require confirmed sandbox providers + mail sink.",
+    "auditAccountDomains": {
+      "influencer": "gmail.com",
+      "business": "kwiktech.net",
+      "admin": "influrios.com"
+    },
+    "mailSinkConfigured": false,
+    "isolationConfirmedEnvFlag": false
+  },
+  "completedAt": "2026-11-18T17:01:17.431Z"
+}

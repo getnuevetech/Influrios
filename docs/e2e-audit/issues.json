@@ -1,0 +1,24 @@
+[
+  {
+    "id": "ISSUE-P0-ADMIN-LOGIN-DEFAULT-CREDS",
+    "severity": "P0",
+    "role": "admin",
+    "route": "/admin/login",
+    "caseId": "J02-admin-exposure",
+    "buildId": "ada9c7f5d90d4d61e78627da2765cbe14004cbc4",
+    "runId": "AUDIT_20261118170047",
+    "prerequisites": "Public unauthenticated access",
+    "steps": "Open /admin/login; observe default super-admin hint rendering concrete credentials",
+    "expected": "No concrete default credentials on login page",
+    "actual": "Page renders default super-admin email and password hint (values redacted from pack)",
+    "impact": "Credential exposure / unauthorized admin access risk",
+    "reproducibility": "Always",
+    "evidenceLinks": [
+      "media/e2e-audit/preflight/01-admin-login-public.png (redacted)"
+    ],
+    "suspectedCause": "Login page intentionally prints ADMIN_SUPER_* defaults for bootstrap",
+    "proposedCorrection": "Remove concrete credential rendering; show setup-needed state only when no admin exists",
+    "ownerRole": "Engineering",
+    "retestResult": "Not retested"
+  }
+]

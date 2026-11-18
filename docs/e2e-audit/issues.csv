@@ -1,0 +1,2 @@
+id,severity,role,route,caseId,buildId,runId,expected,actual,impact,ownerRole,retestResult
+"ISSUE-P0-ADMIN-LOGIN-DEFAULT-CREDS","P0","admin","/admin/login","J02-admin-exposure","ada9c7f5d90d4d61e78627da2765cbe14004cbc4","AUDIT_20261118170047","No concrete default credentials on login page","Page renders default super-admin email and password hint (values redacted from pack)","Credential exposure / unauthorized admin access risk","Engineering","Not retested"
