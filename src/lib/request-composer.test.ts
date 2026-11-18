@@ -14,13 +14,16 @@ describe("request composer", () => {
     assert.equal(joinDraftRecipients(["ada", "ada", "ben"]), "ada,ben");
   });
 
-  it("sends only a private brief with recipients and publishes only a public brief", () => {
+  it("sends invitations on private or public briefs and publishes only a public brief", () => {
     assert.equal(composerSubmit({ intent: "draft", visibility: "private", recipientCount: 2 }).ok, true);
     assert.deepEqual(composerSubmit({ intent: "invite", visibility: "private", recipientCount: 2 }), {
       ok: true,
       action: "invite",
     });
-    assert.equal(composerSubmit({ intent: "invite", visibility: "public", recipientCount: 2 }).ok, false);
+    assert.deepEqual(composerSubmit({ intent: "invite", visibility: "public", recipientCount: 2 }), {
+      ok: true,
+      action: "invite",
+    });
     assert.equal(composerSubmit({ intent: "invite", visibility: "private", recipientCount: 0 }).ok, false);
     assert.deepEqual(composerSubmit({ intent: "publish", visibility: "public", recipientCount: 0 }), {
       ok: true,

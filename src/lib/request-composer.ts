@@ -29,9 +29,7 @@ export function composerSubmit(input: {
   const intent = input.intent.trim();
   if (intent === "" || intent === "draft") return { ok: true, action: "draft" };
   if (intent === "invite") {
-    if (input.visibility !== "private") {
-      return { ok: false, error: "Choose private invitations before sending this brief to named influencers." };
-    }
+    // Public listings may also send direct invitations; visibility stays Public.
     if (input.recipientCount < 1) {
       return { ok: false, error: "Choose at least one influencer before sending invitations." };
     }
