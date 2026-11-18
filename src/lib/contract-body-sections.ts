@@ -96,7 +96,8 @@ export function parseAgreementBodySections(body: string): AgreementBodySection[]
       };
       continue;
     }
-    if (SUBTITLE.test(trimmed.trim()) && current.lines.length > 0) {
+    // Allow the first subtitle (e.g. Agreement purpose) even when the preamble is empty.
+    if (SUBTITLE.test(trimmed.trim()) && (current.lines.length > 0 || current.heading || sections.length === 0)) {
       push();
       current = {
         id: `block-${sections.length + 1}`,
