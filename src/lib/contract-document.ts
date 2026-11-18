@@ -8,7 +8,7 @@ import { applyInfluencerFeeToTerms, resolvePartyPlatformFee } from "@/lib/dual-p
 import { feeLevelForSignedTerms } from "@/lib/paid-agreement-fee";
 import { prisma } from "@/lib/db";
 import { memberDealView } from "@/lib/member-deal-money";
-import { formatMoney } from "@/lib/money";
+import { formatContractMoney } from "@/lib/money";
 import { decryptSecret } from "@/lib/provider-secrets";
 import { activeSigningProvider } from "@/lib/providers";
 import { readSignedTermsSnapshot } from "@/lib/signed-funding";
@@ -373,9 +373,13 @@ export async function agreementForParty(input: {
       total = quote.totalCents;
     }
   }
+  const currency = (terms.currency || "USD").trim().toUpperCase() || "USD";
   return presentAgreementToParty(input.body, {
-    platformFee: fee != null ? formatMoney(fee, terms.currency) : "Shown in your fee breakdown",
-    compensation: formatMoney(viewer === "influencer" && total != null ? total : terms.grossCents, terms.currency),
+    platformFee: fee != null ? formatContractMoney(fee, currency) : "Shown in your fee breakdown",
+    compensation: formatContractMoney(
+      viewer === "influencer" && total != null ? total : terms.grossCents,
+      currency,
+    ),
     feeNote: "Your platform fee is reserved on this agreement.",
   });
 }

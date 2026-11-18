@@ -4,7 +4,7 @@
  * never repeat gross values under an "Influencer Amount" label.
  */
 import { allocateByLargestRemainder } from "@/lib/largest-remainder";
-import { formatMoney } from "@/lib/money";
+import { formatContractMoney } from "@/lib/money";
 
 export type MilestoneScheduleInput = {
   title: string;
@@ -65,9 +65,9 @@ export function buildMilestoneSchedule(input: {
       grossCents,
       feeCents,
       netCents,
-      grossLabel: formatMoney(grossCents, currency),
-      feeLabel: formatMoney(feeCents, currency),
-      netLabel: formatMoney(netCents, currency),
+      grossLabel: formatContractMoney(grossCents, currency),
+      feeLabel: formatContractMoney(feeCents, currency),
+      netLabel: formatContractMoney(netCents, currency),
     };
   });
   const grossCents = rows.reduce((sum, row) => sum + row.grossCents, 0);
@@ -83,9 +83,9 @@ export function buildMilestoneSchedule(input: {
       feeCents,
       netCents,
       shareLabel: `${(shareBps / 100).toFixed(0)}%`,
-      grossLabel: formatMoney(grossCents, currency),
-      feeLabel: formatMoney(feeCents, currency),
-      netLabel: formatMoney(netCents, currency),
+      grossLabel: formatContractMoney(grossCents, currency),
+      feeLabel: formatContractMoney(feeCents, currency),
+      netLabel: formatContractMoney(netCents, currency),
     },
   };
 }

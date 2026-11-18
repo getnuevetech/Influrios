@@ -77,10 +77,21 @@ describe("milestone schedule reconciliation", () => {
     assert.equal(schedule.rows[0]?.grossCents, 142_800);
     assert.equal(schedule.rows[0]?.feeCents, 21_420);
     assert.equal(schedule.rows[0]?.netCents, 121_380);
+    assert.equal(schedule.rows[0]?.feeLabel, "$214.20");
+    assert.equal(schedule.rows[1]?.feeLabel, "$207.90");
+    assert.equal(schedule.rows[1]?.netLabel, "$1,178.10");
+    assert.equal(schedule.totals.feeLabel, "$630.00");
+    assert.equal(schedule.totals.netLabel, "$3,570.00");
+    // Displayed fees must still sum to the signed total (no silent $208 rounding).
+    assert.equal(
+      schedule.rows.reduce((sum, row) => sum + row.feeCents, 0),
+      schedule.totals.feeCents,
+    );
     const block = formatMilestoneScheduleBlock(schedule);
     assert.match(block, /Gross compensation/);
     assert.match(block, /Influencer fee/);
     assert.match(block, /Net compensation/);
+    assert.match(block, /\$207\.90/);
     assert.equal(block.includes("Influencer Amount"), false);
   });
 });

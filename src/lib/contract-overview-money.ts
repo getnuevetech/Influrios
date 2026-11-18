@@ -3,7 +3,7 @@
  * The shared Document tab keeps Business / Influencer platform fee labels.
  */
 import { memberDealView } from "@/lib/member-deal-money";
-import { formatStoredMoney } from "@/lib/money";
+import { formatContractMoney } from "@/lib/money";
 import { readSignedTermsSnapshot } from "@/lib/signed-funding";
 
 export function overviewAmountLines(input: {
@@ -12,6 +12,7 @@ export function overviewAmountLines(input: {
 }): { label: string; amount: string; emphasis: boolean; negative?: boolean }[] {
   const terms = readSignedTermsSnapshot(input.termsSnapshotJson);
   if (!terms) return [];
+  const currency = (terms.currency || "USD").trim().toUpperCase() || "USD";
   const view = memberDealView({
     role: input.role,
     grossCents: terms.grossCents,
@@ -32,7 +33,7 @@ export function overviewAmountLines(input: {
               : line.label === "Gross compensation" || line.label === "Influencer compensation"
                 ? "Gross influencer compensation"
                 : line.label,
-      amount: formatStoredMoney(line.amountCents, terms.currency),
+      amount: formatContractMoney(line.amountCents, currency),
       emphasis: line.label === "You pay" || line.label === "Net payout" || line.label === "You receive",
       negative: /fee/i.test(line.label) && input.role === "influencer",
     }));
@@ -41,7 +42,7 @@ export function overviewAmountLines(input: {
   return [
     {
       label: "Gross influencer compensation",
-      amount: formatStoredMoney(terms.grossCents, terms.currency),
+      amount: formatContractMoney(terms.grossCents, currency),
       emphasis: false,
     },
   ];
