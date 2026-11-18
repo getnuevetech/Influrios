@@ -23,11 +23,21 @@
   "completedAt": "2026-11-18T17:10:30.624Z",
   "caseCount": 153,
   "issueCount": 1,
-  "packGeneratedAt": "2026-11-18T17:13:47.666Z",
+  "packGeneratedAt": "2026-11-18T19:19:48.865Z",
   "downloads": [
     "/cursor/stores/self/docs/e2e-audit/downloads/influrios-e2e-audit-docs.zip",
     "/cursor/stores/self/docs/e2e-audit/downloads/influrios-e2e-audit-screenshots.zip",
     "/cursor/stores/self/docs/e2e-audit/downloads/influrios-e2e-audit-recordings.zip",
     "/cursor/stores/self/docs/e2e-audit/downloads/influrios-e2e-audit-preflight.zip"
-  ]
+  ],
+  "revision": "r2",
+  "verdict": "Audit incomplete with blockers",
+  "mailSink": {
+    "proven": true,
+    "jobId": "cmwmi5v4b08nlpb01rxivghrn"
+  },
+  "isolation": {
+    "status": "evidence-plus-residual-attestation",
+    "totalAccountsObserved": 5
+  }
 }

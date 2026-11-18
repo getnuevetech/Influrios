@@ -1,0 +1,20 @@
+{
+  "at": "2026-11-18T19:16:54.650Z",
+  "recipientAlias": "AUDIT_ADMIN_EMAIL",
+  "recipientDomain": "influrios.com",
+  "afterUrl": "https://influrios.com/admin/mail?sent=started",
+  "afterBanner": true,
+  "evidence": {
+    "attempts": [
+      {
+        "i": 0,
+        "succeeded": true,
+        "smtp250": true,
+        "failed": false,
+        "mailExcerpt": "Recent test sends\n\nsucceeded · [REDACTED_EMAIL] · 11/18/2026, 7:16:47 PM\njob cmwmi5v4b08nlpb01rxivghrn\nSMTP 250 2.0.0 OK 1795029408 6a1803df08f44-92114d67132sm28805366d6.28 - gsmtp\nsucceeded · [REDACTED_EMAIL] · 10/13/2026, 4:35:12 PM\njob cmv6wje8100a3o6018frdtn0r\nsucceeded · [REDACTED_EMAIL] · 10/13/2026, 4:25:38 PM\njob cmv6w73c40084o601nhpaegey\nsucceeded · [REDACTED_EMAIL] · 10/13/2026, 4:23:16 PM\njob cmv6w41sw006fo601axnabyu0\nSMTP 250 2.0.0 OK 1791908597 6a1803df08f44-91b97b95514sm29168156d6.28 - gsmtp\nsucceeded · [REDACTED_EMAIL] · 10/13/2026, 4:21:53 PM\njob cmv6w2aao004go601s4y306o8\nSMTP 250 2.0.0 OK 1791908514 af79cd13be357-93ef5009b87sm268915485a.11 - gsmtp\nOpen jobs →\n\nCommunication channels\n\nEmail on · SMS off\n\nCollapse\n\nEmail is sent through SMTP when this channel is on. SMS is not sent.\n\nEmail enabled\nSave channels\nOlder message drafts\n\nThe catalog of 79 emails is on Email tem",
+        "jobsHasMailTest": true
+      }
+    ]
+  },
+  "claim": "Controlled delivery to AUDIT allowlisted admin mailbox via Admin→Email Send test. Does NOT claim personal inbox UI interception beyond SMTP accept + job success."
+}

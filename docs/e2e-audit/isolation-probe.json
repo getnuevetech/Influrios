@@ -1,0 +1,447 @@
+{
+  "startedAt": "2026-11-18T19:15:26.677Z",
+  "host": "https://influrios.com",
+  "pages": [
+    {
+      "id": "accounts",
+      "path": "/admin/accounts",
+      "url": "https://influrios.com/admin/accounts",
+      "title": "User Accounts · Admin · Influrios",
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\n[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\n\nACCOUNT MANAGEMENT\n\nUser Accounts\n\nManage influencer, business, and admin console accounts — verification, plans, access, and outreach from one place.\n\nExport CSV\nSend invite\n\nTotal Accounts\n\n5\n\n↓ 100%\n\nInfluencers\n\n3\n\n↓ 100%\n\nBusinesses\n\n2\n\n↓ 100%\n\nVerified (KYC)\n\n3\n\n60% of accounts\n\nPending Review\n\n0\n\nNeeds attention\n\nInfluencer Accounts\nBusiness Accounts\nAll Accounts\nAdmin users →\nMore\nStatus\nActive\nRestricted\nPlan\nSTARTER\nPLUS\nPRO\nKYC\nVerified\nIn review\nNot verified\nRejected\nFilters\n\tACCOUNT NAME\tTYPE\tPLAN\tSTATUS\tACTIONS\n\t\n\nArgboboy\n\n@argboboy20\n\n\tInfluencer\tPLUS\tActive\t\nView account\n···\n\n\t\n\nJenks Ag\n\n@jenks-ag-3\n\n\tInfluencer\tSTARTER\tActive\t\nView account\n···\n\n\t\n\nAg Olomola\n\n@ag-olomola-2\n\n\tInfluencer\tPLUS\tActive\t\nView account\n···\n\nShowing 1-3 of 3 influencers\n\n‹\n1 / 1\n›\nRegistration policy",
+      "signals": {
+        "mentionsSandbox": false,
+        "mentionsLive": false,
+        "mentionsStripe": false,
+        "smtpReady": false,
+        "testSendUi": false
+      }
+    },
+    {
+      "id": "biz-accounts",
+      "path": "/admin/business-accounts",
+      "url": "https://influrios.com/admin/business-accounts",
+      "title": "Business Accounts · Admin · Influrios",
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\n[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\n\nACCOUNT MANAGEMENT\n\nUser Accounts\n\nManage influencer, business, and admin console accounts — verification, plans, access, and outreach from one place.\n\nExport CSV\nSend invite\n\nTotal Accounts\n\n5\n\n↓ 100%\n\nInfluencers\n\n3\n\n↓ 100%\n\nBusinesses\n\n2\n\n↓ 100%\n\nVerified (KYC)\n\n3\n\n60% of accounts\n\nPending Review\n\n0\n\nNeeds attention\n\nInfluencer Accounts\nBusiness Accounts\nAll Accounts\nAdmin users →\nMore\nStatus\nActive\nRestricted\nPlan\nBUSINESS_FREE\nBUSINESS_PRO\nAGENCY\nFilters\n\tACCOUNT NAME\tTYPE\tPLAN\tSTATUS\tACTIONS\n\t\nRW\n\nRichard Winfred Esi\n\nHandle on the account record\n\n\tBusiness\tSTARTER\tActive\t\nView account\n···\n\n\t\nAH\n\nABC Holdings\n\nHandle on the account record\n\n\tBusiness\tSTARTER\tActive\t\nView account\n···\n\nShowing 1-2 of 2 businesses\n\n‹\n1 / 1\n›\nRegistration policy",
+      "signals": {
+        "mentionsSandbox": false,
+        "mentionsLive": false,
+        "mentionsStripe": false,
+        "smtpReady": false,
+        "testSendUi": false
+      }
+    },
+    {
+      "id": "accounts-all",
+      "path": "/admin/accounts?tab=all",
+      "url": "https://influrios.com/admin/accounts?tab=all",
+      "title": "User Accounts · Admin · Influrios",
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\n[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\n\nACCOUNT MANAGEMENT\n\nUser Accounts\n\nManage influencer, business, and admin console accounts — verification, plans, access, and outreach from one place.\n\nExport CSV\nSend invite\n\nTotal Accounts\n\n5\n\n↓ 100%\n\nInfluencers\n\n3\n\n↓ 100%\n\nBusinesses\n\n2\n\n↓ 100%\n\nVerified (KYC)\n\n3\n\n60% of accounts\n\nPending Review\n\n0\n\nNeeds attention\n\nInfluencer Accounts\nBusiness Accounts\nAll Accounts\nAdmin users →\nMore\nStatus\nActive\nRestricted\nPlan\nSTARTER\nPLUS\nPRO\nBUSINESS_FREE\nBUSINESS_PRO\nAGENCY\nKYC\nVerified\nIn review\nNot verified\nRejected\nFilters\n\tACCOUNT NAME\tTYPE\tPLAN\tSTATUS\tACTIONS\n\t\nRW\n\nRichard Winfred Esi\n\nHandle on the account record\n\n\tBusiness\tSTARTER\tActive\t\nView account\n···\n\n\t\nAH\n\nABC Holdings\n\nHandle on the account record\n\n\tBusiness\tSTARTER\tActive\t\nView account\n···\n\n\t\n\nArgboboy\n\n@argboboy20\n\n\tInfluencer\tPLUS\tActive\t\nView account\n···\n\n\t\n\nJenks Ag\n\n@jenks-ag-3\n\n\tInfluencer\tSTARTER\tActive\t\nView account\n···\n\n\t\n\nAg Olomola\n\n@ag-olomola-2\n\n\tInfluencer\tPLUS\tActive\t\nView account\n···\n\nShowing 1-5 of 5 accounts\n\n‹\n1 / 1\n›\nRegistration policy",
+      "signals": {
+        "mentionsSandbox": false,
+        "mentionsLive": false,
+        "mentionsStripe": false,
+        "smtpReady": false,
+        "testSendUi": false
+      }
+    },
+    {
+      "id": "billing",
+      "path": "/admin/billing",
+      "url": "https://influrios.com/admin/billing",
+      "title": "Billing activity · Admin · Influrios",
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\n[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\n\nAdmin / Subscriptions\n\nPlans & features\nBilling activity\nBilling activity\nS\nStripe\n·\nSandbox\nCustomer portal\n·\nOn\nBilling settings\nManage account overrides\nCheckout sessions\nStatus: All\nStatus: Completed\nStatus: Open\nStatus: Expired\nDate range\nDate range: All time\nDate range: Last 7 days\nDate range: Last 30 days\nDate range: Last 90 days\nDate\tAccount\tPlan\tCheckout status\tDetails\nNov 8\tAg Olomola\tInfluencer Plus\t\nCompleted\tView\nNov 8\tAg Olomola\tInfluencer Plus\t\nOpen\tView\nOct 13\tArgboboy\tInfluencer Plus\t\nCompleted\tView",
+      "signals": {
+        "mentionsSandbox": true,
+        "mentionsLive": false,
+        "mentionsStripe": true,
+        "smtpReady": false,
+        "testSendUi": false
+      }
+    },
+    {
+      "id": "mail",
+      "path": "/admin/mail",
+      "url": "https://influrios.com/admin/mail",
+      "title": "Email · Admin · Influrios",
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\n[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\n← Admin\nEmail\n\nConfigure SMTP and manage auto/manual templates. Each template can keep a short SMS body (max 320 characters) for a later provider. SMS is not sent.\n\nSMTP settings\n\nReady (admin)\n\nCollapse\n\nSMTP is ready to send via the admin settings.\n\nHost\nGmail / Google Workspace: use smtp.gmail.com (not smtp.google.com). Port 587 + App Password.\nPort\nUsername\nFrom address\nFrom name\nShown beside the From address on catalog mail, including template tests and live catalog sends. Older plain-text mail keeps the address alone.\nPassword\nGmail requires an App Password (Google Account → Security), not your normal login password.\nEnabled (required for admin SMTP to send)\nRemove the saved password\n\nNo SMTP host is set in the environment. Turn on Enabled with host, from address, and password (when a username is set), then save.\n\nSave SMTP\n\nTest SMTP (claim invitation)\n\nSMTP ready\n\nCollapse\n\nSends the claim invitation template to one address. Preview labels fill the name, expiry, and profile, and the link is this site. The message does not claim a profile. SMTP must show Ready above — if Enabled is off or the password is missing, the error after submit names the missing step.\n\nTo\nSend test\n\nRecent test sends\n\nsucceeded · [REDACTED_EMAIL] · 10/13/2026, 4:35:12 PM\njob cmv6wje8100a3o6018frdtn0r\nsucceeded · [REDACTED_EMAIL] · 10/13/2026, 4:25:38 PM\njob cmv6w73c40084o601nhpaegey\nsucceeded · [REDACTED_EMAIL] · 10/13/2026, 4:23:16 PM\njob cmv6w41sw006fo601axnabyu0\nSMTP 250 2.0.0 OK 1791908597 6a1803df08f44-91b97b95514sm29168156d6.28 - gsmtp\nsucceeded ·",
+      "signals": {
+        "mentionsSandbox": false,
+        "mentionsLive": false,
+        "mentionsStripe": false,
+        "smtpReady": true,
+        "testSendUi": true
+      }
+    },
+    {
+      "id": "mail-health",
+      "path": "/admin/mail/health",
+      "url": "https://influrios.com/admin/mail/health",
+      "title": "Email health · Admin · Influrios",
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\n[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\n← Email settings\nEmail health\n\nSMTP, category switches, and paused templates. A category that is on sends the catalog. A category that is off keeps the older plain-text sender. Pausing an essential template stops that message.\n\nProvider\n\nSMTP is ready (admin).\n\nFrom name: Influrios\n\nFailed mail jobs: 32\n\nPaused templates\n\nNone paused.\n\nLive catalog categories\nYour account\nYour invitations\nYour agreement\nCollaboration funding\nYour collaboration\nPayout update\nCase update\nCancellation update\nRefund update\nPayment update\nOperations alert\nSubscription billing\nFrom Influrios\nSave switches",
+      "signals": {
+        "mentionsSandbox": false,
+        "mentionsLive": false,
+        "mentionsStripe": false,
+        "smtpReady": true,
+        "testSendUi": false
+      }
+    },
+    {
+      "id": "payment-switches",
+      "path": "/admin/payment-switches",
+      "url": "https://influrios.com/admin/payment-settings?section=fees#payment-switches",
+      "title": "Payment settings · Admin · Influrios",
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\n[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\nPayment settings\n\nProviders and connections, account roles, country routes, fees, and tax settings. Saving a form does not start a charge or move money that is already with a provider.\n\nProviders\nAccount roles\nCountry routes\nFees & policies\nTax\nDiscount codes\nAudit\n← Admin\nCollaboration fee rules\n\nPhase 12.1 — Admin-versioned fee matrix and immutable snapshots. Fee percentages are never hard-coded in product flows (Addendum PA001 / PA002).\n\nFee simulator\n\nResolve the winning rule for a commercial context before either party accepts.\n\nJurisdiction\nChoose a jurisdiction\nUnited Kingdom\nNigeria\nUnited States\nService level\nChoose a service level\nDiscovery only\nPlatform match\nContracted collaboration\nManaged introduction\nManaged campaign\nGross influencer compensation (USD)\nSimulate fee\nJurisdiction gates\n\nManage which markets allow protected payments and whether UI may say “escrow” (PA004). Deeper capability flags also live under Marketplace.\n\nGB · United Kingdom\n\nProtected payments on · Protected Payment\n\nExpand\n\nNG · Nigeria\n\nProtected payments on · Escrow\n\nExpand\n\nUS · United States\n\nProtected payments on · Protected Payment\n\nExpand\nAdd jurisdiction gate\nCode (ISO-2)\nLabel\nProtected payments enabled\nAllow the word escrow\nCreate jurisdiction\n\nPA004 — UI must not say “escrow” unless escrowTermAllowed is true for that jurisdiction.\n\nActive rules\n\nA contract service level uses the Business fee (added on top) and the Influencer fee (deducted from the gross) that match it. A saved rule for that level is listed even when it is inactive. Missing",
+      "signals": {
+        "mentionsSandbox": false,
+        "mentionsLive": false,
+        "mentionsStripe": false,
+        "smtpReady": false,
+        "testSendUi": false
+      }
+    },
+    {
+      "id": "gateways",
+      "path": "/admin/gateways",
+      "url": "https://influrios.com/admin/payment-settings?section=providers",
+      "title": "Payment settings · Admin · Influrios",
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\n[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\nPayment settings\n\nProviders and connections, account roles, country routes, fees, and tax settings. Saving a form does not start a charge or move money that is already with a provider.\n\nProviders\nAccount roles\nCountry routes\nFees & policies\nTax\nDiscount codes\nAudit\n← Admin\nPayment gateways\n\nCredentials live here. Country collection, holding, and conflicts are on Country routes.\n\nSave gateway credentials here. Plan checkouts use Stripe from this page. Country corridors pick which of these gateways collect collaboration funding and which payout onboarding rail influencers see. Assign each country — or a named country group — to one gateway, and set one default backup for failed country routes.\n\nDefault backup gateway\n\nWhen a country's assigned gateway is disabled or missing a secret, checkout and readiness checks use this backup instead.\n\nBackup gateway\nChoose a gateway…\nAirwallex\nFlutterwave\nM-Pesa\nStripe Collaboration (current)\nSet as default backup\nCountry groups\n\nGroup countries for reference. Saving a group does not change a country route. Edit each payout gateway on Payment settings. Hold Ctrl/Cmd to select multiple countries.\n\nAdd a country group\nGroup name\nGateway\nAirwallex\nFlutterwave\nM-Pesa\nStripe Collaboration\nCountries\nAfghanistan (AF)\nAland Islands (AX)\nAlbania (AL)\nAlgeria (DZ)\nAmerican Samoa (AS)\nAndorra (AD)\nAngola (AO)\nAnguilla (AI)\nAntarctica (AQ)\nAntigua And Barbuda (AG)\nArgentina (AR)\nArmenia (AM)\nAruba (AW)\nAustralia (AU)\nAustria (AT)\nAzerbaijan (AZ)\nBahrain (BH)\nBangladesh (BD)\nBarbados (BB)\nBelarus (BY)\nBelgium (B",
+      "signals": {
+        "mentionsSandbox": false,
+        "mentionsLive": false,
+        "mentionsStripe": true,
+        "smtpReady": false,
+        "testSendUi": false
+      }
+    },
+    {
+      "id": "payment-providers",
+      "path": "/admin/payment-settings?section=providers",
+      "url": "https://influrios.com/admin/payment-settings?section=providers",
+      "title": "Payment settings · Admin · Influrios",
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\n[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\nPayment settings\n\nProviders and connections, account roles, country routes, fees, and tax settings. Saving a form does not start a charge or move money that is already with a provider.\n\nProviders\nAccount roles\nCountry routes\nFees & policies\nTax\nDiscount codes\nAudit\n← Admin\nPayment gateways\n\nCredentials live here. Country collection, holding, and conflicts are on Country routes.\n\nSave gateway credentials here. Plan checkouts use Stripe from this page. Country corridors pick which of these gateways collect collaboration funding and which payout onboarding rail influencers see. Assign each country — or a named country group — to one gateway, and set one default backup for failed country routes.\n\nDefault backup gateway\n\nWhen a country's assigned gateway is disabled or missing a secret, checkout and readiness checks use this backup instead.\n\nBackup gateway\nChoose a gateway…\nAirwallex\nFlutterwave\nM-Pesa\nStripe Collaboration (current)\nSet as default backup\nCountry groups\n\nGroup countries for reference. Saving a group does not change a country route. Edit each payout gateway on Payment settings. Hold Ctrl/Cmd to select multiple countries.\n\nAdd a country group\nGroup name\nGateway\nAirwallex\nFlutterwave\nM-Pesa\nStripe Collaboration\nCountries\nAfghanistan (AF)\nAland Islands (AX)\nAlbania (AL)\nAlgeria (DZ)\nAmerican Samoa (AS)\nAndorra (AD)\nAngola (AO)\nAnguilla (AI)\nAntarctica (AQ)\nAntigua And Barbuda (AG)\nArgentina (AR)\nArmenia (AM)\nAruba (AW)\nAustralia (AU)\nAustria (AT)\nAzerbaijan (AZ)\nBahrain (BH)\nBangladesh (BD)\nBarbados (BB)\nBelarus (BY)\nBelgium (B",
+      "signals": {
+        "mentionsSandbox": false,
+        "mentionsLive": false,
+        "mentionsStripe": true,
+        "smtpReady": false,
+        "testSendUi": false
+      }
+    },
+    {
+      "id": "jobs",
+      "path": "/admin/jobs",
+      "url": "https://influrios.com/admin/jobs",
+      "title": "Jobs · Admin · Influrios",
+      "excerpt": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\n[REDACTED_EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([REDACTED_EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\n← Admin\nJobs\n\nMail, verification, milestone auto-approval, and provider records. A failed mail job can be queued again. Invitation mail is marked delivered only after SMTP accepts it. The sweep clock enqueues each money sweep from POST /api/cron/sweeps. Auto-approval sweeps skip disputed milestones.\n\nmilestone_auto_approval\nlatest: succeeded · 2026-10-13T15:36:12.760Z\nsucceeded id cmv6ufj5m000dut01g2jvu0xh · 2026-10-13T15:36:12.760Z\nreview_deadline_sweep\nlatest: succeeded · 2026-10-13T15:36:12.768Z\nsucceeded id cmv6ufj5p000eut01t3p0flqz · 2026-10-13T15:36:12.768Z\ndispute_sla_sweep\nlatest: succeeded · 2026-10-13T15:36:12.776Z\nsucceeded id cmv6ufj5r000fut013dywan8h · 2026-10-13T15:36:12.776Z\nprovider_hold_warn_sweep\nlatest: succeeded · 2026-10-13T15:36:12.786Z\nsucceeded id cmv6ufj5s000gut01c90ko4yp · 2026-10-13T15:36:12.786Z\nfailed_payout_retry_sweep\nlatest: succeeded · 2026-10-13T15:36:12.794Z\nsucceeded id cmv6ufj5u000hut01lz4pa77u · 2026-10-13T15:36:12.794Z\nfunding_recon_sweep\nlatest: succeeded · 2026-10-13T15:36:12.803Z\nsucceeded id cmv6ufj5w000iut01kxpy8rk4 · 2026-10-13T15:36:12.803Z\nscheduled_release_sweep\nlatest: succeeded · 2026-11-13T22:54:49.252Z\nsucceeded id cmwfkqzrb000sry01je9ormgg · 2026-11-13T22:54:49.252Z\nmarketplace_application_expire_sweep\nlatest: succeeded · 2026-10-13T15:36:12.818Z\nsucceeded id cmv6ufj5z000kut016jsvrpko · 2026-10-13T15:36:12.818Z\nrecurring_cycle_sweep\nlatest: succeeded · 2026-10-13T15:36:12.839Z\nsucceeded id cmv6ufj61000lut013qd0vrgz · 2026-10-13T15:36:12.839Z\nshort_link_schedule_sweep\nlatest: succeed",
+      "signals": {
+        "mentionsSandbox": false,
+        "mentionsLive": false,
+        "mentionsStripe": false,
+        "smtpReady": false,
+        "testSendUi": false
+      }
+    }
+  ],
+  "mailControls": {
+    "inputs": [
+      {
+        "name": "tab",
+        "type": "hidden",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "q",
+        "type": "search",
+        "placeholder": "Search Influrios (users, businesses, campaigns, invoices...)",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "$ACTION_ID_00771a2e751b7cf1eb04d7d2a9350a4db1b8574116",
+        "type": "hidden",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "$ACTION_ID_402798654916d8103cf6a39a9ba695198aa3f1518f",
+        "type": "hidden",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "host",
+        "type": "text",
+        "placeholder": "smtp.gmail.com",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "port",
+        "type": "number",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "username",
+        "type": "text",
+        "placeholder": "[REDACTED_EMAIL]",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "fromAddress",
+        "type": "text",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "fromName",
+        "type": "text",
+        "placeholder": "Influrios",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "password",
+        "type": "password",
+        "placeholder": "Saved. Leave blank to keep it.",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "enabled",
+        "type": "checkbox",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "clearSecret",
+        "type": "checkbox",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "$ACTION_ID_4009ad3ac48d6a69d0e5def7b30f02449f3cf1be9b",
+        "type": "hidden",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "to",
+        "type": "email",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "$ACTION_ID_408a806315b3e166ab7c7ec18314efcb7c3f7012fb",
+        "type": "hidden",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "emailEnabled",
+        "type": "checkbox",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "$ACTION_ID_4019aa46c7ab8d4fe6a274e84709f4506c9e4c5869",
+        "type": "hidden",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "id",
+        "type": "hidden",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "key",
+        "type": "hidden",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "triggerKey",
+        "type": "select-one",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "audience",
+        "type": "select-one",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "mode",
+        "type": "select-one",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "subject",
+        "type": "text",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "bodyEmail",
+        "type": "textarea",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "bodySms",
+        "type": "textarea",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "active",
+        "type": "checkbox",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "sortOrder",
+        "type": "hidden",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "$ACTION_ID_40d6bce56733053b03884123b6365e7e236924db27",
+        "type": "hidden",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "templateId",
+        "type": "hidden",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "channel",
+        "type": "hidden",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "to",
+        "type": "email",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "$ACTION_ID_40a4cafd8d4ebabfde8e943fd13712d6913a2ae4cf",
+        "type": "hidden",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "id",
+        "type": "hidden",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "$ACTION_ID_4019aa46c7ab8d4fe6a274e84709f4506c9e4c5869",
+        "type": "hidden",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "id",
+        "type": "hidden",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "key",
+        "type": "hidden",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "placeholder": "",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "triggerKey",
+        "type": "select-one",
+        "id": "",
+        "aria": null
+      },
+      {
+        "name": "audience",
+        "type": "select-one",
+        "id": "",
+        "aria": null
+      }
+    ],
+    "buttons": [
+      "Sign out",
+      "Save SMTP",
+      "Send test",
+      "Save channels",
+      "Save template",
+      "Send email",
+      "Remove template",
+      "Save template",
+      "Send email",
+      "Remove template",
+      "Save template",
+      "Send email",
+      "Remove template",
+      "Save template",
+      "Send email",
+      "Remove template",
+      "Save template",
+      "Send email",
+      "Remove template",
+      "Add template"
+    ]
+  }
+}

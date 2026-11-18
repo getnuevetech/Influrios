@@ -1,13 +1,13 @@
-# Influrios E2E audit pack (AUDIT_20261118170047)
+# Influrios E2E audit pack (AUDIT_20261118170047 / r2)
 
-**Verdict:** Audit incomplete with blockers.
+**Verdict:** Audit incomplete with blockers. PR #534 open for revision — **not** finished.
 
-Browse: [index.html](./index.html)  
-Executive: [executive-summary.md](./executive-summary.md)  
-Environment / blockers: [environment.md](./environment.md) · [blockers.md](./blockers.md)
+- [index.html](./index.html)
+- [executive-summary.md](./executive-summary.md)
+- [coverage.md](./coverage.md) (reconciled denominators)
+- [isolation-evidence.md](./isolation-evidence.md)
+- [mail-sink-proof.md](./mail-sink-proof.md)
+- [blockers.md](./blockers.md)
+- [downloads/](./downloads/)
 
-Media: `/cursor/stores/self/media/e2e-audit/` (screenshots, recordings, preflight, SHA256SUMS.txt)
-
-Downloads: [downloads/](./downloads/)
-
-Agency deferred. Payment Standard v2 paused. No live money / real customer notices executed.
+Media: `/cursor/stores/self/media/e2e-audit/`

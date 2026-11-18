@@ -1,45 +1,39 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><title>E2E Audit Executive Summary</title></head><body><pre># Influrios End-to-End Audit — Executive summary
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>E2E Audit Executive Summary</title></head><body><pre># Influrios End-to-End Audit — Executive summary (rev r2)
 
 **runId:** AUDIT_20261118170047  
+**Revision:** r2 — Ola rejected treating #534 as finished; pack revised  
 **Deployed build:** `ada9c7f5d90d4d61e78627da2765cbe14004cbc4`  
 **Base URL:** https://influrios.com  
-**Date:** 2026-11-18 (UTC)
 
 ## Verdict
 
-**Audit incomplete with blockers.**
+**Audit incomplete with blockers** (revision in progress on PR #534 — keep open).
 
-The browsable pack covers preflight, route/action inventory, authenticated read-only navigation across Public/Influencer/Business/Admin, centered-popup geometry samples (Pass on sampled dialogs), and login/pricing checks. Critical sandbox mutating journeys (invite → sign → fund → milestone → payout, subscription checkout, notification interception) were **not** executed because staging isolation and a proven mail sink were not confirmed.
+Stopping customer-affecting mutations without isolation attestation was correct; calling that stop “done” was not. This revision:
 
-## Counts
+1. Proves notification controlled delivery (SMTP 250 + job success to AUDIT_ADMIN)
+2. Documents isolation footprint evidence (5 accounts, Stripe Sandbox) + **exact operator checklist** still required
+3. Removes false journey Pass inflation from route-open screenshots
+4. Keeps mutating invite/sign/fund/payout/sub/withdraw/delete journeys **Blocked** with owner/action until checklist completes
 
-- Cases: **153**
-- Functional Pass: **131** · Fail: **0** · Blocked: **20** · Not tested: **1** · N/A: **1**
-- Issues: **1** (P0: 1)
-- Screenshots: 141 · Recordings: 3
+## Journey matrix (J01–J30)
 
-## Top blockers / defects
+- Pass: **0**
+- Partial: **9**
+- Blocked: **20**
+- (see [coverage.md](./coverage.md))
 
-1. **BLK-ISOLATION** — confirm isolated staging or set `AUDIT_ISOLATION_CONFIRMED=1`
-2. **BLK-MAIL-SINK** — provide allowlisted sink + interception proof
-3. **ISSUE-P0-ADMIN-LOGIN-DEFAULT-CREDS** — remove concrete default admin credentials from `/admin/login` (separate hotfix; not silently fixed in this audit)
-4. **BLK-DEPLOY-SHA** — deployed `ada9c7f5` ≠ local PR #532 HEAD
+## Top open items for Ola
 
-## Completed vs incomplete
+1. Complete isolation attestation checkboxes in [isolation-evidence.md](./isolation-evidence.md)
+2. Separate hotfix for P0 admin-login default credentials
+3. After (1): authorize mutating retest — pack will be updated on #534
 
-| Completed (evidence-backed) | Incomplete / blocked |
-|-----------------------------|----------------------|
-| Preflight provider labeling (Stripe Sandbox, SMTP Ready, in-app signing) | J01 verify, J05–J08 notices |
-| Role logins + invalid login | J04–J15 mutating main collaboration |
-| Route inventory opens (128 source routes mapped; audited subset executed) | J16–J20 sandbox money matrix |
-| J30 centered popup samples Pass | Provider-sandbox checkout/payout proof |
-| Agency deferred labeled | End-to-end verified gate |
+## Links
 
-## Next actions for Ola
-
-1. Confirm isolation + mail allowlist (unblocks mutating suite).  
-2. Authorize separate P0 admin-login credential hotfix.  
-3. Re-run mutating journeys on confirmed staging; refresh pack.
-
-Full pack index: [index.html](./index.html)
+- [index.html](./index.html)
+- [blockers.md](./blockers.md)
+- [mail-sink-proof.md](./mail-sink-proof.md)
+- [isolation-evidence.md](./isolation-evidence.md)
+- Downloads: [downloads/](./downloads/)
 </pre></body></html>
