@@ -1,6 +1,6 @@
 # Influrios UX design package
 
-**Status:** In revision for Ola — **not complete / not implementation-ready**  
+**Status:** **Draft specification** — **not complete / not implementation-ready** (GitHub draft PR #533)  
 **Date:** 2026-11-18  
 **Baseline:** PR #532 visual audit (immutable) — [../staging-visual-audit/README.md](../staging-visual-audit/README.md)  
 **Policy:** Agency deferred · Payment Standard v2 paused · No product UI redesign / broad implementation in this phase  
