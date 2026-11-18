@@ -1,6 +1,7 @@
 /**
  * Collaboration agreements: admin template, filled document, PDF, and who may read a message.
- * Agreements are signed in Influrios. A stored PDF is available before and after every party signs.
+ * Signing channel follows Admin → Document signing (Influrios in-app or DocuSign). A stored PDF
+ * is available before and after every party signs.
  */
 import { createHash } from "crypto";
 import { applyInfluencerFeeToTerms, resolvePartyPlatformFee } from "@/lib/dual-platform-fees";
@@ -8,6 +9,8 @@ import { feeLevelForSignedTerms } from "@/lib/paid-agreement-fee";
 import { prisma } from "@/lib/db";
 import { memberDealView } from "@/lib/member-deal-money";
 import { formatMoney } from "@/lib/money";
+import { decryptSecret } from "@/lib/provider-secrets";
+import { activeSigningProvider } from "@/lib/providers";
 import { readSignedTermsSnapshot } from "@/lib/signed-funding";
 import { stripLeadingChrome } from "@/lib/contract-body-sections";
 import { buildMilestoneSchedule } from "@/lib/contract-milestone-schedule";
@@ -27,6 +30,11 @@ import {
 import { renderFormalAgreementDocumentHtml } from "@/lib/formal-agreement-html";
 import { renderFormalAgreementPdf, type FormalPdfInput } from "@/lib/formal-agreement-pdf";
 import { chromeAvailableForPdf, htmlDocumentToPdf } from "@/lib/html-to-pdf";
+import { resolveSigningMode } from "@/lib/signing";
+import {
+  assembleDocuSignCredentials,
+  openDocuSignEnvelope,
+} from "@/lib/signing/docusign";
 import {
   applyNativeSignatureAnchor,
   formatNativeAttestation,
@@ -1008,6 +1016,56 @@ export async function deleteContractDocumentAsSuperAdmin(id: string) {
   return { ok: true as const };
 }
 
+/** Resolve the admin-enabled signing channel before a contract row is created. */
+export async function resolveContractSigningChannel(fetchImpl?: typeof fetch): Promise<
+  | { ok: true; channel: "native"; providerId: string | null }
+  | {
+      ok: true;
+      channel: "docusign";
+      providerId: string;
+      credentials: import("@/lib/signing/docusign").DocuSignCredentials;
+      fetchImpl?: typeof fetch;
+    }
+  | { ok: false; error: string }
+> {
+  const provider = await activeSigningProvider().catch(() => null);
+  if (!provider) return { ok: true, channel: "native", providerId: null };
+  const secret = (provider.secretCipher ? decryptSecret(provider.secretCipher) : "") || "";
+  const mode = resolveSigningMode(provider.code, {
+    integrationKey: provider.integrationKey,
+    userId: provider.userId,
+    accountId: provider.publicKey,
+    privateKey: secret,
+    baseUrl: provider.baseUrl,
+  });
+  if (mode === "native") return { ok: true, channel: "native", providerId: provider.id };
+  if (mode !== "docusign") {
+    return {
+      ok: false,
+      error:
+        "DocuSign is enabled but credentials are incomplete. Save the integration key, user id, account id, private key, and API base URL in Admin → Document signing, or enable Influrios in-app signing. Nothing was sent.",
+    };
+  }
+  const assembled = assembleDocuSignCredentials({
+    stored: {
+      integrationKey: provider.integrationKey,
+      userId: provider.userId,
+      accountId: provider.publicKey,
+      privateKey: secret,
+      baseUrl: provider.baseUrl,
+      oauthBaseUrl: provider.oauthBaseUrl || undefined,
+    },
+  });
+  if (!assembled.ok) return assembled;
+  return {
+    ok: true,
+    channel: "docusign",
+    providerId: provider.id,
+    credentials: assembled,
+    fetchImpl,
+  };
+}
+
 export async function sendCollaborationContract(input: {
   render: ContractRenderInput;
   workspaceId: string;
@@ -1017,6 +1075,8 @@ export async function sendCollaborationContract(input: {
   createdByUserId: string;
   source: Record<string, string>;
   termsSnapshot?: import("@/lib/signed-funding").SignedTermsSnapshot | null;
+  /** Test-only DocuSign HTTP. */
+  fetchImpl?: typeof fetch;
 }) {
   const business = input.render.parties.find((party) => party.role === "business");
   const creators = input.render.parties.filter((party) => party.role === "creator");
@@ -1032,8 +1092,10 @@ export async function sendCollaborationContract(input: {
   if (duplicate) {
     return { ok: false as const, error: duplicate, existingId: existing?.id ?? null };
   }
+  const signing = await resolveContractSigningChannel(input.fetchImpl);
+  if (!signing.ok) return signing;
+  const signingChannel = signing.channel;
   const template = await ensureContractTemplate();
-  const signingChannel = "native" as const;
   let envelopeId = "";
 
   // Create the row first so the agreement reference is assigned before the body and PDF are frozen.
@@ -1078,7 +1140,9 @@ export async function sendCollaborationContract(input: {
     ...input.render,
     agreementId: agreementRef,
     agreementStatus: input.render.agreementStatus ?? "Ready for Signature",
-    esignProvider: input.render.esignProvider,
+    esignProvider:
+      input.render.esignProvider ??
+      (signingChannel === "docusign" ? "DocuSign" : "Influrios in-app signing"),
   });
   const pdfBytes = renderContractPdf(renderedBody, {
     title: input.render.title,
@@ -1103,7 +1167,36 @@ export async function sendCollaborationContract(input: {
     replacementId: document.id,
   }).catch(() => undefined);
 
-  if (signingChannel === "native" && !envelopeId) {
+  if (signing.channel === "docusign") {
+    const opened = await openDocuSignEnvelope({
+      credentials: signing.credentials,
+      fetchImpl: signing.fetchImpl,
+      request: {
+        collaborationId: input.collaborationId || document.id,
+        title: input.render.title.slice(0, 160),
+        documentHtml: renderedBody,
+        documentPdf: Buffer.from(pdfBytes),
+        parties: input.render.parties.map((party) => ({ name: party.name, email: party.email })),
+      },
+    });
+    if (!opened.ok) {
+      await prisma.contractDocument.delete({ where: { id: document.id } }).catch(() => undefined);
+      return opened;
+    }
+    envelopeId = opened.envelopeId;
+    if (input.collaborationId?.trim()) {
+      await prisma.signatureRequest.create({
+        data: {
+          collaborationId: input.collaborationId.trim(),
+          providerId: signing.providerId,
+          status: "sent",
+          title: input.render.title.slice(0, 160),
+          externalId: envelopeId,
+          lastError: null,
+        },
+      });
+    }
+  } else if (!envelopeId) {
     envelopeId = nativeEnvelopeId(document.id);
   }
 
@@ -1115,6 +1208,7 @@ export async function sendCollaborationContract(input: {
       contentDigest: contractContentDigest(renderedBody),
       pdfBytes: new Uint8Array(pdfBytes),
       envelopeId,
+      signingChannel,
     },
   });
 

@@ -894,7 +894,7 @@ export async function queueSignatureRequest(input: { collaborationId: string; ti
     return {
       ok: false as const,
       error:
-        "Agreements are signed in Influrios. Create the contract and each party signs on the contract page. Nothing was sent to DocuSign.",
+        "DocuSign envelopes are created when you send the collaboration agreement from the contract wizard. Open the agreement flow and send it there. Nothing was queued from this legacy action.",
     };
   } else if (!provider.baseUrl) {
     return { ok: false as const, error: "Add the signing API base URL in admin. Nothing was signed." };

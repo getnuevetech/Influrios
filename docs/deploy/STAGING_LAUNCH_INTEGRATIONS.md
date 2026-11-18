@@ -477,6 +477,26 @@ npm run staging:e9-team-proposal-evidence
 npm run staging:e9-prove-chain
 ```
 
+### E10 progress (DocuSign) — **product path ready** (host evidence blank)
+
+**Goal:** DocuSign enabled · wizard send creates an envelope · both parties complete in sandbox · `ContractDocument` / `SignatureRequest` become signed only from Connect webhook · duplicate delivery leaves a single completion.
+
+| Check | Result |
+|-------|--------|
+| Wizard send follows Admin signing channel | ☑ `resolveContractSigningChannel` + `openDocuSignEnvelope` in `sendCollaborationContract` |
+| Native still default when Influrios signing is enabled | ☑ |
+| Admin cannot mark signed from a form | ☑ `advanceSignatureRequest` refuses `signed` |
+| Unit wiring | ☑ `src/lib/signing.test.ts` + DocuSign adapter tests |
+| Host: unsigned webhook → 401 when Ready | ☐ `npm run staging:e10-docusign-evidence` |
+| Host: completed + duplicate webhook | ☐ `DOCUSIGN_WEBHOOK_SECRET=… npm run staging:e10-prove-chain` |
+| Live sandbox envelope id from wizard | ☐ paste from DocuSign + `tmp/e10-evidence-ids.env` |
+
+```bash
+cd /var/www/influrios
+npm run staging:e10-docusign-evidence
+DOCUSIGN_WEBHOOK_SECRET=… npm run staging:e10-prove-chain
+```
+
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
 | Env, HTTPS, auth secret, cron | probe 8/8 · cron 401 · E1 tick `2026-10-13T15:36:12Z` · `milestone_auto_approval`=`cmv6ufj5m000dut01g2jvu0xh` · `recurring_cycle_sweep`=`cmv6ufj61000lut013qd0vrgz` · crontab installed | 2026-10-13 | host + cloud-agent |
@@ -487,7 +507,7 @@ npm run staging:e9-prove-chain
 | Airwallex hold and release | **in progress** — post-#323 deploy had unsigned **401** (2026-11-02) · **2026-11-17 probe: unsigned → 503 Airwallex not ready** · use `staging:e6-prove-chain` once gateway secret restored | 2026-11-17 | host + cloud-agent |
 | Recurring tranche 2 | **product path ready** — payments series label + Stop · `npm run staging:e8-recurring-evidence` / `staging:e8-prove-chain` · paste scheduleId + tranche 2 id when host prove runs | | |
 | Team proposal | **product path ready** — shortlist → `/collaboration/team?creators=` · `npm run staging:e9-team-proposal-evidence` / `staging:e9-prove-chain` · paste proposal id + wizard parties when host prove runs | | |
-| DocuSign completed | | | |
+| DocuSign completed | **product path ready** — wizard send uses DocuSign when enabled · `npm run staging:e10-docusign-evidence` / `staging:e10-prove-chain` · paste envelope + contract ids when host prove runs | | |
 | Flutterwave or M-Pesa | | | |
 | Intro fee + paid mentorship | | | |
 

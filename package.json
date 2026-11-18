@@ -36,6 +36,8 @@
     "staging:e8-prove-chain": "bash scripts/staging-e8-recurring-evidence.sh --prove-chain",
     "staging:e9-team-proposal-evidence": "bash scripts/staging-e9-team-proposal-evidence.sh",
     "staging:e9-prove-chain": "bash scripts/staging-e9-team-proposal-evidence.sh --prove-chain",
+    "staging:e10-docusign-evidence": "bash scripts/staging-e10-docusign-evidence.sh",
+    "staging:e10-prove-chain": "bash scripts/staging-e10-docusign-evidence.sh --prove-chain",
     "staging:marketplace-fixture": "tsx scripts/marketplace-webhook-fixture.ts",
     "postinstall": "prisma generate"
   },
