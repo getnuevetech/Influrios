@@ -457,6 +457,26 @@ npm run staging:e8-recurring-evidence
 CRON_SECRET=… npm run staging:e8-prove-chain
 ```
 
+### E9 progress (Team proposal) — **product path ready** (host evidence blank)
+
+**Goal:** business sends a two-creator proposal · both accept · wizard lists both parties · funding blocked until every payout route is ready · funding id after routes exist.
+
+| Check | Result |
+|-------|--------|
+| Shortlist → coordinated proposal preselect | ☑ `/business/home` · `/collaboration/team?creators=` |
+| Campaign intent + shortlist-first invite form | ☑ `/collaboration/team` |
+| Accept / decline + wizard gate | ☑ existing `team-proposal` + contract wizard |
+| Funding blocked without payout route | ☑ `teamFundingReady` / ROUTE_BLOCKED |
+| Unit wiring | ☑ `src/lib/team-proposal.test.ts` |
+| Host: seed accepted two-creator proposal | ☐ `npm run staging:e9-prove-chain` |
+| Host: open wizard party list + fund when ready | ☐ paste proposal id + funding id from `tmp/e9-evidence-ids.env` |
+
+```bash
+cd /var/www/influrios
+npm run staging:e9-team-proposal-evidence
+npm run staging:e9-prove-chain
+```
+
 | Area | Evidence id | Date | Operator |
 |------|-------------|------|----------|
 | Env, HTTPS, auth secret, cron | probe 8/8 · cron 401 · E1 tick `2026-10-13T15:36:12Z` · `milestone_auto_approval`=`cmv6ufj5m000dut01g2jvu0xh` · `recurring_cycle_sweep`=`cmv6ufj61000lut013qd0vrgz` · crontab installed | 2026-10-13 | host + cloud-agent |
@@ -466,7 +486,7 @@ CRON_SECRET=… npm run staging:e8-prove-chain
 | Meilisearch counts | job `cmv81yjje0002nl01evdvvz01` · indexed=3 postgres=3 · health 200 · Discover 200 (`2026-10-14T11:55:09Z`) | 2026-10-14 | host + cloud-agent |
 | Airwallex hold and release | **in progress** — post-#323 deploy had unsigned **401** (2026-11-02) · **2026-11-17 probe: unsigned → 503 Airwallex not ready** · use `staging:e6-prove-chain` once gateway secret restored | 2026-11-17 | host + cloud-agent |
 | Recurring tranche 2 | **product path ready** — payments series label + Stop · `npm run staging:e8-recurring-evidence` / `staging:e8-prove-chain` · paste scheduleId + tranche 2 id when host prove runs | | |
-| Team proposal | | | |
+| Team proposal | **product path ready** — shortlist → `/collaboration/team?creators=` · `npm run staging:e9-team-proposal-evidence` / `staging:e9-prove-chain` · paste proposal id + wizard parties when host prove runs | | |
 | DocuSign completed | | | |
 | Flutterwave or M-Pesa | | | |
 | Intro fee + paid mentorship | | | |

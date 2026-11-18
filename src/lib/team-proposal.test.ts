@@ -204,6 +204,21 @@ describe("team proposals", () => {
     assert.equal(landing.includes("teamProposal"), false);
   });
 
+  it("wires business shortlist → coordinated proposal and the E9 host script", () => {
+    const teamPage = readFileSync("src/app/collaboration/team/page.tsx", "utf8");
+    assert.match(teamPage, /creators/);
+    assert.match(teamPage, /campaignIntent/);
+    assert.match(teamPage, /shortlist/);
+    assert.match(teamPage, /actionSendTeamProposal/);
+    const home = readFileSync("src/app/business/home/page.tsx", "utf8");
+    assert.match(home, /Coordinated proposal/);
+    assert.match(home, /\/collaboration\/team\?creators=/);
+    assert.match(home, /Company seats/);
+    assert.equal(home.includes('href="/collaboration/team"\n                    className="flex items-center gap-3'), false);
+    assert.match(readFileSync("scripts/staging-e9-team-proposal-evidence.sh", "utf8"), /prove-chain/);
+    assert.match(readFileSync("package.json", "utf8"), /staging:e9-prove-chain/);
+  });
+
   it("expires an unanswered proposal and leaves an accepted one open", () => {
     const past = new Date("2026-01-01T00:00:00.000Z");
     const now = new Date("2026-02-01T00:00:00.000Z");
