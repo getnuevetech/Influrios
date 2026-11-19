@@ -1,7 +1,7 @@
 {
-  "runId": "AUDIT_LOCAL_R3",
-  "revision": "r3.3",
-  "recordedAt": "2026-11-19T02:12:18.927113Z",
+  "runId": "AUDIT_LOCAL_R34",
+  "revision": "r3.4",
+  "recordedAt": "2026-11-19T14:21:36.610106+00:00",
   "results": [
     {
       "runId": "AUDIT_20261118170047",
@@ -9035,7 +9035,487 @@
       "functionalResult": "Partial",
       "visualResult": "Pass",
       "completedAt": "2026-11-19T02:10:57.638Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R34",
+      "buildId": "local-dev-r34",
+      "environment": "local-dedicated",
+      "revision": "r3.4",
+      "startedAt": "2026-11-19T14:03:00.876Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j13r34-pay-attempt-1.png"
+        },
+        {
+          "rel": "local-journeys/j13r34-paid-success.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "stripe-test-checkout",
+          "deposit": "cmwnlt3h80001jsun72eu2ry7|cs_test_a0Lb9eQ1QmhXvGcK8ncsCmkW42DZMtWoEWbOnDZDX4gI08ItsOCLSHxVXX|confirmed",
+          "fundingStatus": "held"
+        },
+        {
+          "type": "db",
+          "fundingId": "cmwnlt2ns0004jsxwt08i73n1",
+          "status": "held"
+        },
+        {
+          "type": "label",
+          "stripeTestCheckout": true,
+          "providerE2eComplete": false
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": true,
+      "caseKind": "journey",
+      "caseId": "J13-r34-sandbox-ledger-hold-checkout",
+      "journeyId": "J13",
+      "role": "business",
+      "expected": "Business collaboration checkout \u2014 Stripe TEST collection + webhook \u2192 funding held",
+      "actual": "{\"fundingId\":\"cmwnlt2ns0004jsxwt08i73n1\",\"fundingStatus\":\"held\",\"deposit\":\"cmwnlt3h80001jsun72eu2ry7|cs_test_a0Lb9eQ1QmhXvGcK8ncsCmkW42DZMtWoEWbOnDZDX4gI08ItsOCLSHxVXX|confirmed\",\"label\":\"Stripe TEST checkout (cs_test_ / sk_test_ / livemode=false)\",\"simulationTopology\":\"sandbox_ledger_hold\",\"providerE2eComplete\":false,\"note\":\"Ordinary Checkout TEST collection under sandbox_ledger_hold \u2014 NOT allocated-funds/Treasury. Paid via Stripe hosted UI (computerUse) with 4242.\",\"media\":[\"local-journeys/j13r34-paid-success.png\",\"local-journeys/j13r34-pay-attempt-1.png\"]}",
+      "functionalResult": "Pass",
+      "visualResult": "Pass",
+      "fixtureIds": [
+        "cmwnlt2ns0004jsxwt08i73n1",
+        "audit.r3mrvlgh.business-a@example.com",
+        "audit.r3mrvlgh.influencer-a@example.com"
+      ],
+      "completedAt": "2026-11-19T14:03:00.876Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R34",
+      "buildId": "local-dev-r34",
+      "environment": "local-dedicated",
+      "revision": "r3.4",
+      "startedAt": "2026-11-19T14:03:12.088Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j14r34-creator-hub.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j14r34-creator-hub.png"
+        },
+        {
+          "rel": "local-journeys/j14r34-biz-hub.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j14r34-biz-hub.png"
+        },
+        {
+          "rel": "local-journeys/j14r34-after-approve-nav.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j14r34-after-approve-nav.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "db",
+          "milestoneId": "cmwnlt2ns0005jsxwrx8kc211",
+          "approved": "approved|2"
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PARTIAL: milestone status lineage recorded; full dual-party workroom recording incomplete",
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J14-r34-deliver-revise-approve",
+      "journeyId": "J14",
+      "role": "business+influencer",
+      "expected": "Deliver \u2192 revision \u2192 approve; stale version blocked; approval starts release process only",
+      "actual": "{\"fundingStatus\":\"held\",\"milestoneId\":\"cmwnlt2ns0005jsxwrx8kc211\",\"revised\":\"revision_requested\",\"approved\":\"approved|2\",\"note\":\"Status transitions on FundingMilestone; dual-party UI workroom still Partial depth\"}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:03:12.088Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R34",
+      "buildId": "local-dev-r34",
+      "environment": "local-dedicated",
+      "revision": "r3.4",
+      "startedAt": "2026-11-19T14:03:21.847Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j15r34-admin-marketplace.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j15r34-admin-marketplace.png"
+        },
+        {
+          "rel": "local-journeys/j15r34-influencer-payments.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j15r34-influencer-payments.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "simulation",
+          "isSim": true,
+          "providerE2eComplete": false
+        },
+        {
+          "type": "payout",
+          "status": "UNPROVEN"
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PARTIAL: simulated internal release only \u2014 provider payout UNPROVEN (not Pass)",
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J15-r34-release-simulation-payout-unproven",
+      "journeyId": "J15",
+      "role": "admin+system",
+      "expected": "Release/transfer/payout distinguished; bank payout not from approval alone",
+      "actual": "{\"release\":{\"ok\":true,\"reference\":\"sim_sandbox_ledger_hold:mkt_release_cmwnmefvn0000jss8ik7en4sd\",\"execution\":\"external\"},\"isSim\":true,\"providerE2eComplete\":false,\"labels\":{\"release\":\"SIMULATION: sandbox_ledger_hold release (providerE2eComplete=false)\",\"payout\":\"Provider transfer/payout UNPROVEN under original J15 criteria\"},\"note\":\"Simulation does NOT satisfy original provider payout Pass\"}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:03:21.847Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R34",
+      "buildId": "local-dev-r34",
+      "environment": "local-dedicated",
+      "revision": "r3.4",
+      "startedAt": "2026-11-19T14:07:03.521Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j16r34-pricing.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j16r34-pricing.png"
+        },
+        {
+          "rel": "local-journeys/j16r34-month-hosted.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j16r34-month-hosted.png"
+        },
+        {
+          "rel": "local-journeys/j16r34-month-after-ui.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j16r34-month-after-ui.png"
+        },
+        {
+          "rel": "local-journeys/j16r34-month-paid-success.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "stripe-test-checkout",
+          "interval": "month",
+          "paid": false,
+          "stripeSessionId": "cs_test_a0PWYFboLhuT3mTWJdHMO2C1yibcJV4OjMuBIdjGWR2loJqAonCZFTBPzL",
+          "payMethod": "no-pi"
+        },
+        {
+          "type": "stripe-test-checkout",
+          "paid": true,
+          "sessionId": "cs_test_a0PWYFboLhuT3mTWJdHMO2C1yibcJV4OjMuBIdjGWR2loJqAonCZFTBPzL"
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": true,
+      "caseKind": "journey",
+      "caseId": "J16-r34-creator-plus-month",
+      "journeyId": "J16",
+      "role": "influencer",
+      "expected": "New user month purchase \u2014 genuine sandbox payment + entitlement",
+      "actual": "{\"pricingUnavailable\":false,\"started\":{\"ok\":true,\"stripeSessionId\":\"cs_test_a0PWYFboLhuT3mTWJdHMO2C1yibcJV4OjMuBIdjGWR2loJqAonCZFTBPzL\",\"localId\":\"cs_mwnmeo1h_0hcaee\",\"url\":\"https://checkout.stripe.com/g/pay/cs_test_a0PWYFboLhuT3mTWJdHMO2C1yibcJV4OjMuBId\"},\"paid\":true,\"payMethod\":\"hosted-ui-computerUse\",\"label\":\"Stripe TEST checkout (cs_test_ / sk_test_ / livemode=false)\",\"stripePaymentStatus\":\"paid\"}",
+      "functionalResult": "Pass",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:07:03.521Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R34",
+      "buildId": "local-dev-r34",
+      "environment": "local-dedicated",
+      "revision": "r3.4",
+      "startedAt": "2026-11-19T14:07:03.576Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j16r34-pricing.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j16r34-pricing.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "stripe-test-checkout",
+          "interval": "year",
+          "paid": false,
+          "stripeSessionId": "",
+          "payMethod": "none"
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PARTIAL: opened=false; paid=false",
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J16-r34-creator-plus-year",
+      "journeyId": "J16",
+      "role": "influencer",
+      "expected": "New user year purchase \u2014 genuine sandbox payment + entitlement",
+      "actual": "{\"pricingUnavailable\":false,\"started\":{\"ok\":false,\"error\":\"Annual billing is not available for this plan. You can stay on monthly. Nothing was charged.\"},\"paid\":false,\"payMethod\":\"none\",\"label\":\"Stripe TEST checkout (cs_test_ / sk_test_ / livemode=false)\"}",
+      "functionalResult": "Fail",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:07:03.576Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R34",
+      "buildId": "local-dev-r34",
+      "environment": "local-dedicated",
+      "revision": "r3.4",
+      "startedAt": "2026-11-19T14:07:09.565Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j17r34-billing.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j17r34-billing.png"
+        },
+        {
+          "rel": "local-journeys/j17r34-billing-actions.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j17r34-billing-actions.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "db",
+          "sub": ""
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PARTIAL: billing UI captured; sandbox change confirm / proration evidence incomplete",
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J17-r34-existing-subscriber-changes",
+      "journeyId": "J17",
+      "role": "influencer",
+      "expected": "Existing subscriber changes \u2014 monthly\u2194annual, upgrade/downgrade, cancel/resume",
+      "actual": "{\"hasControls\":true,\"sub\":\"\",\"bodySnippet\":\"\u221e\\nInflurios\\nDashboard\\nAction inbox\\nMy Profile\\nCollaborations\\nContracts\\n3\\nEarnings & Payouts\\nMessages\\nSettings\\nStarter\\nBilling & Plan\\nLog out\\n\\n\u00a9 2026 Influrios. All rights reserved.\\n\\n3\\nA\\n\\nAUDIT r3mrvlgh Influencer A\\n\\nInfluencer\\n\\nINFLUENCER\\n\\nBilling & plan\\n\\nManage your Influrios plan, billing, and payment details.\\n\\nStarter\\n\\nFree\\n\\nChange plan\\n\\nChoose \"}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:07:09.565Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R34",
+      "buildId": "local-dev-r34",
+      "environment": "local-dedicated",
+      "revision": "r3.4",
+      "startedAt": "2026-11-19T14:08:15.405Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j18r34-pricing-annual.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j18r34-pricing-annual.png"
+        },
+        {
+          "rel": "local-journeys/j18r34-panel.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j18r34-panel.png"
+        },
+        {
+          "rel": "local-journeys/j18r34-after-apply.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j18r34-after-apply.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "server-eligibility",
+          "yearOk": true,
+          "quote": {
+            "ok": true,
+            "discountCents": 3420
+          }
+        },
+        {
+          "type": "ui-apply",
+          "appliedUi": false
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PARTIAL: Apply control not reached; server eligibility proven; investigate tax-gated plan availability",
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J18-r34-discount-apply-ui",
+      "journeyId": "J18",
+      "role": "influencer",
+      "expected": "Discount Apply through UI; reject monthly/wrong plan; redemption records",
+      "actual": "{\"code\":\"AUDITANNW9YL6\",\"appliedUi\":false,\"yearOk\":true,\"quote\":{\"ok\":true,\"discountCents\":3420},\"taxRule\":\"cmwmwm6b700ppjs31fq8h4w9s|US \u00b7 All subscription plans \u00b7 8.25%|subscription|825\",\"plusProUnavailableRootCause\":\"paidPlanAvailability returns unavailable when no matching country tax rule for subscription plan/country \u2014 family TaxPolicyVersion should unlock; verify pricing country + mapStoredPolicy load\"}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:08:15.405Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R34",
+      "buildId": "local-dev-r34",
+      "environment": "local-dedicated",
+      "revision": "r3.4",
+      "startedAt": "2026-11-19T14:08:19.995Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j20r34-tax-admin.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j20r34-tax-admin.png"
+        },
+        {
+          "rel": "local-journeys/j20r34-public-pricing.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j20r34-public-pricing.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "tax-calc",
+          "calc": {
+            "chargeId": "PLUS",
+            "countryCode": "US",
+            "currency": "USD",
+            "baseCents": 10000,
+            "calculatedAt": "2026-11-19T14:08:19.994Z",
+            "storedAsZero": false,
+            "ruleId": "cmwmwm6b700ppjs31fq8h4w9s",
+            "ruleVersion": 1,
+            "stripe": {
+              "automaticTax": false,
+              "exclusiveRate": true
+            },
+            "ok": true,
+            "status": "calculated",
+            "subtotalCents": 10000,
+            "taxCents": 825,
+            "totalCents": 10825,
+            "reason": "8.25% on the base price."
+          },
+          "arith": {
+            "base": 10000,
+            "discount": 1000,
+            "taxable": 9000,
+            "tax10pct": 900,
+            "total": 9900,
+            "observed825bps": 825
+          }
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PARTIAL: tax rule + calc; full checkout/invoice/receipt chain incomplete",
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J20-r34-quote-through-charge",
+      "journeyId": "J20",
+      "role": "admin+member",
+      "expected": "Quote through final charge \u2014 preview/public/checkout/invoice reconcile; tax once",
+      "actual": "{\"taxRow\":\"cmwmwm6b700ppjs31fq8h4w9s|subscription||US|percentage|825|ready\",\"calc\":{\"chargeId\":\"PLUS\",\"countryCode\":\"US\",\"currency\":\"USD\",\"baseCents\":10000,\"calculatedAt\":\"2026-11-19T14:08:19.994Z\",\"storedAsZero\":false,\"ruleId\":\"cmwmwm6b700ppjs31fq8h4w9s\",\"ruleVersion\":1,\"stripe\":{\"automaticTax\":false,\"exclusiveRate\":true},\"ok\":true,\"status\":\"calculated\",\"subtotalCents\":10000,\"taxCents\":825,\"totalCents\":10825,\"reason\":\"8.25% on the base price.\"},\"arith\":{\"base\":10000,\"discount\":1000,\"taxable\":9000,\"tax10pct\":900,\"total\":9900,\"observed825bps\":825},\"note\":\"Subscription portion independent of collab funding\"}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:08:19.995Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R34",
+      "buildId": "local-dev-r34",
+      "environment": "local-dedicated",
+      "revision": "r3.4",
+      "startedAt": "2026-11-19T14:09:45.988Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/vis34-home-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis34-home-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis34-pricing-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis34-pricing-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis34-discover-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis34-discover-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis34-login-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis34-login-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis34-about-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis34-about-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis34-faq-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis34-faq-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis34-admin-home-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis34-admin-home-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis34-admin-accounts-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis34-admin-accounts-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis34-admin-payment-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis34-admin-payment-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis34-admin-matching-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis34-admin-matching-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis34-biz-hub-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis34-biz-hub-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis34-inf-hub-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis34-inf-hub-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis34-billing-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis34-billing-mob.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "visual-consistency",
+          "count": 13
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PARTIAL: expanded samples captured; full page-state matrix still open",
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": false,
+      "caseKind": "visual",
+      "caseId": "VIS-r34-consistency-review",
+      "journeyId": "J30",
+      "role": "multi",
+      "expected": "Expanded visual consistency \u2014 desktop/mobile, dialogs, nav, Creator vs Influencer terminology",
+      "actual": "{\"findings\":[{\"route\":\"/\",\"a11y\":{\"h1\":1,\"nav\":true,\"unlabeledButtons\":0,\"creatorWord\":0,\"influencerWord\":6,\"publicNavInAdmin\":false},\"dialog\":false,\"screenshots\":[\"local-journeys/vis34-home-desk.png\",\"local-journeys/vis34-home-mob.png\"],\"snippet\":\"\u221e\\nInflurios\\nHome\\nHome\\nDiscover\\nDiscover\\nCategories\\nCategories\\nCollaboration\\nCollaboration\\nFor Businesses\\nFor Businesses\\n\"},{\"route\":\"/pricing\",\"a11y\":{\"h1\":1,\"nav\":true,\"unlabeledButtons\":0,\"creatorWord\":0,\"influencerWord\":2,\"publicNavInAdmin\":false},\"dialog\":false,\"screenshots\":[\"local-journeys/vis34-pricing-desk.png\",\"local-journeys/vis34-pricing-mob.png\"],\"snippet\":\"\u221e\\nInflurios\\nDiscover\\nInfluencer Plans\\nBusiness Plans\\nResources\\nLogin\\nGet Started\\nInfluencer plans\\nMonthly\\nAnnual\\nStarter\"},{\"route\":\"/discover\",\"a11y\":{\"h1\":1,\"nav\":true,\"unlabeledButtons\":2,\"creatorWord\":0,\"influencerWord\":2,\"publicNavInAdmin\":false},\"dialog\":false,\"screenshots\":[\"local-journeys/vis34-discover-desk.png\",\"local-journeys/vis34-discover-mob.png\"],\"snippet\":\"\u221e\\nInflurios\\nHome\\nHome\\nDiscover\\nDiscover\\nCategories\\nCategories\\nCollaboration\\nCollaboration\\nFor Businesses\\nFor Businesses\\n\"},{\"route\":\"/login\",\"a11y\":{\"h1\":1,\"nav\":true,\"unlabeledButtons\":0,\"creatorWord\":0,\"influencerWord\":0,\"publicNavInAdmin\":false},\"dialog\":false,\"screenshots\":[\"local-journeys/vis34-login-desk.png\",\"local-journeys/vis34-login-mob.png\"],\"snippet\":\"\u221e\\nInflurios\\nFeatures\\nCreators\\nBrands\\nHelp\\nCreate an account\\n\\nWelcome back\\nto your network.\\n\\nLog in to Influrios\\n\\nEmail a\"},{\"route\":\"/about\",\"a11y\":{\"h1\":1,\"nav\":true,\"unlabeledButtons\":0,\"creatorWord\":0,\"influencerWord\":2,\"publicNavInAdmin\":false},\"dialog\":false,\"screenshots\":[\"local-journeys/vis34-about-desk.png\",\"local-journeys/vis34-about-mob.png\"],\"snippet\":\"\u221e\\nInflurios\\nHome\\nHome\\nDiscover\\nDiscover\\nCategories\\nCategories\\nCollaboration\\nCollaboration\\nFor Businesses\\nFor Businesses\\n\"},{\"route\":\"/faq\",\"a11y\":{\"h1\":1,\"nav\":true,\"unlabeledButtons\":0,\"creatorWord\":0,\"influencerWord\":3,\"publicNavInAdmin\":false},\"dialog\":false,\"screenshots\":[\"local-journeys/vis34-faq-desk.png\",\"local-journeys/vis34-faq-mob.png\"],\"snippet\":\"\u221e\\nInflurios\\nHome\\nHome\\nDiscover\\nDiscover\\nCategories\\nCategories\\nCollaboration\\nCollaboration\\nFor Businesses\\nFor Businesses\\n\"},{\"route\":\"/admin\",\"a11y\":{\"h1\":1,\"nav\":true,\"unlabeledButtons\":0,\"creatorWord\":1,\"influencerWord\":3,\"publicNavInAdmin\":true},\"dialog\":false,\"screenshots\":[\"local-journeys/vis34-admin-home-desk.png\",\"local-journeys/vis34-admin-home-mob.png\"],\"snippet\":\"\u221e\\nInflurios\\nHome\\nDiscover\\nCategories\\nCollaboration\\nFor Businesses\\nPricing\\nAR\\n\\nAUDIT r3mrvlgh Super\\n\\naudit.admin@example.\"},{\"route\":\"/admin/accounts\",\"a11y\":{\"h1\":1,\"nav\":true,\"unlabeledButtons\":4,\"creatorWord\":0,\"influencerWord\":8,\"publicNavInAdmin\":true},\"dialog\":false,\"screenshots\":[\"local-journeys/vis34-admin-accounts-desk.png\",\"local-journeys/vis34-admin-accounts-mob.png\"],\"snippet\":\"\u221e\\nInflurios\\nHome\\nDiscover\\nCategories\\nCollaboration\\nFor Businesses\\nPricing\\nAR\\n\\nAUDIT r3mrvlgh Super\\n\\naudit.admin@example.\"},{\"route\":\"/admin/payment-settings\",\"a11y\":{\"h1\":2,\"nav\":true,\"unlabeledButtons\":2,\"creatorWord\":0,\"influencerWord\":2,\"publicNavInAdmin\":true},\"dialog\":false,\"screenshots\":[\"local-journeys/vis34-admin-payment-desk.png\",\"local-journeys/vis34-admin-payment-mob.png\"],\"snippet\":\"\u221e\\nInflurios\\nHome\\nDiscover\\nCategories\\nCollaboration\\nFor Businesses\\nPricing\\nAR\\n\\nAUDIT r3mrvlgh Super\\n\\naudit.admin@example.\"},{\"route\":\"/admin/matching\",\"a11y\":{\"h1\":1,\"nav\":true,\"unlabeledButtons\":2,\"creatorWord\":0,\"influencerWord\":9,\"publicNavInAdmin\":true},\"dialog\":false,\"screenshots\":[\"local-journeys/vis34-admin-matching-desk.png\",\"local-journeys/vis34-admin-matching-mob.png\"],\"snippet\":\"\u221e\\nInflurios\\nHome\\nDiscover\\nCategories\\nCollaboration\\nFor Businesses\\nPricing\\nAR\\n\\nAUDIT r3mrvlgh Super\\n\\naudit.admin@example.\"},{\"route\":\"/collaboration/business\",\"a11y\":{\"h1\":1,\"nav\":true,\"unlabeledButtons\":0,\"creatorWord\":0,\"influencerWord\":0,\"publicNavInAdmin\":false},\"dialog\":false,\"screenshots\":[\"local-journeys/vis34-biz-hub-desk.png\",\"local-journeys/vis34-biz-hub-mob.png\"],\"snippet\":\"\u221e\\nInflurios\\nDashboard\\nAction inbox\\nCompany Profile\\nDiscover Creators\\nCollaborations\\n1\\nContracts\\n3\\nAnalytics\\nTeam\\nBilling\"},{\"route\":\"/collaboration/creator\",\"a11y\":{\"h1\":1,\"nav\":true,\"unlabeledButtons\":0,\"creatorWord\":0,\"influencerWord\":2,\"publicNavInAdmin\":false},\"dialog\":false,\"screenshots\":[\"local-journeys/vis34-inf-hub-desk.png\",\"local-journeys/vis34-inf-hub-mob.png\"],\"snippet\":\"\u221e\\nInflurios\\nHome\\nHome\\nDiscover\\nDiscover\\nCategories\\nCategories\\nCollaboration\\nCollaboration\\nFor Businesses\\nFor Businesses\\n\"},{\"route\":\"/billing\",\"a11y\":{\"h1\":1,\"nav\":true,\"unlabeledButtons\":0,\"creatorWord\":0,\"influencerWord\":2,\"publicNavInAdmin\":false},\"dialog\":false,\"screenshots\":[\"local-journeys/vis34-billing-desk.png\",\"local-journeys/vis34-billing-mob.png\"],\"snippet\":\"\u221e\\nInflurios\\nDashboard\\nAction inbox\\nMy Profile\\nCollaborations\\nContracts\\n3\\nEarnings & Payouts\\nMessages\\nSettings\\nStarter\\nBi\"}],\"priorArt\":{\"duplicatedPublicNavInAdmin\":true,\"creatorTerminologyMixed\":true}}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:09:45.988Z"
     }
   ],
-  "count": 196
+  "count": 205
 }

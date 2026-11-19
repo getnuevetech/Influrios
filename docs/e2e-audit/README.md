@@ -1,18 +1,14 @@
-Revision **r3.3** — non-funding J18/J19/J22 + Partials deepen; J13 product gate held (no silent-fix).
+Revision **r3.4** — #535 sandbox ledger hold merged; original J01–J30 defs; Stripe TEST vs simulation labels.
 
-# Influrios E2E audit pack (AUDIT_LOCAL_R3 / r3.3)
+# Influrios E2E audit pack (AUDIT_LOCAL_R34)
 
-**Verdict:** Audit incomplete with blockers. PR #534 open for revision — **not** finished.
+**Verdict:** Incomplete — #534 stays open. CI ≠ done. Simulated payout ≠ provider Pass.
 
-- [index.html](./index.html)
 - [executive-summary.md](./executive-summary.md)
-- [coverage.md](./coverage.md)
 - [journeys.md](./journeys.md)
+- [coverage.md](./coverage.md)
 - [blockers.md](./blockers.md)
-- [local-journey-nonfunding-results.json](./local-journey-nonfunding-results.json)
-- [j18-j19-fix.json](./j18-j19-fix.json)
-- [isolation-evidence.md](./isolation-evidence.md)
-- [mail-sink-proof.md](./mail-sink-proof.md)
-- [downloads/](./downloads/)
+- [correction-register.md](./correction-register.md)
+- [local-journey-r34-results.json](./local-journey-r34-results.json)
 
 Media: `/cursor/stores/self/media/e2e-audit/`
