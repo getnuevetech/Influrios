@@ -1,5 +1,6 @@
+import { verifyCollaborationCollectionAccess } from "@/lib/collaboration-collection-access";
 import { prisma } from "@/lib/db";
-import { maskAccountId, stripeCapabilityStatus } from "@/lib/payment-account-routing";
+import { maskAccountId, resolveSandboxDeploymentHost, stripeCapabilityStatus } from "@/lib/payment-account-routing";
 
 const PROOF_LABEL = {
   draft: "Draft",
@@ -8,7 +9,21 @@ const PROOF_LABEL = {
 } as const;
 
 export async function AccountRolesPanel() {
-  const status = stripeCapabilityStatus();
+  const deploymentHost = resolveSandboxDeploymentHost();
+  const access = await verifyCollaborationCollectionAccess({
+    originOrHost: deploymentHost,
+    environment: "sandbox",
+  });
+  const status = stripeCapabilityStatus({
+    secretPresent: Boolean(access.stripeKeyMode),
+    probe: {
+      allocatedFunds: access.allocatedFunds,
+      treasury: access.treasury,
+      status: access.probe.status,
+    },
+    collectionDecision: access,
+    checkedAt: access.checkedAt,
+  });
   const [connections, accounts, routes] = await Promise.all([
     prisma.providerConnection.findMany({ orderBy: { updatedAt: "desc" }, take: 40 }).catch(() => []),
     prisma.providerAccount.findMany({ orderBy: { updatedAt: "desc" }, take: 40, include: { connection: true } }).catch(() => []),
@@ -26,7 +41,23 @@ export async function AccountRolesPanel() {
       <div className="rounded-2xl border border-border bg-white p-5 text-sm">
         <p className="font-semibold text-indigo">Stripe capability check · {status.checkedAt}</p>
         <p className="mt-2">{status.reason}</p>
-        <p className="mt-2">Allocated funds: {status.allocatedFunds}. Treasury: {status.treasury}. New collaboration funding: {status.newCollaborationFunding}.</p>
+        <p className="mt-2">
+          Environment: {access.environment}. Key mode: {access.stripeKeyMode ?? "none"}. Trusted deployment:{" "}
+          {access.trustedDeployment ? "yes" : "no"}. Sandbox route enabled: {access.sandboxRouteEnabled ? "yes" : "no"}.
+        </p>
+        <p className="mt-2">
+          Allocated funds: {status.allocatedFunds}. Treasury: {status.treasury}. New collaboration funding:{" "}
+          {status.newCollaborationFunding}. Provider E2E complete: {String(status.providerE2eComplete)}.
+        </p>
+        {status.limitation ? <p className="mt-2 text-muted">{status.limitation}</p> : null}
+        {access.probe.status === "failed" ? (
+          <p className="mt-2 text-muted">Verification failed: {access.probe.reason}</p>
+        ) : null}
+        {status.simulation ? (
+          <p className="mt-2 text-muted">
+            SIMULATION: sandbox ledger-hold may be open for sk_test on trusted non-production hosts with COLLABORATION_SANDBOX_LEDGER_HOLD=1 only. That is not provider allocated-funds or Treasury E2E, and live collaboration deposits stay closed.
+          </p>
+        ) : null}
         <ul className="mt-3 space-y-2">
           {status.unproven.map((row) => (
             <li key={row.id}>
