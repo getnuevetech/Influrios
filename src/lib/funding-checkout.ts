@@ -223,11 +223,22 @@ export async function startFundingDeposit(input: {
     }
     await prisma.fundingDeposit.update({ where: { id: openDeposit.id }, data: { status: "failed" } }).catch(() => undefined);
   }
-  const { collaborationCollectionGate } = await import("@/lib/payment-account-routing");
-  const collection = collaborationCollectionGate({ allocatedFunds: false, treasury: false });
-  if (!collection.ok) return collection;
+  const { verifyCollaborationCollectionAccess } = await import("@/lib/collaboration-collection-access");
+  const collection = await verifyCollaborationCollectionAccess({ originOrHost: input.origin });
+  if (!collection.ok) return { ok: false, error: collection.error };
   const creds = await stripeCredentials();
   if (!creds.ok) return { ok: false, error: stripeCredentialError(creds.reason, "charged") };
+  // Live keys must never open collection via the sandbox ledger-hold path.
+  if (creds.mode === "live" && collection.simulation) {
+    return { ok: false, error: "Live Stripe credentials cannot open the sandbox collaboration collection path. Nothing was charged." };
+  }
+  if (creds.mode === "live" && !collection.allocatedFunds && !collection.treasury) {
+    return {
+      ok: false,
+      error:
+        "New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged.",
+    };
+  }
   const deposit = await prisma.fundingDeposit.create({
     data: {
       fundingId: funding.id,
@@ -260,6 +271,28 @@ export async function startFundingDeposit(input: {
     return opened;
   }
   await prisma.fundingDeposit.update({ where: { id: deposit.id }, data: { reference: opened.id } });
+  await prisma.auditLog
+    .create({
+      data: {
+        actor: "business",
+        action: "funding.deposit.gateway_opened",
+        objectType: "FundingDeposit",
+        objectId: deposit.id,
+        after: {
+          fundingId: funding.id,
+          method: input.method,
+          amountCents: planned.amountCents,
+          topology: collection.topology,
+          simulation: collection.simulation,
+          simulationLabel: collection.simulationLabel,
+          providerE2eComplete: collection.providerE2eComplete,
+          allocatedFunds: collection.allocatedFunds,
+          treasury: collection.treasury,
+          limitation: collection.limitation,
+        },
+      },
+    })
+    .catch(() => undefined);
   return { ok: true, kind: "gateway", url: opened.url, depositId: deposit.id };
 }
 

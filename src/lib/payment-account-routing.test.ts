@@ -6,6 +6,8 @@ import {
   buildRoleMapping,
   capabilityLossAllows,
   collaborationCollectionGate,
+  resolveCollaborationCollectionRoute,
+  isLiveProductCollectionHost,
   collaborationOperationsBridge,
   describeStripeOperation,
   domesticLaunchAllowed,
@@ -86,6 +88,17 @@ describe("payment account routing", () => {
     assert.equal(accepted.ok, true);
     assert.equal(collaborationCollectionGate({ allocatedFunds: false, treasury: false }).ok, false);
     assert.equal(selectStripeTopology({ providerCode: "stripe", evidence: null }).newCollectionsEnabled, false);
+    // Payment Standard topology stays closed without evidence; sandbox ledger-hold is a separate route.
+    assert.equal(
+      resolveCollaborationCollectionRoute({
+        environment: "live",
+        stripeKeyMode: "live",
+        originOrHost: "https://influrios.com",
+        probe: { allocatedFunds: false, treasury: false, reason: "none" },
+      }).ok,
+      false,
+    );
+    assert.equal(isLiveProductCollectionHost("https://influrios.com"), true);
   });
 
   it("stores verified account ids and refuses a Stripe mapping on another provider", () => {

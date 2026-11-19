@@ -811,6 +811,22 @@ export async function openCustomerPortal(input: { customerId: string; returnUrl:
   }
 }
 
+/** Raw Stripe JSON for capability probes (account retrieve, list endpoints). Not a money movement. */
+export async function stripeRetrievePayload(input: {
+  method: "GET" | "POST";
+  path: string;
+  secret: string;
+  apiVersion?: string;
+}): Promise<Record<string, unknown> | null> {
+  try {
+    return await stripeCall(input.method, input.path, input.secret, undefined, undefined, {
+      apiVersion: input.apiVersion,
+    });
+  } catch {
+    return null;
+  }
+}
+
 /** A provider object id is the only submission. A timeout stays unknown and is not sent again from this call. */
 export async function stripeApiRequest(input: {
   method: "GET" | "POST";

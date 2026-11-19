@@ -27,6 +27,12 @@ export async function AccountRolesPanel() {
         <p className="font-semibold text-indigo">Stripe capability check · {status.checkedAt}</p>
         <p className="mt-2">{status.reason}</p>
         <p className="mt-2">Allocated funds: {status.allocatedFunds}. Treasury: {status.treasury}. New collaboration funding: {status.newCollaborationFunding}.</p>
+        {status.limitation ? <p className="mt-2 text-muted">{status.limitation}</p> : null}
+        {status.simulation ? (
+          <p className="mt-2 text-muted">
+            SIMULATION: sandbox ledger-hold may be open for sk_test on non-production hosts only. That is not provider allocated-funds or Treasury E2E, and live collaboration deposits stay closed.
+          </p>
+        ) : null}
         <ul className="mt-3 space-y-2">
           {status.unproven.map((row) => (
             <li key={row.id}>
