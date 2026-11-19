@@ -24,7 +24,7 @@
 
 ## Blocked (provider sandbox)
 
-- **J13 / J15 / J16** — missing Stripe test secrets / payout sandbox (exact missing resource listed in coverage.md). No live money.
+- **J13 / J15 / J16** — Ola bound Stripe test secrets, but they are **ABSENT in this VM** (names-only re-probe). **Fresh worker required.** See `stripe-secret-probe.json`. No live money.
 
 ## Explicitly out of scope this pack
 
@@ -39,3 +39,8 @@
 - Not tested: **0**
 
 Pack: [index.html](./index.html)
+
+## Stripe / admin update (r3.1)
+
+Ola bound Stripe test secrets, but this VM does not see `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` — **fresh worker required** for J13/J16/J15. Admin Fail RCA: `admin-login-root-cause.md`.
+
