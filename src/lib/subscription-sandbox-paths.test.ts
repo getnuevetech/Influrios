@@ -112,9 +112,12 @@ describe("subscription sandbox paths (independent of collab deposits)", () => {
       environment: "live",
       stripeKeyMode: "live",
       originOrHost: "https://influrios.com",
-      probe: { allocatedFunds: false, treasury: false, reason: "none" },
+      probe: { status: "checked", allocatedFunds: true, treasury: true, reason: "flags" },
+      trustedDeployment: true,
+      sandboxRouteEnabled: true,
     });
     assert.equal(liveCollab.ok, false);
+    assert.equal(liveCollab.providerE2eComplete, false);
   });
 
   it("allows Stripe sandbox probe with sk_test while collab live path stays refused", async () => {
@@ -135,7 +138,9 @@ describe("subscription sandbox paths (independent of collab deposits)", () => {
       environment: "sandbox",
       stripeKeyMode: "sandbox",
       originOrHost: "https://influrios.com/billing",
-      probe: { allocatedFunds: false, treasury: false, reason: "none" },
+      probe: { status: "checked", allocatedFunds: false, treasury: false, reason: "none" },
+      trustedDeployment: true,
+      sandboxRouteEnabled: true,
     });
     assert.equal(route.ok, false);
   });

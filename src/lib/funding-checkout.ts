@@ -224,21 +224,40 @@ export async function startFundingDeposit(input: {
     await prisma.fundingDeposit.update({ where: { id: openDeposit.id }, data: { status: "failed" } }).catch(() => undefined);
   }
   const { verifyCollaborationCollectionAccess } = await import("@/lib/collaboration-collection-access");
+  const {
+    buildSandboxCollectionProvenance,
+    mergeSandboxCollectionProvenance,
+  } = await import("@/lib/payment-account-routing");
   const collection = await verifyCollaborationCollectionAccess({ originOrHost: input.origin });
   if (!collection.ok) return { ok: false, error: collection.error };
-  const creds = await stripeCredentials();
-  if (!creds.ok) return { ok: false, error: stripeCredentialError(creds.reason, "charged") };
-  // Live keys must never open collection via the sandbox ledger-hold path.
-  if (creds.mode === "live" && collection.simulation) {
-    return { ok: false, error: "Live Stripe credentials cannot open the sandbox collaboration collection path. Nothing was charged." };
-  }
-  if (creds.mode === "live" && !collection.allocatedFunds && !collection.treasury) {
+  // This PR only opens labelled sandbox ledger-hold — never live / allocated-funds / Treasury collection.
+  if (!collection.simulation || collection.topology !== "sandbox_ledger_hold") {
     return {
       ok: false,
       error:
-        "New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged.",
+        "Live collaboration funding stays closed. Capability availability is not a proven allocated-funds or Treasury collection flow. Nothing was charged.",
     };
   }
+  const creds = await stripeCredentials();
+  if (!creds.ok) return { ok: false, error: stripeCredentialError(creds.reason, "charged") };
+  if (creds.mode !== "sandbox") {
+    return {
+      ok: false,
+      error: "Live Stripe credentials cannot open the sandbox collaboration collection path. Nothing was charged.",
+    };
+  }
+  const provenance = buildSandboxCollectionProvenance({
+    originOrHost: input.origin,
+    allocatedFundsDetected: collection.allocatedFunds,
+    treasuryDetected: collection.treasury,
+    openedAt: collection.checkedAt,
+  });
+  const fundingRow = await prisma.collaborationFunding.findUnique({
+    where: { id: funding.id },
+    select: { routeSnapshotJson: true },
+  });
+  if (!fundingRow) return { ok: false, error: "That funding was not found. Nothing was charged." };
+  const routeSnapshotJson = mergeSandboxCollectionProvenance(fundingRow.routeSnapshotJson, provenance);
   const deposit = await prisma.fundingDeposit.create({
     data: {
       fundingId: funding.id,
@@ -247,12 +266,13 @@ export async function startFundingDeposit(input: {
       amountCents: planned.amountCents,
       currency: funding.currency,
       payerNote: note,
+      instructionsJson: { collaborationCollection: provenance },
     },
   });
   const origin = input.origin.replace(/\/$/, "");
   const opened = await openStripeFundingCheckout({
     secret: creds.secret,
-    mode: creds.mode,
+    mode: "sandbox",
     amountCents: planned.amountCents,
     currency: funding.currency,
     name: funding.title || "Collaboration deposit",
@@ -264,35 +284,44 @@ export async function startFundingDeposit(input: {
       purpose: "funding_deposit",
       depositId: deposit.id,
       fundingId: funding.id,
+      collectionTopology: "sandbox_ledger_hold",
+      simulation: "1",
     },
   });
   if (!opened.ok) {
     await prisma.fundingDeposit.update({ where: { id: deposit.id }, data: { status: "failed" } }).catch(() => undefined);
     return opened;
   }
-  await prisma.fundingDeposit.update({ where: { id: deposit.id }, data: { reference: opened.id } });
-  await prisma.auditLog
-    .create({
-      data: {
-        actor: "business",
-        action: "funding.deposit.gateway_opened",
-        objectType: "FundingDeposit",
-        objectId: deposit.id,
-        after: {
-          fundingId: funding.id,
-          method: input.method,
-          amountCents: planned.amountCents,
-          topology: collection.topology,
-          simulation: collection.simulation,
-          simulationLabel: collection.simulationLabel,
-          providerE2eComplete: collection.providerE2eComplete,
-          allocatedFunds: collection.allocatedFunds,
-          treasury: collection.treasury,
-          limitation: collection.limitation,
+  try {
+    await prisma.$transaction([
+      prisma.fundingDeposit.update({ where: { id: deposit.id }, data: { reference: opened.id } }),
+      prisma.collaborationFunding.update({ where: { id: funding.id }, data: { routeSnapshotJson } }),
+      prisma.auditLog.create({
+        data: {
+          actor: "business",
+          action: "funding.deposit.gateway_opened",
+          objectType: "FundingDeposit",
+          objectId: deposit.id,
+          after: {
+            fundingId: funding.id,
+            method: input.method,
+            amountCents: planned.amountCents,
+            topology: collection.topology,
+            simulation: true,
+            simulationLabel: collection.simulationLabel,
+            providerE2eComplete: false,
+            allocatedFundsDetected: collection.allocatedFunds,
+            treasuryDetected: collection.treasury,
+            limitation: collection.limitation,
+            provenance,
+          },
         },
-      },
-    })
-    .catch(() => undefined);
+      }),
+    ]);
+  } catch {
+    await prisma.fundingDeposit.update({ where: { id: deposit.id }, data: { status: "failed" } }).catch(() => undefined);
+    return { ok: false, error: "Sandbox collection provenance could not be stored. Nothing was treated as opened." };
+  }
   return { ok: true, kind: "gateway", url: opened.url, depositId: deposit.id };
 }
 

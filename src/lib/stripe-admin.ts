@@ -811,20 +811,64 @@ export async function openCustomerPortal(input: { customerId: string; returnUrl:
   }
 }
 
-/** Raw Stripe JSON for capability probes (account retrieve, list endpoints). Not a money movement. */
+/**
+ * Capability-probe retrieve with HTTP status.
+ * Distinguishes verification failure (401/timeout) from a successful empty/unsupported payload.
+ */
+export async function stripeRetrieveResult(input: {
+  method: "GET" | "POST";
+  path: string;
+  secret: string;
+  apiVersion?: string;
+}): Promise<
+  | { ok: true; httpStatus: number; payload: Record<string, unknown> }
+  | { ok: false; httpStatus: number | null; error: string }
+> {
+  const version = input.apiVersion?.trim() || STRIPE_VERSION;
+  try {
+    const response = await transport(`${STRIPE_HOST}${input.path}`, {
+      method: input.method,
+      redirect: "manual",
+      signal: AbortSignal.timeout(8000),
+      headers: {
+        Authorization: `Bearer ${input.secret}`,
+        "Stripe-Version": version,
+      },
+    });
+    if (response.status < 200 || response.status >= 300) {
+      return {
+        ok: false,
+        httpStatus: response.status,
+        error: `Stripe account probe failed (HTTP ${response.status}). Verification stays unknown. Nothing was enabled.`,
+      };
+    }
+    const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+    if (!payload || typeof payload !== "object") {
+      return {
+        ok: false,
+        httpStatus: response.status,
+        error: "Stripe account probe returned an invalid payload. Verification stays unknown. Nothing was enabled.",
+      };
+    }
+    return { ok: true, httpStatus: response.status, payload };
+  } catch {
+    return {
+      ok: false,
+      httpStatus: null,
+      error: "Stripe account probe timed out or failed. Verification stays unknown. Nothing was enabled.",
+    };
+  }
+}
+
+/** Raw Stripe JSON for capability probes. Prefer stripeRetrieveResult when failure must be distinguished. */
 export async function stripeRetrievePayload(input: {
   method: "GET" | "POST";
   path: string;
   secret: string;
   apiVersion?: string;
 }): Promise<Record<string, unknown> | null> {
-  try {
-    return await stripeCall(input.method, input.path, input.secret, undefined, undefined, {
-      apiVersion: input.apiVersion,
-    });
-  } catch {
-    return null;
-  }
+  const result = await stripeRetrieveResult(input);
+  return result.ok ? result.payload : null;
 }
 
 /** A provider object id is the only submission. A timeout stays unknown and is not sent again from this call. */

@@ -1,7 +1,7 @@
 # Sandbox collaboration collection flow
 
 **PR scope:** sandbox-only collaboration collection routing for E2E testing.  
-**Not in scope:** silently enabling live collaboration deposits or changing the Influrios Payment Standard topologies (`connect_allocated_funds` / `treasury_financial_accounts`) without proven provider access.
+**Not in scope:** enabling live collaboration deposits, claiming allocated-funds/Treasury collection from capability probes, or silently changing the Influrios Payment Standard.
 
 ## Capability probe (this Stripe account)
 
@@ -12,68 +12,62 @@ Retrieved via `GET /v1/account` with `STRIPE_SECRET_KEY` (`sk_test_…`):
 | `card_payments` | active |
 | `transfers` | active |
 | `us_bank_account_ach_payments` | active |
-| **allocated funds** (`allocated_funds` / Connect allocated-funds preview) | **unavailable** |
-| **Treasury** (`treasury` / financial accounts) | **unavailable** (`GET /v1/treasury/financial_accounts` → not onboarded) |
+| **allocated funds** | **unavailable / unproven** |
+| **Treasury** | **unavailable / unproven** |
 
-**Precise limitation:** Stripe allocated funds and Treasury financial accounts are unavailable on this account. Provider collaboration E2E (allocated/Treasury hold → release → bank payout) is **not** complete.
+**Precise limitation:** Capability availability is **not** an implemented or proven payment flow. Live collaboration collection stays **closed**. Provider collaboration E2E (allocated/Treasury hold → release → bank payout) is **not** complete.
+
+Failed probes (HTTP 401, timeout, invalid payload) are **verification_failed** — they do **not** open `sandbox_ledger_hold`.
 
 ## Routing / verification design
 
-Call sites no longer hardcode `collaborationCollectionGate({ allocatedFunds: false, treasury: false })`.
+1. **`verifyCollaborationCollectionAccess`** probes Stripe and records `probe.status` (`checked` | `failed`).
+2. **`resolveCollaborationCollectionRoute`** gates:
+   - **Live key or live environment:** always refuse (`live_closed`). Capability flags never set `providerE2eComplete` or open collection.
+   - **Failed probe:** refuse (`verification_failed`).
+   - **Empty host / prod host (`influrios.com`):** refuse.
+   - **Untrusted deployment** (`NODE_ENV`/`VERCEL_ENV` production, or unset): refuse.
+   - **Missing `COLLABORATION_SANDBOX_LEDGER_HOLD=1`:** refuse.
+   - **Sandbox gates pass:** open labelled **`sandbox_ledger_hold`** only (`simulation: true`, `providerE2eComplete: false`). Ordinary Checkout is used as a **test collection** — never labelled as allocated-funds/Treasury collection.
 
-1. **`verifyCollaborationCollectionAccess`** (`src/lib/collaboration-collection-access.ts`)  
-   - Loads Stripe credentials (`sk_test` / `sk_live` classification).  
-   - Probes `/v1/account` (and Treasury FA list when a treasury capability flag is present).  
-   - Passes real probe booleans into **`resolveCollaborationCollectionRoute`**.
+3. **Provenance:** On deposit open, funding `routeSnapshotJson.collaborationCollection` and deposit `instructionsJson` persist sandbox provenance. Settlement reads that frozen record — changing the Stripe key later does **not** reclassify existing funding.
 
-2. **`resolveCollaborationCollectionRoute`** (`src/lib/payment-account-routing.ts`)  
-   - **Live key or live environment:** open only if probe proves allocated funds **or** Treasury; otherwise refuse. Never opens `sandbox_ledger_hold`.  
-   - **`sk_live` + sandbox label:** refuse (live credentials cannot open the sandbox path).  
-   - **`sk_test` + live environment:** refuse.  
-   - **`sk_test` + sandbox + live product host (`influrios.com`):** refuse (sandbox path cannot enable live collection).  
-   - **`sk_test` + sandbox + non-prod host + no allocated/Treasury:** open **`sandbox_ledger_hold`** with `simulation: true`, `providerE2eComplete: false`, and an explicit limitation string. Does **not** set `allocatedFunds`/`treasury` to true.
-
-## Sandbox flow under test (collection → holding → release → payout)
+## Sandbox flow under test
 
 ```
-[sandbox only: sk_test + non-prod host]
-  Business starts card/ACH deposit (funding-checkout)
+[sandbox only: sk_test + trusted deployment + COLLABORATION_SANDBOX_LEDGER_HOLD=1 + non-prod host]
+  Business starts card/ACH deposit
     → verifyCollaborationCollectionAccess
     → topology = sandbox_ledger_hold (SIMULATION)
-    → Stripe Checkout Session (mode=payment, livemode=false)
-  Business pays with test card
-    → webhook / confirmGatewayDeposit
-    → marketplace funding.held  (Influrios ledger hold)
-  Milestone approve
-    → settlement executor
-    → SIMULATION transferRef = sim_sandbox_ledger_hold:<settlementId>
-    → reconciliation case records capability limitation
-  Influencer “payout”
-    → app may show released balance / withdrawal UI against ledger
-    → Stripe allocated-funds release / Treasury outbound payment is NOT executed
+    → persist provenance on funding + deposit
+    → Stripe Checkout Session (livemode=false)   ← test checkout, not allocated-funds collection
+  Pay with test card → funding.held (Influrios ledger)
+  Milestone approve → settlement executor
+    → requires trusted env + explicit enable + persisted provenance
+    → atomic sim transferRef + audit (DB failure ⇒ ok:false)
+    → retries keep state=sandbox_simulation, providerE2eComplete=false
+  Influencer payout UI may reflect ledger — Stripe allocated/Treasury payout NOT executed
 ```
 
-Notifications for local E2E stay on Mailpit / local SMTP (`SMTP_HOST`); fixtures use synthetic `@example.com` addresses. No customer notices on live.
+## vs intended production
 
-## Intended production flow (difference)
-
-| Step | Production (Payment Standard) | Sandbox ledger-hold (this PR) |
+| Step | Production (Payment Standard) | This PR sandbox path |
 | --- | --- | --- |
-| Collection | Stripe allocated-funds charge **or** Treasury FA credit | Ordinary Checkout PaymentIntent to platform balance |
-| Holding | Provider-side allocated / FA balance | **Influrios marketplace ledger** `held` only |
-| Release | Allocated release / Treasury outbound with application fee | **Labelled simulation** transfer ref; no provider movement |
-| Payout | Connect / bank payout on proven manual-payout control | App-ledger only; not claimed as provider E2E |
+| Collection | Allocated-funds / Treasury | Ordinary Checkout + **simulation** label |
+| Holding | Provider-side hold | Influrios ledger `held` |
+| Release | Provider release | `sim_sandbox_ledger_hold:*` |
+| Payout | Connect / bank payout | Not claimed |
 
-Production collaboration deposits remain **closed** until allocated funds or Treasury is proven on the live account.
+## Audit note (after merge/review)
 
-## After merge / review
-
-Re-run audit journeys **J13–J15 / J17 / J20** (and related) against this routing. Do **not** mark audit Pass boxes from an unreviewed change.
+Re-run journeys distinguishing: **Stripe test checkout** vs **simulated internal release** vs **unproven provider payout**.  
+J17 = subscription changes; J20 = quote-to-charge/tax. Do not mark #534 Pass boxes from this PR alone.
 
 ## Code anchors
 
-- Routing: `src/lib/payment-account-routing.ts` (`resolveCollaborationCollectionRoute`, `sandboxLedgerHoldReleaseSimulation`)
-- Probe + verify: `src/lib/collaboration-collection-access.ts`
-- Deposit open: `src/lib/funding-checkout.ts`
-- Adapter / settlement: `src/lib/stripe-payment-adapter.ts`, `src/lib/payment-settlement-executor.ts`
-- Tests: `src/lib/collaboration-collection-access.test.ts`, extensions in `payment-account-routing.test.ts`
+- `src/lib/payment-account-routing.ts`
+- `src/lib/collaboration-collection-access.ts`
+- `src/lib/funding-checkout.ts`
+- `src/lib/payment-settlement-executor.ts`
+- `src/lib/stripe-payment-adapter.ts`
+- Tests: `collaboration-collection-access.test.ts`, `payment-settlement-executor.test.ts`

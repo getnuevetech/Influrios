@@ -87,33 +87,42 @@ export function unprovenStripeCapabilities() {
 
 export function stripeCapabilityStatus(input?: {
   secretPresent?: boolean;
-  probe?: { allocatedFunds: boolean; treasury: boolean };
+  probe?: { allocatedFunds: boolean; treasury: boolean; status?: "checked" | "failed" };
   /** When set with a sandbox probe gap, surfaces labelled sandbox ledger-hold (not live enablement). */
   collectionDecision?: CollaborationCollectionDecision;
+  /** ISO time of this verification; defaults to the static review date when omitted. */
+  checkedAt?: string;
 }) {
   const secretPresent = input?.secretPresent ?? Boolean(process.env.STRIPE_SECRET_KEY?.trim());
   const probe = input?.probe;
-  const allocatedFunds = probe
-    ? probe.allocatedFunds
-      ? ("proven" as const)
-      : ("unavailable" as const)
-    : ("unproven" as const);
-  const treasury = probe ? (probe.treasury ? ("proven" as const) : ("unavailable" as const)) : ("unproven" as const);
+  const probeFailed = probe?.status === "failed";
+  const allocatedFunds = probeFailed
+    ? ("unknown" as const)
+    : probe
+      ? probe.allocatedFunds
+        ? ("detected_unproven" as const)
+        : ("unavailable" as const)
+      : ("unproven" as const);
+  const treasury = probeFailed
+    ? ("unknown" as const)
+    : probe
+      ? probe.treasury
+        ? ("detected_unproven" as const)
+        : ("unavailable" as const)
+      : ("unproven" as const);
   const decision = input?.collectionDecision;
   const sandboxHold = decision?.ok === true && decision.topology === "sandbox_ledger_hold";
-  const providerOpen = decision?.ok === true && !decision.simulation;
-  let newCollaborationFunding: "disabled" | "sandbox_ledger_hold" | "enabled" = "disabled";
-  if (providerOpen) newCollaborationFunding = "enabled";
-  else if (sandboxHold) newCollaborationFunding = "sandbox_ledger_hold";
-  const reason = sandboxHold
-    ? "Sandbox ledger-hold is open for test credentials only. Allocated funds and Treasury remain unavailable — not provider E2E."
-    : providerOpen
-      ? "Retrieved Stripe allocated funds or Treasury access allows collaboration collection on this environment."
+  // Capability flags never enable live / provider collection in this PR.
+  const newCollaborationFunding: "disabled" | "sandbox_ledger_hold" = sandboxHold ? "sandbox_ledger_hold" : "disabled";
+  const reason = probeFailed
+    ? "Stripe capability verification failed. Collaboration funding stays disabled until a successful probe."
+    : sandboxHold
+      ? "Sandbox ledger-hold is open for test credentials only. Capability detection is not a proven payment flow — not provider E2E."
       : secretPresent
-        ? "A Stripe secret is present, but no retrieved allocated-funds preview or Treasury financial account is stored. New collaboration funding stays disabled on live."
+        ? "A Stripe secret is present. Capability availability is not an implemented/proven collection flow. Live collaboration funding stays disabled."
         : "No Stripe secret is configured, and neither Connect allocated funds nor Treasury was retrieved for the Influrios account. New collaboration funding stays disabled.";
   return {
-    checkedAt: STRIPE_CAPABILITY_REVIEWED_ON,
+    checkedAt: input?.checkedAt?.trim() || STRIPE_CAPABILITY_REVIEWED_ON,
     credentialsPresent: secretPresent,
     allocatedFunds,
     treasury,
@@ -122,6 +131,7 @@ export function stripeCapabilityStatus(input?: {
     reason,
     limitation: decision && "limitation" in decision ? decision.limitation : null,
     simulation: sandboxHold,
+    providerE2eComplete: false as const,
   };
 }
 
@@ -256,32 +266,33 @@ export function isLiveProductCollectionHost(originOrHost: string): boolean {
   return Boolean(host) && LIVE_PRODUCT_HOSTS.test(host);
 }
 
+/**
+ * Probe outcome. `checked` means Stripe answered; flags may still be unsupported.
+ * `failed` means 401/timeout/invalid — never treat as sandbox_ledger_hold.
+ */
 export type CollaborationCapabilityProbe = {
+  status: "checked" | "failed";
   allocatedFunds: boolean;
   treasury: boolean;
   reason: string;
   accountId?: string;
+  httpStatus?: number | null;
 };
 
 /** Topologies for collaboration collection. `sandbox_ledger_hold` is simulation-labelled, not Payment Standard topology. */
-export type CollaborationCollectionTopology =
-  | "connect_allocated_funds"
-  | "treasury_financial_accounts"
-  | "sandbox_ledger_hold"
-  | "unavailable";
+export type CollaborationCollectionTopology = "sandbox_ledger_hold" | "unavailable";
 
 export type CollaborationCollectionDecision =
   | {
       ok: true;
-      topology: Exclude<CollaborationCollectionTopology, "unavailable">;
+      topology: "sandbox_ledger_hold";
       allocatedFunds: boolean;
       treasury: boolean;
-      /** True only for Stripe allocated-funds or Treasury topology (not sandbox ledger hold). */
-      providerE2eComplete: boolean;
-      /** True when Influrios ledger hold substitutes for unavailable provider topology. */
-      simulation: boolean;
-      simulationLabel: string | null;
-      limitation: string | null;
+      /** Always false in this PR — capability detection is not a proven provider flow. */
+      providerE2eComplete: false;
+      simulation: true;
+      simulationLabel: string;
+      limitation: string;
     }
   | {
       ok: false;
@@ -293,16 +304,118 @@ export type CollaborationCollectionDecision =
       simulationLabel: null;
       limitation: string | null;
       error: string;
+      /** verification_failed vs capability_unsupported vs policy refuse */
+      refuseKind?: "verification_failed" | "live_closed" | "missing_context" | "policy";
     };
 
+export type SandboxCollectionProvenance = {
+  topology: "sandbox_ledger_hold";
+  simulation: true;
+  simulationLabel: string;
+  providerE2eComplete: false;
+  stripeKeyModeAtOpen: "sandbox";
+  environment: "sandbox";
+  originHost: string;
+  openedAt: string;
+  limitation: string;
+  allocatedFundsDetected: boolean;
+  treasuryDetected: boolean;
+};
+
 const CAPABILITY_LIMITATION =
-  "Stripe allocated funds and Treasury financial accounts are unavailable on this account. Provider collaboration E2E (allocated/Treasury hold → release → payout) is not complete.";
+  "Stripe allocated funds and/or Treasury may be missing or unproven on this account. Capability detection is not an implemented collection flow. Provider collaboration E2E (allocated/Treasury hold → release → payout) is not complete.";
+
+const LIVE_CLOSED_LIMITATION =
+  "Live collaboration collection stays closed in this change. Capability availability is not a proven payment flow.";
+
+export const SANDBOX_LEDGER_HOLD_ENV = "COLLABORATION_SANDBOX_LEDGER_HOLD";
+export const SANDBOX_TRANSFER_REF_PREFIX = "sim_sandbox_ledger_hold:";
+
+export function isSandboxLedgerHoldTransferRef(ref: string): boolean {
+  return ref.trim().startsWith(SANDBOX_TRANSFER_REF_PREFIX);
+}
+
+/** Trusted non-production deployment only (never NODE_ENV/VERCEL_ENV production; empty env is not trusted). */
+export function isTrustedSandboxDeployment(
+  env: Record<string, string | undefined> = process.env as Record<string, string | undefined>,
+): boolean {
+  const nodeEnv = (env.NODE_ENV ?? "").trim().toLowerCase();
+  const vercelEnv = (env.VERCEL_ENV ?? "").trim().toLowerCase();
+  if (nodeEnv === "production" || vercelEnv === "production") return false;
+  return nodeEnv === "development" || nodeEnv === "test" || vercelEnv === "preview" || vercelEnv === "development";
+}
+
+/** Explicit opt-in for the labelled sandbox ledger-hold route. */
+export function isSandboxLedgerHoldRouteEnabled(
+  env: Record<string, string | undefined> = process.env as Record<string, string | undefined>,
+): boolean {
+  const raw = (env.COLLABORATION_SANDBOX_LEDGER_HOLD ?? "").trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes";
+}
+
+export function readSandboxCollectionProvenance(value: unknown): SandboxCollectionProvenance | null {
+  if (!value || typeof value !== "object") return null;
+  const root = value as Record<string, unknown>;
+  const row =
+    root.collaborationCollection && typeof root.collaborationCollection === "object"
+      ? (root.collaborationCollection as Record<string, unknown>)
+      : root;
+  if (row.topology !== "sandbox_ledger_hold" || row.simulation !== true) return null;
+  if (row.providerE2eComplete === true) return null;
+  if (row.stripeKeyModeAtOpen !== "sandbox" || row.environment !== "sandbox") return null;
+  const originHost = String(row.originHost ?? "").trim();
+  const openedAt = String(row.openedAt ?? "").trim();
+  const simulationLabel = String(row.simulationLabel ?? "").trim();
+  const limitation = String(row.limitation ?? "").trim();
+  if (!originHost || !openedAt || !simulationLabel) return null;
+  return {
+    topology: "sandbox_ledger_hold",
+    simulation: true,
+    simulationLabel,
+    providerE2eComplete: false,
+    stripeKeyModeAtOpen: "sandbox",
+    environment: "sandbox",
+    originHost,
+    openedAt,
+    limitation: limitation || CAPABILITY_LIMITATION,
+    allocatedFundsDetected: row.allocatedFundsDetected === true,
+    treasuryDetected: row.treasuryDetected === true,
+  };
+}
+
+export function buildSandboxCollectionProvenance(input: {
+  originOrHost: string;
+  allocatedFundsDetected: boolean;
+  treasuryDetected: boolean;
+  openedAt?: string;
+}): SandboxCollectionProvenance {
+  return {
+    topology: "sandbox_ledger_hold",
+    simulation: true,
+    simulationLabel: "SIMULATION: sandbox_ledger_hold",
+    providerE2eComplete: false,
+    stripeKeyModeAtOpen: "sandbox",
+    environment: "sandbox",
+    originHost: collectionRequestHost(input.originOrHost),
+    openedAt: input.openedAt ?? new Date().toISOString(),
+    limitation: CAPABILITY_LIMITATION,
+    allocatedFundsDetected: input.allocatedFundsDetected,
+    treasuryDetected: input.treasuryDetected,
+  };
+}
+
+/** Merge provenance onto an existing route snapshot without dropping frozen route fields. */
+export function mergeSandboxCollectionProvenance(existing: unknown, provenance: SandboxCollectionProvenance) {
+  const base = existing && typeof existing === "object" && !Array.isArray(existing) ? { ...(existing as object) } : {};
+  return { ...base, collaborationCollection: provenance };
+}
 
 function refuseCollaborationCollection(input: {
   allocatedFunds: boolean;
   treasury: boolean;
   error: string;
   limitation?: string | null;
+  refuseKind?: "verification_failed" | "live_closed" | "missing_context" | "policy";
 }): CollaborationCollectionDecision {
   return {
     ok: false,
@@ -314,72 +427,68 @@ function refuseCollaborationCollection(input: {
     simulationLabel: null,
     limitation: input.limitation ?? null,
     error: input.error,
+    refuseKind: input.refuseKind,
   };
 }
 
 /**
  * Environment-specific collaboration collection routing.
- * Live stays closed without proven allocated funds or Treasury.
- * Sandbox may use a clearly labelled ledger-hold simulation when those capabilities are absent —
- * never by flipping allocatedFunds/treasury to true, and never on sk_live or the live product host.
+ * Live stays closed in this PR — capability flags never open live collection or set providerE2eComplete.
+ * Sandbox may open labelled ledger-hold only when: trusted deployment, explicit route enable,
+ * non-empty non-prod host, sk_test, successful probe that checked capabilities (unsupported or detected-but-unproven).
  */
 export function resolveCollaborationCollectionRoute(input: {
   environment: "sandbox" | "live";
   stripeKeyMode: "sandbox" | "live" | null;
   originOrHost: string;
   probe: CollaborationCapabilityProbe;
+  trustedDeployment: boolean;
+  sandboxRouteEnabled: boolean;
 }): CollaborationCollectionDecision {
   const allocatedFunds = input.probe.allocatedFunds === true;
   const treasury = input.probe.treasury === true;
+  const host = collectionRequestHost(input.originOrHost);
   const liveHost = isLiveProductCollectionHost(input.originOrHost);
+
+  if (input.probe.status === "failed") {
+    return refuseCollaborationCollection({
+      allocatedFunds: false,
+      treasury: false,
+      error: input.probe.reason || "Stripe capability verification failed. Nothing was charged.",
+      limitation: CAPABILITY_LIMITATION,
+      refuseKind: "verification_failed",
+    });
+  }
+
+  // Live collection stays closed — capability availability ≠ implemented/proven payment flow.
+  if (input.stripeKeyMode === "live" || input.environment === "live") {
+    return refuseCollaborationCollection({
+      allocatedFunds,
+      treasury,
+      error:
+        "Live collaboration funding stays closed. Capability availability is not a proven allocated-funds or Treasury collection flow. Nothing was charged.",
+      limitation: LIVE_CLOSED_LIMITATION,
+      refuseKind: "live_closed",
+    });
+  }
 
   if (!input.stripeKeyMode) {
     return refuseCollaborationCollection({
       allocatedFunds,
       treasury,
       error: "Use a valid Stripe secret key (sk_test_… or sk_live_…). Nothing was charged.",
-      limitation: allocatedFunds || treasury ? null : CAPABILITY_LIMITATION,
+      limitation: CAPABILITY_LIMITATION,
+      refuseKind: "missing_context",
     });
   }
 
-  // Live credentials must never open the sandbox-only path, even if the caller labels environment sandbox.
-  if (input.stripeKeyMode === "live") {
-    if (input.environment === "sandbox") {
-      return refuseCollaborationCollection({
-        allocatedFunds,
-        treasury,
-        error: "Live Stripe credentials cannot open the sandbox collaboration collection path. Nothing was charged.",
-        limitation: CAPABILITY_LIMITATION,
-      });
-    }
-    if (!allocatedFunds && !treasury) {
-      return refuseCollaborationCollection({
-        allocatedFunds: false,
-        treasury: false,
-        error:
-          "New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged.",
-        limitation: CAPABILITY_LIMITATION,
-      });
-    }
-    return {
-      ok: true,
-      topology: allocatedFunds ? "connect_allocated_funds" : "treasury_financial_accounts",
-      allocatedFunds,
-      treasury,
-      providerE2eComplete: true,
-      simulation: false,
-      simulationLabel: null,
-      limitation: null,
-    };
-  }
-
-  // Sandbox credentials
-  if (input.environment === "live") {
+  if (!host) {
     return refuseCollaborationCollection({
       allocatedFunds,
       treasury,
-      error: "Sandbox credentials cannot open live collaboration collection. Nothing was charged.",
+      error: "Sandbox collaboration collection needs a request host. Nothing was charged.",
       limitation: CAPABILITY_LIMITATION,
+      refuseKind: "missing_context",
     });
   }
 
@@ -389,28 +498,36 @@ export function resolveCollaborationCollectionRoute(input: {
       treasury,
       error: "Sandbox collaboration collection cannot run on the live product host. Nothing was charged.",
       limitation: CAPABILITY_LIMITATION,
+      refuseKind: "policy",
     });
   }
 
-  if (allocatedFunds || treasury) {
-    return {
-      ok: true,
-      topology: allocatedFunds ? "connect_allocated_funds" : "treasury_financial_accounts",
+  if (!input.trustedDeployment) {
+    return refuseCollaborationCollection({
       allocatedFunds,
       treasury,
-      providerE2eComplete: true,
-      simulation: false,
-      simulationLabel: null,
-      limitation: null,
-    };
+      error: "Sandbox ledger-hold is only allowed on a trusted non-production deployment. Nothing was charged.",
+      limitation: CAPABILITY_LIMITATION,
+      refuseKind: "policy",
+    });
   }
 
-  // Precise capability gap: enable labelled sandbox ledger-hold only (not Payment Standard topology).
+  if (!input.sandboxRouteEnabled) {
+    return refuseCollaborationCollection({
+      allocatedFunds,
+      treasury,
+      error: `Sandbox ledger-hold requires ${SANDBOX_LEDGER_HOLD_ENV}=1. Nothing was charged.`,
+      limitation: CAPABILITY_LIMITATION,
+      refuseKind: "policy",
+    });
+  }
+
+  // Ordinary Checkout + Influrios ledger hold — never claim allocated-funds/Treasury collection.
   return {
     ok: true,
     topology: "sandbox_ledger_hold",
-    allocatedFunds: false,
-    treasury: false,
+    allocatedFunds,
+    treasury,
     providerE2eComplete: false,
     simulation: true,
     simulationLabel: "SIMULATION: sandbox_ledger_hold",
@@ -433,7 +550,7 @@ export function sandboxLedgerHoldReleaseSimulation(input: { settlementId: string
     simulation: true as const,
     providerE2eComplete: false as const,
     simulationLabel: "SIMULATION: sandbox_ledger_hold_release",
-    transferRef: `sim_sandbox_ledger_hold:${settlementId}`,
+    transferRef: `${SANDBOX_TRANSFER_REF_PREFIX}${settlementId}`,
     limitation: CAPABILITY_LIMITATION,
     note: "App-ledger release recorded for sandbox tests only. Stripe allocated-funds / Treasury payout was not executed.",
   };

@@ -1,44 +1,53 @@
 /**
  * Stripe payment adapter.
- * Live collaboration collection stays closed until allocated funds or Treasury is proven.
- * Sandbox may open labelled ledger-hold routing without claiming those capabilities.
+ * Live collaboration collection stays closed — capability flags do not enable it.
+ * Sandbox may open labelled ledger-hold routing without claiming allocated funds / Treasury.
  * A release instruction for money already collected on the original route is still only an instruction.
  * Bank payout is not marked from this adapter.
  */
 import { verifyCollaborationCollectionAccess } from "@/lib/collaboration-collection-access";
-import { stripeCapabilityStatus } from "@/lib/payment-account-routing";
+import { isSandboxLedgerHoldTransferRef, readSandboxCollectionProvenance, stripeCapabilityStatus } from "@/lib/payment-account-routing";
 import { queueProviderInstruction, type PaymentProviderAdapter } from "@/lib/payment-provider-adapter";
+import { prisma } from "@/lib/db";
 import { stripeApiRequest, stripeCredentials } from "@/lib/stripe-admin";
 
 export function createStripePaymentAdapter(): PaymentProviderAdapter {
   return {
     async getCapabilities() {
-      const access = await verifyCollaborationCollectionAccess();
+      const access = await verifyCollaborationCollectionAccess({ originOrHost: "127.0.0.1" });
       const status = stripeCapabilityStatus({
-        probe: { allocatedFunds: access.allocatedFunds, treasury: access.treasury },
+        probe: {
+          allocatedFunds: access.allocatedFunds,
+          treasury: access.treasury,
+          status: access.probe.status,
+        },
         collectionDecision: access,
+        checkedAt: access.checkedAt,
       });
-      const funding = status.newCollaborationFunding !== "disabled";
+      const funding = status.newCollaborationFunding === "sandbox_ledger_hold";
       return {
         code: "stripe",
         funding,
-        release: access.ok && !access.simulation,
+        release: false,
         partialRefund: true,
         webhook: true,
       };
     },
     async createFundingIntent() {
-      const access = await verifyCollaborationCollectionAccess();
+      const access = await verifyCollaborationCollectionAccess({ originOrHost: "127.0.0.1" });
       if (!access.ok) return { ok: false, error: access.error };
       if (access.simulation) {
-        // Collection for sandbox ledger-hold is owned by funding-checkout (Stripe Checkout + app hold).
         return {
           ok: false,
           error:
             "SIMULATION: sandbox_ledger_hold — open collaboration deposit via funding checkout. This adapter does not charge. Provider allocated-funds/Treasury E2E is not complete.",
         };
       }
-      return { ok: false, error: "Nothing was charged." };
+      return {
+        ok: false,
+        error:
+          "Live collaboration funding stays closed. Capability availability is not a proven allocated-funds or Treasury collection flow. Nothing was charged.",
+      };
     },
     async getFundingStatus() {
       return { error: "Funding status comes from a retrieved provider object, not from this screen." };
@@ -50,8 +59,11 @@ export function createStripePaymentAdapter(): PaymentProviderAdapter {
       if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
         return { ok: false, error: "Release needs a positive integer amount." };
       }
-      const access = await verifyCollaborationCollectionAccess();
-      if (access.ok && access.simulation) {
+      const funding = await prisma.collaborationFunding
+        .findUnique({ where: { id: input.fundingId.trim() }, select: { routeSnapshotJson: true } })
+        .catch(() => null);
+      const provenance = readSandboxCollectionProvenance(funding?.routeSnapshotJson);
+      if (provenance) {
         const queued = await queueProviderInstruction({
           instruction: "release",
           fundingId: input.fundingId,
@@ -66,23 +78,11 @@ export function createStripePaymentAdapter(): PaymentProviderAdapter {
           execution: "external" as const,
         };
       }
-      if (!access.ok || access.simulation) {
-        return {
-          ok: false,
-          error: access.ok
-            ? "Distribution is not proven. Nothing was transferred."
-            : access.error,
-        };
-      }
-      const queued = await queueProviderInstruction({
-        instruction: "release",
-        fundingId: input.fundingId,
-        amountCents: input.amountCents,
-        milestoneId: input.milestoneId,
-        shares: input.shares,
-      });
-      if (!queued.ok) return queued;
-      return { ok: true, reference: queued.reference, execution: "external" as const };
+      return {
+        ok: false,
+        error:
+          "Live distribution stays blocked. Capability availability is not a proven allocated-funds or Treasury release flow. Nothing was transferred.",
+      };
     },
     async createPartialRefund(input) {
       return queueProviderInstruction({
@@ -120,7 +120,7 @@ export function createStripePaymentAdapter(): PaymentProviderAdapter {
     async reconcileTransaction(reference) {
       const ref = reference.trim();
       if (!ref) return { ok: false, error: "Reconciliation needs a provider reference. The balance was not treated as zero." };
-      if (ref.startsWith("sim_sandbox_ledger_hold:")) {
+      if (isSandboxLedgerHoldTransferRef(ref)) {
         return { ok: false, error: "SIMULATION references are not provider reconciliation. Provider E2E is not complete." };
       }
       const creds = await stripeCredentials();

@@ -1,8 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  buildSandboxCollectionProvenance,
   collectionRequestHost,
   isLiveProductCollectionHost,
+  isSandboxLedgerHoldRouteEnabled,
+  isSandboxLedgerHoldTransferRef,
+  isTrustedSandboxDeployment,
+  mergeSandboxCollectionProvenance,
+  readSandboxCollectionProvenance,
   resolveCollaborationCollectionRoute,
   sandboxLedgerHoldReleaseSimulation,
   stripeCapabilityStatus,
@@ -15,10 +21,13 @@ function jsonResponse(status: number, body: unknown) {
 }
 
 const noCaps = {
+  status: "checked" as const,
   allocatedFunds: false,
   treasury: false,
   reason: "The account payload does not prove allocated funds or Treasury.",
 };
+
+const sandboxGates = { trustedDeployment: true, sandboxRouteEnabled: true };
 
 describe("collaboration collection routing", () => {
   it("parses hosts and treats influrios.com as the live product host", () => {
@@ -30,85 +39,139 @@ describe("collaboration collection routing", () => {
     assert.equal(isLiveProductCollectionHost("https://staging.example.com"), false);
   });
 
-  it("opens labelled sandbox ledger-hold when capabilities are unavailable (sk_test only)", () => {
+  it("requires trusted deployment and explicit sandbox route enable", () => {
+    assert.equal(isTrustedSandboxDeployment({ NODE_ENV: "production" }), false);
+    assert.equal(isTrustedSandboxDeployment({ NODE_ENV: "test" }), true);
+    assert.equal(isTrustedSandboxDeployment({}), false);
+    assert.equal(isSandboxLedgerHoldRouteEnabled({ COLLABORATION_SANDBOX_LEDGER_HOLD: "1" }), true);
+    assert.equal(isSandboxLedgerHoldRouteEnabled({}), false);
+  });
+
+  it("opens labelled sandbox ledger-hold only when gates pass (sk_test)", () => {
     const route = resolveCollaborationCollectionRoute({
       environment: "sandbox",
       stripeKeyMode: "sandbox",
       originOrHost: "http://127.0.0.1:3000",
       probe: noCaps,
+      ...sandboxGates,
     });
     assert.equal(route.ok, true);
     if (!route.ok) return;
     assert.equal(route.topology, "sandbox_ledger_hold");
-    assert.equal(route.allocatedFunds, false);
-    assert.equal(route.treasury, false);
     assert.equal(route.simulation, true);
     assert.equal(route.providerE2eComplete, false);
-    assert.match(String(route.limitation), /allocated funds and Treasury/i);
-    assert.match(String(route.simulationLabel), /^SIMULATION:/);
+    assert.match(String(route.limitation), /not complete/i);
   });
 
-  it("refuses live collection without allocated funds or Treasury", () => {
-    const live = resolveCollaborationCollectionRoute({
+  it("does not enable live collection or providerE2eComplete from capability probes", () => {
+    const liveWithCaps = resolveCollaborationCollectionRoute({
       environment: "live",
       stripeKeyMode: "live",
       originOrHost: "https://influrios.com",
-      probe: noCaps,
+      probe: { status: "checked", allocatedFunds: true, treasury: true, reason: "detected" },
+      ...sandboxGates,
     });
-    assert.equal(live.ok, false);
-    if (live.ok) return;
-    assert.match(live.error, /Nothing was charged/);
-    assert.match(String(live.limitation), /unavailable/i);
-  });
-
-  it("refuses sk_live on the sandbox path and sk_test on live environment", () => {
-    const liveKeySandboxEnv = resolveCollaborationCollectionRoute({
-      environment: "sandbox",
-      stripeKeyMode: "live",
-      originOrHost: "http://127.0.0.1:3000",
-      probe: noCaps,
-    });
-    assert.equal(liveKeySandboxEnv.ok, false);
-    if (!liveKeySandboxEnv.ok) {
-      assert.match(liveKeySandboxEnv.error, /Live Stripe credentials cannot open the sandbox/);
+    assert.equal(liveWithCaps.ok, false);
+    if (!liveWithCaps.ok) {
+      assert.equal(liveWithCaps.refuseKind, "live_closed");
+      assert.equal(liveWithCaps.providerE2eComplete, false);
     }
 
-    const testKeyLiveEnv = resolveCollaborationCollectionRoute({
-      environment: "live",
+    const sandboxWithCaps = resolveCollaborationCollectionRoute({
+      environment: "sandbox",
       stripeKeyMode: "sandbox",
       originOrHost: "http://127.0.0.1:3000",
-      probe: noCaps,
+      probe: { status: "checked", allocatedFunds: true, treasury: false, reason: "detected" },
+      ...sandboxGates,
     });
-    assert.equal(testKeyLiveEnv.ok, false);
-    if (!testKeyLiveEnv.ok) {
-      assert.match(testKeyLiveEnv.error, /Sandbox credentials cannot open live/);
+    assert.equal(sandboxWithCaps.ok, true);
+    if (!sandboxWithCaps.ok) return;
+    assert.equal(sandboxWithCaps.topology, "sandbox_ledger_hold");
+    assert.equal(sandboxWithCaps.providerE2eComplete, false);
+    assert.equal(sandboxWithCaps.simulation, true);
+  });
+
+  it("refuses empty host, prod host, missing enable, and untrusted deployment", () => {
+    assert.equal(
+      resolveCollaborationCollectionRoute({
+        environment: "sandbox",
+        stripeKeyMode: "sandbox",
+        originOrHost: "",
+        probe: noCaps,
+        ...sandboxGates,
+      }).ok,
+      false,
+    );
+    assert.equal(
+      resolveCollaborationCollectionRoute({
+        environment: "sandbox",
+        stripeKeyMode: "sandbox",
+        originOrHost: "https://influrios.com",
+        probe: noCaps,
+        ...sandboxGates,
+      }).ok,
+      false,
+    );
+    assert.equal(
+      resolveCollaborationCollectionRoute({
+        environment: "sandbox",
+        stripeKeyMode: "sandbox",
+        originOrHost: "http://127.0.0.1:3000",
+        probe: noCaps,
+        trustedDeployment: false,
+        sandboxRouteEnabled: true,
+      }).ok,
+      false,
+    );
+    assert.equal(
+      resolveCollaborationCollectionRoute({
+        environment: "sandbox",
+        stripeKeyMode: "sandbox",
+        originOrHost: "http://127.0.0.1:3000",
+        probe: noCaps,
+        trustedDeployment: true,
+        sandboxRouteEnabled: false,
+      }).ok,
+      false,
+    );
+  });
+
+  it("treats failed probes as verification_failed, not sandbox_ledger_hold", () => {
+    const failed = resolveCollaborationCollectionRoute({
+      environment: "sandbox",
+      stripeKeyMode: "sandbox",
+      originOrHost: "http://127.0.0.1:3000",
+      probe: {
+        status: "failed",
+        allocatedFunds: false,
+        treasury: false,
+        reason: "Stripe account probe failed (HTTP 401). Verification stays unknown. Nothing was enabled.",
+        httpStatus: 401,
+      },
+      ...sandboxGates,
+    });
+    assert.equal(failed.ok, false);
+    if (!failed.ok) {
+      assert.equal(failed.refuseKind, "verification_failed");
+      assert.match(failed.error, /Verification stays unknown|probe failed/i);
     }
   });
 
-  it("refuses sandbox ledger-hold on the production host even with sk_test", () => {
-    const route = resolveCollaborationCollectionRoute({
-      environment: "sandbox",
-      stripeKeyMode: "sandbox",
-      originOrHost: "https://www.influrios.com/payments/checkout/x",
-      probe: noCaps,
-    });
-    assert.equal(route.ok, false);
-    if (!route.ok) assert.match(route.error, /live product host/);
-  });
-
-  it("uses real allocated-funds topology when the probe proves it (sandbox)", () => {
-    const route = resolveCollaborationCollectionRoute({
-      environment: "sandbox",
-      stripeKeyMode: "sandbox",
+  it("persists and reads sandbox provenance without reclassification from a later key", () => {
+    const provenance = buildSandboxCollectionProvenance({
       originOrHost: "http://127.0.0.1:3000",
-      probe: { allocatedFunds: true, treasury: false, reason: "proven", accountId: "acct_platform123" },
+      allocatedFundsDetected: false,
+      treasuryDetected: false,
+      openedAt: "2026-11-19T03:00:00.000Z",
     });
-    assert.equal(route.ok, true);
-    if (!route.ok) return;
-    assert.equal(route.topology, "connect_allocated_funds");
-    assert.equal(route.simulation, false);
-    assert.equal(route.providerE2eComplete, true);
-    assert.equal(route.allocatedFunds, true);
+    const merged = mergeSandboxCollectionProvenance({ countryCode: "US", version: "1" }, provenance);
+    const read = readSandboxCollectionProvenance(merged);
+    assert.ok(read);
+    assert.equal(read?.topology, "sandbox_ledger_hold");
+    assert.equal(read?.providerE2eComplete, false);
+    assert.equal(read?.originHost, "127.0.0.1");
+    assert.equal(isSandboxLedgerHoldTransferRef("sim_sandbox_ledger_hold:set_1"), true);
+    assert.equal(isSandboxLedgerHoldTransferRef("tr_123"), false);
   });
 
   it("labels sandbox release simulation without claiming provider payout", () => {
@@ -117,51 +180,55 @@ describe("collaboration collection routing", () => {
     if (!sim.ok) return;
     assert.equal(sim.providerE2eComplete, false);
     assert.equal(sim.transferRef, "sim_sandbox_ledger_hold:set_1");
-    assert.match(sim.simulationLabel, /^SIMULATION:/);
   });
 
-  it("surfaces sandbox_ledger_hold in capability status without claiming allocated funds", () => {
+  it("surfaces sandbox_ledger_hold in capability status without enabling live", () => {
     const decision = resolveCollaborationCollectionRoute({
       environment: "sandbox",
       stripeKeyMode: "sandbox",
       originOrHost: "http://127.0.0.1:3000",
       probe: noCaps,
+      ...sandboxGates,
     });
     const status = stripeCapabilityStatus({
       secretPresent: true,
       probe: noCaps,
       collectionDecision: decision,
+      checkedAt: "2026-11-19T03:00:00.000Z",
     });
     assert.equal(status.allocatedFunds, "unavailable");
     assert.equal(status.treasury, "unavailable");
     assert.equal(status.newCollaborationFunding, "sandbox_ledger_hold");
-    assert.equal(status.simulation, true);
+    assert.equal(status.providerE2eComplete, false);
+    assert.equal(status.checkedAt, "2026-11-19T03:00:00.000Z");
   });
 });
 
 describe("collaboration collection live refusal (verify + transport)", () => {
-  it("classifies sk_live and refuses sandbox verify when live key is configured", async () => {
+  it("classifies sk_live and refuses even when capability flags are returned", async () => {
     assert.equal(classifyStripeKey("sk_live_examplekey"), "live");
     const previous = process.env.STRIPE_SECRET_KEY;
     process.env.STRIPE_SECRET_KEY = "sk_live_examplekey";
     setStripeTransportForTests(async () =>
       jsonResponse(200, {
         id: "acct_liveprobe",
-        capabilities: { card_payments: "active" },
+        capabilities: { card_payments: "active", allocated_funds: "active" },
+        allocated_funds: "active",
       }),
     );
     const access = await verifyCollaborationCollectionAccess({
       originOrHost: "http://127.0.0.1:3000",
-      environment: "sandbox",
+      environment: "live",
+      env: { COLLABORATION_SANDBOX_LEDGER_HOLD: "1", NODE_ENV: "test" },
     });
     process.env.STRIPE_SECRET_KEY = previous;
     setStripeTransportForTests(null);
     assert.equal(access.ok, false);
-    assert.equal(access.stripeKeyMode, "live");
-    if (!access.ok) assert.match(access.error, /Live Stripe credentials cannot open the sandbox/);
+    assert.equal(access.providerE2eComplete, false);
+    if (!access.ok) assert.equal(access.refuseKind, "live_closed");
   });
 
-  it("opens sandbox ledger-hold for sk_test on a local host when capabilities are absent", async () => {
+  it("opens sandbox ledger-hold for sk_test when gates pass and capabilities are unsupported", async () => {
     const previous = process.env.STRIPE_SECRET_KEY;
     process.env.STRIPE_SECRET_KEY = "sk_test_examplekey";
     setStripeTransportForTests(async (input) => {
@@ -177,29 +244,70 @@ describe("collaboration collection live refusal (verify + transport)", () => {
     const access = await verifyCollaborationCollectionAccess({
       originOrHost: "http://127.0.0.1:3000",
       environment: "sandbox",
+      env: { COLLABORATION_SANDBOX_LEDGER_HOLD: "1", NODE_ENV: "test" },
     });
     process.env.STRIPE_SECRET_KEY = previous;
     setStripeTransportForTests(null);
     assert.equal(access.ok, true);
     assert.equal(access.topology, "sandbox_ledger_hold");
-    assert.equal(access.allocatedFunds, false);
-    assert.equal(access.treasury, false);
     assert.equal(access.providerE2eComplete, false);
+    assert.equal(access.probe.status, "checked");
   });
 
-  it("refuses production host even when sk_test probe succeeds without capabilities", async () => {
+  it("refuses failed Stripe probes (401) instead of opening sandbox_ledger_hold", async () => {
+    const previous = process.env.STRIPE_SECRET_KEY;
+    process.env.STRIPE_SECRET_KEY = "sk_test_examplekey";
+    setStripeTransportForTests(async () => jsonResponse(401, { error: { message: "Invalid API Key" } }));
+    const access = await verifyCollaborationCollectionAccess({
+      originOrHost: "http://127.0.0.1:3000",
+      environment: "sandbox",
+      env: { COLLABORATION_SANDBOX_LEDGER_HOLD: "1", NODE_ENV: "test" },
+    });
+    process.env.STRIPE_SECRET_KEY = previous;
+    setStripeTransportForTests(null);
+    assert.equal(access.ok, false);
+    assert.equal(access.probe.status, "failed");
+    if (!access.ok) assert.equal(access.refuseKind, "verification_failed");
+  });
+
+  it("refuses production host and missing sandbox route enable even with a good probe", async () => {
     const previous = process.env.STRIPE_SECRET_KEY;
     process.env.STRIPE_SECRET_KEY = "sk_test_examplekey";
     setStripeTransportForTests(async () =>
       jsonResponse(200, { id: "acct_testprobe", capabilities: { card_payments: "active" } }),
     );
-    const access = await verifyCollaborationCollectionAccess({
+
+    const prodHost = await verifyCollaborationCollectionAccess({
       originOrHost: "https://influrios.com",
       environment: "sandbox",
+      env: { COLLABORATION_SANDBOX_LEDGER_HOLD: "1", NODE_ENV: "test" },
     });
+    assert.equal(prodHost.ok, false);
+
+    const disabled = await verifyCollaborationCollectionAccess({
+      originOrHost: "http://127.0.0.1:3000",
+      environment: "sandbox",
+      env: { COLLABORATION_SANDBOX_LEDGER_HOLD: "0", NODE_ENV: "test" },
+    });
+    assert.equal(disabled.ok, false);
+
+    const emptyHost = await verifyCollaborationCollectionAccess({
+      originOrHost: "",
+      environment: "sandbox",
+      env: { COLLABORATION_SANDBOX_LEDGER_HOLD: "1", NODE_ENV: "test" },
+    });
+    assert.equal(emptyHost.ok, false);
+
     process.env.STRIPE_SECRET_KEY = previous;
     setStripeTransportForTests(null);
-    assert.equal(access.ok, false);
-    if (!access.ok) assert.match(access.error, /live product host/);
+  });
+});
+
+describe("settlement simulation retry semantics", () => {
+  it("keeps simulated transfer refs out of ordinary transfer_recorded classification", () => {
+    assert.equal(isSandboxLedgerHoldTransferRef("sim_sandbox_ledger_hold:abc"), true);
+    assert.equal(isSandboxLedgerHoldTransferRef("tr_live_abc"), false);
+    const sim = sandboxLedgerHoldReleaseSimulation({ settlementId: "s1", fundingId: "f1" });
+    assert.equal(sim.ok && sim.providerE2eComplete, false);
   });
 });
