@@ -1,6 +1,6 @@
 {
   "run": "r3mrvlgh",
-  "passwordEnv": "AUDIT_LOCAL_PASSWORD (value not stored in pack)",
+  "passwordEnv": "AUDIT_LOCAL_PASSWORD or default",
   "members": {
     "businessA": "audit.r3mrvlgh.business-a@example.com",
     "businessB": "audit.r3mrvlgh.business-b@example.com",
@@ -13,10 +13,10 @@
     "limited": "audit.r3mrvlgh.admin-limited@example.com"
   },
   "ids": {
-    "businessA": "cmwmrvlmf0050jsl0lyr7gwwm",
-    "businessB": "cmwmrvlni0051jsl05kd7ena5",
-    "influencerA": "cmwmrvlop005ajsl0822thyoj",
-    "influencerB": "cmwmrvlpi005bjsl0gi8tfe9p",
-    "influencerUnrelated": "cmwmrvlqc005cjsl0z2rd5hd1"
+    "businessA": "cmwmvi0ey0050jsnckwh9y150",
+    "businessB": "cmwmvi0g10051jsncfd6d407i",
+    "influencerA": "cmwmvi0h9005ajsncyoee4mdx",
+    "influencerB": "cmwmvi0i3005bjsncvjfdc7mk",
+    "influencerUnrelated": "cmwmvi0iw005cjsncfovposxb"
   }
 }

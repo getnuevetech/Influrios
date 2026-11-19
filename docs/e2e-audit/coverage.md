@@ -1,6 +1,6 @@
-# Coverage (revision r3 — local dedicated harness)
+# Coverage (revision r3.2 — Stripe fresh-boot)
 
-**Verdict: Audit incomplete with remaining blockers** — local dedicated env now executes invite→accept→agreement→dual-sign and several lifecycle journeys. Provider-sandbox money paths remain Blocked without Stripe test secrets.
+**Verdict: Audit incomplete with remaining blockers** — Stripe test secrets are present on this fresh boot. Collaboration card funding is product-gated; subscription Checkout is Partial.
 
 **Route-open Pass ≠ journey Pass.** Completed journeys below are dual-account / DB / Mailpit evidenced on `http://127.0.0.1:3000` + Mailpit + Postgres `influrios_audit`.
 
@@ -36,28 +36,21 @@ creator/signed
 - Route/action inventory Passes remain screenshots + open checks only.
 - J30 popup geometry samples and mobile a11y smoke are visual/navigation, tracked Partial until full checklist.
 
-## Blocked / missing resources (exact)
+## Blocked / missing resources (exact) — r3.2
 
 | ID | Missing resource | Attempted resolution | Smallest Ola action |
 |----|------------------|----------------------|---------------------|
-| J13/J16 | Bound `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` **not visible in this VM** | Re-probed shell, `.env.local`, next-server environ (names only) — all absent | **Start new worker** so secrets inject at boot |
-| J15 | Same + funded collaboration | Dual-sign done earlier; funding blocked | After new worker: J13 then J15 |
-| J02 admin (explained) | N/A — harness pwd source mismatch | loginAdmin proves ADMIN_SUPER_PASSWORD works | Harness should load `.env.local` / pass admin env explicitly |
-
-## Blocked / missing resources (exact)
-
-| ID | Missing resource | Attempted resolution | Smallest Ola action |
-|----|------------------|----------------------|---------------------|
-| J13/J16 | `STRIPE_SECRET_KEY` (sk_test_) + `STRIPE_WEBHOOK_SECRET` bound to Cloud Agent / local `.env.local` | Local app + marketplace primary synthetic route prepared; Checkout not callable without Stripe test key | Bind Stripe **test** secrets to agent env (no live keys) |
-| J15 | Funded collaboration + payout provider sandbox (Stripe Connect / Airwallex test) + webhook reachability | Dual-sign completed; funding gate still needs provider sandbox | Provide test payout credentials after J13 |
-| J02 admin local | Working local admin password/`AuditLocalAdmin!2026` path failed login in harness | Business/influencer local login Pass; public admin Pass historically | **Separate P0** — do not mix into audit attestation |
+| J13 | Proven Stripe allocated-funds / Treasury capability (or product decision to allow ordinary card deposit) | Secrets present; dual-party `awaiting_provider` seeded; `startFundingDeposit(card)` hits hardcoded `collaborationCollectionGate(false,false)` | Product decision / separate PR to wire gate — audit will not silent-fix |
+| J15 | Funded (`held`) collaboration after J13 | Upstream blocked; marketplace primary webhook seeded only | Unblock J13 then hold → approve → `payout.released` |
+| J16 | Headless completion of Stripe hosted Checkout card form | `startCheckout` opens `cs_test_`; sandbox UI screenshots; webhook 400 unsigned; API `pm_card_visa` sub active (related) | Optional headed confirm / Stripe CLI; or accept Partial |
+| J02 admin | ~~Harness pwd~~ | Reconfirm Pass with `.env.local` load this boot | None — harness fix already in place |
 
 ## J01–J30 matrix
 
 | ID | Status | Notes |
 |----|--------|-------|
 | J01 | Pass | email=audit.r3mrvlgh.signup.mwmst7q8@example.com; user=audit.r3mrvlgh.signup.mwmst7q8@example.com; mailDelta=1; url=http://127.0.0.1:3000/account/verify?email=a |
-| J02 | Partial | Member logins Pass; admin Fail root-caused (harness fallback pwd ≠ ADMIN_SUPER_PASSWORD); reprobe Pass — see admin-login-root-cause.md |
+| J02 | Pass | Members Pass; admin Fail RCA harness `.env.local` — **reconfirm Pass** this boot |
 | J03 | Partial | Discover/card inventory opens only — false journey Pass avoided |
 | J04 | Pass | briefs=cmwms5ddg00ncjsu70yjkim0x/AUDIT debug send/draft
 cmwms41i300mcjsu77wn66by9/AUDIT r3mrvlgh Main mwms3x9b/draft
@@ -72,10 +65,10 @@ cmwms41ip00mdjsu7wkmlliks/ACCEPTED/audit-r3mrvlgh-a; acceptedHeuristic=true |
 | J11 | Pass | business/signed
 creator/signed |
 | J12 | Pass | Status: signed · Influrios in-app · 2/2 signed; doc=signed |
-| J13 | Blocked | Stripe secrets bound per Ola but **ABSENT in this VM** — fresh worker required (see stripe-secret-probe.json) |
-| J14 | Blocked | Milestone submit/revise/approve needs funded collaboration (depends on J13 Stripe) |
-| J15 | Blocked | Upstream J13; secrets not visible in this VM — fresh worker required |
-| J16 | Blocked | Same as J13 — STRIPE_* names absent in this VM |
+| J13 | Blocked | Secrets present; product `collaborationCollectionGate` refuses card deposit |
+| J14 | Blocked | Milestone submit/revise/approve needs funded collaboration (depends on J13) |
+| J15 | Blocked | Upstream J13 — funding never held |
+| J16 | Partial | Checkout opens + sandbox UI + webhook ready; hosted card confirm incomplete; related API sub active |
 | J17 | Blocked | Retry/failure money paths need provider sandbox after J13 |
 | J18 | Blocked | Discount mutating admin ops not fully executed this revision |
 | J19 | Blocked | Tax/payment-settings mutating ops not fully executed this revision |

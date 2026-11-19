@@ -122,7 +122,7 @@
     "startUrl": "http://127.0.0.1:3000/admin/login",
     "finalUrl": "http://127.0.0.1:3000/admin/login",
     "expected": "Admin login on local",
-    "actual": "http://127.0.0.1:3000/admin/login | RCA: password-source mismatch (harness fallback \u2260 seeded ADMIN_SUPER_PASSWORD); re-probe with env password \u2192 /admin Pass",
+    "actual": "http://127.0.0.1:3000/admin/login | RCA: password-source mismatch (harness fallback ≠ seeded ADMIN_SUPER_PASSWORD); re-probe with env password → /admin Pass",
     "functionalResult": "Fail",
     "visualResult": "Pass",
     "completedAt": "2026-11-18T23:52:12.018Z"
@@ -441,7 +441,7 @@
     "environment": "local-dedicated",
     "integrationLevel": "L2-app-internal",
     "expected": "Signed agreement remains fully signed / guarded",
-    "actual": "Status: signed \u00b7 Influrios in-app \u00b7 2/2 signed; doc=signed",
+    "actual": "Status: signed · Influrios in-app · 2/2 signed; doc=signed",
     "functionalResult": "Pass",
     "visualResult": "Pass",
     "journeyCompletion": true,
@@ -516,7 +516,7 @@
     "environment": "local-dedicated",
     "integrationLevel": "L2-app-internal",
     "expected": "Signup creates account and/or verification mail in Mailpit",
-    "actual": "email=audit.r3mrvlgh.signup.mwmst7q8@example.com; user=audit.r3mrvlgh.signup.mwmst7q8@example.com; mailDelta=1; url=http://127.0.0.1:3000/account/verify?email=audit.r3mrvlgh.signup.mwmst7q8%40example.com&next=%2Fcreator%3Fwelcome%3D1; subjects=[\"Your Influrios verification code\",\"Fully signed: \u201cAUDIT r3mrvlgh Main mwms3x9b\u201d\",\"Fully signed: \u201cAUDIT r3mrvlgh Main mwms3x9b\u201d\"]",
+    "actual": "email=audit.r3mrvlgh.signup.mwmst7q8@example.com; user=audit.r3mrvlgh.signup.mwmst7q8@example.com; mailDelta=1; url=http://127.0.0.1:3000/account/verify?email=audit.r3mrvlgh.signup.mwmst7q8%40example.com&next=%2Fcreator%3Fwelcome%3D1; subjects=[\"Your Influrios verification code\",\"Fully signed: “AUDIT r3mrvlgh Main mwms3x9b”\",\"Fully signed: “AUDIT r3mrvlgh Main mwms3x9b”\"]",
     "functionalResult": "Pass",
     "visualResult": "Pass",
     "journeyCompletion": true,
@@ -547,111 +547,207 @@
   },
   {
     "runId": "AUDIT_LOCAL_R3",
-    "caseId": "J13-local-sandbox-checkout",
-    "journeyId": "J13",
-    "role": "business",
-    "caseKind": "journey",
+    "buildId": "local-dev",
     "environment": "local-dedicated",
-    "integrationLevel": "L3-provider-sandbox",
-    "expected": "Sandbox collaboration funding checkout",
-    "actual": "Re-probe 2026-11-19: STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET ABSENT from agent shell, .env.local, and next-server environ. next-server started 2026-11-19T00:29:36Z; .env.local mtime 2026-11-18T23:47:38Z. This VM predates/never received bound secrets.",
-    "functionalResult": "Blocked",
-    "visualResult": "Not tested",
-    "journeyCompletion": false,
-    "blocker": "MISSING_RESOURCE: bound Stripe test secrets not visible in this VM \u2014 fresh worker boot required",
+    "startedAt": "2026-11-19T01:35:18.889Z",
+    "screenshotRefs": [],
     "assertionRefs": [
       {
         "type": "probe",
         "file": "stripe-secret-probe.json"
       }
     ],
-    "screenshotRefs": [],
-    "fixtureIds": [],
-    "startedAt": "2026-11-19T01:25:41.777874+00:00",
-    "completedAt": "2026-11-19T01:25:41.777874+00:00"
+    "providerEventRefs": [],
+    "issueIds": [],
+    "blocker": null,
+    "integrationLevel": "L3-provider-sandbox",
+    "journeyCompletion": true,
+    "caseKind": "journey",
+    "caseId": "PROBE-stripe-secrets-fresh-boot",
+    "journeyId": "preflight",
+    "role": "system",
+    "expected": "sk_test_ + whsec_ present; sandbox API reachable",
+    "actual": "{\"secret\":{\"presentInAgentShell\":true,\"presentInDotEnvLocal\":true,\"prefix\":\"sk_test_\",\"length\":107,\"mode\":\"sandbox\"},\"webhook\":{\"presentInAgentShell\":true,\"presentInDotEnvLocal\":true,\"prefix\":\"whsec_\",\"length\":38},\"api\":{\"ok\":true,\"status\":200,\"firstLivemode\":false,\"firstIdPrefix\":\"cs_test_\"}}",
+    "functionalResult": "Pass",
+    "visualResult": "Not applicable",
+    "completedAt": "2026-11-19T01:35:18.889Z"
   },
   {
     "runId": "AUDIT_LOCAL_R3",
-    "caseId": "J16-local-subscription-checkout",
-    "journeyId": "J16",
-    "role": "business",
-    "caseKind": "journey",
+    "buildId": "local-dev",
     "environment": "local-dedicated",
-    "integrationLevel": "L3-provider-sandbox",
-    "expected": "Sandbox subscription checkout",
-    "actual": "Same probe as J13 \u2014 STRIPE_* names absent in this VM; cannot execute Checkout.",
-    "functionalResult": "Blocked",
-    "visualResult": "Not tested",
-    "journeyCompletion": false,
-    "blocker": "MISSING_RESOURCE: bound Stripe test secrets not visible in this VM \u2014 fresh worker boot required",
-    "assertionRefs": [
+    "startedAt": "2026-11-19T01:35:27.650Z",
+    "screenshotRefs": [
       {
-        "type": "probe",
-        "file": "stripe-secret-probe.json"
+        "rel": "local-journeys/j02-admin-reprobe-envlocal-load.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j02-admin-reprobe-envlocal-load.png"
+      },
+      {
+        "rel": "local-journeys/j02-admin-reprobe-member-pwd-fail.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j02-admin-reprobe-member-pwd-fail.png"
       }
     ],
-    "screenshotRefs": [],
-    "fixtureIds": [],
-    "startedAt": "2026-11-19T01:25:41.777874+00:00",
-    "completedAt": "2026-11-19T01:25:41.777874+00:00"
-  },
-  {
-    "runId": "AUDIT_LOCAL_R3",
-    "caseId": "J15-local-payout",
-    "journeyId": "J15",
-    "role": "influencer",
-    "caseKind": "journey",
-    "environment": "local-dedicated",
-    "integrationLevel": "L3-provider-sandbox",
-    "expected": "Payout after funding",
-    "actual": "Blocked upstream: J13 funding requires Stripe test secrets visible to the local app process.",
-    "functionalResult": "Blocked",
-    "visualResult": "Not tested",
-    "journeyCompletion": false,
-    "blocker": "MISSING_RESOURCE: depends on J13; Stripe secrets not visible in this VM \u2014 fresh worker boot required",
     "assertionRefs": [
       {
-        "type": "probe",
-        "file": "stripe-secret-probe.json"
+        "type": "admin-rca",
+        "file": "admin-login-root-cause.md"
+      },
+      {
+        "type": "harness",
+        "loadEnvLocal": true
       }
     ],
-    "screenshotRefs": [],
-    "fixtureIds": [],
-    "startedAt": "2026-11-19T01:25:41.777874+00:00",
-    "completedAt": "2026-11-19T01:25:41.777874+00:00"
-  },
-  {
-    "runId": "AUDIT_LOCAL_R3",
+    "providerEventRefs": [],
+    "issueIds": [],
+    "blocker": null,
+    "integrationLevel": "L2-app-internal",
+    "journeyCompletion": true,
+    "caseKind": "journey",
     "caseId": "J02-local-login-admin-reprobe",
     "journeyId": "J02",
     "role": "admin",
-    "caseKind": "journey",
-    "environment": "local-dedicated",
-    "integrationLevel": "L2-app-internal",
-    "expected": "Admin login with ADMIN_SUPER_PASSWORD",
-    "actual": "http://127.0.0.1:3000/admin \u2014 Pass when using ADMIN_SUPER_PASSWORD; Fail with AuditLocalPass!2026",
+    "startUrl": "http://127.0.0.1:3000/admin/login",
+    "finalUrl": "http://127.0.0.1:3000/admin",
+    "expected": "Admin login Pass when harness loads ADMIN_SUPER_PASSWORD from .env.local",
+    "actual": "envPwdPass=true; memberPwdStaysOnLogin=true; adminPasswordSource=ADMIN_SUPER_PASSWORD; url=http://127.0.0.1:3000/admin",
     "functionalResult": "Pass",
     "visualResult": "Pass",
-    "journeyCompletion": true,
+    "completedAt": "2026-11-19T01:35:27.650Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "buildId": "local-dev",
+    "environment": "local-dedicated",
+    "startedAt": "2026-11-19T01:35:39.805Z",
     "screenshotRefs": [
       {
-        "rel": "local-journeys/j02-admin-reprobe-env.png"
+        "rel": "local-journeys/j13-checkout-page.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j13-checkout-page.png"
       }
     ],
     "assertionRefs": [
       {
-        "type": "doc",
-        "rel": "admin-login-root-cause.md"
+        "type": "product-gate",
+        "gate": {
+          "ok": false,
+          "error": "New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged."
+        }
       },
       {
-        "type": "api",
-        "loginAdmin": "ok with ADMIN_SUPER_PASSWORD"
+        "type": "probe",
+        "file": "stripe-secret-probe.json"
+      },
+      {
+        "type": "db",
+        "fundingId": "cmwmvouoj0004jst2hs8vu4lc",
+        "status": "awaiting_provider"
       }
     ],
+    "providerEventRefs": [],
+    "issueIds": [],
+    "blocker": "PRODUCT_GATE: collaborationCollectionGate refuses new collaboration card deposit — New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged.",
+    "integrationLevel": "L3-provider-sandbox",
+    "journeyCompletion": false,
+    "caseKind": "journey",
+    "caseId": "J13-local-sandbox-checkout",
+    "journeyId": "J13",
+    "role": "business",
+    "startUrl": "http://127.0.0.1:3000/payments/checkout/cmwmvouoj0004jst2hs8vu4lc",
+    "expected": "Sandbox collaboration funding checkout with provider objects",
+    "actual": "{\"productGate\":{\"ok\":false,\"error\":\"New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged.\"},\"startFundingDeposit\":{\"ok\":false,\"error\":\"New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged.\"},\"checkoutPageSnippet\":\"∞\\nInflurios\\nDashboard\\nAction inbox\\nCompany Profile\\nDiscover Creators\\nCollaborations\\nContracts\\nAnalytics\\nTeam\\nBilling & Plans\\nCollaboration Payments\\nVerification\\nSettings\\nLog out\\n\\n© 2026 Influrios. All rights reserved.\\n\\nA\\n\\nAUDIT r3mrvlgh Co A\\n\\nAUDIT r3mrvlgh Co A\\n\\nBack to payments\\n\\nFUNDING CHECKOUT\\n\\nAUDIT J13 Stripe funding\\n•\\nNeeds funding\\nSigned breakdown\\n\\nGross work $45.00\\n\\nBusiness collaboration\",\"dualParty\":{\"business\":\"audit.r3mrvlgh.business-a@example.com\",\"influencer\":\"audit.r3mrvlgh.influencer-a@example.com\",\"creatorSlug\":\"audit-r3mrvlgh-a\",\"fundingId\":\"cmwmvouoj0004jst2hs8vu4lc\",\"milestoneId\":\"cmwmvouoj0005jst25dyddwpw\"},\"secretsPresent\":true,\"stripeApiProbe\":{\"ok\":true,\"status\":200,\"firstLivemode\":false,\"firstIdPrefix\":\"cs_test_\"}}",
+    "functionalResult": "Blocked",
+    "visualResult": "Pass",
     "fixtureIds": [
-      "audit.admin@example.com"
+      "cmwmvouoj0004jst2hs8vu4lc",
+      "audit.r3mrvlgh.business-a@example.com",
+      "audit.r3mrvlgh.influencer-a@example.com"
     ],
-    "startedAt": "2026-11-19T01:25:41.777874+00:00",
-    "completedAt": "2026-11-19T01:25:41.777874+00:00"
+    "completedAt": "2026-11-19T01:35:39.805Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "buildId": "local-dev",
+    "environment": "local-dedicated",
+    "startedAt": "2026-11-19T01:36:44.683Z",
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j16-pricing.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j16-pricing.png"
+      },
+      {
+        "rel": "local-journeys/j16-stripe-checkout.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j16-stripe-checkout.png"
+      },
+      {
+        "rel": "local-journeys/j16-stripe-after-pay.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j16-stripe-after-pay.png"
+      }
+    ],
+    "assertionRefs": [
+      {
+        "type": "stripe-checkout",
+        "localSessionId": "cs_mwmvp3k3_hxto60",
+        "stripeSessionIdPrefix": "cs_test_a0cC",
+        "paymentStatus": "unpaid"
+      },
+      {
+        "type": "webhook"
+      }
+    ],
+    "providerEventRefs": [],
+    "issueIds": [],
+    "blocker": "PARTIAL: Checkout session opened in Stripe sandbox; paid+webhook evidence incomplete (card UI / confirm path)",
+    "integrationLevel": "L3-provider-sandbox",
+    "journeyCompletion": false,
+    "caseKind": "journey",
+    "caseId": "J16-local-subscription-checkout",
+    "journeyId": "J16",
+    "role": "influencer",
+    "startUrl": "http://127.0.0.1:3000/pricing",
+    "expected": "Sandbox subscription checkout via Stripe test + webhook evidence",
+    "actual": "{\"started\":{\"ok\":true,\"mode\":\"stripe\",\"sessionId\":\"cs_mwmvp3k3_hxto60\",\"urlHost\":\"checkout.stripe.com\"},\"sessionMeta\":{\"localSessionId\":\"cs_mwmvp3k3_hxto60\",\"stripeSessionIdPrefix\":\"cs_test_a0cC\",\"paymentStatus\":\"unpaid\"},\"webhook\":null,\"checkoutAttempts\":\"1\",\"account\":\"audit.r3mrvlgh.influencer-a@example.com\"}",
+    "functionalResult": "Partial",
+    "visualResult": "Pass",
+    "fixtureIds": [
+      "audit.r3mrvlgh.influencer-a@example.com"
+    ],
+    "completedAt": "2026-11-19T01:36:44.683Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "buildId": "local-dev",
+    "environment": "local-dedicated",
+    "startedAt": "2026-11-19T01:36:50.808Z",
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j15-payments-mobile-blocked.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j15-payments-mobile-blocked.png"
+      }
+    ],
+    "assertionRefs": [
+      {
+        "type": "upstream",
+        "fundingStatus": "awaiting_provider",
+        "gate": "New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged."
+      }
+    ],
+    "providerEventRefs": [],
+    "issueIds": [],
+    "blocker": "UPSTREAM_J13: funding status=awaiting_provider (need held after Stripe deposit). Product gate blocked card deposit; payout sandbox not executed on Stripe-funded deal.",
+    "integrationLevel": "L3-provider-sandbox",
+    "journeyCompletion": false,
+    "caseKind": "journey",
+    "caseId": "J15-local-payout",
+    "journeyId": "J15",
+    "role": "influencer",
+    "expected": "Sandbox payout/release after funded collaboration",
+    "actual": "{\"fundingStatus\":\"awaiting_provider\",\"fundingId\":\"cmwmvouoj0004jst2hs8vu4lc\",\"milestoneId\":\"cmwmvouoj0005jst25dyddwpw\",\"upstream\":{\"ok\":false,\"error\":\"New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged.\"},\"productGate\":\"New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged.\",\"note\":\"Secrets present; collaborationCollectionGate blocks Stripe card funding initiation\"}",
+    "functionalResult": "Blocked",
+    "visualResult": "Pass",
+    "fixtureIds": [
+      "cmwmvouoj0004jst2hs8vu4lc",
+      "cmwmvouoj0005jst25dyddwpw"
+    ],
+    "completedAt": "2026-11-19T01:36:50.808Z"
   }
 ]

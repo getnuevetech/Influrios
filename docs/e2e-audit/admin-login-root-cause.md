@@ -19,3 +19,6 @@
 
 ## Fix for future local runs (harness only)
 Load `.env.local` into the harness process (or always pass `ADMIN_SUPER_PASSWORD` explicitly); do not reuse the member `AuditLocalPass!2026` fallback for admin.
+
+## Reconfirm (fresh boot bc-133de653-…, 2026-11-19)
+Harness `loadEnvLocal()` + `ADMIN_SUPER_PASSWORD` → `/admin` **Pass**. Member password `AuditLocalPass!2026` remains on `/admin/login`. Screenshots: `media/e2e-audit/local-journeys/j02-admin-reprobe-envlocal-load.png`, `j02-admin-reprobe-member-pwd-fail.png`.

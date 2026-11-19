@@ -1,46 +1,32 @@
-# Executive summary (revision r3)
+# Executive summary (revision r3.2)
 
-**Verdict: Incomplete — continue #534.** Local dedicated harness removed the false “attestation-only” gate and completed core collaboration journeys with DB + Mailpit evidence.
+**Verdict: Incomplete — continue #534.** Fresh boot has Stripe test secrets. Collaboration card funding remains **product-gated**; subscription Checkout is **Partial** (session opens, hosted card confirm incomplete).
 
 ## What completed (journeys)
 
-- **J01** signup → verify page + Mailpit delta on `@example.com`
-- **J02** local business/influencer login Pass (local admin Fail = separate P0)
-- **J04** create request + private invite (DB `MarketplaceApplication` REQUESTED + Mailpit)
-- **J05** influencer accept (DB ACCEPTED)
-- **J06** business response review
-- **J07** delete pure draft (`saved=deleted`, row removed)
-- **J08** accept then withdraw (DB WITHDRAWN) on influencer B
-- **J09** delete blocked for signed agreement (settlement redirect; contract stays `signed`)
-- **J10** prepare agreement + send for in-app signature (Mailpit sign notices)
-- **J11** dual-party native sign (2/2 `signed`, Mailpit “Fully signed”)
-- **J12** signed agreement remains fully signed
-- **J23** Mailpit interception Pass
-- **J24** local unrelated denial Pass
+- **J01–J12, J23–J24** — prior local dedicated evidence (DB + Mailpit + dual accounts) retained.
+- **J02 admin** — harness `.env.local` / `ADMIN_SUPER_PASSWORD` **reconfirm Pass** this boot.
+- **Stripe probe** — `STRIPE_SECRET_KEY` (`sk_test_`) + `STRIPE_WEBHOOK_SECRET` present; list sessions sandbox OK.
 
-## Navigation / visual (not journey completion)
+## Stripe journeys this boot (`bc-133de653-…`)
 
-- Inventory route opens, J30 centered popup samples, mobile a11y smoke — tracked separately / Partial.
+| ID | Result | Evidence |
+|----|--------|----------|
+| J13 | **Blocked** | Secrets OK; `startFundingDeposit(card)` refused by `collaborationCollectionGate` (allocated funds/Treasury unproven) |
+| J16 | **Partial** | App `startCheckout` → `cs_test_` + sandbox UI + synthetic email; webhook unsigned → 400; API `pm_card_visa` subscription active (related, not Checkout UI Pass) |
+| J15 | **Blocked** | Upstream J13 — no `held` funding for payout/release |
 
-## Blocked (provider sandbox)
+No live money / customer notices. Checkboxes not marked without evidence.
 
-- **J13 / J15 / J16** — Ola bound Stripe test secrets, but they are **ABSENT in this VM** (names-only re-probe). **Fresh worker required.** See `stripe-secret-probe.json`. No live money.
+## Navigation / visual
 
-## Explicitly out of scope this pack
-
-- Agency deferred; Payment v2 paused; no silent product fixes; no live customer notices.
-- Admin credential P0 tracked separately from audit completion.
+- Inventory / J30 samples remain Partial / navigation-only.
 
 ## Counts (J01–J30 matrix)
 
-- Pass: **11**
-- Partial: **10**
-- Blocked: **9**
+- Pass: **12** (J02 promoted to Pass on admin reconfirm)
+- Partial: **10** (J16 moved Blocked → Partial)
+- Blocked: **8**
 - Not tested: **0**
 
-Pack: [index.html](./index.html)
-
-## Stripe / admin update (r3.1)
-
-Ola bound Stripe test secrets, but this VM does not see `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` — **fresh worker required** for J13/J16/J15. Admin Fail RCA: `admin-login-root-cause.md`.
-
+Pack: [index.html](./index.html) · Stripe results: [local-journey-stripe-results.json](./local-journey-stripe-results.json) · Blockers: [blockers.md](./blockers.md)

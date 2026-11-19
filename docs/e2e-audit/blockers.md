@@ -1,26 +1,33 @@
-# Blockers (revision r3.1 — Stripe re-probe)
+# Blockers (revision r3.2 — fresh-boot Stripe execution)
 
-## Open — requires fresh worker
+## Open — product / automation
 
-### BLK-STRIPE-TEST-KEYS-NOT-IN-THIS-VM
-- **Ola stated:** `STRIPE_SECRET_KEY` (sk_test) + `STRIPE_WEBHOOK_SECRET` are bound.
-- **This VM re-probe (names only, 2026-11-19):** both **ABSENT** from:
-  - agent shell `process.env`
-  - `/workspace/.env.local` (mtime 2026-11-18T23:47:38Z — no `STRIPE_*` keys)
-  - `next-server` process environ (started 2026-11-19T00:29:36Z)
-- **Conclusion:** This running VM/process **predates or never received** the binding. J13 → J16 → J15 **cannot** execute here.
-- **Smallest Ola action:** Start a **new worker** on the same branch with secrets injected at boot; then re-run J13, J16, J15 on the local harness (no live money).
-- Evidence: [`stripe-secret-probe.json`](./stripe-secret-probe.json)
+### BLK-J13-COLLABORATION-COLLECTION-GATE
+- **Secrets on this VM:** `STRIPE_SECRET_KEY` (`sk_test_`) + `STRIPE_WEBHOOK_SECRET` (`whsec_`) **PRESENT** (fresh boot `bc-133de653-…`). Stripe `GET /v1/checkout/sessions?limit=1` → 200, `livemode=false`.
+- **Attempted:** Seed dual-party `awaiting_provider` funding (`audit.r3mrvlgh.business-a` / `influencer-a`); call `startFundingDeposit({ method: "card" })`.
+- **Result:** Blocked by product gate — `collaborationCollectionGate({ allocatedFunds: false, treasury: false })` hardcodes refusal: *“New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged.”* (`src/lib/funding-checkout.ts` + `src/lib/payment-account-routing.ts`).
+- **Smallest Ola action:** Decide whether Payment Standard should keep new collaboration card deposits closed, or wire the gate to proven sandbox capability evidence (product change = separate PR; audit does not silent-fix).
+- Evidence: [`local-journey-stripe-results.json`](./local-journey-stripe-results.json), [`stripe-secret-probe.json`](./stripe-secret-probe.json)
 
-### BLK-PAYOUT-SANDBOX
-- Depends on J13 funding succeeding after Stripe secrets are visible.
+### BLK-J15-UPSTREAM-J13
+- Payout/release after funding not executed — funding never reached `held` because J13 card deposit cannot open.
+- Primary marketplace webhook secret seeded for local payout drills; not claimed as J15 Pass.
+- **Smallest Ola action:** Unblock J13 collection gate (or approve alternate hold path), then re-run hold → approve milestone → `payout.released`.
 
-## Explained (not a Stripe blocker)
+### BLK-J16-HOSTED-CHECKOUT-CARD-CONFIRM
+- **Not a missing secret.** `startCheckout({ sku: "creator_plus" })` opens `cs_test_` Checkout; sandbox UI shows Influencer Plus $19/mo + synthetic `@example.com` email (screenshots `j16-stripe-checkout.png`).
+- Headless Playwright could not complete card accordion → 4242 → Subscribe (form interaction / bot barriers). Session stayed `unpaid`.
+- Related sandbox proof (not Checkout UI Pass): API subscription with `pm_card_visa` → `status=active`, invoice paid, `livemode=false`; webhook unsigned → HTTP 400 Missing Stripe-Signature.
+- Evidence: [`j16-related-stripe-api-evidence.json`](./j16-related-stripe-api-evidence.json), media `j16-*.png`
+- **Smallest Ola action:** Optional — provide Stripe CLI listener or headed Checkout confirm on operator machine; or accept Partial until hosted Checkout automation works.
 
-### J02 local admin Fail
-- **Root cause:** harness password fallback ≠ seeded `ADMIN_SUPER_PASSWORD` hash. See [`admin-login-root-cause.md`](./admin-login-root-cause.md).
-- Re-probe with `ADMIN_SUPER_PASSWORD` → `/admin` Pass.
-- Remains separate from product P0 admin-cred hotfix scope.
+## Explained / reconfirmed Pass
 
-## Resolved for non-money journeys
-- Local Postgres + Mailpit + synthetic fixtures; J01/J04–J12/J23/J24 completed on this VM.
+### J02 local admin
+- Root cause (harness `.env.local` / `ADMIN_SUPER_PASSWORD`) documented in [`admin-login-root-cause.md`](./admin-login-root-cause.md).
+- **Reconfirm on this boot:** harness `loadEnvLocal()` + `ADMIN_SUPER_PASSWORD` → `/admin` **Pass**; member password fallback stays on `/admin/login`.
+
+## Resolved (prior)
+
+- Stripe secrets missing from prior VM — **resolved by fresh worker boot** (this run).
+- Local Postgres + Mailpit + synthetic fixtures for non-money journeys.
