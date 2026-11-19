@@ -1,39 +1,30 @@
-# Blockers — Influrios E2E audit `AUDIT_20261118170047` (revision r2)
+# Blockers (revision r3)
 
-Ola: do not treat PR #534 as finished. This file tracks unlock state.
+## Resolved for local mutating journeys
 
-## BLK-ISOLATION — Residual operator attestation
+- Dedicated local Postgres `influrios_audit` + Next on `127.0.0.1:3000`
+- Mailpit SMTP sink on `127.0.0.1:1025` / UI `8025` — proven
+- Synthetic `@example.com` fixtures (not the five live accounts)
+- US corridor + marketplace primary provider secrets (synthetic) for agreement readiness
+- Fee rules / staged milestones / verified KYC fixtures for contract wizard
 
-| Field | Detail |
-|-------|--------|
-| Status | **OPEN (residual)** — strong evidence gathered; attestation checklist incomplete |
-| Evidence | [isolation-evidence.md](./isolation-evidence.md) · Total Accounts=5 · Stripe Sandbox · AUDIT sessions mapped |
-| Affected | Mutating J04–J20, withdraw/delete, sandbox checkout/payout |
-| Exact unblock | Complete checklist in isolation-evidence.md (4 checkboxes) |
-| Owner | Ola / operator |
+## Open blockers
 
-## BLK-MAIL-SINK — Controlled delivery proven
+### BLK-STRIPE-TEST-KEYS
+- **Missing:** Cloud Agent secrets `STRIPE_SECRET_KEY` (`sk_test_…`) and `STRIPE_WEBHOOK_SECRET`
+- **Tried:** Local app boot; marketplace primary route seeded; Checkout/payout not executable without keys
+- **Smallest Ola action:** Bind Stripe **test** secrets to the agent environment (no live keys, no customer charges)
 
-| Field | Detail |
-|-------|--------|
-| Status | **CLOSED** (controlled delivery) |
-| Evidence | [mail-sink-proof.md](./mail-sink-proof.md) · job `cmwmi5v4b08nlpb01rxivghrn` · SMTP 250 |
-| Residual | Do not message non-AUDIT recipients; inbox UI not separately proven |
+### BLK-PAYOUT-SANDBOX
+- **Missing:** Payout provider sandbox credentials + webhook reachability after funding
+- **Depends on:** J13 funding
+- **Smallest Ola action:** Provide test Connect/payout credentials after Stripe test keys
 
-## BLK-ADMIN-CRED-EXPOSURE — P0 (separate hotfix)
+### BLK-ADMIN-LOCAL-LOGIN (separate P0)
+- Local admin login Fail in harness; do **not** treat as audit attestation work
+- **Smallest Ola action:** Separate hotfix for admin credential/login — outside this audit pack gate
 
-| Status | **OPEN** — out of silent-audit-fix scope |
-| Evidence | Public `/admin/login` still renders concrete default credentials (values redacted from pack) |
-| Owner | Engineering (separate PR) |
+## Not blockers anymore
 
-## BLK-DEPLOY-SHA
-
-| Status | **OPEN** for regression claims only |
-| Evidence | Deployed ≠ local PR #532 HEAD |
-
-## Closed / N/A
-
-| Item | Note |
-|------|------|
-| Agency | Deferred |
-| Payment Standard v2 | Paused |
+- Operator isolation/mail attestation checkboxes
+- Absence of a disposable public staging mutation lane (local harness is sufficient)

@@ -1,3 +1,5 @@
+Revision **r3** — local dedicated harness completed invite→sign journeys; Stripe sandbox still blocked.
+
 # Influrios E2E audit pack (AUDIT_20261118170047 / r2)
 
 **Verdict:** Audit incomplete with blockers. PR #534 open for revision — **not** finished.

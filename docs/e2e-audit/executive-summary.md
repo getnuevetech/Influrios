@@ -1,38 +1,41 @@
-# Influrios End-to-End Audit — Executive summary (rev r2)
+# Executive summary (revision r3)
 
-**runId:** AUDIT_20261118170047  
-**Revision:** r2 — Ola rejected treating #534 as finished; pack revised  
-**Deployed build:** `ada9c7f5d90d4d61e78627da2765cbe14004cbc4`  
-**Base URL:** https://influrios.com  
+**Verdict: Incomplete — continue #534.** Local dedicated harness removed the false “attestation-only” gate and completed core collaboration journeys with DB + Mailpit evidence.
 
-## Verdict
+## What completed (journeys)
 
-**Audit incomplete with blockers** (revision in progress on PR #534 — keep open).
+- **J01** signup → verify page + Mailpit delta on `@example.com`
+- **J02** local business/influencer login Pass (local admin Fail = separate P0)
+- **J04** create request + private invite (DB `MarketplaceApplication` REQUESTED + Mailpit)
+- **J05** influencer accept (DB ACCEPTED)
+- **J06** business response review
+- **J07** delete pure draft (`saved=deleted`, row removed)
+- **J08** accept then withdraw (DB WITHDRAWN) on influencer B
+- **J09** delete blocked for signed agreement (settlement redirect; contract stays `signed`)
+- **J10** prepare agreement + send for in-app signature (Mailpit sign notices)
+- **J11** dual-party native sign (2/2 `signed`, Mailpit “Fully signed”)
+- **J12** signed agreement remains fully signed
+- **J23** Mailpit interception Pass
+- **J24** local unrelated denial Pass
 
-Stopping customer-affecting mutations without isolation attestation was correct; calling that stop “done” was not. This revision:
+## Navigation / visual (not journey completion)
 
-1. Proves notification controlled delivery (SMTP 250 + job success to AUDIT_ADMIN)
-2. Documents isolation footprint evidence (5 accounts, Stripe Sandbox) + **exact operator checklist** still required
-3. Removes false journey Pass inflation from route-open screenshots
-4. Keeps mutating invite/sign/fund/payout/sub/withdraw/delete journeys **Blocked** with owner/action until checklist completes
+- Inventory route opens, J30 centered popup samples, mobile a11y smoke — tracked separately / Partial.
 
-## Journey matrix (J01–J30)
+## Blocked (provider sandbox)
 
-- Pass: **0**
-- Partial: **9**
-- Blocked: **20**
-- (see [coverage.md](./coverage.md))
+- **J13 / J15 / J16** — missing Stripe test secrets / payout sandbox (exact missing resource listed in coverage.md). No live money.
 
-## Top open items for Ola
+## Explicitly out of scope this pack
 
-1. Complete isolation attestation checkboxes in [isolation-evidence.md](./isolation-evidence.md)
-2. Separate hotfix for P0 admin-login default credentials
-3. After (1): authorize mutating retest — pack will be updated on #534
+- Agency deferred; Payment v2 paused; no silent product fixes; no live customer notices.
+- Admin credential P0 tracked separately from audit completion.
 
-## Links
+## Counts (J01–J30 matrix)
 
-- [index.html](./index.html)
-- [blockers.md](./blockers.md)
-- [mail-sink-proof.md](./mail-sink-proof.md)
-- [isolation-evidence.md](./isolation-evidence.md)
-- Downloads: [downloads/](./downloads/)
+- Pass: **11**
+- Partial: **10**
+- Blocked: **9**
+- Not tested: **0**
+
+Pack: [index.html](./index.html)
