@@ -6,6 +6,8 @@ import {
   buildRoleMapping,
   capabilityLossAllows,
   collaborationCollectionGate,
+  resolveCollaborationCollectionRoute,
+  isLiveProductCollectionHost,
   collaborationOperationsBridge,
   describeStripeOperation,
   domesticLaunchAllowed,
@@ -86,6 +88,19 @@ describe("payment account routing", () => {
     assert.equal(accepted.ok, true);
     assert.equal(collaborationCollectionGate({ allocatedFunds: false, treasury: false }).ok, false);
     assert.equal(selectStripeTopology({ providerCode: "stripe", evidence: null }).newCollectionsEnabled, false);
+    // Live stays closed even when capability flags are present — detection ≠ proven flow.
+    assert.equal(
+      resolveCollaborationCollectionRoute({
+        environment: "live",
+        stripeKeyMode: "live",
+        originOrHost: "https://influrios.com",
+        probe: { status: "checked", allocatedFunds: true, treasury: true, reason: "flags" },
+        trustedDeployment: true,
+        sandboxRouteEnabled: true,
+      }).ok,
+      false,
+    );
+    assert.equal(isLiveProductCollectionHost("https://influrios.com"), true);
   });
 
   it("stores verified account ids and refuses a Stripe mapping on another provider", () => {
