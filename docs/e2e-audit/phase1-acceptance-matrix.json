@@ -1,0 +1,52 @@
+{
+  "revision": "phase-1-corrective",
+  "recordedAt": "2026-11-19T19:45:00.000Z",
+  "rules": {
+    "coverage": "Complete if journey exercised with retained evidence; Incomplete otherwise",
+    "acceptance": "Pass | Fail | Partial — product criteria. Provider payout uses Partial + provider-limitations PL-* (not Partial forever)",
+    "demotionPolicy": "Unsupported or thin Pass labels demoted; valid evidence preserved"
+  },
+  "counts": { "pass": 22, "partial": 8, "failWholeJourney": 0, "coverageIncomplete": 0 },
+  "demotions": [
+    { "id": "J03", "from": "Pass", "to": "Partial", "reason": "Demo directory; shortlist UI absent; prior DB shortlist insufficient", "cor": "COR-13" },
+    { "id": "J25", "from": "Pass", "to": "Partial", "reason": "Inventory only; prior phone mutate was SQL not admin Edit UI", "cor": "COR-14" },
+    { "id": "J27", "from": "Pass", "to": "Partial", "reason": "Route reachability only", "cor": "COR-15" },
+    { "id": "J30", "from": "Pass", "to": "Partial", "reason": "Visual coverage Complete but acceptance Fail COR-09a/b", "cor": "COR-16" },
+    { "id": "J15", "from": "Partial forever", "to": "Partial", "reason": "Provider payout unproven pending provider integration/testing (PL-01)", "cor": "COR-01" }
+  ],
+  "journeys": [
+    { "id": "J01", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J02", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J03", "coverage": "Complete", "acceptance": "Partial", "gap": "shortlist UI on live profiles" },
+    { "id": "J04", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J05", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J06", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J07", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J08", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J09", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J10", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J11", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J12", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J13", "coverage": "Complete", "acceptance": "Pass", "label": "Stripe TEST checkout" },
+    { "id": "J14", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J15", "coverage": "Complete", "acceptance": "Partial", "providerLimitation": "PL-01", "label": "Simulated internal release; payout UNPROVEN pending provider integration/testing" },
+    { "id": "J16", "coverage": "Complete", "acceptance": "Partial", "steps": { "month": "Pass", "year": "Fail" }, "productFailure": "COR-03" },
+    { "id": "J17", "coverage": "Complete", "acceptance": "Partial", "productFailure": "COR-07" },
+    { "id": "J18", "coverage": "Complete", "acceptance": "Pass", "evidence": "j18p1-us-checkout.png Stripe shows AUDITPRO15M" },
+    { "id": "J19", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J20", "coverage": "Complete", "acceptance": "Pass", "label": "Stripe TEST checkout + tax invoice" },
+    { "id": "J21", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J22", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J23", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J24", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J25", "coverage": "Complete", "acceptance": "Partial", "gap": "admin Edit field save" },
+    { "id": "J26", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J27", "coverage": "Complete", "acceptance": "Partial", "gap": "CMS publish / job run" },
+    { "id": "J28", "coverage": "Complete", "acceptance": "Partial", "productFailure": "COR-10" },
+    { "id": "J29", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J30", "coverage": "Complete", "acceptance": "Partial", "productFailure": "COR-09a COR-09b" }
+  ],
+  "agency": "Deferred",
+  "phase1Stop": true,
+  "remediationPhase": "Later focused PRs — not phase 1"
+}

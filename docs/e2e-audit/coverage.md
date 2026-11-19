@@ -1,18 +1,12 @@
-# Coverage (revision r3.6 — stop when Pass or precise limitation)
+# Coverage — Phase 1 corrective
 
-**Verdict: Incomplete — #534 stays open.** CI ≠ done. Simulated payouts ≠ provider Pass.
+**Phase 1 complete for audit-pack hygiene.** Remediation PRs are a later phase.
 
-## Completed this revision
+## Verdict
 
-- **J18 Pass** — Pro month Checkout Apply UI (`AUDITPRO15M`); wrong-interval reject; tax preview
-- **J20 Pass** — Quote→Stripe TEST charge with 8.25% tax→paid invoice/receipt (`tax=239`, total `3139`)
-- **J16 year** — Fail with RCA (no invent Pass)
-- **J17 / J28 / J15** — Partial with precise product/provider limitations
+- **Test-execution coverage:** Complete for J01–J30 (every journey has evidence; thin Passes demoted).  
+- **Product acceptance:** Pass **22** / Partial **8** — includes documented product Failures (annual, proration, intro fee, visual chrome).  
+- **Provider:** J15 payout unproven **pending provider integration/testing** (not simulation Pass).  
 
-## Matrix counts (J01–J30)
-
-- Pass: **26**
-- Partial: **4** (J15, J16, J17, J28)
-- Blocked (gate): **0**
-
-See [journeys.md](./journeys.md), [correction-register.md](./correction-register.md), [local-journey-r36-results.json](./local-journey-r36-results.json).
+Unsupported Pass labels corrected. Missing coverage was finished or explicitly Partial.  
+See [final-coverage-report.md](./final-coverage-report.md).

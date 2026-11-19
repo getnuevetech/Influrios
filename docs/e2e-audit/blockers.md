@@ -1,29 +1,24 @@
-# Blockers (revision r3.6)
+# Blockers / limitations — Phase 1
 
-## Open — precise product / provider limitations
+## Provider (see provider-limitations.md)
 
-### BLK-J15-PROVIDER-PAYOUT-UNPROVEN (forever Partial)
-- Simulation only; never Pass without Connect/bank payout proof.
+### PL-01 / J15
+- Provider payout **unproven pending provider integration/testing**.  
+- Simulation exercised; not Pass.
 
-### BLK-J16-ANNUAL-PLAN (Fail — RCA)
-1. `PlatformSetting` `billing.annualOffers` empty.  
-2. Stripe TEST has no active year-interval Price.  
-3. Monthly Plus Pass retained.
+## Product (acceptance Partial/Fail — not coverage gaps)
 
-### BLK-J17-PRORATION-PRODUCT-GAPS (Partial)
-1. `SubscriptionState.externalId` stored as Checkout Session id (`cs_test_`), not Subscription id (`sub_`).  
-2. `billing.prices` / catalog `offer.priceId` empty → `actionPreviewTierChange` cannot compute amount due.  
-3. Portal control absent when `stripeCustomerId` unset at complete.
+- **COR-03** J16 annual unavailable  
+- **COR-07 / COR-11** J17 proration / price IDs  
+- **COR-10** J28 managed_intro fee rule missing  
+- **COR-09a/b** admin dual chrome + Creator terminology  
+- **COR-13** J03 demo directory / no shortlist UI  
 
-### BLK-J28-MANAGED-INTRO-FEE-RULE (Partial)
-- Lifecycle advances to `in_conversation`.  
-- `requestIntroFeeSettlement` fails: no active `CollaborationFeeRule` with `serviceLevel=managed_intro`.
+## Security (interrupt-class if exposed on customer hosts)
 
-## Closed this revision
+- **COR-SEC-01** admin login credential hint — see `issues.json`
 
-- J18 Apply UI (Pro month) — Pass  
-- J20 quote→charge→tax→invoice — Pass  
+## Closed as coverage hygiene
 
-## Environment
-
-- `COLLABORATION_SANDBOX_LEDGER_HOLD=1`, `sk_test_`, Mailpit, `influrios_audit`, `APP_URL=http://127.0.0.1:3000`
+- Overstated Pass labels demoted  
+- J18 Apply evidenced through Stripe Checkout coupon line  

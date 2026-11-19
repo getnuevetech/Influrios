@@ -12,3 +12,4 @@
 
 Browse expanded media at `/cursor/stores/self/media/e2e-audit/`.
 r3.6 local journeys zip
+- phase1 coverage media: influrios-e2e-audit-phase1-coverage.zip

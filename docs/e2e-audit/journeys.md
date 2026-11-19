@@ -1,60 +1,53 @@
-# Journeys (revision r3.6 — remaining Partials pushed; audit NOT complete)
+# Journeys — Phase 1 corrective matrix
 
-Operator attestation checkboxes are **not** a gate. Local dedicated Postgres + Mailpit + synthetic `@example.com` + `sk_test_` only.  
-**Live collaboration deposits stay closed.** `COLLABORATION_SANDBOX_LEDGER_HOLD=1` + localhost enables labelled `sandbox_ledger_hold` TEST collection only.
+Harness: local dedicated Postgres + Mailpit + `@example.com` + `sk_test_` + `COLLABORATION_SANDBOX_LEDGER_HOLD=1` on localhost. Live deposits closed. Agency deferred.
 
-## Money evidence labels (required)
+## Two lenses (required)
 
-| Label | Meaning | Counts as original Pass? |
-|-------|---------|--------------------------|
-| Stripe TEST checkout | Real `cs_test_` / `sk_test_` / livemode=false payment confirmed | Yes for collection/checkout steps |
-| Simulated internal release | `sim_sandbox_ledger_hold:*`, `providerE2eComplete=false` | **No** for J15 provider payout |
-| Provider payout UNPROVEN | Connect/bank payout not executed | **No** |
+| Lens | Values |
+|------|--------|
+| **Coverage** | Complete / Incomplete — was the check executed with retained evidence? |
+| **Acceptance** | Pass / Fail / Partial — product criteria. Provider payout: Partial + `provider-limitations.md` (never “Partial forever”; never Pass from simulation) |
 
-## Matrix (original acceptance criteria)
+## Money labels
 
-| ID | Original definition | Status | Notes |
-|----|---------------------|--------|-------|
-| J01 | Signup + verify | Pass | prior |
-| J02 | Login members + admin | Pass | prior |
-| J03 | Discover / card | Pass | r3.5 |
-| J04–J12 | Brief→signed lifecycle | Pass | prior |
-| J13 | Business collaboration checkout | Pass | Stripe TEST → held |
-| J14 | Deliver → revise → approve | Pass | r3.5 dual-party workroom |
-| J15 | Release / transfer / payout | **Partial forever** | Simulated only; **never Pass** without provider payout |
-| J16 | Monthly + annual purchases | Partial* | **Month Pass.** **Year Fail** — product/provider limitation (see RCA) |
-| J17 | Existing subscriber changes | **Partial** | **PRODUCT LIMITATION:** `SubscriptionState.externalId` is `cs_test_` not `sub_`; `billing.prices` empty → proration preview impossible |
-| J18 | Discount eligibility + Apply | **Pass** | r3.6 Pro month Checkout Apply `AUDITPRO15M` (−$4.35); year code rejected on month; tax preview 8.25% |
-| J19 | Configure tax | Pass | prior |
-| J20 | Quote through final charge | **Pass** | r3.6 Pro $29 + tax $2.39 = $31.39 Stripe TEST paid; invoice `in_…` tax=239; hosted invoice + PDF |
-| J21 | Business shell | Pass | r3.5 |
-| J22–J23 | Messaging / Mailpit | Pass | prior |
-| J24–J27 | Access / admin surfaces | Pass | r3.5 |
-| J28 | Matching lifecycle | **Partial** | Advanced to `in_conversation`; **PRODUCT LIMITATION:** no `managed_intro` `CollaborationFeeRule` → fee quote blocked |
-| J29–J30 | Public / visual | Pass | r3.5/r3.6; COR-09 dual chrome/terminology remain open findings |
+| Label | Original Pass? |
+|-------|----------------|
+| Stripe TEST checkout | Yes for checkout steps |
+| Simulated internal release | **No** for J15 payout |
+| Provider payout UNPROVEN pending provider integration/testing | **No** |
 
-## Stop state — remaining blocked with precise limitation
+## Matrix
 
-| ID | Result | Precise limitation |
-|----|--------|-------------------|
-| J15 | Partial forever | No Connect/bank payout; simulation `providerE2eComplete=false` |
-| J16 year | Fail | Empty `billing.annualOffers` + no Stripe year Price in TEST |
-| J17 | Partial | Product stores checkout session id as `externalId`; empty `billing.prices` / `offer.priceId` |
-| J28 | Partial | Zero active fee rules for `serviceLevel=managed_intro` |
+| ID | Definition | Coverage | Acceptance | Notes |
+|----|------------|----------|------------|-------|
+| J01 | Signup + verify | Complete | Pass | |
+| J02 | Login members + admin | Complete | Pass | |
+| J03 | Discover / card / shortlist | Complete | **Partial** | Demo directory; no shortlist UI (COR-13) |
+| J04–J12 | Brief → signed | Complete | Pass | |
+| J13 | Collab checkout | Complete | Pass | Stripe TEST → held |
+| J14 | Deliver → revise → approve | Complete | Pass | Dual-party evidence; ≠ payout |
+| J15 | Release / payout | Complete | **Partial** | Sim release only; payout unproven **pending provider integration/testing** (PL-01) |
+| J16 | Month + annual purchase | Complete | **Partial** | Month Pass; year **Fail** COR-03 |
+| J17 | Subscriber changes | Complete | **Partial** | COR-07 / COR-11 |
+| J18 | Discount Apply | Complete | Pass | Apply + Stripe coupon line `j18p1-us-checkout.png` |
+| J19 | Tax config | Complete | Pass | |
+| J20 | Quote → charge / tax / invoice | Complete | Pass | tax=239 on invoice |
+| J21 | Business shell | Complete | Pass | |
+| J22–J23 | Messages / Mailpit | Complete | Pass | |
+| J24 | Access restrictions | Complete | Pass | |
+| J25 | Admin accounts | Complete | **Partial** | Inventory; UI edit not proven (COR-14) |
+| J26 | Admin plans | Complete | Pass | |
+| J27 | Admin jobs/CMS | Complete | **Partial** | Routes only (COR-15) |
+| J28 | Matching lifecycle | Complete | **Partial** | Advanced; fee rule missing (COR-10) |
+| J29 | Public/marketing | Complete | Pass | |
+| J30 | Visual / a11y | Complete | **Partial** | Dual chrome + Creator terminology (COR-09) |
 
-## Plus / Pro / annual RCA (unchanged)
+## Counts
 
-1. `billing.annualOffers` empty → year checkout refused  
-2. Stripe TEST has no `recurring.interval=year` Price  
-3. Tax “unavailable” mitigated (US subscription 8.25% ready)
+- Acceptance Pass: **22**  
+- Acceptance Partial: **8** (J03, J15, J16, J17, J25, J27, J28, J30)  
+- Coverage Incomplete: **0**  
+- Phase 1 demotions from prior Pass 26: J03, J25, J27, J30  
 
-## Status counts (J01–J30)
-
-- Pass: **26**
-- Partial: **4** (J15, J16, J17, J28)
-- Blocked (collection gate): **0**
-- Not tested: **0**
-
-\*J16 overall Partial until annual Pass; monthly Stripe TEST remains Pass evidence.
-
-**Audit is NOT complete.** See [local-journey-r36-results.json](./local-journey-r36-results.json).
+See [final-coverage-report.md](./final-coverage-report.md), [correction-register.md](./correction-register.md), [provider-limitations.md](./provider-limitations.md).
