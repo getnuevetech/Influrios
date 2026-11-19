@@ -1,12 +1,11 @@
-# Coverage — Phase 1 corrective
+# Coverage — Bounded closure
 
-**Phase 1 complete for audit-pack hygiene.** Remediation PRs are a later phase.
+**Remediation PAUSED.** Coverage scored at **required-step** level (not “evidence row exists”). Coverage ≠ acceptance.
 
 ## Verdict
 
-- **Test-execution coverage:** Complete for J01–J30 (every journey has evidence; thin Passes demoted).  
-- **Product acceptance:** Pass **22** / Partial **8** — includes documented product Failures (annual, proration, intro fee, visual chrome).  
-- **Provider:** J15 payout unproven **pending provider integration/testing** (not simulation Pass).  
+- **Required-step coverage:** Incomplete for **J18** (redemption `not_executed`) and **J20** (UI payment blocked / invoice `not_executed`). All other J01–J30 required steps classified.  
+- **Product acceptance:** Pass **20** / Partial **10**.  
+- **Preserved subtests:** J18 Apply-to-Stripe Pass; J20 prior API tax-invoice Pass (subtest only).  
 
-Unsupported Pass labels corrected. Missing coverage was finished or explicitly Partial.  
-See [final-coverage-report.md](./final-coverage-report.md).
+See [final-coverage-report.md](./final-coverage-report.md) and [phase1-bounded-closure-results.json](./phase1-bounded-closure-results.json).

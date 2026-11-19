@@ -1,14 +1,23 @@
-Revision **r3.4** — #535 sandbox ledger hold merged; original J01–J30 defs; Stripe TEST vs simulation labels.
+# Influrios E2E audit pack — Bounded closure (#534)
 
-# Influrios E2E audit pack (AUDIT_LOCAL_R34)
+**Revision:** phase1-bounded-closure · base `3929086`  
+**Remediation:** PAUSED — no product fixes this pass.  
+**Coverage:** required-step level (≠ acceptance).
 
-**Verdict:** Incomplete — #534 stays open. CI ≠ done. Simulated payout ≠ provider Pass.
+| Lens | Result |
+|------|--------|
+| Acceptance Pass | **20** |
+| Acceptance Partial | **10** |
+| Coverage Incomplete | **2** (J18, J20) |
 
-- [executive-summary.md](./executive-summary.md)
-- [journeys.md](./journeys.md)
-- [coverage.md](./coverage.md)
-- [blockers.md](./blockers.md)
+## Start here
+
+- [final-coverage-report.md](./final-coverage-report.md)
+- [phase1-acceptance-matrix.json](./phase1-acceptance-matrix.json)
+- [phase1-bounded-closure-results.json](./phase1-bounded-closure-results.json)
 - [correction-register.md](./correction-register.md)
-- [local-journey-r34-results.json](./local-journey-r34-results.json)
+- [journeys.md](./journeys.md) · [coverage.md](./coverage.md) · [blockers.md](./blockers.md)
+- [provider-limitations.md](./provider-limitations.md)
 
-Media: `/cursor/stores/self/media/e2e-audit/`
+Closure screenshots: [media-local-journeys-closure/](./media-local-journeys-closure/)  
+Full media: `/cursor/stores/self/media/e2e-audit/`

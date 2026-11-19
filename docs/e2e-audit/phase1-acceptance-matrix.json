@@ -1,18 +1,22 @@
 {
-  "revision": "phase-1-corrective",
-  "recordedAt": "2026-11-19T19:45:00.000Z",
+  "revision": "phase1-bounded-closure",
+  "recordedAt": "2026-11-19T20:37:28.257Z",
+  "baseCommit": "3929086",
   "rules": {
-    "coverage": "Complete if journey exercised with retained evidence; Incomplete otherwise",
-    "acceptance": "Pass | Fail | Partial — product criteria. Provider payout uses Partial + provider-limitations PL-* (not Partial forever)",
-    "demotionPolicy": "Unsupported or thin Pass labels demoted; valid evidence preserved"
+    "coverage": "Required-step outcomes: executed_successfully | executed_with_reproducible_failure | blocked_by_named_dependency | not_executed. Complete only when every required step is classified AND none remain not_executed without explicit unresolved deferral documented — Incomplete when required payment/redemption/invoice steps are not_executed.",
+    "acceptance": "Pass | Fail | Partial — product criteria. Coverage ≠ acceptance.",
+    "demotionPolicy": "Unsupported or thin Pass labels demoted; valid subtest Passes preserved",
+    "remediation": "PAUSED — no product fixes, no remediation PRs this pass"
   },
-  "counts": { "pass": 22, "partial": 8, "failWholeJourney": 0, "coverageIncomplete": 0 },
+  "counts": { "pass": 20, "partial": 10, "failWholeJourney": 0, "coverageIncomplete": 2 },
   "demotions": [
     { "id": "J03", "from": "Pass", "to": "Partial", "reason": "Demo directory; shortlist UI absent; prior DB shortlist insufficient", "cor": "COR-13" },
     { "id": "J25", "from": "Pass", "to": "Partial", "reason": "Inventory only; prior phone mutate was SQL not admin Edit UI", "cor": "COR-14" },
-    { "id": "J27", "from": "Pass", "to": "Partial", "reason": "Route reachability only", "cor": "COR-15" },
-    { "id": "J30", "from": "Pass", "to": "Partial", "reason": "Visual coverage Complete but acceptance Fail COR-09a/b", "cor": "COR-16" },
-    { "id": "J15", "from": "Partial forever", "to": "Partial", "reason": "Provider payout unproven pending provider integration/testing (PL-01)", "cor": "COR-01" }
+    { "id": "J27", "from": "Pass", "to": "Partial", "reason": "Route reachability only; publish/run obstacles remain for jobs Retry", "cor": "COR-15" },
+    { "id": "J30", "from": "Pass", "to": "Partial", "reason": "Visual coverage Complete but acceptance Fail COR-09a/b + COR-18 mobile overflow", "cor": "COR-16" },
+    { "id": "J15", "from": "Partial forever", "to": "Partial", "reason": "Provider payout unproven pending provider integration/testing (PL-01)", "cor": "COR-01" },
+    { "id": "J18", "from": "Pass", "to": "Partial", "reason": "Apply-to-Stripe subtest Pass retained; annual Apply Fail; completed discounted redemption not_executed (hosted ≠ redemption)", "cor": "COR-04 COR-19" },
+    { "id": "J20", "from": "Pass", "to": "Partial", "reason": "Hardcoded-tax/API direct checkout insufficient; Influrios UI quote→Stripe evidenced; UI payment+invoice Incomplete", "cor": "COR-08" }
   ],
   "journeys": [
     { "id": "J01", "coverage": "Complete", "acceptance": "Pass" },
@@ -32,21 +36,72 @@
     { "id": "J15", "coverage": "Complete", "acceptance": "Partial", "providerLimitation": "PL-01", "label": "Simulated internal release; payout UNPROVEN pending provider integration/testing" },
     { "id": "J16", "coverage": "Complete", "acceptance": "Partial", "steps": { "month": "Pass", "year": "Fail" }, "productFailure": "COR-03" },
     { "id": "J17", "coverage": "Complete", "acceptance": "Partial", "productFailure": "COR-07" },
-    { "id": "J18", "coverage": "Complete", "acceptance": "Pass", "evidence": "j18p1-us-checkout.png Stripe shows AUDITPRO15M" },
+    {
+      "id": "J18",
+      "coverage": "Incomplete",
+      "acceptance": "Partial",
+      "subtests": {
+        "apply_to_stripe": "Pass",
+        "annual_apply": "Fail/Unresolved",
+        "completed_discounted_redemption": "Unresolved (not_executed)"
+      },
+      "evidence": ["j18p1-us-checkout.png", "j18c2-stripe-with-coupon.png", "j18c-annual-apply.png"],
+      "productFailure": "COR-04 COR-19"
+    },
     { "id": "J19", "coverage": "Complete", "acceptance": "Pass" },
-    { "id": "J20", "coverage": "Complete", "acceptance": "Pass", "label": "Stripe TEST checkout + tax invoice" },
+    {
+      "id": "J20",
+      "coverage": "Incomplete",
+      "acceptance": "Partial",
+      "label": "Influrios UI quote→Stripe evidenced; UI payment+invoice not Pass",
+      "evidence": ["j20c2-login.png", "j20c2-tax-preview.png", "j20c2-hosted-from-ui.png"],
+      "retainedSubtest": "api_tax_invoice_prior Pass only",
+      "productFailure": "COR-08",
+      "blocker": "PL-03"
+    },
     { "id": "J21", "coverage": "Complete", "acceptance": "Pass" },
     { "id": "J22", "coverage": "Complete", "acceptance": "Pass" },
     { "id": "J23", "coverage": "Complete", "acceptance": "Pass" },
     { "id": "J24", "coverage": "Complete", "acceptance": "Pass" },
     { "id": "J25", "coverage": "Complete", "acceptance": "Partial", "gap": "admin Edit field save" },
-    { "id": "J26", "coverage": "Complete", "acceptance": "Pass" },
-    { "id": "J27", "coverage": "Complete", "acceptance": "Partial", "gap": "CMS publish / job run" },
+    {
+      "id": "J26",
+      "coverage": "Complete",
+      "acceptance": "Pass",
+      "steps": {
+        "open_plans": "executed_successfully",
+        "edit_plan_meta": "executed_successfully",
+        "reload_verify": "executed_successfully"
+      },
+      "evidence": ["j26c-edit-dialog.png", "j26c-after-save-attempt.png", "j26c-reload.png"],
+      "note": "Catalog inventory alone is not Pass; edit→save→reload proven"
+    },
+    {
+      "id": "J27",
+      "coverage": "Complete",
+      "acceptance": "Partial",
+      "steps": {
+        "banners_save": "executed_successfully",
+        "homepage_save": "executed_successfully",
+        "jobs_retry_failed": "blocked_by_named_dependency",
+        "route_/admin/cms": "blocked_by_named_dependency",
+        "route_/admin/content": "blocked_by_named_dependency"
+      },
+      "evidence": ["j27c-banners-saved.png", "j27c-homepage-saved.png", "j27c-jobs.png"],
+      "gap": "No failed-job Retry row; /admin/cms and /admin/content 404"
+    },
     { "id": "J28", "coverage": "Complete", "acceptance": "Partial", "productFailure": "COR-10" },
     { "id": "J29", "coverage": "Complete", "acceptance": "Pass" },
-    { "id": "J30", "coverage": "Complete", "acceptance": "Partial", "productFailure": "COR-09a COR-09b" }
+    {
+      "id": "J30",
+      "coverage": "Complete",
+      "acceptance": "Partial",
+      "productFailure": "COR-09a COR-09b COR-18",
+      "evidence": ["j30c-admin-accounts-mob-overflow.png", "vis36-admin-dual-chrome.png"]
+    }
   ],
   "agency": "Deferred",
   "phase1Stop": true,
-  "remediationPhase": "Later focused PRs — not phase 1"
+  "boundedClosure": true,
+  "remediationPhase": "PAUSED — later focused PRs"
 }

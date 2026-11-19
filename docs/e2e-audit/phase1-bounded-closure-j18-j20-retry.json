@@ -1,0 +1,40 @@
+{
+  "freshCode": "AUDITPRO15M7B7B",
+  "recordedAt": "2026-11-19T20:37:28.257Z",
+  "J18": {
+    "freshCode": "AUDITPRO15M7B7B",
+    "applyUi": "executed_successfully",
+    "applyEvidence": [
+      "local-journeys/j18c2-apply-month.png",
+      "local-journeys/j18c2-preview.png"
+    ],
+    "applyDetail": "∞\nInflurios\nDashboard\nAction inbox\nMy Profile\nCollaborations\nContracts\nEarnings & Payouts\nMessages\nSettings\nStarter\nBilling & Plan\nLog out\n\n© 2026 Influrios. All rights reserved.\n\nA\n\nAUDIT r3mrvlgh Unrelated\n\nInfluencer\n\nINFLUENCER\n\nBilling & plan\n\nManage your Influrios plan, billing, and payment details.\n\nStarter\n\nFree\n\nChange plan\n\nChoose a plan and billing cadence that works for you.\n\nMonthly\nA",
+    "stripeUrl": "https://checkout.stripe.com/g/pay/cs_test_a0cToeWr1cpdHLcLSsbMBhhU2bglQ3VZD0XfdfDx0XSq0CPuiR7nRlUt2W#fidnandhYHdWcXxpYCc%2FJ2FgY2RwaXEnKSdicyc%2FNiknZHVsTmB8Jz8",
+    "stripeResult": "executed_successfully",
+    "couponVisible": true,
+    "stripeEvidence": [
+      "local-journeys/j18c2-stripe-with-coupon.png"
+    ],
+    "note": "Hosted coupon ≠ completed redemption. Prior j18p1-us-checkout.png retained as Apply-to-Stripe Pass.",
+    "annual": "not re-attempted beyond prior COR-03/COR-04 Fail",
+    "redemption": "not_executed"
+  },
+  "J20": {
+    "loginEvidence": [
+      "local-journeys/j20c2-login.png"
+    ],
+    "taxPreview": "executed_successfully",
+    "previewEvidence": [
+      "local-journeys/j20c2-tax-preview.png"
+    ],
+    "stripeUrl": "https://checkout.stripe.com/g/pay/cs_test_a0sOtHbrBk8BA6f9iDp54S6HB0JoXB7ENQXdMJekSZ3LuusGNWyk6qg1KR#fidnandhYHdWcXxpYCc%2FJ2FgY2RwaXEnKSdicyc%2FNiknZHVsTmB8Jz8",
+    "influriosToStripe": "executed_successfully",
+    "hostedEvidence": [
+      "local-journeys/j20c2-hosted-from-ui.png"
+    ],
+    "paymentComplete": "blocked_by_named_dependency (PL-03 headless Card accordion; computerUse not in this bounded pass)",
+    "invoiceFromUiPayment": "not_executed",
+    "acceptance": "Partial",
+    "demotion": "Prior API startCheckout(taxPercent) Pass demoted — insufficient for Influrios UI quote→payment→invoice"
+  }
+}
