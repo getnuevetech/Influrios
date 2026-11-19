@@ -2,19 +2,84 @@
  * Stripe payment adapter.
  * Live collaboration collection stays closed — capability flags do not enable it.
  * Sandbox may open labelled ledger-hold routing without claiming allocated funds / Treasury.
- * A release instruction for money already collected on the original route is still only an instruction.
- * Bank payout is not marked from this adapter.
+ * Release uses the same sandbox auth as settlement (trusted env + enable + provenance + non-prod host).
  */
 import { verifyCollaborationCollectionAccess } from "@/lib/collaboration-collection-access";
-import { isSandboxLedgerHoldTransferRef, readSandboxCollectionProvenance, stripeCapabilityStatus } from "@/lib/payment-account-routing";
+import {
+  authorizeSandboxLedgerHoldRelease,
+  isSandboxLedgerHoldTransferRef,
+  resolveSandboxDeploymentHost,
+  SANDBOX_TRANSFER_REF_PREFIX,
+  stripeCapabilityStatus,
+} from "@/lib/payment-account-routing";
 import { queueProviderInstruction, type PaymentProviderAdapter } from "@/lib/payment-provider-adapter";
 import { prisma } from "@/lib/db";
 import { stripeApiRequest, stripeCredentials } from "@/lib/stripe-admin";
 
-export function createStripePaymentAdapter(): PaymentProviderAdapter {
+export type StripePaymentAdapterOptions = {
+  originOrHost?: string;
+  env?: Record<string, string | undefined>;
+};
+
+export type ReleaseOrTransferDeps = {
+  findRouteSnapshot: (fundingId: string) => Promise<unknown | null>;
+  queueRelease: typeof queueProviderInstruction;
+};
+
+const defaultReleaseDeps: ReleaseOrTransferDeps = {
+  async findRouteSnapshot(fundingId) {
+    const funding = await prisma.collaborationFunding
+      .findUnique({ where: { id: fundingId }, select: { routeSnapshotJson: true } })
+      .catch(() => null);
+    return funding?.routeSnapshotJson ?? null;
+  },
+  queueRelease: queueProviderInstruction,
+};
+
+/** Shared release entry — same sandbox auth as executeOwnedSettlement. */
+export async function executeSandboxReleaseOrTransfer(
+  input: {
+    fundingId: string;
+    milestoneId: string;
+    amountCents: number;
+    shares?: { label: string; amountCents: number }[];
+  },
+  context?: { originOrHost?: string; env?: Record<string, string | undefined> },
+  deps: ReleaseOrTransferDeps = defaultReleaseDeps,
+): Promise<{ ok: true; reference: string; execution?: "provider" | "external" } | { ok: false; error: string }> {
+  if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
+    return { ok: false, error: "Release needs a positive integer amount." };
+  }
+  const routeSnapshotJson = await deps.findRouteSnapshot(input.fundingId.trim());
+  const auth = authorizeSandboxLedgerHoldRelease({
+    env: context?.env,
+    originOrHost: context?.originOrHost,
+    routeSnapshotJson,
+  });
+  if (!auth.ok) return { ok: false, error: auth.error };
+
+  const queued = await deps.queueRelease({
+    instruction: "release",
+    fundingId: input.fundingId,
+    amountCents: input.amountCents,
+    milestoneId: input.milestoneId,
+    shares: input.shares,
+  });
+  if (!queued.ok) return queued;
+  return {
+    ok: true,
+    reference: `${SANDBOX_TRANSFER_REF_PREFIX}${queued.reference}`,
+    execution: "external",
+  };
+}
+
+export function createStripePaymentAdapter(options?: StripePaymentAdapterOptions): PaymentProviderAdapter {
+  const env = options?.env ?? (process.env as Record<string, string | undefined>);
+  const originOrHost = options?.originOrHost ?? resolveSandboxDeploymentHost(env);
+
   return {
     async getCapabilities() {
-      const access = await verifyCollaborationCollectionAccess({ originOrHost: "127.0.0.1" });
+      const access = await verifyCollaborationCollectionAccess({ originOrHost, environment: "sandbox", env });
       const status = stripeCapabilityStatus({
         probe: {
           allocatedFunds: access.allocatedFunds,
@@ -34,7 +99,7 @@ export function createStripePaymentAdapter(): PaymentProviderAdapter {
       };
     },
     async createFundingIntent() {
-      const access = await verifyCollaborationCollectionAccess({ originOrHost: "127.0.0.1" });
+      const access = await verifyCollaborationCollectionAccess({ originOrHost, environment: "sandbox", env });
       if (!access.ok) return { ok: false, error: access.error };
       if (access.simulation) {
         return {
@@ -56,33 +121,7 @@ export function createStripePaymentAdapter(): PaymentProviderAdapter {
       return queueProviderInstruction({ instruction: "cancel", fundingId: reference });
     },
     async createReleaseOrTransfer(input) {
-      if (!Number.isInteger(input.amountCents) || input.amountCents <= 0) {
-        return { ok: false, error: "Release needs a positive integer amount." };
-      }
-      const funding = await prisma.collaborationFunding
-        .findUnique({ where: { id: input.fundingId.trim() }, select: { routeSnapshotJson: true } })
-        .catch(() => null);
-      const provenance = readSandboxCollectionProvenance(funding?.routeSnapshotJson);
-      if (provenance) {
-        const queued = await queueProviderInstruction({
-          instruction: "release",
-          fundingId: input.fundingId,
-          amountCents: input.amountCents,
-          milestoneId: input.milestoneId,
-          shares: input.shares,
-        });
-        if (!queued.ok) return queued;
-        return {
-          ok: true,
-          reference: `sim_sandbox_ledger_hold:${queued.reference}`,
-          execution: "external" as const,
-        };
-      }
-      return {
-        ok: false,
-        error:
-          "Live distribution stays blocked. Capability availability is not a proven allocated-funds or Treasury release flow. Nothing was transferred.",
-      };
+      return executeSandboxReleaseOrTransfer(input, { originOrHost, env });
     },
     async createPartialRefund(input) {
       return queueProviderInstruction({

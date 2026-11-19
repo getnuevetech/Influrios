@@ -7,6 +7,7 @@
 import {
   interpretStripeAccountPayload,
   isSandboxLedgerHoldRouteEnabled,
+  isStripeAccountRetrievePayload,
   isTrustedSandboxDeployment,
   resolveCollaborationCollectionRoute,
   type CollaborationCapabilityProbe,
@@ -34,8 +35,18 @@ async function probeCollaborationCapabilities(secret: string): Promise<Collabora
       httpStatus: account.httpStatus,
     };
   }
+  if (!isStripeAccountRetrievePayload(account.payload)) {
+    return {
+      status: "failed",
+      allocatedFunds: false,
+      treasury: false,
+      reason:
+        "Stripe account probe returned an invalid account payload. Verification stays unknown. Nothing was enabled.",
+      httpStatus: account.httpStatus,
+    };
+  }
   const interpreted = interpretStripeAccountPayload(account.payload);
-  const accountId = typeof account.payload.id === "string" ? account.payload.id : undefined;
+  const accountId = account.payload.id;
 
   let treasury = interpreted.treasury;
   if (!treasury) {

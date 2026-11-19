@@ -353,6 +353,75 @@ export function isSandboxLedgerHoldRouteEnabled(
   return raw === "1" || raw === "true" || raw === "yes";
 }
 
+/** Deployment host from env (NEXT_PUBLIC_APP_URL / APP_URL). Never invent 127.0.0.1. */
+export function resolveSandboxDeploymentHost(
+  env: Record<string, string | undefined> = process.env as Record<string, string | undefined>,
+): string {
+  for (const key of ["NEXT_PUBLIC_APP_URL", "APP_URL"] as const) {
+    const raw = (env[key] ?? "").trim();
+    if (!raw) continue;
+    const host = collectionRequestHost(raw);
+    if (host && host !== "0.0.0.0") return host;
+  }
+  return "";
+}
+
+/**
+ * Central auth for sandbox ledger-hold mutations (settlement + release adapter).
+ * Requires trusted deployment, explicit enable, non-prod host, and frozen funding provenance.
+ * NODE_ENV=production or missing flag refuses even when provenance is present.
+ */
+export function authorizeSandboxLedgerHoldRelease(input: {
+  env?: Record<string, string | undefined>;
+  originOrHost?: string;
+  routeSnapshotJson: unknown;
+}): { ok: true; provenance: SandboxCollectionProvenance; host: string } | { ok: false; error: string } {
+  const env = input.env ?? (process.env as Record<string, string | undefined>);
+  if (!isTrustedSandboxDeployment(env)) {
+    return {
+      ok: false,
+      error: "Sandbox settlement simulation is only allowed on a trusted non-production deployment. Nothing was transferred.",
+    };
+  }
+  if (!isSandboxLedgerHoldRouteEnabled(env)) {
+    return {
+      ok: false,
+      error: `Sandbox settlement simulation requires ${SANDBOX_LEDGER_HOLD_ENV}=1. Nothing was transferred.`,
+    };
+  }
+  const provenance = readSandboxCollectionProvenance(input.routeSnapshotJson);
+  if (!provenance) {
+    return {
+      ok: false,
+      error:
+        "Sandbox settlement simulation needs persisted sandbox_ledger_hold provenance on the funding. Live distribution stays blocked. Nothing was transferred.",
+    };
+  }
+  const host =
+    collectionRequestHost(input.originOrHost ?? "") ||
+    provenance.originHost ||
+    resolveSandboxDeploymentHost(env);
+  if (!host) {
+    return { ok: false, error: "Sandbox settlement simulation needs a request host. Nothing was transferred." };
+  }
+  if (isLiveProductCollectionHost(host)) {
+    return {
+      ok: false,
+      error: "Sandbox settlement simulation cannot run on the live product host. Nothing was transferred.",
+    };
+  }
+  return { ok: true, provenance, host };
+}
+
+/** Stripe GET /v1/account must return an account object with acct_ id — not {}, [], or a list. */
+export function isStripeAccountRetrievePayload(payload: unknown): payload is Record<string, unknown> & { id: string } {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+  const record = payload as Record<string, unknown>;
+  if (record.object === "list") return false;
+  const id = typeof record.id === "string" ? record.id.trim() : "";
+  return /^acct_[A-Za-z0-9]+$/.test(id);
+}
+
 export function readSandboxCollectionProvenance(value: unknown): SandboxCollectionProvenance | null {
   if (!value || typeof value !== "object") return null;
   const root = value as Record<string, unknown>;

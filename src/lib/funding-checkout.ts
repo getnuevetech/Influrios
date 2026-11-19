@@ -96,44 +96,84 @@ function payerEmail(value: string | undefined) {
   return email.includes("@") ? email : "";
 }
 
-export async function startFundingDeposit(input: {
-  fundingId: string;
-  method: DepositMethod;
-  email?: string;
-  note?: string;
-  origin: string;
-}): Promise<
+export type StartFundingDepositDeps = {
+  findFunding?: (fundingId: string) => Promise<{
+    id: string;
+    status: string;
+    grossCents: number;
+    currency: string;
+    title: string;
+    feeSnapshotJson: unknown;
+  } | null>;
+  findOpenGatewayDeposit?: (fundingId: string, method: DepositMethod) => Promise<{
+    id: string;
+    reference: string;
+  } | null>;
+  readCheckoutSession?: (secret: string, sessionId: string) => Promise<StripeCheckoutPayment | null>;
+  verifyAccess?: (input: { originOrHost?: string; env?: Record<string, string | undefined> }) => Promise<{
+    ok: boolean;
+    error?: string;
+    simulation?: boolean;
+    topology?: string;
+    allocatedFunds?: boolean;
+    treasury?: boolean;
+    checkedAt?: string;
+    simulationLabel?: string | null;
+    limitation?: string | null;
+  }>;
+  env?: Record<string, string | undefined>;
+  /** When set, skip rollout/tax/charge product gates (unit tests only). */
+  skipProductGates?: boolean;
+};
+
+export async function startFundingDeposit(
+  input: {
+    fundingId: string;
+    method: DepositMethod;
+    email?: string;
+    note?: string;
+    origin: string;
+  },
+  deps: StartFundingDepositDeps = {},
+): Promise<
   | { ok: true; kind: "gateway"; url: string; depositId: string }
   | { ok: true; kind: "manual"; depositId: string; instructions: ManualDepositInstructions }
   | { ok: false; error: string }
 > {
-  const funding = await prisma.collaborationFunding.findUnique({
-    where: { id: input.fundingId.trim() },
-    select: { id: true, status: true, grossCents: true, currency: true, title: true, feeSnapshotJson: true },
-  });
+  const findFunding =
+    deps.findFunding ??
+    ((fundingId: string) =>
+      prisma.collaborationFunding.findUnique({
+        where: { id: fundingId },
+        select: { id: true, status: true, grossCents: true, currency: true, title: true, feeSnapshotJson: true },
+      }));
+  const funding = await findFunding(input.fundingId.trim());
   if (!funding || funding.status !== "awaiting_provider") {
     return { ok: false, error: "This funding is not waiting for a deposit. Nothing was charged." };
   }
-  const { journeyFundingInitiation } = await import("@/lib/four-account-journey");
-  const { productSwitch } = await import("@/lib/product-switches");
-  let rolloutEnabled = true;
-  try {
-    rolloutEnabled = await productSwitch("journey_funding");
-  } catch {
-    rolloutEnabled = true;
-  }
-  const rollout = journeyFundingInitiation({ rolloutEnabled, intent: "start_funding" });
-  if (!rollout.ok) return rollout;
-  const { paymentChargeBlock, paymentChargeKeyForDeposit } = await import("@/lib/payment-charge-switches");
-  const chargeKey = paymentChargeKeyForDeposit(input.method);
-  if (chargeKey) {
-    const charge = await paymentChargeBlock(chargeKey);
-    if (!charge.ok) return charge;
+  if (!deps.skipProductGates) {
+    const { journeyFundingInitiation } = await import("@/lib/four-account-journey");
+    const { productSwitch } = await import("@/lib/product-switches");
+    let rolloutEnabled = true;
+    try {
+      rolloutEnabled = await productSwitch("journey_funding");
+    } catch {
+      rolloutEnabled = true;
+    }
+    const rollout = journeyFundingInitiation({ rolloutEnabled, intent: "start_funding" });
+    if (!rollout.ok) return rollout;
+    const { paymentChargeBlock, paymentChargeKeyForDeposit } = await import("@/lib/payment-charge-switches");
+    const chargeKey = paymentChargeKeyForDeposit(input.method);
+    if (chargeKey) {
+      const charge = await paymentChargeBlock(chargeKey);
+      if (!charge.ok) return charge;
+    }
+    const plan = (funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
+    const { collaborationTaxBeforeCollection } = await import("@/lib/tax-determination");
+    const taxReady = collaborationTaxBeforeCollection(plan);
+    if (!taxReady.ok) return { ok: false, error: taxReady.error };
   }
   const plan = (funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
-  const { collaborationTaxBeforeCollection } = await import("@/lib/tax-determination");
-  const taxReady = collaborationTaxBeforeCollection(plan);
-  if (!taxReady.ok) return { ok: false, error: taxReady.error };
   const signed = readSignedDealMoney(plan);
   const planned = collectionInstructionAmount({
     fundingGrossCents: funding.grossCents,
@@ -184,14 +224,28 @@ export async function startFundingDeposit(input: {
   if (input.method === "ach_online" && funding.currency.trim().toUpperCase() !== "USD") {
     return { ok: false, error: "Online ACH collects USD. Nothing was charged." };
   }
-  const openDeposit = await prisma.fundingDeposit.findFirst({
-    where: { fundingId: funding.id, method: input.method, status: "gateway_opened" },
-    orderBy: { createdAt: "desc" },
-  });
+  const { verifyCollaborationCollectionAccess } = await import("@/lib/collaboration-collection-access");
+  const {
+    buildSandboxCollectionProvenance,
+    mergeSandboxCollectionProvenance,
+  } = await import("@/lib/payment-account-routing");
+  const verifyAccess = deps.verifyAccess ?? verifyCollaborationCollectionAccess;
+
+  const findOpenGatewayDeposit =
+    deps.findOpenGatewayDeposit ??
+    (async (fundingId: string, method: DepositMethod) => {
+      const row = await prisma.fundingDeposit.findFirst({
+        where: { fundingId, method, status: "gateway_opened" },
+        orderBy: { createdAt: "desc" },
+      });
+      return row?.reference ? { id: row.id, reference: row.reference } : null;
+    });
+  const openDeposit = await findOpenGatewayDeposit(funding.id, input.method);
   if (openDeposit?.reference) {
     const creds = await stripeCredentials();
     if (!creds.ok) return { ok: false, error: stripeCredentialError(creds.reason, "charged") };
-    const session = await readStripeCheckoutSession(creds.secret, openDeposit.reference);
+    const readSession = deps.readCheckoutSession ?? readStripeCheckoutSession;
+    const session = await readSession(creds.secret, openDeposit.reference);
     if (
       session &&
       gatewaySessionConfirmsDeposit({
@@ -202,6 +256,7 @@ export async function startFundingDeposit(input: {
         currency: funding.currency,
       })
     ) {
+      // Already-completed payment reconciliation stays separate from sandbox resume auth.
       const confirmed = await confirmGatewayDeposit({
         depositId: openDeposit.id,
         fundingId: funding.id,
@@ -219,17 +274,27 @@ export async function startFundingDeposit(input: {
       session.amountTotal === planned.amountCents &&
       session.currency === funding.currency.trim().toUpperCase()
     ) {
+      // Authorize BEFORE returning an existing unpaid Checkout URL (prod host / no flag must refuse).
+      const resumeAccess = await verifyAccess({ originOrHost: input.origin, env: deps.env });
+      if (!resumeAccess.ok) return { ok: false, error: resumeAccess.error || "Sandbox collection is not authorized. Nothing was charged." };
+      if (!resumeAccess.simulation || resumeAccess.topology !== "sandbox_ledger_hold") {
+        return {
+          ok: false,
+          error:
+            "Live collaboration funding stays closed. Capability availability is not a proven allocated-funds or Treasury collection flow. Nothing was charged.",
+        };
+      }
       return { ok: true, kind: "gateway", url: session.url, depositId: openDeposit.id };
     }
     await prisma.fundingDeposit.update({ where: { id: openDeposit.id }, data: { status: "failed" } }).catch(() => undefined);
   }
-  const { verifyCollaborationCollectionAccess } = await import("@/lib/collaboration-collection-access");
-  const {
-    buildSandboxCollectionProvenance,
-    mergeSandboxCollectionProvenance,
-  } = await import("@/lib/payment-account-routing");
-  const collection = await verifyCollaborationCollectionAccess({ originOrHost: input.origin });
-  if (!collection.ok) return { ok: false, error: collection.error };
+  const collection = await verifyAccess({ originOrHost: input.origin, env: deps.env });
+  if (!collection.ok) {
+    return {
+      ok: false,
+      error: typeof collection.error === "string" ? collection.error : "Sandbox collection is not authorized. Nothing was charged.",
+    };
+  }
   // This PR only opens labelled sandbox ledger-hold — never live / allocated-funds / Treasury collection.
   if (!collection.simulation || collection.topology !== "sandbox_ledger_hold") {
     return {
@@ -248,8 +313,8 @@ export async function startFundingDeposit(input: {
   }
   const provenance = buildSandboxCollectionProvenance({
     originOrHost: input.origin,
-    allocatedFundsDetected: collection.allocatedFunds,
-    treasuryDetected: collection.treasury,
+    allocatedFundsDetected: collection.allocatedFunds === true,
+    treasuryDetected: collection.treasury === true,
     openedAt: collection.checkedAt,
   });
   const fundingRow = await prisma.collaborationFunding.findUnique({
@@ -308,11 +373,11 @@ export async function startFundingDeposit(input: {
             amountCents: planned.amountCents,
             topology: collection.topology,
             simulation: true,
-            simulationLabel: collection.simulationLabel,
+            simulationLabel: collection.simulationLabel ?? "SIMULATION: sandbox_ledger_hold",
             providerE2eComplete: false,
-            allocatedFundsDetected: collection.allocatedFunds,
-            treasuryDetected: collection.treasury,
-            limitation: collection.limitation,
+            allocatedFundsDetected: collection.allocatedFunds === true,
+            treasuryDetected: collection.treasury === true,
+            limitation: collection.limitation ?? null,
             provenance,
           },
         },

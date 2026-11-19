@@ -1,6 +1,6 @@
 import { verifyCollaborationCollectionAccess } from "@/lib/collaboration-collection-access";
 import { prisma } from "@/lib/db";
-import { maskAccountId, stripeCapabilityStatus } from "@/lib/payment-account-routing";
+import { maskAccountId, resolveSandboxDeploymentHost, stripeCapabilityStatus } from "@/lib/payment-account-routing";
 
 const PROOF_LABEL = {
   draft: "Draft",
@@ -9,8 +9,9 @@ const PROOF_LABEL = {
 } as const;
 
 export async function AccountRolesPanel() {
+  const deploymentHost = resolveSandboxDeploymentHost();
   const access = await verifyCollaborationCollectionAccess({
-    originOrHost: "127.0.0.1",
+    originOrHost: deploymentHost,
     environment: "sandbox",
   });
   const status = stripeCapabilityStatus({
