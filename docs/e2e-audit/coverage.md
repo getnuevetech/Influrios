@@ -1,11 +1,11 @@
-# Coverage — Bounded closure
+# Coverage — J18/J20 completion
 
-**Remediation PAUSED.** Coverage scored at **required-step** level (not “evidence row exists”). Coverage ≠ acceptance.
+Remediation **PAUSED**. Coverage = required-step outcomes (≠ acceptance).
 
 ## Verdict
 
-- **Required-step coverage:** Incomplete for **J18** (redemption `not_executed`) and **J20** (UI payment blocked / invoice `not_executed`). All other J01–J30 required steps classified.  
-- **Product acceptance:** Pass **20** / Partial **10**.  
-- **Preserved subtests:** J18 Apply-to-Stripe Pass; J20 prior API tax-invoice Pass (subtest only).  
+- **Coverage Incomplete:** **0** (J18/J20 payment + redemption + invoice steps executed successfully).  
+- **Acceptance Pass:** **22** / Partial **8**.  
+- **Shared transaction:** `cs_test_a0EmDMZuI8eydnfk4Q7mmX0qws8ubVjVzYpvrImu1MdQ6Q2bH4QaoI1ryt` closes monthly J18 + J20. Annual Apply COR-04 preserved.
 
-See [final-coverage-report.md](./final-coverage-report.md) and [phase1-bounded-closure-results.json](./phase1-bounded-closure-results.json).
+See [final-coverage-report.md](./final-coverage-report.md) and [j18-j20-complete-results.json](./j18-j20-complete-results.json).

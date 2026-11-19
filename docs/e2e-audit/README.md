@@ -1,23 +1,20 @@
-# Influrios E2E audit pack — Bounded closure (#534)
+# Influrios E2E audit pack — J18/J20 completion (#534)
 
-**Revision:** phase1-bounded-closure · base `3929086`  
-**Remediation:** PAUSED — no product fixes this pass.  
-**Coverage:** required-step level (≠ acceptance).
+**Revision:** j18-j20-complete · base `3924de3`  
+**Remediation:** PAUSED  
 
 | Lens | Result |
 |------|--------|
-| Acceptance Pass | **20** |
-| Acceptance Partial | **10** |
-| Coverage Incomplete | **2** (J18, J20) |
+| Acceptance Pass | **22** |
+| Acceptance Partial | **8** |
+| Coverage Incomplete | **0** |
 
 ## Start here
 
 - [final-coverage-report.md](./final-coverage-report.md)
+- [j18-j20-complete-results.json](./j18-j20-complete-results.json)
 - [phase1-acceptance-matrix.json](./phase1-acceptance-matrix.json)
-- [phase1-bounded-closure-results.json](./phase1-bounded-closure-results.json)
 - [correction-register.md](./correction-register.md)
-- [journeys.md](./journeys.md) · [coverage.md](./coverage.md) · [blockers.md](./blockers.md)
-- [provider-limitations.md](./provider-limitations.md)
+- [journeys.md](./journeys.md)
 
-Closure screenshots: [media-local-journeys-closure/](./media-local-journeys-closure/)  
-Full media: `/cursor/stores/self/media/e2e-audit/`
+Media: [media-local-journeys-closure/](./media-local-journeys-closure/) · store `/cursor/stores/self/media/e2e-audit/`

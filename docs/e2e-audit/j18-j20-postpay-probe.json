@@ -1,0 +1,44 @@
+{
+  "stripe": {
+    "id": "cs_test_a0EmDMZuI8eydnfk4Q7mmX0qws8ubVjVzYpvrImu1MdQ6Q2bH4QaoI1ryt",
+    "status": "complete",
+    "payment_status": "paid",
+    "amount_total": 2668,
+    "amount_subtotal": 2900,
+    "total_details": {
+      "amount_discount": 435,
+      "amount_shipping": 0,
+      "amount_tax": 203
+    },
+    "customer": "cus_VexvFLCnJx55WQ",
+    "subscription": "sub_1UddzZ1geYv2y1v8vgifqqnT"
+  },
+  "invoice": {
+    "id": "in_1UddzZ1geYv2y1v8tm2vcCBe",
+    "status": "paid",
+    "subtotal": 2900,
+    "tax": 203,
+    "total": 2668,
+    "discount": [
+      {
+        "amount": 435,
+        "discount": "di_1UddzZ1geYv2y1v8G8RKBCJw"
+      }
+    ],
+    "hosted": "https://invoice.stripe.com/i/acct_1TqpBo1geYv2y1v8/test_YWNjdF8xVHFwQm8xZ2VZdjJ5MXY4LF9WZXh2QkhrTTZrNmQzUW5pNEhqVUtiZmJNMUNvT3A5LDE4NTY2ODk5MQ0200UZAInfr1?s=ap",
+    "pdf": "https://pay.stripe.com/invoice/acct_1TqpBo1geYv2y1v8/test_YWNjdF8xVHFwQm8xZ2VZdjJ5MXY4LF9WZXh2QkhrTTZrNmQzUW5pNEhqVUtiZmJNMUNvT3A5LDE4NTY2ODk5MQ0200UZAInfr1/pdf?s=ap"
+  },
+  "db": {
+    "sub": "active|creator_pro|month|cs_test_a0EmDMZuI8eydnfk4Q7mmX0qws8ubVjVzYpvrImu1MdQ6Q2bH4QaoI1ryt",
+    "offer": "AUDITPRO15MAC4C|1|0|active",
+    "reservation": "cmwo49al105mejsgoo1n8ulob|consumed|435|2900|cs_test_a0EmDMZuI8eydnfk4Q7mmX0qws8ubVjVzYpvrImu1MdQ6Q2bH4QaoI1ryt|confirmed|2026-11-19 22:39:52.586",
+    "attempts": "cs_mwo49af4_pfd10w|completed|cs_test_a0EmDMZuI8eydnfk4Q7mmX0qws8ubVjVzYpvrImu1MdQ6Q2bH4QaoI1ryt|2026-11-19 22:39:52.567"
+  },
+  "expected": {
+    "base": 2900,
+    "discount": 435,
+    "discountedBase": 2465,
+    "tax": 203,
+    "total": 2668
+  }
+}

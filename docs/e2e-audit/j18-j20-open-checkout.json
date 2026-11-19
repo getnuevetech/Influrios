@@ -1,0 +1,13 @@
+{
+  "stripeUrl": "https://checkout.stripe.com/g/pay/cs_test_a0EmDMZuI8eydnfk4Q7mmX0qws8ubVjVzYpvrImu1MdQ6Q2bH4QaoI1ryt#fidnandhYHdWcXxpYCc%2FJ2FgY2RwaXEnKSdicyc%2FNiknZHVsTmB8Jz8ndW5acWB2cVowNFF0dUdqNGJgXHM3fDRzPUhQfTFNfH1MS1ZzVlMzMmRWSG49TVIyR39zX3RHfVBwdkx0T2puaFFzMnFDaGNmcGFhMn9XaGxEMjZgfFJjPH9zbUA3SGZdZzU1Vn89QWlIUjInKSdjd2poVmB3c2B3Jz9xd3BgKSdnZGZuYndqcGthRmppancnPycmY2NjY2NjJyknaWR8anBxUXx1YCc%2FJ3Zsa2JpYFpscWBoJ3gl",
+  "stripeSessionId": "cs_test_a0EmDMZuI8eydnfk4Q7mmX0qws8ubVjVzYpvrImu1MdQ6Q2bH4QaoI1ryt",
+  "freshCode": "AUDITPRO15MAC4C",
+  "expected": {
+    "base": 2900,
+    "discount": 435,
+    "discountedBase": 2465,
+    "tax": 203,
+    "total": 2668
+  },
+  "email": "audit.r3mrvlgh.influencer-unrelated@example.com"
+}
