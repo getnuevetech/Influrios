@@ -368,8 +368,14 @@ export function resolveSandboxDeploymentHost(
 
 /**
  * Central auth for sandbox ledger-hold mutations (settlement + release adapter).
- * Requires trusted deployment, explicit enable, non-prod host, and frozen funding provenance.
- * NODE_ENV=production or missing flag refuses even when provenance is present.
+ * Requires trusted deployment, explicit enable, frozen funding provenance, and a
+ * non-production **current** deployment host.
+ *
+ * Explicit `originOrHost` and saved funding provenance host are for provenance /
+ * audit only — they must NOT skip validating where execution happens now.
+ * Missing current host or production current host (e.g. influrios.com) refuses
+ * even when NODE_ENV=test, the sandbox flag is on, and saved funding host is localhost
+ * (background-job shape with no explicit host). NODE_ENV=production refuse stays.
  */
 export function authorizeSandboxLedgerHoldRelease(input: {
   env?: Record<string, string | undefined>;
@@ -397,20 +403,30 @@ export function authorizeSandboxLedgerHoldRelease(input: {
         "Sandbox settlement simulation needs persisted sandbox_ledger_hold provenance on the funding. Live distribution stays blocked. Nothing was transferred.",
     };
   }
-  const host =
-    collectionRequestHost(input.originOrHost ?? "") ||
-    provenance.originHost ||
-    resolveSandboxDeploymentHost(env);
-  if (!host) {
-    return { ok: false, error: "Sandbox settlement simulation needs a request host. Nothing was transferred." };
+  // Independent of explicit request host and saved funding host: where we run now.
+  const currentHost = resolveSandboxDeploymentHost(env);
+  if (!currentHost) {
+    return {
+      ok: false,
+      error:
+        "Sandbox settlement simulation needs the current trusted deployment host (NEXT_PUBLIC_APP_URL / APP_URL). Nothing was transferred.",
+    };
   }
-  if (isLiveProductCollectionHost(host)) {
+  if (isLiveProductCollectionHost(currentHost)) {
     return {
       ok: false,
       error: "Sandbox settlement simulation cannot run on the live product host. Nothing was transferred.",
     };
   }
-  return { ok: true, provenance, host };
+  // Explicit host is provenance/request context only — still refuse if the caller named prod.
+  const explicitHost = collectionRequestHost(input.originOrHost ?? "");
+  if (explicitHost && isLiveProductCollectionHost(explicitHost)) {
+    return {
+      ok: false,
+      error: "Sandbox settlement simulation cannot run on the live product host. Nothing was transferred.",
+    };
+  }
+  return { ok: true, provenance, host: currentHost };
 }
 
 /** Stripe GET /v1/account must return an account object with acct_ id — not {}, [], or a list. */

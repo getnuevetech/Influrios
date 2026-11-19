@@ -30,7 +30,7 @@ Failed probes (HTTP 401, timeout, invalid payload) are **verification_failed** �
    - **Missing `COLLABORATION_SANDBOX_LEDGER_HOLD=1`:** refuse.
    - **Sandbox gates pass:** open labelled **`sandbox_ledger_hold`** only (`simulation: true`, `providerE2eComplete: false`). Ordinary Checkout is used as a **test collection** — never labelled as allocated-funds/Treasury collection.
 
-3. **Provenance:** On deposit open, funding `routeSnapshotJson.collaborationCollection` and deposit `instructionsJson` persist sandbox provenance. Settlement **and** `createReleaseOrTransfer` use the same `authorizeSandboxLedgerHoldRelease` gate (trusted deployment + enable flag + provenance + non-prod host). Changing the Stripe key later does **not** reclassify existing funding.
+3. **Provenance:** On deposit open, funding `routeSnapshotJson.collaborationCollection` and deposit `instructionsJson` persist sandbox provenance. Settlement **and** `createReleaseOrTransfer` use the same `authorizeSandboxLedgerHoldRelease` gate (trusted deployment + enable flag + provenance). **Current** deployment host (`NEXT_PUBLIC_APP_URL` / `APP_URL`) is validated independently — saved funding host or an explicit request host must not skip that check. Missing or production current host (e.g. `influrios.com`) refuses even in background-job shape (`NODE_ENV=test`, flag on, saved host localhost, no explicit host). Changing the Stripe key later does **not** reclassify existing funding.
 
 4. **Resume:** Returning an existing unpaid Checkout URL requires the same authorize step first (prod host / missing flag refuse). Already-paid reconciliation stays separate.
 

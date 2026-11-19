@@ -16,14 +16,16 @@ import { queueProviderInstruction, type PaymentProviderAdapter } from "@/lib/pay
 import { prisma } from "@/lib/db";
 import { stripeApiRequest, stripeCredentials } from "@/lib/stripe-admin";
 
-export type StripePaymentAdapterOptions = {
-  originOrHost?: string;
-  env?: Record<string, string | undefined>;
-};
-
 export type ReleaseOrTransferDeps = {
   findRouteSnapshot: (fundingId: string) => Promise<unknown | null>;
   queueRelease: typeof queueProviderInstruction;
+};
+
+export type StripePaymentAdapterOptions = {
+  originOrHost?: string;
+  env?: Record<string, string | undefined>;
+  /** Test/injection override for release snapshot + queue. */
+  releaseDeps?: Partial<ReleaseOrTransferDeps>;
 };
 
 const defaultReleaseDeps: ReleaseOrTransferDeps = {
@@ -76,6 +78,10 @@ export async function executeSandboxReleaseOrTransfer(
 export function createStripePaymentAdapter(options?: StripePaymentAdapterOptions): PaymentProviderAdapter {
   const env = options?.env ?? (process.env as Record<string, string | undefined>);
   const originOrHost = options?.originOrHost ?? resolveSandboxDeploymentHost(env);
+  const releaseDeps: ReleaseOrTransferDeps = {
+    findRouteSnapshot: options?.releaseDeps?.findRouteSnapshot ?? defaultReleaseDeps.findRouteSnapshot,
+    queueRelease: options?.releaseDeps?.queueRelease ?? defaultReleaseDeps.queueRelease,
+  };
 
   return {
     async getCapabilities() {
@@ -121,7 +127,7 @@ export function createStripePaymentAdapter(options?: StripePaymentAdapterOptions
       return queueProviderInstruction({ instruction: "cancel", fundingId: reference });
     },
     async createReleaseOrTransfer(input) {
-      return executeSandboxReleaseOrTransfer(input, { originOrHost, env });
+      return executeSandboxReleaseOrTransfer(input, { originOrHost, env }, releaseDeps);
     },
     async createPartialRefund(input) {
       return queueProviderInstruction({

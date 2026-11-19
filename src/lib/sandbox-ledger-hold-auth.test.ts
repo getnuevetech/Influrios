@@ -20,6 +20,12 @@ function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 }
 
+const VALID_ACCOUNT = {
+  id: "acct_platform123",
+  object: "account",
+  capabilities: { card_payments: "active", transfers: "active" },
+};
+
 const provenance = buildSandboxCollectionProvenance({
   originOrHost: "http://127.0.0.1:3000",
   allocatedFundsDetected: false,
@@ -28,28 +34,38 @@ const provenance = buildSandboxCollectionProvenance({
 });
 const routeSnapshot = mergeSandboxCollectionProvenance({ countryCode: "US", version: "1" }, provenance);
 
+const trustedSandboxEnv = {
+  NODE_ENV: "test",
+  COLLABORATION_SANDBOX_LEDGER_HOLD: "1",
+  NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3000",
+} as const;
+
 describe("authorizeSandboxLedgerHoldRelease (central)", () => {
   it("refuses NODE_ENV=production even with mocked provenance and flag absent", () => {
     const denied = authorizeSandboxLedgerHoldRelease({
-      env: { NODE_ENV: "production" },
+      env: { NODE_ENV: "production", NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3000" },
       originOrHost: "http://127.0.0.1:3000",
       routeSnapshotJson: routeSnapshot,
     });
     assert.equal(denied.ok, false);
   });
 
-  it("refuses production host and missing enable flag even with provenance", () => {
+  it("refuses production current host and missing enable flag even with provenance", () => {
     assert.equal(
       authorizeSandboxLedgerHoldRelease({
-        env: { NODE_ENV: "test", COLLABORATION_SANDBOX_LEDGER_HOLD: "1" },
-        originOrHost: "https://influrios.com",
+        env: {
+          NODE_ENV: "test",
+          COLLABORATION_SANDBOX_LEDGER_HOLD: "1",
+          NEXT_PUBLIC_APP_URL: "https://influrios.com",
+        },
+        originOrHost: "http://127.0.0.1:3000",
         routeSnapshotJson: routeSnapshot,
       }).ok,
       false,
     );
     assert.equal(
       authorizeSandboxLedgerHoldRelease({
-        env: { NODE_ENV: "test" },
+        env: { NODE_ENV: "test", NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3000" },
         originOrHost: "http://127.0.0.1:3000",
         routeSnapshotJson: routeSnapshot,
       }).ok,
@@ -57,13 +73,36 @@ describe("authorizeSandboxLedgerHoldRelease (central)", () => {
     );
   });
 
-  it("allows trusted test env with enable + provenance + non-prod host", () => {
-    const ok = authorizeSandboxLedgerHoldRelease({
+  it("background-job shape: saved funding host cannot skip missing/production current host", () => {
+    // No explicit host; provenance.originHost is localhost; current deployment missing.
+    const missingCurrent = authorizeSandboxLedgerHoldRelease({
       env: { NODE_ENV: "test", COLLABORATION_SANDBOX_LEDGER_HOLD: "1" },
+      routeSnapshotJson: routeSnapshot,
+    });
+    assert.equal(missingCurrent.ok, false);
+    if (!missingCurrent.ok) assert.match(missingCurrent.error, /current trusted deployment host/i);
+
+    // Current deployment is production — refuse even with saved localhost provenance.
+    const prodCurrent = authorizeSandboxLedgerHoldRelease({
+      env: {
+        NODE_ENV: "test",
+        COLLABORATION_SANDBOX_LEDGER_HOLD: "1",
+        NEXT_PUBLIC_APP_URL: "https://influrios.com",
+      },
+      routeSnapshotJson: routeSnapshot,
+    });
+    assert.equal(prodCurrent.ok, false);
+    if (!prodCurrent.ok) assert.match(prodCurrent.error, /live product host/i);
+  });
+
+  it("allows trusted test env with enable + provenance + non-prod current host", () => {
+    const ok = authorizeSandboxLedgerHoldRelease({
+      env: { ...trustedSandboxEnv },
       originOrHost: "http://127.0.0.1:3000",
       routeSnapshotJson: routeSnapshot,
     });
     assert.equal(ok.ok, true);
+    if (ok.ok) assert.equal(ok.host, "127.0.0.1");
   });
 
   it("resolves deployment host from env without inventing 127.0.0.1", () => {
@@ -86,7 +125,14 @@ describe("executeSandboxReleaseOrTransfer (release adapter entry)", () => {
     let queued = false;
     const result = await executeSandboxReleaseOrTransfer(
       { fundingId: "fund_1", milestoneId: "ms_1", amountCents: 1000 },
-      { originOrHost: "http://127.0.0.1:3000", env: { NODE_ENV: "production", COLLABORATION_SANDBOX_LEDGER_HOLD: "1" } },
+      {
+        originOrHost: "http://127.0.0.1:3000",
+        env: {
+          NODE_ENV: "production",
+          COLLABORATION_SANDBOX_LEDGER_HOLD: "1",
+          NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3000",
+        },
+      },
       {
         findRouteSnapshot: async () => routeSnapshot,
         queueRelease: async () => {
@@ -102,7 +148,10 @@ describe("executeSandboxReleaseOrTransfer (release adapter entry)", () => {
   it("refuses when sandbox flag is absent even with provenance on a test host", async () => {
     const result = await executeSandboxReleaseOrTransfer(
       { fundingId: "fund_1", milestoneId: "ms_1", amountCents: 1000 },
-      { originOrHost: "http://127.0.0.1:3000", env: { NODE_ENV: "test" } },
+      {
+        originOrHost: "http://127.0.0.1:3000",
+        env: { NODE_ENV: "test", NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3000" },
+      },
       {
         findRouteSnapshot: async () => routeSnapshot,
         queueRelease: async () => ({ ok: true as const, reference: "job_1" }),
@@ -114,7 +163,7 @@ describe("executeSandboxReleaseOrTransfer (release adapter entry)", () => {
   it("queues labelled simulation only when auth passes", async () => {
     const result = await executeSandboxReleaseOrTransfer(
       { fundingId: "fund_1", milestoneId: "ms_1", amountCents: 1000 },
-      { originOrHost: "http://127.0.0.1:3000", env: { NODE_ENV: "test", COLLABORATION_SANDBOX_LEDGER_HOLD: "1" } },
+      { originOrHost: "http://127.0.0.1:3000", env: { ...trustedSandboxEnv } },
       {
         findRouteSnapshot: async () => routeSnapshot,
         queueRelease: async () => ({ ok: true as const, reference: "job_9" }),
@@ -124,16 +173,30 @@ describe("executeSandboxReleaseOrTransfer (release adapter entry)", () => {
     if (result.ok) assert.match(result.reference, /^sim_sandbox_ledger_hold:/);
   });
 
-  it("adapter createReleaseOrTransfer uses the same auth", async () => {
+  it("adapter createReleaseOrTransfer uses the same auth and does not queue release", async () => {
+    let queued = false;
     const adapter = createStripePaymentAdapter({
-      originOrHost: "http://127.0.0.1:3000",
-      env: { NODE_ENV: "production", COLLABORATION_SANDBOX_LEDGER_HOLD: "1", NEXT_PUBLIC_APP_URL: "https://influrios.com" },
+      // Explicit host omitted — background-job shape; current host is production.
+      env: {
+        NODE_ENV: "test",
+        COLLABORATION_SANDBOX_LEDGER_HOLD: "1",
+        NEXT_PUBLIC_APP_URL: "https://influrios.com",
+      },
+      releaseDeps: {
+        findRouteSnapshot: async () => routeSnapshot,
+        queueRelease: async () => {
+          queued = true;
+          return { ok: true as const, reference: "job_should_not_queue" };
+        },
+      },
     });
-    // Adapter uses real prisma for find — without provenance row it still refuses; production host on options also refuses via auth when snapshot exists.
-    // Call shared entry with mocked snapshot through executeSandboxReleaseOrTransfer already covered;
-    // here assert adapter capability path does not hardcode 127 when env names prod host.
-    const caps = await adapter.getCapabilities();
-    assert.equal(caps.release, false);
+    const result = await adapter.createReleaseOrTransfer({
+      fundingId: "fund_1",
+      milestoneId: "ms_1",
+      amountCents: 1000,
+    });
+    assert.equal(result.ok, false);
+    assert.equal(queued, false);
   });
 });
 
@@ -142,7 +205,14 @@ describe("executeOwnedSettlement (direct)", () => {
     let persisted = false;
     const result = await executeOwnedSettlement(
       "set_1",
-      { originOrHost: "http://127.0.0.1:3000", env: { NODE_ENV: "production", COLLABORATION_SANDBOX_LEDGER_HOLD: "1" } },
+      {
+        originOrHost: "http://127.0.0.1:3000",
+        env: {
+          NODE_ENV: "production",
+          COLLABORATION_SANDBOX_LEDGER_HOLD: "1",
+          NEXT_PUBLIC_APP_URL: "http://127.0.0.1:3000",
+        },
+      },
       {
         findSettlement: async () => ({
           id: "set_1",
@@ -162,10 +232,17 @@ describe("executeOwnedSettlement (direct)", () => {
     assert.equal(persisted, false);
   });
 
-  it("refuses live product host even when trusted env + flag + provenance", async () => {
+  it("refuses live product current host even when trusted env + flag + provenance", async () => {
     const result = await executeOwnedSettlement(
       "set_1",
-      { originOrHost: "https://www.influrios.com", env: { NODE_ENV: "test", COLLABORATION_SANDBOX_LEDGER_HOLD: "1" } },
+      {
+        // No explicit host (job shape); saved funding host is localhost via provenance.
+        env: {
+          NODE_ENV: "test",
+          COLLABORATION_SANDBOX_LEDGER_HOLD: "1",
+          NEXT_PUBLIC_APP_URL: "https://www.influrios.com",
+        },
+      },
       {
         findSettlement: async () => ({
           id: "set_1",
@@ -189,7 +266,7 @@ describe("executeOwnedSettlement (direct)", () => {
     let savedTax = "";
     const result = await executeOwnedSettlement(
       "set_1",
-      { originOrHost: "http://127.0.0.1:3000", env: { NODE_ENV: "test", COLLABORATION_SANDBOX_LEDGER_HOLD: "1" } },
+      { originOrHost: "http://127.0.0.1:3000", env: { ...trustedSandboxEnv } },
       {
         findSettlement: async () => ({
           id: "set_1",
@@ -243,98 +320,84 @@ describe("executeOwnedSettlement (direct)", () => {
 });
 
 describe("startFundingDeposit (direct resume auth)", () => {
+  function stripeTransportWithValidAccount(checkoutBody: unknown) {
+    return async (input: RequestInfo | URL) => {
+      const url = String(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+      if (url.includes("/v1/account")) return jsonResponse(200, VALID_ACCOUNT);
+      return jsonResponse(200, checkoutBody);
+    };
+  }
+
   it("refuses unpaid Checkout resume on influrios.com / production / no sandbox flag", async () => {
     const previous = process.env.STRIPE_SECRET_KEY;
     process.env.STRIPE_SECRET_KEY = "sk_test_resumeauth";
-    setStripeTransportForTests(async () =>
-      jsonResponse(200, {
-        id: "cs_test_resume",
-        payment_status: "unpaid",
-        amount_total: 5000,
-        currency: "usd",
-        url: "https://checkout.stripe.com/c/pay/cs_test_resume",
-        livemode: false,
-        metadata: { depositId: "dep_1", fundingId: "fund_1" },
-      }),
-    );
+    const unpaidCheckout = {
+      id: "cs_test_resume",
+      payment_status: "unpaid",
+      amount_total: 5000,
+      currency: "usd",
+      url: "https://checkout.stripe.com/c/pay/cs_test_resume",
+      livemode: false,
+      metadata: { depositId: "dep_1", fundingId: "fund_1" },
+    };
+    // Valid Stripe account so refusals are host/env/flag — not invalid payload.
+    setStripeTransportForTests(stripeTransportWithValidAccount(unpaidCheckout));
+
+    const fundingRow = {
+      id: "fund_1",
+      status: "awaiting_provider",
+      grossCents: 5000,
+      currency: "USD",
+      title: "Test",
+      feeSnapshotJson: {},
+    };
+    const unpaidSession = {
+      id: "cs_test_resume",
+      paymentStatus: "unpaid" as const,
+      amountTotal: 5000,
+      currency: "USD",
+      url: "https://checkout.stripe.com/c/pay/cs_test_resume",
+      metadata: { depositId: "dep_1", fundingId: "fund_1" },
+    };
 
     const refusedHost = await startFundingDeposit(
       { fundingId: "fund_1", method: "card", origin: "https://influrios.com" },
       {
         skipProductGates: true,
         env: { NODE_ENV: "test", COLLABORATION_SANDBOX_LEDGER_HOLD: "1" },
-        findFunding: async () => ({
-          id: "fund_1",
-          status: "awaiting_provider",
-          grossCents: 5000,
-          currency: "USD",
-          title: "Test",
-          feeSnapshotJson: {},
-        }),
+        findFunding: async () => fundingRow,
         findOpenGatewayDeposit: async () => ({ id: "dep_1", reference: "cs_test_resume" }),
-        readCheckoutSession: async () => ({
-          id: "cs_test_resume",
-          paymentStatus: "unpaid",
-          amountTotal: 5000,
-          currency: "USD",
-          url: "https://checkout.stripe.com/c/pay/cs_test_resume",
-          metadata: { depositId: "dep_1", fundingId: "fund_1" },
-        }),
+        readCheckoutSession: async () => unpaidSession,
       },
     );
     assert.equal(refusedHost.ok, false);
+    if (!refusedHost.ok) assert.match(refusedHost.error, /host|live|production|closed|authorized/i);
 
     const refusedFlag = await startFundingDeposit(
       { fundingId: "fund_1", method: "card", origin: "http://127.0.0.1:3000" },
       {
         skipProductGates: true,
         env: { NODE_ENV: "test" },
-        findFunding: async () => ({
-          id: "fund_1",
-          status: "awaiting_provider",
-          grossCents: 5000,
-          currency: "USD",
-          title: "Test",
-          feeSnapshotJson: {},
-        }),
+        findFunding: async () => fundingRow,
         findOpenGatewayDeposit: async () => ({ id: "dep_1", reference: "cs_test_resume" }),
-        readCheckoutSession: async () => ({
-          id: "cs_test_resume",
-          paymentStatus: "unpaid",
-          amountTotal: 5000,
-          currency: "USD",
-          url: "https://checkout.stripe.com/c/pay/cs_test_resume",
-          metadata: {},
-        }),
+        readCheckoutSession: async () => unpaidSession,
       },
     );
     assert.equal(refusedFlag.ok, false);
+    if (!refusedFlag.ok) assert.match(refusedFlag.error, /COLLABORATION_SANDBOX_LEDGER_HOLD|enable|authorized|sandbox/i);
 
     const refusedProd = await startFundingDeposit(
       { fundingId: "fund_1", method: "card", origin: "http://127.0.0.1:3000" },
       {
         skipProductGates: true,
         env: { NODE_ENV: "production", COLLABORATION_SANDBOX_LEDGER_HOLD: "1" },
-        findFunding: async () => ({
-          id: "fund_1",
-          status: "awaiting_provider",
-          grossCents: 5000,
-          currency: "USD",
-          title: "Test",
-          feeSnapshotJson: {},
-        }),
+        findFunding: async () => fundingRow,
         findOpenGatewayDeposit: async () => ({ id: "dep_1", reference: "cs_test_resume" }),
-        readCheckoutSession: async () => ({
-          id: "cs_test_resume",
-          paymentStatus: "unpaid",
-          amountTotal: 5000,
-          currency: "USD",
-          url: "https://checkout.stripe.com/c/pay/cs_test_resume",
-          metadata: {},
-        }),
+        readCheckoutSession: async () => unpaidSession,
       },
     );
     assert.equal(refusedProd.ok, false);
+    if (!refusedProd.ok) assert.match(refusedProd.error, /trusted|production|deployment|authorized/i);
 
     process.env.STRIPE_SECRET_KEY = previous;
     setStripeTransportForTests(null);
@@ -343,18 +406,21 @@ describe("startFundingDeposit (direct resume auth)", () => {
   it("allows unpaid resume only when sandbox gates pass", async () => {
     const previous = process.env.STRIPE_SECRET_KEY;
     process.env.STRIPE_SECRET_KEY = "sk_test_resumeauth";
-    setStripeTransportForTests(async () =>
-      jsonResponse(200, {
-        id: "acct_testprobe",
-        object: "account",
-        capabilities: { card_payments: "active" },
+    setStripeTransportForTests(
+      stripeTransportWithValidAccount({
+        id: "cs_test_resume",
+        payment_status: "unpaid",
+        amount_total: 5000,
+        currency: "usd",
+        url: "https://checkout.stripe.com/c/pay/cs_test_resume",
+        livemode: false,
       }),
     );
     const allowed = await startFundingDeposit(
       { fundingId: "fund_1", method: "card", origin: "http://127.0.0.1:3000" },
       {
         skipProductGates: true,
-        env: { NODE_ENV: "test", COLLABORATION_SANDBOX_LEDGER_HOLD: "1" },
+        env: { ...trustedSandboxEnv },
         findFunding: async () => ({
           id: "fund_1",
           status: "awaiting_provider",
