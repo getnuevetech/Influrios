@@ -27,7 +27,13 @@
 - Root cause (harness `.env.local` / `ADMIN_SUPER_PASSWORD`) documented in [`admin-login-root-cause.md`](./admin-login-root-cause.md).
 - **Reconfirm on this boot:** harness `loadEnvLocal()` + `ADMIN_SUPER_PASSWORD` → `/admin` **Pass**; member password fallback stays on `/admin/login`.
 
+## Environment note (2026-11-19 re-probe on long-lived worker)
+
+- Long-lived VM `bc-301bac77-…` re-probed **names only**: `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` still **ABSENT** from process env and `.env.local`.
+- **Verdict:** this VM **predates binding injection** into the running shell — start a **new worker** if further Stripe harness runs are needed on that lineage.
+- Fresh-boot sibling `bc-133de653-…` already saw `sk_test_` + `whsec_` and executed J13→J16→J15 (results retained below / in JSON). Do not treat long-lived ABSENT as undoing that evidence.
+
 ## Resolved (prior)
 
-- Stripe secrets missing from prior VM — **resolved by fresh worker boot** (this run).
+- Stripe secrets missing from prior long-lived VM — **resolved for execution by fresh worker boot** (`bc-133de653-…`); long-lived `bc-301bac77-…` remains blind until restarted.
 - Local Postgres + Mailpit + synthetic fixtures for non-money journeys.

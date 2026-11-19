@@ -1,12 +1,12 @@
 # Executive summary (revision r3.2)
 
-**Verdict: Incomplete — continue #534.** Fresh boot has Stripe test secrets. Collaboration card funding remains **product-gated**; subscription Checkout is **Partial** (session opens, hosted card confirm incomplete).
+**Verdict: Incomplete — continue #534.** Fresh boot (`bc-133de653-…`) had Stripe test secrets and ran J13→J16→J15. Long-lived worker (`bc-301bac77-…`) re-probe 2026-11-19 still **ABSENT** secrets — **needs a new worker** for further Stripe runs on that lineage. Collaboration card funding remains **product-gated**; subscription Checkout is **Partial**.
 
 ## What completed (journeys)
 
 - **J01–J12, J23–J24** — prior local dedicated evidence (DB + Mailpit + dual accounts) retained.
-- **J02 admin** — harness `.env.local` / `ADMIN_SUPER_PASSWORD` **reconfirm Pass** this boot.
-- **Stripe probe** — `STRIPE_SECRET_KEY` (`sk_test_`) + `STRIPE_WEBHOOK_SECRET` present; list sessions sandbox OK.
+- **J02 admin** — Fail root cause = harness used member password fallback (`AuditLocalPass!2026`) instead of DB-hashed `ADMIN_SUPER_PASSWORD` because plain Node did not load `.env.local`; harness load + reconfirm **Pass** on fresh boot ([admin-login-root-cause.md](./admin-login-root-cause.md)).
+- **Stripe probe** — present on fresh boot (`sk_test_` + `whsec_`); **absent** on long-lived `bc-301bac77-…` (predates binding).
 
 ## Stripe journeys this boot (`bc-133de653-…`)
 
