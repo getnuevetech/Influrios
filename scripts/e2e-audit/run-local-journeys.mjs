@@ -6,6 +6,26 @@ import { chromium } from "playwright";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { execSync } from "node:child_process";
+import { readFileSync, existsSync } from "node:fs";
+
+/** Load .env.local into process.env without overriding already-set values (admin/Stripe). */
+function loadEnvLocal() {
+  const envPath = path.join(process.cwd(), ".env.local");
+  if (!existsSync(envPath)) return;
+  for (const line of readFileSync(envPath, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq <= 0) continue;
+    const key = trimmed.slice(0, eq).trim();
+    let val = trimmed.slice(eq + 1).trim();
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1);
+    }
+    if (process.env[key] === undefined) process.env[key] = val;
+  }
+}
+loadEnvLocal();
 
 const BASE = process.env.AUDIT_BASE_URL || "http://127.0.0.1:3000";
 if (/influrios\.com/i.test(BASE)) throw new Error("Refusing public host");
@@ -14,6 +34,7 @@ const DOCS = "/cursor/stores/self/docs/e2e-audit";
 const MEDIA = "/cursor/stores/self/media/e2e-audit/local-journeys";
 const RUN = "AUDIT_LOCAL_R3";
 const PASSWORD = process.env.AUDIT_LOCAL_PASSWORD || "AuditLocalPass!2026";
+const ADMIN_PASSWORD = process.env.ADMIN_SUPER_PASSWORD || PASSWORD;
 const fixtures = JSON.parse(await fs.readFile(path.join(DOCS, "local-fixtures.json"), "utf8"));
 const MAILPIT = process.env.MAILPIT_API || "http://127.0.0.1:8025";
 
@@ -177,7 +198,7 @@ results.push(
       }),
     );
   }
-  const adminUrl = await adminLogin(page, fixtures.admin.super, process.env.ADMIN_SUPER_PASSWORD || PASSWORD);
+  const adminUrl = await adminLogin(page, fixtures.admin.super, ADMIN_PASSWORD);
   const s = await shot(page, "j02-login-admin");
   results.push(
     caseRow({
@@ -201,7 +222,7 @@ results.push(
 {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
-  await adminLogin(page, fixtures.admin.super, process.env.ADMIN_SUPER_PASSWORD || PASSWORD);
+  await adminLogin(page, fixtures.admin.super, ADMIN_PASSWORD);
   await page.goto(`${BASE}/admin/mail`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1000);
   // Ensure SMTP form points at mailpit if UI present

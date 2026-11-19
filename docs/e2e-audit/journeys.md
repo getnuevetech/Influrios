@@ -5,7 +5,7 @@ Operator attestation checkboxes are **not** a gate. Local dedicated Postgres + M
 | ID | Status | Notes |
 |----|--------|-------|
 | J01 | Pass | email=audit.r3mrvlgh.signup.mwmst7q8@example.com; user=audit.r3mrvlgh.signup.mwmst7q8@example.com; mailDelta=1; url=http://127.0.0.1:3000/account/verify?email=a |
-| J02 | Partial | Local business/influencer login Pass; local admin Fail (separate P0); public logins Pass |
+| J02 | Partial | Admin Fail explained: harness fallback ≠ ADMIN_SUPER_PASSWORD; reprobe Pass |
 | J03 | Partial | Discover/card inventory opens only — false journey Pass avoided |
 | J04 | Pass | briefs=cmwms5ddg00ncjsu70yjkim0x/AUDIT debug send/draft
 cmwms41i300mcjsu77wn66by9/AUDIT r3mrvlgh Main mwms3x9b/draft
@@ -20,10 +20,10 @@ cmwms41ip00mdjsu7wkmlliks/ACCEPTED/audit-r3mrvlgh-a; acceptedHeuristic=true |
 | J11 | Pass | business/signed
 creator/signed |
 | J12 | Pass | Status: signed · Influrios in-app · 2/2 signed; doc=signed |
-| J13 | Blocked | MISSING_RESOURCE: Stripe/provider sandbox secrets not bound in Cloud Agent env |
+| J13 | Blocked | Stripe bound per Ola but absent in this VM — need fresh worker |
 | J14 | Blocked | Milestone submit/revise/approve needs funded collaboration (depends on J13 Stripe) |
-| J15 | Blocked | MISSING_RESOURCE: Stripe/provider sandbox secrets not bound in Cloud Agent env |
-| J16 | Blocked | MISSING_RESOURCE: Stripe/provider sandbox secrets not bound in Cloud Agent env |
+| J15 | Blocked | Depends on J13; secrets not in this VM |
+| J16 | Blocked | Same Stripe visibility gap — fresh worker |
 | J17 | Blocked | Retry/failure money paths need provider sandbox after J13 |
 | J18 | Blocked | Discount mutating admin ops not fully executed this revision |
 | J19 | Blocked | Tax/payment-settings mutating ops not fully executed this revision |

@@ -104,10 +104,15 @@
         "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j02-login-admin.png"
       }
     ],
-    "assertionRefs": [],
+    "assertionRefs": [
+      {
+        "type": "doc",
+        "rel": "admin-login-root-cause.md"
+      }
+    ],
     "providerEventRefs": [],
     "issueIds": [],
-    "blocker": null,
+    "blocker": "Harness used AuditLocalPass!2026 fallback while DB hash is ADMIN_SUPER_PASSWORD (AuditLocalAdmin!2026). See admin-login-root-cause.md",
     "integrationLevel": "L2-app-internal",
     "journeyCompletion": true,
     "caseKind": "journey",
@@ -117,7 +122,7 @@
     "startUrl": "http://127.0.0.1:3000/admin/login",
     "finalUrl": "http://127.0.0.1:3000/admin/login",
     "expected": "Admin login on local",
-    "actual": "http://127.0.0.1:3000/admin/login",
+    "actual": "http://127.0.0.1:3000/admin/login | RCA: password-source mismatch (harness fallback \u2260 seeded ADMIN_SUPER_PASSWORD); re-probe with env password \u2192 /admin Pass",
     "functionalResult": "Fail",
     "visualResult": "Pass",
     "completedAt": "2026-11-18T23:52:12.018Z"
@@ -183,72 +188,6 @@
     "functionalResult": "Pass",
     "visualResult": "Pass",
     "completedAt": "2026-11-18T23:52:52.814Z"
-  },
-  {
-    "runId": "AUDIT_LOCAL_R3",
-    "buildId": "local-dev",
-    "environment": "local-dedicated",
-    "startedAt": "2026-11-18T23:52:52.817Z",
-    "screenshotRefs": [],
-    "assertionRefs": [],
-    "providerEventRefs": [],
-    "issueIds": [],
-    "blocker": "MISSING_RESOURCE: Cloud Agent secret STRIPE_SECRET_KEY (sk_test_) + STRIPE_WEBHOOK_SECRET for localhost webhook",
-    "integrationLevel": "L3-provider-sandbox",
-    "journeyCompletion": false,
-    "caseKind": "journey",
-    "caseId": "J13-local-sandbox-checkout",
-    "journeyId": "J13",
-    "role": "business",
-    "expected": "Sandbox collaboration checkout with provider objects",
-    "actual": "STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET not present in this Cloud Agent environment; local app has no test keys bound",
-    "functionalResult": "Blocked",
-    "visualResult": "Not tested",
-    "completedAt": "2026-11-18T23:52:52.817Z"
-  },
-  {
-    "runId": "AUDIT_LOCAL_R3",
-    "buildId": "local-dev",
-    "environment": "local-dedicated",
-    "startedAt": "2026-11-18T23:52:52.817Z",
-    "screenshotRefs": [],
-    "assertionRefs": [],
-    "providerEventRefs": [],
-    "issueIds": [],
-    "blocker": "MISSING_RESOURCE: provider sandbox credentials + webhook reachability to local process",
-    "integrationLevel": "L3-provider-sandbox",
-    "journeyCompletion": false,
-    "caseKind": "journey",
-    "caseId": "J15-local-payout",
-    "journeyId": "J15",
-    "role": "admin",
-    "expected": "Sandbox payout/release evidence",
-    "actual": "Requires funded collaboration + provider sandbox credentials (Stripe/Airwallex test)",
-    "functionalResult": "Blocked",
-    "visualResult": "Not tested",
-    "completedAt": "2026-11-18T23:52:52.817Z"
-  },
-  {
-    "runId": "AUDIT_LOCAL_R3",
-    "buildId": "local-dev",
-    "environment": "local-dedicated",
-    "startedAt": "2026-11-18T23:52:52.817Z",
-    "screenshotRefs": [],
-    "assertionRefs": [],
-    "providerEventRefs": [],
-    "issueIds": [],
-    "blocker": "MISSING_RESOURCE: STRIPE_SECRET_KEY (sk_test_) for local Checkout",
-    "integrationLevel": "L3-provider-sandbox",
-    "journeyCompletion": false,
-    "caseKind": "journey",
-    "caseId": "J16-local-subscription-checkout",
-    "journeyId": "J16",
-    "role": "member",
-    "expected": "Sandbox subscription checkout",
-    "actual": "No Stripe test keys in agent env",
-    "functionalResult": "Blocked",
-    "visualResult": "Not tested",
-    "completedAt": "2026-11-18T23:52:52.817Z"
   },
   {
     "runId": "AUDIT_LOCAL_R3",
@@ -605,5 +544,114 @@
     "blocker": null,
     "startedAt": "2026-11-19T00:15:01.789Z",
     "completedAt": "2026-11-19T00:15:01.789Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "caseId": "J13-local-sandbox-checkout",
+    "journeyId": "J13",
+    "role": "business",
+    "caseKind": "journey",
+    "environment": "local-dedicated",
+    "integrationLevel": "L3-provider-sandbox",
+    "expected": "Sandbox collaboration funding checkout",
+    "actual": "Re-probe 2026-11-19: STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET ABSENT from agent shell, .env.local, and next-server environ. next-server started 2026-11-19T00:29:36Z; .env.local mtime 2026-11-18T23:47:38Z. This VM predates/never received bound secrets.",
+    "functionalResult": "Blocked",
+    "visualResult": "Not tested",
+    "journeyCompletion": false,
+    "blocker": "MISSING_RESOURCE: bound Stripe test secrets not visible in this VM \u2014 fresh worker boot required",
+    "assertionRefs": [
+      {
+        "type": "probe",
+        "file": "stripe-secret-probe.json"
+      }
+    ],
+    "screenshotRefs": [],
+    "fixtureIds": [],
+    "startedAt": "2026-11-19T01:25:41.777874+00:00",
+    "completedAt": "2026-11-19T01:25:41.777874+00:00"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "caseId": "J16-local-subscription-checkout",
+    "journeyId": "J16",
+    "role": "business",
+    "caseKind": "journey",
+    "environment": "local-dedicated",
+    "integrationLevel": "L3-provider-sandbox",
+    "expected": "Sandbox subscription checkout",
+    "actual": "Same probe as J13 \u2014 STRIPE_* names absent in this VM; cannot execute Checkout.",
+    "functionalResult": "Blocked",
+    "visualResult": "Not tested",
+    "journeyCompletion": false,
+    "blocker": "MISSING_RESOURCE: bound Stripe test secrets not visible in this VM \u2014 fresh worker boot required",
+    "assertionRefs": [
+      {
+        "type": "probe",
+        "file": "stripe-secret-probe.json"
+      }
+    ],
+    "screenshotRefs": [],
+    "fixtureIds": [],
+    "startedAt": "2026-11-19T01:25:41.777874+00:00",
+    "completedAt": "2026-11-19T01:25:41.777874+00:00"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "caseId": "J15-local-payout",
+    "journeyId": "J15",
+    "role": "influencer",
+    "caseKind": "journey",
+    "environment": "local-dedicated",
+    "integrationLevel": "L3-provider-sandbox",
+    "expected": "Payout after funding",
+    "actual": "Blocked upstream: J13 funding requires Stripe test secrets visible to the local app process.",
+    "functionalResult": "Blocked",
+    "visualResult": "Not tested",
+    "journeyCompletion": false,
+    "blocker": "MISSING_RESOURCE: depends on J13; Stripe secrets not visible in this VM \u2014 fresh worker boot required",
+    "assertionRefs": [
+      {
+        "type": "probe",
+        "file": "stripe-secret-probe.json"
+      }
+    ],
+    "screenshotRefs": [],
+    "fixtureIds": [],
+    "startedAt": "2026-11-19T01:25:41.777874+00:00",
+    "completedAt": "2026-11-19T01:25:41.777874+00:00"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "caseId": "J02-local-login-admin-reprobe",
+    "journeyId": "J02",
+    "role": "admin",
+    "caseKind": "journey",
+    "environment": "local-dedicated",
+    "integrationLevel": "L2-app-internal",
+    "expected": "Admin login with ADMIN_SUPER_PASSWORD",
+    "actual": "http://127.0.0.1:3000/admin \u2014 Pass when using ADMIN_SUPER_PASSWORD; Fail with AuditLocalPass!2026",
+    "functionalResult": "Pass",
+    "visualResult": "Pass",
+    "journeyCompletion": true,
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j02-admin-reprobe-env.png"
+      }
+    ],
+    "assertionRefs": [
+      {
+        "type": "doc",
+        "rel": "admin-login-root-cause.md"
+      },
+      {
+        "type": "api",
+        "loginAdmin": "ok with ADMIN_SUPER_PASSWORD"
+      }
+    ],
+    "fixtureIds": [
+      "audit.admin@example.com"
+    ],
+    "startedAt": "2026-11-19T01:25:41.777874+00:00",
+    "completedAt": "2026-11-19T01:25:41.777874+00:00"
   }
 ]

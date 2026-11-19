@@ -40,6 +40,14 @@ creator/signed
 
 | ID | Missing resource | Attempted resolution | Smallest Ola action |
 |----|------------------|----------------------|---------------------|
+| J13/J16 | Bound `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` **not visible in this VM** | Re-probed shell, `.env.local`, next-server environ (names only) — all absent | **Start new worker** so secrets inject at boot |
+| J15 | Same + funded collaboration | Dual-sign done earlier; funding blocked | After new worker: J13 then J15 |
+| J02 admin (explained) | N/A — harness pwd source mismatch | loginAdmin proves ADMIN_SUPER_PASSWORD works | Harness should load `.env.local` / pass admin env explicitly |
+
+## Blocked / missing resources (exact)
+
+| ID | Missing resource | Attempted resolution | Smallest Ola action |
+|----|------------------|----------------------|---------------------|
 | J13/J16 | `STRIPE_SECRET_KEY` (sk_test_) + `STRIPE_WEBHOOK_SECRET` bound to Cloud Agent / local `.env.local` | Local app + marketplace primary synthetic route prepared; Checkout not callable without Stripe test key | Bind Stripe **test** secrets to agent env (no live keys) |
 | J15 | Funded collaboration + payout provider sandbox (Stripe Connect / Airwallex test) + webhook reachability | Dual-sign completed; funding gate still needs provider sandbox | Provide test payout credentials after J13 |
 | J02 admin local | Working local admin password/`AuditLocalAdmin!2026` path failed login in harness | Business/influencer local login Pass; public admin Pass historically | **Separate P0** — do not mix into audit attestation |
@@ -49,7 +57,7 @@ creator/signed
 | ID | Status | Notes |
 |----|--------|-------|
 | J01 | Pass | email=audit.r3mrvlgh.signup.mwmst7q8@example.com; user=audit.r3mrvlgh.signup.mwmst7q8@example.com; mailDelta=1; url=http://127.0.0.1:3000/account/verify?email=a |
-| J02 | Partial | Local business/influencer login Pass; local admin Fail (separate P0); public logins Pass |
+| J02 | Partial | Member logins Pass; admin Fail root-caused (harness fallback pwd ≠ ADMIN_SUPER_PASSWORD); reprobe Pass — see admin-login-root-cause.md |
 | J03 | Partial | Discover/card inventory opens only — false journey Pass avoided |
 | J04 | Pass | briefs=cmwms5ddg00ncjsu70yjkim0x/AUDIT debug send/draft
 cmwms41i300mcjsu77wn66by9/AUDIT r3mrvlgh Main mwms3x9b/draft
@@ -64,10 +72,10 @@ cmwms41ip00mdjsu7wkmlliks/ACCEPTED/audit-r3mrvlgh-a; acceptedHeuristic=true |
 | J11 | Pass | business/signed
 creator/signed |
 | J12 | Pass | Status: signed · Influrios in-app · 2/2 signed; doc=signed |
-| J13 | Blocked | MISSING_RESOURCE: Stripe/provider sandbox secrets not bound in Cloud Agent env |
+| J13 | Blocked | Stripe secrets bound per Ola but **ABSENT in this VM** — fresh worker required (see stripe-secret-probe.json) |
 | J14 | Blocked | Milestone submit/revise/approve needs funded collaboration (depends on J13 Stripe) |
-| J15 | Blocked | MISSING_RESOURCE: Stripe/provider sandbox secrets not bound in Cloud Agent env |
-| J16 | Blocked | MISSING_RESOURCE: Stripe/provider sandbox secrets not bound in Cloud Agent env |
+| J15 | Blocked | Upstream J13; secrets not visible in this VM — fresh worker required |
+| J16 | Blocked | Same as J13 — STRIPE_* names absent in this VM |
 | J17 | Blocked | Retry/failure money paths need provider sandbox after J13 |
 | J18 | Blocked | Discount mutating admin ops not fully executed this revision |
 | J19 | Blocked | Tax/payment-settings mutating ops not fully executed this revision |
