@@ -30,7 +30,13 @@ Failed probes (HTTP 401, timeout, invalid payload) are **verification_failed** �
    - **Missing `COLLABORATION_SANDBOX_LEDGER_HOLD=1`:** refuse.
    - **Sandbox gates pass:** open labelled **`sandbox_ledger_hold`** only (`simulation: true`, `providerE2eComplete: false`). Ordinary Checkout is used as a **test collection** — never labelled as allocated-funds/Treasury collection.
 
-3. **Provenance:** On deposit open, funding `routeSnapshotJson.collaborationCollection` and deposit `instructionsJson` persist sandbox provenance. Settlement reads that frozen record — changing the Stripe key later does **not** reclassify existing funding.
+3. **Provenance:** On deposit open, funding `routeSnapshotJson.collaborationCollection` and deposit `instructionsJson` persist sandbox provenance. Settlement **and** `createReleaseOrTransfer` use the same `authorizeSandboxLedgerHoldRelease` gate (trusted deployment + enable flag + provenance + non-prod host). Changing the Stripe key later does **not** reclassify existing funding.
+
+4. **Resume:** Returning an existing unpaid Checkout URL requires the same authorize step first (prod host / missing flag refuse). Already-paid reconciliation stays separate.
+
+5. **Probe payload:** HTTP 200 with `{}`, `[]`, or a list object is `verification_failed` — not sandbox_ledger_hold.
+
+6. **Tax fields:** Settlement simulation does **not** overwrite `taxReason`; simulation metadata goes to `commandKey` / audit / reconciliation.
 
 ## Sandbox flow under test
 
