@@ -673,7 +673,7 @@ async function main() {
     const sBill = await shot(page, "j17r34-billing");
     const body = await page.locator("body").innerText();
     let preview: unknown = null;
-    let changed: unknown = null;
+    const changed: unknown = null;
     try {
       const { previewSubscriptionUpdate, updateSubscriptionPrice } = await import("../../src/lib/billing");
       // attempt if helpers exist
