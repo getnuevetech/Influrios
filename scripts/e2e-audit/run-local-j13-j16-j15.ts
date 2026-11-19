@@ -267,7 +267,7 @@ async function main() {
   const infEmail = seeded.influencerEmail;
   const creatorSlug = seeded.creatorSlug;
   // ---------- J13: attempt Stripe funding checkout ----------
-  let j13 = {
+  const j13 = {
     gateError: null,
     deposit: null,
     checkoutUrl: null,
@@ -451,9 +451,9 @@ async function main() {
     let functionalResult = "Blocked";
     let journeyCompletion = false;
     let actual = "";
-    let screens = [sPricing];
+    const screens = [sPricing];
     let webhook = null;
-    let sessionMeta = {};
+    const sessionMeta = {};
 
     if (started.ok) {
       await page.goto(started.url, { waitUntil: "domcontentloaded", timeout: 120000 });
