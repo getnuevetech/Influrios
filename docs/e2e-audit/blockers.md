@@ -1,36 +1,29 @@
-# Blockers (revision r3.5)
+# Blockers (revision r3.6)
 
-## Resolved for TEST collection (not live)
+## Open — precise product / provider limitations
 
-### Was: BLK-J13-COLLABORATION-COLLECTION-GATE
-- **#535 merged:** sandbox-only `sandbox_ledger_hold` when `COLLABORATION_SANDBOX_LEDGER_HOLD=1` + trusted localhost + `sk_test_`.
-- Stripe TEST checkout paid → funding **held** (J13 Pass).
-- **Still true:** Live collaboration deposits closed; capability probe does not set `providerE2eComplete`.
+### BLK-J15-PROVIDER-PAYOUT-UNPROVEN (forever Partial)
+- Simulation only; never Pass without Connect/bank payout proof.
 
-## Open — provider / product
+### BLK-J16-ANNUAL-PLAN (Fail — RCA)
+1. `PlatformSetting` `billing.annualOffers` empty.  
+2. Stripe TEST has no active year-interval Price.  
+3. Monthly Plus Pass retained.
 
-### BLK-J15-PROVIDER-PAYOUT-UNPROVEN
-- Simulated release `sim_sandbox_ledger_hold:…` with `providerE2eComplete:false`.
-- **Does not** satisfy original J15 provider transfer/payout Pass — keep Partial forever until Connect/bank proof.
+### BLK-J17-PRORATION-PRODUCT-GAPS (Partial)
+1. `SubscriptionState.externalId` stored as Checkout Session id (`cs_test_`), not Subscription id (`sub_`).  
+2. `billing.prices` / catalog `offer.priceId` empty → `actionPreviewTierChange` cannot compute amount due.  
+3. Portal control absent when `stripeCustomerId` unset at complete.
 
-### BLK-J16-ANNUAL-PLAN (RCA documented)
-1. `PlatformSetting` `billing.annualOffers` empty → `recurringOfferFor(…,'year')` fails.
-2. Stripe TEST has only monthly Plus Price (`price_1UdKNn…`); no year interval.
-3. Historical Plus/Pro “unavailable” was tax-rule gate — **mitigated** (US subscription 8.25% ready); Pro month checkout opens.
+### BLK-J28-MANAGED-INTRO-FEE-RULE (Partial)
+- Lifecycle advances to `in_conversation`.  
+- `requestIntroFeeSettlement` fails: no active `CollaborationFeeRule` with `serviceLevel=managed_intro`.
 
-### BLK-J16-HOSTED-CHECKOUT-HEADLESS
-- Headless Playwright often cannot fill Stripe Card accordion; computerUse/headed succeeds.
+## Closed this revision
 
-### BLK-J18-DISCOUNT-APPLY-UI
-- Server eligibility proven (year accept / month reject); Apply UI blocked until annual plan purchasable.
-
-### BLK-J17-PRORATION / BLK-J20-RECEIPT
-- Subscriber change proration + invoice/receipt tax line still open Partials.
-
-### BLK-J28-MATCHING-LIFECYCLE
-- Intros inventoried; advance/fee path incomplete.
+- J18 Apply UI (Pro month) — Pass  
+- J20 quote→charge→tax→invoice — Pass  
 
 ## Environment
 
-- Fresh boot secrets: `STRIPE_SECRET_KEY` (`sk_test_`) + `STRIPE_WEBHOOK_SECRET` present.
-- Harness: Postgres `influrios_audit`, Mailpit, `APP_URL=http://127.0.0.1:3000`, `COLLABORATION_SANDBOX_LEDGER_HOLD=1`.
+- `COLLABORATION_SANDBOX_LEDGER_HOLD=1`, `sk_test_`, Mailpit, `influrios_audit`, `APP_URL=http://127.0.0.1:3000`

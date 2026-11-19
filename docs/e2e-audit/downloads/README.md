@@ -11,3 +11,4 @@
 | r3.5 local journeys | `/workspace/docs/e2e-audit/downloads/influrios-e2e-audit-r35-local-journeys.zip` (also store media `j14r35-*`, `vis35-*`) |
 
 Browse expanded media at `/cursor/stores/self/media/e2e-audit/`.
+r3.6 local journeys zip

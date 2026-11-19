@@ -31,3 +31,12 @@ Manual readable-size review against centered-popup design + nav/a11y checklist. 
 ## Honesty rule
 
 Visual coverage Pass does **not** close money journeys (J15/J16-year/J17/J18/J20) or matching (J28).
+
+## r3.6 gap fill
+
+| Capture | Notes |
+|---------|-------|
+| `vis36-admin-dual-chrome.png` | Public Discover/Pricing nav + admin chrome reproduced |
+| `vis36-billing-subscriber.png` | Active Plus billing |
+| `j18r36-pro-month-applied.png` | Discount Apply + tax breakdown in Confirm plan dialog |
+| `j20r36-hosted-invoice.png` | Stripe hosted invoice with tax line |

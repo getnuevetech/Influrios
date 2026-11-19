@@ -1,23 +1,21 @@
-# Prioritized correction register (r3.5)
+# Prioritized correction register (r3.6)
 
-Evidence-backed product/UX issues from local dedicated audit. Not a silent Pass list. Audit **NOT** complete.
+Audit **NOT** complete. Remaining money/lifecycle gaps are product/provider limitations below.
 
 | ID | Priority | Area | Finding | Evidence | Suggested direction |
 |----|----------|------|---------|----------|---------------------|
-| COR-01 | P0 | J15 payout | Simulated `sim_sandbox_ledger_hold:*` release must never be counted as provider payout Pass | `local-journey-r35-results.json` J15; `providerE2eComplete:false` | Keep Payment Standard hold→release→bank payout as separate proof |
-| COR-02 | P0 | J16 hosted pay | Headless Playwright often fails Stripe Card accordion; computerUse succeeds | J13/J16-month prior | Document headed/computerUse path for hosted Checkout |
-| COR-03 | P1 | J16 annual | Annual unavailable: empty `billing.annualOffers` + no Stripe year Price in TEST | r3.5 RCA in journeys.md; only month `price_1UdKNn…` | Admin: save annual offer + create Stripe year Price; or hide Annual CTA |
-| COR-04 | P1 | J18 Apply UI | Discount Apply unreachable while annual Plus gated | J18 r35; server year-ok / month-reject | Unlock annual first; expose discount field on annual Checkout panel |
-| COR-05 | P2 | Plan availability (historical) | “temporarily unavailable” from missing country tax rule | Mitigated: US subscription 8.25% rule present; Pro month checkout opens | Keep tax-rule gate; admin empty-state → tax config |
-| COR-06 | P3 | J14 workroom entry | Workroom deep-links work; hub CTAs still easy to miss | J14 Pass via `?focus=` | Clearer hub → workroom entry |
-| COR-07 | P1 | J17 proration | Active Plus confirmed; Customer Portal / `subscription.update` proration not completed | J17 r35 Pro hosted open; annual blocked | Finish portal cancel/resume + proration screenshots after annual/Pro prices exist |
-| COR-08 | P1 | J20 receipt chain | Tax quote 8.25% OK; Stripe invoice tax often 0 without `taxRateId`/automatic_tax | J20 r35 calcOk; invoice list | Attach exclusive tax rate or automatic_tax on Subscribe; capture receipt |
-| COR-09 | P1 | Visual/nav | **Admin dual chrome:** public Home/Discover/Pricing nav above admin ops (`vis35-admin-home-desk.png`). **Terminology:** “Top Creator Categories” / Creator wording persists alongside Influencer | `vis35-*`; visual-review.md | Strip public marketing nav from `/admin/*`; standardize Influencer label |
-| COR-10 | P2 | Matching | ManagedIntro inventory only; fee/advance lifecycle open | J28 Partial | Continue intro advance/fee without funding dependency |
-| COR-11 | P2 | Billing price IDs | `billing.prices` + `STRIPE_PRICE_*` empty; monthly relies on Checkout amount fallback | `listBillingPriceIds()` | Persist price IDs in admin payment settings for Plus/Pro/Business |
+| COR-01 | P0 | J15 payout | Simulation ≠ provider payout Pass | r36 J15; `providerE2eComplete:false` | Prove Connect/bank payout separately |
+| COR-03 | P1 | J16 annual | Empty `billing.annualOffers` + no Stripe year Price | J16 r36 Fail RCA | Admin save annual offer + create year Price; or hide Annual CTA |
+| COR-07 | P1 | J17 proration | `completeCheckout`/`applyPlanOnce` stores `cs_test_` as `SubscriptionState.externalId` (not `sub_`); `billing.prices` empty so `offer.priceId` blank | J17 r36 `previewNative` fail; repair still blocked on priceId | Persist Stripe `sub_` id; save price IDs in admin; expose portal when `stripeCustomerId` set |
+| COR-08 | P3 | J20 | Closed in r3.6 Pass | invoice tax=239 hosted+pdf | — |
+| COR-04 | P3 | J18 | Closed for Pro month Apply; annual Apply still gated by COR-03 | J18 r36 Pass screenshots | Unlock annual for annual-code Apply path |
+| COR-09 | P1 | Visual/nav | Admin dual chrome + Creator terminology | `vis36-admin-dual-chrome.png` | Strip public nav from `/admin/*`; Influencer labels |
+| COR-10 | P1 | J28 matching fee | No `CollaborationFeeRule` for `managed_intro` | J28 r36 feeQuote error | Seed/admin create managed_intro fee rule |
+| COR-11 | P2 | Billing price IDs | `billing.prices` + `STRIPE_PRICE_*` empty | listBillingPriceIds all `''` | Persist Plus/Pro price IDs |
+| COR-12 | P2 | J17 portal | No portal control when customer id missing | J17 r36 | Set customer on checkout complete; show Manage billing |
 
-## Label legend (money journeys)
+## Label legend
 
-1. **Stripe TEST checkout** — real `cs_test_` / `sk_test_` / `livemode=false` payment confirmed.
-2. **Simulated internal release** — `sim_sandbox_ledger_hold:*`, `providerE2eComplete=false`.
-3. **Provider payout UNPROVEN** — Connect/bank payout not executed; simulation ≠ Pass.
+1. **Stripe TEST checkout** — real paid `cs_test_` / `sk_test_`  
+2. **Simulated internal release** — `sim_sandbox_ledger_hold:*`, `providerE2eComplete=false`  
+3. **Provider payout UNPROVEN** — no Connect/bank payout; simulation ≠ Pass

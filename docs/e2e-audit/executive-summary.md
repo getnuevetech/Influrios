@@ -1,23 +1,22 @@
-# Executive summary (revision r3.5)
+# Executive summary (revision r3.6)
 
-**Verdict: Incomplete — continue #534.** CI green ≠ audit complete. Simulated releases ≠ provider payout Pass.
+**Verdict: Incomplete — continue #534.** Remaining items are Pass or blocked with precise product/provider limitations. J15 never Pass without provider payout.
 
 ## Highlights
 
-| Journey | Result | Label / gap |
-|---------|--------|-------------|
-| J14 deliver/revise/approve | **Pass** | Dual-party workroom; v1 revise → v2 approve → `release_scheduled`; funding held; ≠ payout |
-| J15 release/payout | **Partial** | Simulated `sim_sandbox_ledger_hold:…`; **providerE2eComplete=false**; payout **UNPROVEN** |
-| J16 monthly Plus | **Pass** (retained) | Stripe TEST Subscribe $19/mo |
-| J16 annual / Plus-Pro RCA | Documented | Empty `billing.annualOffers` + no Stripe year Price; tax gate mitigated |
-| J17 / J18 / J20 | Partial | Proration / Apply UI / invoice-receipt gaps |
-| J03, J21, J24–J27, J29, J30 | **Pass** | Independently driven with screenshots |
+| Journey | Result | Notes |
+|---------|--------|-------|
+| J18 discount Apply | **Pass** | Pro month Checkout Apply `AUDITPRO15M`; year-on-month rejected |
+| J20 quote→invoice | **Pass** | Pro $29 + $2.39 tax = $31.39 Stripe TEST; invoice tax=239; hosted+PDF |
+| J16 annual | **Fail** | Empty annualOffers + no year Price (RCA) |
+| J17 proration | **Partial** | `externalId=cs_test_` + empty `billing.prices` |
+| J28 matching fee | **Partial** | Advanced lifecycle; no `managed_intro` fee rule |
+| J15 payout | **Partial forever** | Simulation only |
 
 ## Counts (J01–J30)
 
-- Pass: **24**
-- Partial: **6** (J15, J16, J17, J18, J20, J28)
-- Blocked (gate): **0** — live deposits still closed; payout unproven under J15
+- Pass: **26**
+- Partial: **4** (J15, J16, J17, J28)
+- Blocked (collection gate): **0**
 
-No live money. Correction register: [correction-register.md](./correction-register.md).  
-Media: `/cursor/stores/self/media/e2e-audit/local-journeys/` (`j14r35-*`, `j*r35-*`, `vis35-*`).
+Media: `/cursor/stores/self/media/e2e-audit/local-journeys/` (`j18r36-*`, `j20r36-*`, `j28r36-*`, `vis36-*`).
