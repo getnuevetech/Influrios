@@ -1,4 +1,4 @@
-# Blockers (revision r3.2 — fresh-boot Stripe execution)
+# Blockers (revision r3.3 — product gate held; non-funding advanced)
 
 ## Open — product / automation
 
@@ -6,8 +6,15 @@
 - **Secrets on this VM:** `STRIPE_SECRET_KEY` (`sk_test_`) + `STRIPE_WEBHOOK_SECRET` (`whsec_`) **PRESENT** (fresh boot `bc-133de653-…`). Stripe `GET /v1/checkout/sessions?limit=1` → 200, `livemode=false`.
 - **Attempted:** Seed dual-party `awaiting_provider` funding (`audit.r3mrvlgh.business-a` / `influencer-a`); call `startFundingDeposit({ method: "card" })`.
 - **Result:** Blocked by product gate — `collaborationCollectionGate({ allocatedFunds: false, treasury: false })` hardcodes refusal: *“New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged.”* (`src/lib/funding-checkout.ts` + `src/lib/payment-account-routing.ts`).
-- **Smallest Ola action:** Decide whether Payment Standard should keep new collaboration card deposits closed, or wire the gate to proven sandbox capability evidence (product change = separate PR; audit does not silent-fix).
+- **Ola notified (r3.3):** Product decision required. **Audit will NOT silent-fix the gate.**
+- **Downstream still Blocked until decision:** J14 (milestones), J15 (payout), J17 (retry/failure money), J20 (withdrawal).
+- **Smallest Ola action:** Decide whether Payment Standard should keep new collaboration card deposits closed, or wire the gate to proven sandbox capability evidence (product change = separate PR).
 - Evidence: [`local-journey-stripe-results.json`](./local-journey-stripe-results.json), [`stripe-secret-probe.json`](./stripe-secret-probe.json)
+
+### Cleared from Blocked this revision (non-funding)
+- **J18** → Partial (admin + server eligibility; Checkout Apply UI still missing)
+- **J19** → Pass (tax UI + DB)
+- **J22** → Pass (dual-party messages + Mailpit)
 
 ### BLK-J15-UPSTREAM-J13
 - Payout/release after funding not executed — funding never reached `held` because J13 card deposit cannot open.

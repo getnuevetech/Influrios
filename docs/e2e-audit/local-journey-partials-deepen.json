@@ -1,0 +1,377 @@
+{
+  "recordedAt": "2026-11-19T02:10:57.897Z",
+  "results": [
+    {
+      "runId": "AUDIT_LOCAL_R3",
+      "buildId": "local-dev",
+      "environment": "local-dedicated",
+      "startedAt": "2026-11-19T02:10:02.919Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j03b-discover.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j03b-discover.png"
+        },
+        {
+          "rel": "local-journeys/j03b-creator-card.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j03b-creator-card.png"
+        },
+        {
+          "rel": "local-journeys/j03b-after-shortlist.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j03b-after-shortlist.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "db",
+          "shortlist": "cmwmwtqj90001jshytqew19te|audit-r3mrvlgh-a|AUDIT J03 deepen",
+          "before": "1",
+          "after": "1"
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J03-local-discover-shortlist-mutate",
+      "journeyId": "J03",
+      "role": "business",
+      "expected": "Discover/card + shortlist mutate with DB evidence; full discover journey still Partial",
+      "actual": "{\"before\":\"1\",\"after\":\"1\",\"row\":\"cmwmwtqj90001jshytqew19te|audit-r3mrvlgh-a|AUDIT J03 deepen\",\"added\":true,\"via\":\"lib-addToShortlist\",\"slug\":\"audit-r3mrvlgh-a\",\"wsId\":\"cmwmvi0g80055jsnch7cl3fvq\",\"mutated\":true}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "fixtureIds": [
+        "audit.r3mrvlgh.business-a@example.com",
+        "audit-r3mrvlgh-a"
+      ],
+      "completedAt": "2026-11-19T02:10:02.919Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R3",
+      "buildId": "local-dev",
+      "environment": "local-dedicated",
+      "startedAt": "2026-11-19T02:10:09.741Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j21b-hub.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j21b-hub.png"
+        },
+        {
+          "rel": "local-journeys/j21b-account.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j21b-account.png"
+        },
+        {
+          "rel": "local-journeys/j21b-account-after.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j21b-account-after.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "db",
+          "workspace": "cmwmvi0g80055jsnch7cl3fvq|AUDIT r3mrvlgh Co A|BUSINESS_FREE",
+          "shortlistN": "1"
+        },
+        {
+          "type": "ui",
+          "sawShortlist": false,
+          "noteSaved": false
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J21-local-business-shell-entity-deepen",
+      "journeyId": "J21",
+      "role": "business",
+      "expected": "Business hub shows workspace entity + shortlist; optional account mutate; still Partial without full entity matrix",
+      "actual": "{\"ws\":\"cmwmvi0g80055jsnch7cl3fvq|AUDIT r3mrvlgh Co A|BUSINESS_FREE\",\"shortlistN\":\"1\",\"sawShortlist\":false,\"noteSaved\":false}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "fixtureIds": [
+        "audit.r3mrvlgh.business-a@example.com",
+        "cmwmvi0g80055jsnch7cl3fvq"
+      ],
+      "completedAt": "2026-11-19T02:10:09.741Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R3",
+      "buildId": "local-dev",
+      "environment": "local-dedicated",
+      "startedAt": "2026-11-19T02:10:19.233Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j24b-unrelated-contract.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j24b-unrelated-contract.png"
+        },
+        {
+          "rel": "local-journeys/j24b-member-admin.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j24b-member-admin.png"
+        },
+        {
+          "rel": "local-journeys/j24b-limited-admin.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j24b-limited-admin.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "denial",
+          "deniedContract": true,
+          "adminDenied": true,
+          "limitedDenied": true
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PARTIAL: denial samples captured; full cross-account IDOR matrix still fixture-limited",
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J24-local-permission-denial-mutate-deepen",
+      "journeyId": "J24",
+      "role": "influencer+admin-limited",
+      "expected": "Unrelated contract content denial + admin surface denial; still Partial (not full IDOR matrix)",
+      "actual": "{\"docId\":\"cmwmw9yik0000jsmteiw6nq85\",\"deniedContract\":true,\"adminDenied\":true,\"limitedDenied\":true,\"url\":\"http://127.0.0.1:3000/collaboration/contracts/cmwmw9yik0000jsmteiw6nq85\",\"sawForeignMsg\":false,\"msgCount\":\"2\"}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "fixtureIds": [
+        "cmwmw9yik0000jsmteiw6nq85",
+        "audit.r3mrvlgh.admin-limited@example.com"
+      ],
+      "completedAt": "2026-11-19T02:10:19.233Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R3",
+      "buildId": "local-dev",
+      "environment": "local-dedicated",
+      "startedAt": "2026-11-19T02:10:25.891Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j25b-member-view.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j25b-member-view.png"
+        },
+        {
+          "rel": "local-journeys/j25b-after-save.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j25b-after-save.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "db",
+          "beforePhone": "+15554125376",
+          "afterPhone": "+15554223536",
+          "mutated": true
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J25-local-admin-accounts-phone-mutate",
+      "journeyId": "J25",
+      "role": "admin",
+      "expected": "Admin accounts member phone mutate on synthetic unrelated; journey remains Partial (not full accounts suite)",
+      "actual": "{\"uid\":\"cmwmvi0iw005cjsncfovposxb\",\"beforePhone\":\"+15554125376\",\"afterPhone\":\"+15554223536\",\"uiMutated\":false,\"mutated\":true}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "fixtureIds": [
+        "cmwmvi0iw005cjsncfovposxb"
+      ],
+      "completedAt": "2026-11-19T02:10:25.891Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R3",
+      "buildId": "local-dev",
+      "environment": "local-dedicated",
+      "startedAt": "2026-11-19T02:10:31.260Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j26b-plans.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j26b-plans.png"
+        },
+        {
+          "rel": "local-journeys/j26b-plans-detail.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j26b-plans-detail.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "db",
+          "planCount": "6"
+        },
+        {
+          "type": "inventory",
+          "opened": true
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J26-local-admin-plans-deepen-mutate-safe",
+      "journeyId": "J26",
+      "role": "admin",
+      "expected": "Plans inventory + detail open; avoid destructive plan rewrite — remain Partial",
+      "actual": "{\"planCount\":\"6\",\"opened\":true,\"url\":\"http://127.0.0.1:3000/admin/plans\"}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T02:10:31.260Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R3",
+      "buildId": "local-dev",
+      "environment": "local-dedicated",
+      "startedAt": "2026-11-19T02:10:36.435Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j27b-jobs.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j27b-jobs.png"
+        },
+        {
+          "rel": "local-journeys/j27b-cms.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j27b-cms.png"
+        }
+      ],
+      "assertionRefs": [],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J27-local-admin-jobs-cms-deepen",
+      "journeyId": "J27",
+      "role": "admin",
+      "expected": "Jobs + CMS surfaces open; mutating CMS left Partial without durable content rewrite evidence",
+      "actual": "{\"url\":\"http://127.0.0.1:3000/admin/landing\",\"hasForm\":false}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T02:10:36.435Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R3",
+      "buildId": "local-dev",
+      "environment": "local-dedicated",
+      "startedAt": "2026-11-19T02:10:46.008Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j28b-matching.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j28b-matching.png"
+        },
+        {
+          "rel": "local-journeys/j28b-after-mutate.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j28b-after-mutate.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "db",
+          "latestIntro": "cmwmwy6kp02qjjs31ohy7k3p9|AUDIT Business A|audit-r3mrvlgh-a|AUDIT J28 intro mwmwy49i|draft",
+          "latestAlt": "",
+          "afterAlt": "0",
+          "introCounts": {
+            "ManagedIntro": "1",
+            "ManagedIntroEvent": "1",
+            "ManagedMatchRequest": "0",
+            "MarketplaceMatchRecord": "3",
+            "MarketplaceMatchSave": "0"
+          }
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PARTIAL: matching mutate attempted; full intro lifecycle not claimed Pass",
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J28-local-admin-matching-intro-mutate",
+      "journeyId": "J28",
+      "role": "admin",
+      "expected": "Matching intro/opt-in mutate without funding; remain Partial unless durable intro row proven",
+      "actual": "{\"introTable\":\"ManagedIntro\\nManagedIntroEvent\\nManagedMatchRequest\\nMarketplaceMatchRecord\\nMarketplaceMatchSave\",\"introCounts\":{\"ManagedIntro\":\"1\",\"ManagedIntroEvent\":\"1\",\"ManagedMatchRequest\":\"0\",\"MarketplaceMatchRecord\":\"3\",\"MarketplaceMatchSave\":\"0\"},\"afterAlt\":\"0\",\"latestAlt\":\"\",\"latestIntro\":\"cmwmwy6kp02qjjs31ohy7k3p9|AUDIT Business A|audit-r3mrvlgh-a|AUDIT J28 intro mwmwy49i|draft\",\"submitted\":true,\"optInSaved\":true,\"title\":\"AUDIT J28 intro mwmwy49i\",\"url\":\"http://127.0.0.1:3000/admin/matching?created=1\"}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T02:10:46.008Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R3",
+      "buildId": "local-dev",
+      "environment": "local-dedicated",
+      "startedAt": "2026-11-19T02:10:52.771Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j29b-home.png"
+        },
+        {
+          "rel": "local-journeys/j29b-pricing.png"
+        },
+        {
+          "rel": "local-journeys/j29b-about.png"
+        },
+        {
+          "rel": "local-journeys/j29b-pricing-mobile.png"
+        }
+      ],
+      "assertionRefs": [],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": false,
+      "caseKind": "visual",
+      "caseId": "J29-local-public-visual-independent",
+      "journeyId": "J29",
+      "role": "public",
+      "expected": "Independent public visual captures; not journey Pass",
+      "actual": "{\"routes\":[\"/\",\"/pricing\",\"/about\",\"/pricing@390\"]}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T02:10:52.771Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R3",
+      "buildId": "local-dev",
+      "environment": "local-dedicated",
+      "startedAt": "2026-11-19T02:10:57.638Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j30b-a11y-desktop.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j30b-a11y-desktop.png"
+        },
+        {
+          "rel": "local-journeys/j30b-a11y-mobile.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j30b-a11y-mobile.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "a11y-smoke",
+          "unlabeledButtons": 0,
+          "unlabeledInputs": 0,
+          "h1": 1
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": false,
+      "caseKind": "visual",
+      "caseId": "J30-local-visual-a11y-independent",
+      "journeyId": "J30",
+      "role": "business",
+      "expected": "Independent visual/responsive/a11y smoke; full checklist Partial",
+      "actual": "{\"a11y\":{\"unlabeledButtons\":0,\"unlabeledInputs\":0,\"h1\":1}}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T02:10:57.638Z"
+    }
+  ]
+}

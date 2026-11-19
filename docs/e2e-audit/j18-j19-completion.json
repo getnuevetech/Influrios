@@ -1,0 +1,54 @@
+{
+  "recordedAt": "2026-11-19T01:59:11.533Z",
+  "j18": {
+    "functionalResult": "Partial",
+    "note": "See eligibility + UI fields",
+    "evidence": {
+      "offers": "AUDITANNW9YL6|active|year|1500|STARTER",
+      "code": "AUDITANNW9YL6|active|year|1500|STARTER",
+      "offerFound": false,
+      "pricingAnnualUnavailable": false,
+      "upgradeVisible": false,
+      "businessPlansText": "∞\nInflurios\nDiscover\nInfluencer Plans\nBusiness Plans\nResources\nYour account\nStart Free\nBusiness plans\nMonthly\nAnnual\nBusiness Free\n\nFree\n\n✓\nShortlist of 5\n✓\n3 inquiries per month\n✓\n1 team seat\nStart free\nMost popular\nBusiness Pro\n\n$99/month\n\nAnnual b",
+      "tax": {
+        "taxBefore": "0",
+        "taxAfter": "0",
+        "latest": "",
+        "saved": false,
+        "noticeSnippet": "Taxonomy"
+      }
+    },
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j18b-pricing-annual.png"
+      },
+      {
+        "rel": "local-journeys/j18b-after-upgrade-attempt.png"
+      },
+      {
+        "rel": "local-journeys/j18b-business-plans.png"
+      }
+    ]
+  },
+  "j19": {
+    "functionalResult": "Partial",
+    "evidence": {
+      "taxBefore": "0",
+      "taxAfter": "0",
+      "latest": "",
+      "saved": false,
+      "noticeSnippet": "Taxonomy"
+    },
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j19b-add-rule-dialog.png"
+      },
+      {
+        "rel": "local-journeys/j19b-tax-form-filled.png"
+      },
+      {
+        "rel": "local-journeys/j19b-tax-after-save.png"
+      }
+    ]
+  }
+}
