@@ -1,19 +1,20 @@
-# Prioritized correction register (r3.4)
+# Prioritized correction register (r3.5)
 
-Evidence-backed product/UX issues from local dedicated audit after #535 merge. Not a silent Pass list.
+Evidence-backed product/UX issues from local dedicated audit. Not a silent Pass list. Audit **NOT** complete.
 
 | ID | Priority | Area | Finding | Evidence | Suggested direction |
 |----|----------|------|---------|----------|---------------------|
-| COR-01 | P0 | J15 payout | Simulated `sim_sandbox_ledger_hold:*` release must never be counted as provider payout Pass | `local-journey-r34-results.json` J15; `providerE2eComplete:false` | Keep Payment Standard hold→release→bank payout as separate proof; audit labels simulation explicitly |
-| COR-02 | P0 | J16 hosted pay | Headless Playwright often fails to expand/fill Stripe Card fields; computerUse succeeds | J13 paid via computerUse; J16 month `cs_test_` opened unpaid (`payMethod:no-pi`) | Document headed/computerUse path for hosted Checkout; optional Stripe CLI listener |
-| COR-03 | P1 | J16 annual | `startCheckout` year → “Annual billing is not available for this plan” for creator_plus | J16 year Fail actual | Confirm product: enable annual Stripe price for Plus, or surface clearer pricing UX |
-| COR-04 | P1 | J18 Apply UI | Discount Apply control not reachable from pricing when upgrade panel/checkout field absent | J18 r34 screenshots; server eligibility Pass | Ensure annual Checkout panel exposes discount field when plans are purchasable |
-| COR-05 | P1 | Plan availability | Historical “temporarily unavailable” caused by missing country tax rule (`paidPlanAvailability`) | `country-tax.ts`; tax family rule now present; pricingUnavailable=false in r34 | Keep tax rule required; admin empty-state should point to tax config |
-| COR-06 | P2 | J14 workroom | Milestone status can be mutated in DB; dual-party UI workroom recording incomplete | J14 Partial | Product workroom routes for submit/revise/approve need clearer entry from hubs |
-| COR-07 | P2 | J17 changes | Influencer on Starter Free — Change plan UI present; no active paid sub for proration proof | J17 billing screenshots | Complete after J16 paid sub exists; exercise upgrade/downgrade/cancel in sandbox |
-| COR-08 | P2 | J20 chain | Tax calc 8.25% works; checkout→invoice→receipt reconciliation incomplete | J20 calc ok taxCents=825 | Finish with paid subscription invoice + receipt screenshots |
-| COR-09 | P2 | Visual/nav | Expanded desktop/mobile captures; check duplicated public nav in admin + Creator vs Influencer wording | `vis34-*` screenshots; findings in VIS-r34 | Align admin chrome (no public Discover/Plans nav); standardize Influencer terminology |
-| COR-10 | P3 | Matching | ManagedIntro draft create Partial earlier; full lifecycle still open | prior J28 Partial | Continue intro advance/fee without funding dependency |
+| COR-01 | P0 | J15 payout | Simulated `sim_sandbox_ledger_hold:*` release must never be counted as provider payout Pass | `local-journey-r35-results.json` J15; `providerE2eComplete:false` | Keep Payment Standard hold→release→bank payout as separate proof |
+| COR-02 | P0 | J16 hosted pay | Headless Playwright often fails Stripe Card accordion; computerUse succeeds | J13/J16-month prior | Document headed/computerUse path for hosted Checkout |
+| COR-03 | P1 | J16 annual | Annual unavailable: empty `billing.annualOffers` + no Stripe year Price in TEST | r3.5 RCA in journeys.md; only month `price_1UdKNn…` | Admin: save annual offer + create Stripe year Price; or hide Annual CTA |
+| COR-04 | P1 | J18 Apply UI | Discount Apply unreachable while annual Plus gated | J18 r35; server year-ok / month-reject | Unlock annual first; expose discount field on annual Checkout panel |
+| COR-05 | P2 | Plan availability (historical) | “temporarily unavailable” from missing country tax rule | Mitigated: US subscription 8.25% rule present; Pro month checkout opens | Keep tax-rule gate; admin empty-state → tax config |
+| COR-06 | P3 | J14 workroom entry | Workroom deep-links work; hub CTAs still easy to miss | J14 Pass via `?focus=` | Clearer hub → workroom entry |
+| COR-07 | P1 | J17 proration | Active Plus confirmed; Customer Portal / `subscription.update` proration not completed | J17 r35 Pro hosted open; annual blocked | Finish portal cancel/resume + proration screenshots after annual/Pro prices exist |
+| COR-08 | P1 | J20 receipt chain | Tax quote 8.25% OK; Stripe invoice tax often 0 without `taxRateId`/automatic_tax | J20 r35 calcOk; invoice list | Attach exclusive tax rate or automatic_tax on Subscribe; capture receipt |
+| COR-09 | P1 | Visual/nav | **Admin dual chrome:** public Home/Discover/Pricing nav above admin ops (`vis35-admin-home-desk.png`). **Terminology:** “Top Creator Categories” / Creator wording persists alongside Influencer | `vis35-*`; visual-review.md | Strip public marketing nav from `/admin/*`; standardize Influencer label |
+| COR-10 | P2 | Matching | ManagedIntro inventory only; fee/advance lifecycle open | J28 Partial | Continue intro advance/fee without funding dependency |
+| COR-11 | P2 | Billing price IDs | `billing.prices` + `STRIPE_PRICE_*` empty; monthly relies on Checkout amount fallback | `listBillingPriceIds()` | Persist price IDs in admin payment settings for Plus/Pro/Business |
 
 ## Label legend (money journeys)
 

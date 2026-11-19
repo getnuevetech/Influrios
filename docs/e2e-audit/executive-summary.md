@@ -1,23 +1,23 @@
-# Executive summary (revision r3.4)
+# Executive summary (revision r3.5)
 
 **Verdict: Incomplete — continue #534.** CI green ≠ audit complete. Simulated releases ≠ provider payout Pass.
 
-Merged **#535** into audit branch; enabled `COLLABORATION_SANDBOX_LEDGER_HOLD=1` on localhost. Restored original J01–J30 definitions (**J17** = existing subscriber changes; **J20** = quote-through-final-charge).
-
 ## Highlights
 
-| Journey | Result | Label |
-|---------|--------|-------|
-| J13 collab checkout | **Pass** | Stripe TEST `cs_test_` → funding **held** (`sandbox_ledger_hold`; not allocated-funds/Treasury) |
+| Journey | Result | Label / gap |
+|---------|--------|-------------|
+| J14 deliver/revise/approve | **Pass** | Dual-party workroom; v1 revise → v2 approve → `release_scheduled`; funding held; ≠ payout |
 | J15 release/payout | **Partial** | Simulated `sim_sandbox_ledger_hold:…`; **providerE2eComplete=false**; payout **UNPROVEN** |
-| J16 monthly Plus | **Pass** | Stripe TEST Subscribe $19/mo; `SubscriptionState` active |
-| J16 annual | Fail/open | Product: annual not available for plan |
-| J17 / J18 / J20 | Partial | Subscriber changes / discount Apply UI / quote-invoice chain |
+| J16 monthly Plus | **Pass** (retained) | Stripe TEST Subscribe $19/mo |
+| J16 annual / Plus-Pro RCA | Documented | Empty `billing.annualOffers` + no Stripe year Price; tax gate mitigated |
+| J17 / J18 / J20 | Partial | Proration / Apply UI / invoice-receipt gaps |
+| J03, J21, J24–J27, J29, J30 | **Pass** | Independently driven with screenshots |
 
 ## Counts (J01–J30)
 
-- Pass: **16** (journey IDs with Pass; J16 month evidence Pass while annual open → matrix marks J16 Partial*)
-- Partial: **13**
+- Pass: **24**
+- Partial: **6** (J15, J16, J17, J18, J20, J28)
 - Blocked (gate): **0** — live deposits still closed; payout unproven under J15
 
-No live money. Correction register: [correction-register.md](./correction-register.md). Media: `/cursor/stores/self/media/e2e-audit/local-journeys/` (`j13r34-*`, `j16r34-*`, `vis34-*`).
+No live money. Correction register: [correction-register.md](./correction-register.md).  
+Media: `/cursor/stores/self/media/e2e-audit/local-journeys/` (`j14r35-*`, `j*r35-*`, `vis35-*`).

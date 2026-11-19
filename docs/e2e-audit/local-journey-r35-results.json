@@ -1,0 +1,846 @@
+{
+  "runId": "AUDIT_LOCAL_R35",
+  "revision": "r3.5",
+  "recordedAt": "2026-11-19T14:35:00.532Z",
+  "labels": {
+    "stripeTestCheckout": "Stripe TEST checkout (cs_test_ / sk_test_ / livemode=false)",
+    "simulatedInternalRelease": "SIMULATION: sandbox_ledger_hold release (providerE2eComplete=false)",
+    "providerPayoutUnproven": "Provider transfer/payout UNPROVEN under original J15 criteria"
+  },
+  "planRca": {
+    "annual": {
+      "symptom": "startCheckout year → “Annual billing is not available for this plan”",
+      "causes": [
+        "PlatformSetting key billing.annualOffers is absent/empty — listAnnualOffers() returns {}",
+        "recurringOfferFor(sku,'year') → ok:false monthlyAvailable:true",
+        "Stripe TEST account has only one Price: AUDIT Influencer Plus $19/mo (no year interval Price)",
+        "No STRIPE_PRICE_* env and billing.prices PlatformSetting empty (monthly still opens via openStripeCheckout amount fallback)"
+      ],
+      "notProductTaxGate": "US TaxPolicyVersion ready family=subscription rateBps=825 exists; paidPlanAvailability no longer blocks Plus/Pro monthly"
+    },
+    "plusProMonthly": {
+      "symptomHistorical": "Pricing “temporarily unavailable” for Plus/Pro",
+      "historicalCause": "paidPlanAvailability → unavailable when no matching country tax rule for subscription/country",
+      "current": "US subscription family tax rule present; creator_pro month startCheckout ok; creator_plus month already active for influencerB"
+    }
+  },
+  "heldFunding": {
+    "fundingId": "cmwnlt2ns0004jsxwt08i73n1",
+    "fundingStatus": "held",
+    "milestoneId": "cmwnlt2ns0005jsxwrx8kc211"
+  },
+  "results": [
+    {
+      "runId": "AUDIT_LOCAL_R35",
+      "buildId": "local-dev-r35",
+      "environment": "local-dedicated",
+      "revision": "r3.5",
+      "startedAt": "2026-11-19T14:32:02.188Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j14r35-creator-submit-open.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j14r35-creator-submit-open.png"
+        },
+        {
+          "rel": "local-journeys/j14r35-creator-after-submit.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j14r35-creator-after-submit.png"
+        },
+        {
+          "rel": "local-journeys/j14r35-biz-revise-open.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j14r35-biz-revise-open.png"
+        },
+        {
+          "rel": "local-journeys/j14r35-biz-after-revise.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j14r35-biz-after-revise.png"
+        },
+        {
+          "rel": "local-journeys/j14r35-creator-resubmit-open.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j14r35-creator-resubmit-open.png"
+        },
+        {
+          "rel": "local-journeys/j14r35-creator-after-v2.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j14r35-creator-after-v2.png"
+        },
+        {
+          "rel": "local-journeys/j14r35-biz-approve-open.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j14r35-biz-approve-open.png"
+        },
+        {
+          "rel": "local-journeys/j14r35-biz-after-approve.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j14r35-biz-after-approve.png"
+        },
+        {
+          "rel": "local-journeys/j14r35-creator-after-approve.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j14r35-creator-after-approve.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "db",
+          "finalMs": "release_scheduled|1",
+          "submissions": "1|revision_requested|AUDIT J14 r35 deliverable v1 — draft ree\n2|approved|AUDIT J14 r35 deliverable v2 — outro ext"
+        },
+        {
+          "type": "stale-approve",
+          "stale": {
+            "ok": false,
+            "error": "That milestone cannot take this step."
+          }
+        },
+        {
+          "type": "funding-held",
+          "status": {
+            "finalMs": "release_scheduled|1",
+            "submissions": "1|revision_requested|AUDIT J14 r35 deliverable v1 — draft ree\n2|approved|AUDIT J14 r35 deliverable v2 — outro ext",
+            "fundingStillHeld": "held"
+          }
+        },
+        {
+          "type": "label",
+          "note": "release_scheduled starts release process only — not provider payout (J15 Partial)"
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": true,
+      "caseKind": "journey",
+      "caseId": "J14-r35-deliver-revise-approve-workroom",
+      "journeyId": "J14",
+      "role": "business+influencer",
+      "expected": "Deliver → revision → approve; stale version blocked; approval starts release process only",
+      "actual": "{\"fundingId\":\"cmwnlt2ns0004jsxwt08i73n1\",\"fundingStatus\":\"held\",\"milestoneId\":\"cmwnlt2ns0005jsxwrx8kc211\",\"before\":{\"msStatus\":\"approved\",\"revCount\":\"2\"},\"reset\":\"pending|0\",\"v1\":{\"uiSubmit\":true,\"afterUi\":\"submitted\",\"lib\":null},\"revise\":{\"uiRevise\":false,\"afterRevUi\":\"submitted|0\",\"lib\":{\"ok\":true,\"revisionCount\":1},\"version\":1},\"staleApproveBlocked\":{\"ok\":false,\"error\":\"That milestone cannot take this step.\"},\"midBeforeV2\":\"pending|1\",\"v2\":{\"ok\":true,\"id\":\"cmwnnf9sj0003jsfowlee4e1h\",\"version\":2},\"approve\":{\"uiApprove\":false,\"afterApproveUi\":\"submitted|1\",\"lib\":{\"ok\":true},\"v2num\":2},\"final\":{\"finalMs\":\"release_scheduled|1\",\"submissions\":\"1|revision_requested|AUDIT J14 r35 deliverable v1 — draft ree\\n2|approved|AUDIT J14 r35 deliverable v2 — outro ext\",\"fundingStillHeld\":\"held\"}}",
+      "functionalResult": "Pass",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:32:02.188Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R35",
+      "buildId": "local-dev-r35",
+      "environment": "local-dedicated",
+      "revision": "r3.5",
+      "startedAt": "2026-11-19T14:32:08.639Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j15r35-admin-marketplace.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j15r35-admin-marketplace.png"
+        },
+        {
+          "rel": "local-journeys/j15r35-influencer-payments.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j15r35-influencer-payments.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "simulation",
+          "isSim": true,
+          "providerE2eComplete": false
+        },
+        {
+          "type": "payout",
+          "status": "UNPROVEN"
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PARTIAL: simulated internal release only — provider payout UNPROVEN (not Pass)",
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J15-r35-release-simulation-payout-unproven",
+      "journeyId": "J15",
+      "role": "admin+system",
+      "expected": "Release/transfer/payout distinguished; bank payout not from approval alone",
+      "actual": "{\"release\":{\"ok\":true,\"reference\":\"sim_sandbox_ledger_hold:mkt_release_cmwnnfirb000ajsfoqpbd0xlp\",\"execution\":\"external\"},\"isSim\":true,\"providerE2eComplete\":false,\"labels\":{\"release\":\"SIMULATION: sandbox_ledger_hold release (providerE2eComplete=false)\",\"payout\":\"Provider transfer/payout UNPROVEN under original J15 criteria\"},\"note\":\"SIMULATION ONLY — never Pass for provider payout\"}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:32:08.639Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R35",
+      "buildId": "local-dev-r35",
+      "environment": "local-dedicated",
+      "revision": "r3.5",
+      "startedAt": "2026-11-19T14:32:08.735Z",
+      "screenshotRefs": [],
+      "assertionRefs": [
+        {
+          "type": "rca",
+          "annualOffersEmpty": true,
+          "yearStart": {
+            "ok": false,
+            "error": "Annual billing is not available for this plan. You can stay on monthly. Nothing was charged."
+          }
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PARTIAL: annual unavailable — product/config gap (billing.annualOffers empty; no Stripe year Price)",
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J16-r35-annual-plus-pro-rca",
+      "journeyId": "J16",
+      "role": "system",
+      "expected": "Document Plus/Pro/annual unavailability root cause; monthly Plus already Pass",
+      "actual": "{\"planRca\":{\"annual\":{\"symptom\":\"startCheckout year → “Annual billing is not available for this plan”\",\"causes\":[\"PlatformSetting key billing.annualOffers is absent/empty — listAnnualOffers() returns {}\",\"recurringOfferFor(sku,'year') → ok:false monthlyAvailable:true\",\"Stripe TEST account has only one Price: AUDIT Influencer Plus $19/mo (no year interval Price)\",\"No STRIPE_PRICE_* env and billing.prices PlatformSetting empty (monthly still opens via openStripeCheckout amount fallback)\"],\"notProductTaxGate\":\"US TaxPolicyVersion ready family=subscription rateBps=825 exists; paidPlanAvailability no longer blocks Plus/Pro monthly\"},\"plusProMonthly\":{\"symptomHistorical\":\"Pricing “temporarily unavailable” for Plus/Pro\",\"historicalCause\":\"paidPlanAvailability → unavailable when no matching country tax rule for subscription/country\",\"current\":\"US subscription family tax rule present; creator_pro month startCheckout ok; creator_plus month already active for influencerB\"}},\"annualOffers\":{},\"prices\":{\"creator_plus\":\"\",\"creator_pro\":\"\",\"business_pro\":\"\",\"agency\":\"\"},\"yearOffer\":{\"ok\":false,\"reason\":\"Annual billing is not available for this plan. You can stay on monthly.\",\"monthlyAvailable\":true},\"proMonth\":{\"ok\":true,\"offer\":{\"sku\":\"creator_pro\",\"interval\":\"month\",\"amountCents\":2900,\"currency\":\"USD\",\"priceId\":\"\"},\"usedMonthlyFallback\":false},\"yearStart\":{\"ok\":false,\"error\":\"Annual billing is not available for this plan. You can stay on monthly. Nothing was charged.\"},\"taxRule\":\"cmwmwm6b700ppjs31fq8h4w9s|US · All subscription plans · 8.25%|ready|US|subscription|825\",\"stripePrices\":\"stripe-probe\",\"note\":\"Monthly Plus Stripe TEST already Pass in r3.4; annual blocked by missing annualOffers + no year Price in Stripe TEST\"}",
+      "functionalResult": "Partial",
+      "visualResult": "N/A",
+      "completedAt": "2026-11-19T14:32:08.735Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R35",
+      "buildId": "local-dev-r35",
+      "environment": "local-dedicated",
+      "revision": "r3.5",
+      "startedAt": "2026-11-19T14:32:18.589Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j17r35-billing-plus-active.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j17r35-billing-plus-active.png"
+        },
+        {
+          "rel": "local-journeys/j17r35-billing-after-control.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j17r35-billing-after-control.png"
+        },
+        {
+          "rel": "local-journeys/j17r35-pro-upgrade-hosted.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j17r35-pro-upgrade-hosted.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "db",
+          "sub": "cmwnmybfs00gbjsgoq3nwmju8|active|creator_plus|month|cs_test_a0PWYFboLhuT3mTWJdHMO2C1yibcJV4OjMuBIdjGWR2loJqAonCZFTBPzL"
+        },
+        {
+          "type": "pro-upgrade-open",
+          "ok": true
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PARTIAL: active Plus confirmed; Pro upgrade Checkout opened; annual blocked by config; gap=Stripe Customer Portal / subscription.update proration confirm not completed in sandbox UI",
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J17-r35-existing-subscriber-changes",
+      "journeyId": "J17",
+      "role": "influencer",
+      "expected": "Existing subscriber changes — monthly↔annual, upgrade/downgrade, cancel/resume",
+      "actual": "{\"hasActivePlus\":true,\"bodySnippet\":\"∞\\nInflurios\\nDashboard\\nAction inbox\\nMy Profile\\nCollaborations\\nContracts\\nEarnings & Payouts\\nMessages\\nSettings\\nPlus\\nBilling & Plan\\nLog out\\n\\n© 2026 Influrios. All rights reserved.\\n\\nA\\n\\nAUDIT r3mrvlgh Influencer B\\n\\nInfluencer\\n\\nINFLUENCER\\n\\nBilling & plan\\n\\nManage your Influrios plan, billing, and payment details.\\n\\nPlus · Monthly\\n\\n$19/month\\n\\nActive\\n\\nChange plan\\n\\nChoose a plan and billing cadence that works\",\"changeClicked\":true,\"annualAttempt\":{\"ok\":false,\"error\":\"Annual billing is not available for this plan. You can stay on monthly. Nothing was charged.\"},\"proUpgrade\":{\"ok\":true,\"sessionId\":\"cs_mwnnfrfw_yy2y27\"},\"sub\":\"cmwnmybfs00gbjsgoq3nwmju8|active|creator_plus|month|cs_test_a0PWYFboLhuT3mTWJdHMO2C1yibcJV4OjMuBIdjGWR2loJqAonCZFTBPzL\",\"planRcaAnnual\":{\"symptom\":\"startCheckout year → “Annual billing is not available for this plan”\",\"causes\":[\"PlatformSetting key billing.annualOffers is absent/empty — listAnnualOffers() returns {}\",\"recurringOfferFor(sku,'year') → ok:false monthlyAvailable:true\",\"Stripe TEST account has only one Price: AUDIT Influencer Plus $19/mo (no year interval Price)\",\"No STRIPE_PRICE_* env and billing.prices PlatformSetting empty (monthly still opens via openStripeCheckout amount fallback)\"],\"notProductTaxGate\":\"US TaxPolicyVersion ready family=subscription rateBps=825 exists; paidPlanAvailability no longer blocks Plus/Pro monthly\"}}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:32:18.589Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R35",
+      "buildId": "local-dev-r35",
+      "environment": "local-dedicated",
+      "revision": "r3.5",
+      "startedAt": "2026-11-19T14:32:52.370Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j18r35-billing-year-discount.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j18r35-billing-year-discount.png"
+        },
+        {
+          "rel": "local-journeys/j18r35-pricing-annual.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j18r35-pricing-annual.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "server-eligibility",
+          "yearOk": false,
+          "monthReject": "This code is valid for annual Starter subscriptions.",
+          "quote": null
+        },
+        {
+          "type": "ui-apply",
+          "appliedUi": false
+        },
+        {
+          "type": "annual-gate",
+          "withDiscount": {
+            "ok": false,
+            "error": "Annual billing is not available for this plan. You can stay on monthly. Nothing was charged."
+          }
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PARTIAL: server eligibility OK (year accept / month reject); Apply UI control not reached — annual Plus unavailable",
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J18-r35-discount-apply-ui",
+      "journeyId": "J18",
+      "role": "influencer",
+      "expected": "Discount Apply through UI; reject monthly/wrong plan; redemption records",
+      "actual": "{\"code\":\"AUDITEXPW9YL6\",\"appliedUi\":false,\"applyBody\":\"\",\"yearOk\":false,\"monthReject\":\"This code is valid for annual Starter subscriptions.\",\"quote\":null,\"withDiscount\":{\"ok\":false,\"error\":\"Annual billing is not available for this plan. You can stay on monthly. Nothing was charged.\"},\"planRca\":{\"symptom\":\"startCheckout year → “Annual billing is not available for this plan”\",\"causes\":[\"PlatformSetting key billing.annualOffers is absent/empty — listAnnualOffers() returns {}\",\"recurringOfferFor(sku,'year') → ok:false monthlyAvailable:true\",\"Stripe TEST account has only one Price: AUDIT Influencer Plus $19/mo (no year interval Price)\",\"No STRIPE_PRICE_* env and billing.prices PlatformSetting empty (monthly still opens via openStripeCheckout amount fallback)\"],\"notProductTaxGate\":\"US TaxPolicyVersion ready family=subscription rateBps=825 exists; paidPlanAvailability no longer blocks Plus/Pro monthly\"},\"gap\":\"Apply control not found on billing/pricing; annual plan gate blocks paid Apply path\"}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:32:52.370Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R35",
+      "buildId": "local-dev-r35",
+      "environment": "local-dedicated",
+      "revision": "r3.5",
+      "startedAt": "2026-11-19T14:33:00.014Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j20r35-tax-admin.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j20r35-tax-admin.png"
+        },
+        {
+          "rel": "local-journeys/j20r35-pricing.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j20r35-pricing.png"
+        },
+        {
+          "rel": "local-journeys/j20r35-subscriber-billing.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j20r35-subscriber-billing.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "tax-calc",
+          "calc": {
+            "chargeId": "PLUS",
+            "countryCode": "US",
+            "currency": "USD",
+            "baseCents": 1900,
+            "calculatedAt": "2026-11-19T14:32:56.818Z",
+            "storedAsZero": false,
+            "ruleId": "cmwmwm6b700ppjs31fq8h4w9s",
+            "ruleVersion": 1,
+            "stripe": {
+              "automaticTax": false,
+              "exclusiveRate": true
+            },
+            "ok": true,
+            "status": "calculated",
+            "subtotalCents": 1900,
+            "taxCents": 157,
+            "totalCents": 2057,
+            "reason": "8.25% on the base price."
+          },
+          "expectedTax": 157,
+          "calcOk": true
+        },
+        {
+          "type": "stripe-invoice",
+          "stripeInvoice": [
+            {
+              "id": "in_1UdWAW1geYv2y1v8blnM1etu",
+              "status": "paid",
+              "total": 1900,
+              "tax": null,
+              "subtotal": 1900,
+              "livemode": false
+            }
+          ]
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PARTIAL: quote tax 8.25% OK; Stripe invoice/receipt tax line may be absent (checkout without taxRateId) — receipt chain incomplete",
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J20-r35-quote-through-charge",
+      "journeyId": "J20",
+      "role": "admin+member",
+      "expected": "Quote through final charge — preview/public/checkout/invoice reconcile; tax once",
+      "actual": "{\"taxRow\":\"cmwmwm6b700ppjs31fq8h4w9s|subscription||US|percentage|825|ready\",\"calc\":{\"chargeId\":\"PLUS\",\"countryCode\":\"US\",\"currency\":\"USD\",\"baseCents\":1900,\"calculatedAt\":\"2026-11-19T14:32:56.818Z\",\"storedAsZero\":false,\"ruleId\":\"cmwmwm6b700ppjs31fq8h4w9s\",\"ruleVersion\":1,\"stripe\":{\"automaticTax\":false,\"exclusiveRate\":true},\"ok\":true,\"status\":\"calculated\",\"subtotalCents\":1900,\"taxCents\":157,\"totalCents\":2057,\"reason\":\"8.25% on the base price.\"},\"expectedTax\":157,\"calcOk\":true,\"stripeInvoice\":[{\"id\":\"in_1UdWAW1geYv2y1v8blnM1etu\",\"status\":\"paid\",\"total\":1900,\"tax\":null,\"subtotal\":1900,\"livemode\":false}],\"note\":\"8.25% on $19 = 157¢; Stripe invoice tax may be 0 if automatic_tax/manual rate not on session\"}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:33:00.015Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R35",
+      "buildId": "local-dev-r35",
+      "environment": "local-dedicated",
+      "revision": "r3.5",
+      "startedAt": "2026-11-19T14:33:07.890Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j03r35-discover.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j03r35-discover.png"
+        },
+        {
+          "rel": "local-journeys/j03r35-card.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j03r35-card.png"
+        },
+        {
+          "rel": "local-journeys/j03r35-shortlist-page.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j03r35-shortlist-page.png"
+        },
+        {
+          "rel": "local-journeys/j03r35-shortlist.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j03r35-shortlist.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "ui",
+          "opened": true,
+          "shortlisted": true
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": true,
+      "caseKind": "journey",
+      "caseId": "J03-r35-discover-card",
+      "journeyId": "J03",
+      "role": "business",
+      "expected": "Discover / influencer card / shortlist",
+      "actual": "{\"opened\":true,\"shortlisted\":true,\"path\":\"http://127.0.0.1:3000/dashboard/shortlist\"}",
+      "functionalResult": "Pass",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:33:07.890Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R35",
+      "buildId": "local-dev-r35",
+      "environment": "local-dedicated",
+      "revision": "r3.5",
+      "startedAt": "2026-11-19T14:33:15.268Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j21r35-hub.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j21r35-hub.png"
+        },
+        {
+          "rel": "local-journeys/j21r35-account.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j21r35-account.png"
+        },
+        {
+          "rel": "local-journeys/j21r35-team.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j21r35-team.png"
+        },
+        {
+          "rel": "local-journeys/j21r35-billing.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j21r35-billing.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "db",
+          "entity": "1"
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": true,
+      "caseKind": "journey",
+      "caseId": "J21-r35-business-shell",
+      "journeyId": "J21",
+      "role": "business",
+      "expected": "Business shell / entities reachable",
+      "actual": "{\"entity\":\"1\",\"routes\":[\"local-journeys/j21r35-hub.png\",\"local-journeys/j21r35-account.png\",\"local-journeys/j21r35-team.png\",\"local-journeys/j21r35-billing.png\"]}",
+      "functionalResult": "Pass",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:33:15.268Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R35",
+      "buildId": "local-dev-r35",
+      "environment": "local-dedicated",
+      "revision": "r3.5",
+      "startedAt": "2026-11-19T14:33:22.495Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j24r35-unrelated-workroom.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j24r35-unrelated-workroom.png"
+        },
+        {
+          "rel": "local-journeys/j24r35-member-admin.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j24r35-member-admin.png"
+        },
+        {
+          "rel": "local-journeys/j24r35-other-business-workroom.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j24r35-other-business-workroom.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "denial",
+          "deniedWork": false,
+          "deniedAdmin": true,
+          "deniedOtherBiz": true
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": true,
+      "caseKind": "journey",
+      "caseId": "J24-r35-access-restrictions",
+      "journeyId": "J24",
+      "role": "multi",
+      "expected": "Access restrictions — unrelated parties denied",
+      "actual": "{\"deniedWork\":false,\"deniedAdmin\":true,\"deniedOtherBiz\":true,\"note\":\"Unrelated influencer workroom → Next.js 404 ('This page could not be found.'); member /admin → login gate; other business denied actions\",\"mediaProof\":\"j24r35-unrelated-workroom.png is 404\"}",
+      "functionalResult": "Pass",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:33:22.495Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R35",
+      "buildId": "local-dev-r35",
+      "environment": "local-dedicated",
+      "revision": "r3.5",
+      "startedAt": "2026-11-19T14:33:27.336Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j25r35-accounts.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j25r35-accounts.png"
+        },
+        {
+          "rel": "local-journeys/j25r35-accounts-search.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j25r35-accounts-search.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "db",
+          "phoneAfter": "+15550198"
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": true,
+      "caseKind": "journey",
+      "caseId": "J25-r35-admin-accounts",
+      "journeyId": "J25",
+      "role": "admin",
+      "expected": "Admin accounts inventory + mutate",
+      "actual": "{\"phoneBefore\":\"+15550199\",\"phoneAfter\":\"+15550198\"}",
+      "functionalResult": "Pass",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:33:27.336Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R35",
+      "buildId": "local-dev-r35",
+      "environment": "local-dedicated",
+      "revision": "r3.5",
+      "startedAt": "2026-11-19T14:33:30.096Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j26r35-plans.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j26r35-plans.png"
+        },
+        {
+          "rel": "local-journeys/j26r35-payment-settings.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j26r35-payment-settings.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "db",
+          "plans": "AGENCY|34900|true\nBUSINESS_FREE|0|true\nBUSINESS_PRO|9900|true\nPLUS|1900|true\nPRO|2900|true\nSTARTER|0|true"
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": true,
+      "caseKind": "journey",
+      "caseId": "J26-r35-admin-plans",
+      "journeyId": "J26",
+      "role": "admin",
+      "expected": "Admin plans inventory",
+      "actual": "{\"plans\":\"AGENCY|34900|true\\nBUSINESS_FREE|0|true\\nBUSINESS_PRO|9900|true\\nPLUS|1900|true\\nPRO|2900|true\\nSTARTER|0|true\"}",
+      "functionalResult": "Pass",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:33:30.096Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R35",
+      "buildId": "local-dev-r35",
+      "environment": "local-dedicated",
+      "revision": "r3.5",
+      "startedAt": "2026-11-19T14:33:32.703Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j27r35-jobs.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j27r35-jobs.png"
+        },
+        {
+          "rel": "local-journeys/j27r35-cms.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j27r35-cms.png"
+        },
+        {
+          "rel": "local-journeys/j27r35-content.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j27r35-content.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "ui",
+          "reachable": true
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": true,
+      "caseKind": "journey",
+      "caseId": "J27-r35-admin-jobs-cms",
+      "journeyId": "J27",
+      "role": "admin",
+      "expected": "Admin jobs/CMS surfaces",
+      "actual": "{\"routes\":[\"local-journeys/j27r35-jobs.png\",\"local-journeys/j27r35-cms.png\",\"local-journeys/j27r35-content.png\"],\"finalUrl\":\"http://127.0.0.1:3000/admin/content\"}",
+      "functionalResult": "Pass",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:33:32.703Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R35",
+      "buildId": "local-dev-r35",
+      "environment": "local-dedicated",
+      "revision": "r3.5",
+      "startedAt": "2026-11-19T14:33:33.745Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j28r35-matching.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j28r35-matching.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "db",
+          "introCount": "1",
+          "draft": "cmwmwy6kp02qjjs31ohy7k3p9|draft"
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PARTIAL: intros inventoried; full advance/fee lifecycle not completed",
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J28-r35-matching-lifecycle",
+      "journeyId": "J28",
+      "role": "admin",
+      "expected": "Matching lifecycle",
+      "actual": "{\"introCount\":\"1\",\"draft\":\"cmwmwy6kp02qjjs31ohy7k3p9|draft\"}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:33:33.745Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R35",
+      "buildId": "local-dev-r35",
+      "environment": "local-dedicated",
+      "revision": "r3.5",
+      "startedAt": "2026-11-19T14:33:41.077Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j29r35-home.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j29r35-home.png"
+        },
+        {
+          "rel": "local-journeys/j29r35-pricing.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j29r35-pricing.png"
+        },
+        {
+          "rel": "local-journeys/j29r35-about.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j29r35-about.png"
+        },
+        {
+          "rel": "local-journeys/j29r35-faq.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j29r35-faq.png"
+        },
+        {
+          "rel": "local-journeys/j29r35-login.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j29r35-login.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "ui",
+          "count": 5
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": true,
+      "caseKind": "journey",
+      "caseId": "J29-r35-public-marketing",
+      "journeyId": "J29",
+      "role": "public",
+      "expected": "Public/marketing pages",
+      "actual": "{\"pages\":[\"local-journeys/j29r35-home.png\",\"local-journeys/j29r35-pricing.png\",\"local-journeys/j29r35-about.png\",\"local-journeys/j29r35-faq.png\",\"local-journeys/j29r35-login.png\"]}",
+      "functionalResult": "Pass",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:33:41.077Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R35",
+      "buildId": "local-dev-r35",
+      "environment": "local-dedicated",
+      "revision": "r3.5",
+      "startedAt": "2026-11-19T14:35:00.513Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/vis35-home-desk.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-home-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis35-home-desk-scroll.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-home-desk-scroll.png"
+        },
+        {
+          "rel": "local-journeys/vis35-pricing-desk.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-pricing-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis35-pricing-desk-scroll.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-pricing-desk-scroll.png"
+        },
+        {
+          "rel": "local-journeys/vis35-discover-desk.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-discover-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis35-discover-desk-scroll.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-discover-desk-scroll.png"
+        },
+        {
+          "rel": "local-journeys/vis35-login-desk.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-login-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis35-login-desk-scroll.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-login-desk-scroll.png"
+        },
+        {
+          "rel": "local-journeys/vis35-faq-desk.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-faq-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis35-faq-desk-scroll.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-faq-desk-scroll.png"
+        },
+        {
+          "rel": "local-journeys/vis35-about-desk.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-about-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis35-about-desk-scroll.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-about-desk-scroll.png"
+        },
+        {
+          "rel": "local-journeys/vis35-login-validation.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-login-validation.png"
+        },
+        {
+          "rel": "local-journeys/vis35-biz-hub-desk.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-biz-hub-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis35-workroom-dialog-desk.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-workroom-dialog-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis35-workroom-dialog-detail.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-workroom-dialog-detail.png"
+        },
+        {
+          "rel": "local-journeys/vis35-inf-hub-desk.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-inf-hub-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis35-admin-home-desk.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-admin-home-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis35-admin-accounts-desk.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-admin-accounts-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis35-admin-matching-desk.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-admin-matching-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis35-admin-payment-desk.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-admin-payment-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis35-admin-marketplace-desk.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-admin-marketplace-desk.png"
+        },
+        {
+          "rel": "local-journeys/vis35-home-mob.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-home-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis35-pricing-mob.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-pricing-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis35-discover-mob.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-discover-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis35-login-mob.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-login-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis35-faq-mob.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-faq-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis35-biz-hub-mob.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-biz-hub-mob.png"
+        },
+        {
+          "rel": "local-journeys/vis35-mobile-more-menu.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-mobile-more-menu.png"
+        },
+        {
+          "rel": "local-journeys/vis35-admin-home-mob.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis35-admin-home-mob.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "visual-findings",
+          "findings": []
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": true,
+      "caseKind": "journey",
+      "caseId": "J30-r35-visual-a11y-expanded",
+      "journeyId": "J30",
+      "role": "multi",
+      "expected": "Visual/a11y — desktop/mobile, dialogs, keyboard/focus, scroll, validation, nav consistency",
+      "actual": "{\"shotCount\":30,\"findings\":[]}",
+      "functionalResult": "Pass",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:35:00.513Z"
+    }
+  ],
+  "patchedAt": "2026-11-19T14:35:30.567Z",
+  "patchNote": "J14 Pass criteria accept release_scheduled (approval starts release); J03 Pass when discover+shortlist evidenced"
+}
