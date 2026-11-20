@@ -1,3 +1,6 @@
+# ORIGINAL RUN (preserved; superseded by browser-download-corrective-*)
+# Issues: no Files-tab download link; 601-byte PDF viewer stub; signed-out check reused stranger cookie → 404; early http_download_auth_pass=false
+
 # COR-21 browser large-batch + download evidence
 workUrl=http://127.0.0.1:3000/collaboration/work/cmwovw8sw0005jsz8qc1olwc8?tab=milestones&focus=cmwovw8t30007jsz8kaz49vdh&intent=submit
 bodySizeLimit=40mb

@@ -1,0 +1,24 @@
+# COR-21 CORRECTIVE browser download verification
+label=CORRECTIVE
+supersedes=browser-large-batch-run.log (unreconciled; see prior-run-29db36e-unreconciled/)
+workUrl=http://127.0.0.1:3000/collaboration/work/cmwpi87ob0005js42f3i3u3uu?tab=milestones&focus=cmwpi87oj0007js42aol4uge4&intent=submit
+original_path=/tmp/cor21-corrective-mwpi87sw/corrective-cut.pdf
+original_bytes=262144
+original_sha256=0273231d8d92d1c914227ff95a082f43d2ec26d7b35e0b29aab243048d37df77
+submit_url=http://127.0.0.1:3000/collaboration/work/cmwpi87ob0005js42f3i3u3uu?tab=milestones&submitted=1&savedAs=https%3A%2F%2Fdrive.example%2Fcorrective-download
+submit_success=true
+files_tab_download_href=/api/deliverables/cmwpi896z0082jsqrqw2xwxdn
+files_tab_link_text=corrective-cut.pdf
+download_fileId=cmwpi896z0082jsqrqw2xwxdn
+files_tab_click_fetch_status=200
+files_tab_click_fetch_bytes=262144
+files_tab_click_fetch_sha256=0273231d8d92d1c914227ff95a082f43d2ec26d7b35e0b29aab243048d37df77
+byte_match_original=true
+download_owner_status=200 bytes=262144 sha256=0273231d8d92d1c914227ff95a082f43d2ec26d7b35e0b29aab243048d37df77
+download_influencer_status=200 bytes=262144 sha256=0273231d8d92d1c914227ff95a082f43d2ec26d7b35e0b29aab243048d37df77
+download_stranger_status=404 bytes=9 body="Not found"
+download_signed_out_status=401 bytes=26 body="Sign in to open this file."
+all_access_checks_ran=true
+http_download_auth_pass=true
+corrective_pass=true
+wrote=/workspace/media/cor-20-23-acceptance/browser-download-corrective-evidence.txt

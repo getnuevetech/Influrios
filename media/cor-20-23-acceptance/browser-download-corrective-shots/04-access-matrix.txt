@@ -1,0 +1,4 @@
+owner status=200 bytes=262144 sha_match=true
+influencer status=200 bytes=262144 sha_match=true
+stranger status=404 (expect 404)
+signed_out status=401 (expect 401)

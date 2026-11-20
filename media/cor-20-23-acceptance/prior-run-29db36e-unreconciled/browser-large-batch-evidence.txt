@@ -1,0 +1,26 @@
+# COR-21 browser large-batch + download evidence
+# Actual Chromium form (not helper-only, not progressive-only HTTP).
+workUrl=http://127.0.0.1:3000/collaboration/work/cmwovw8sw0005jsz8qc1olwc8?tab=milestones&focus=cmwovw8t30007jsz8kaz49vdh&intent=submit
+bodySizeLimit=40mb
+middlewareClientMaxBodySize=40mb
+batch_files=/tmp/cor21-browser-batch-mwovw8xf/browser-batch-a.pdf,/tmp/cor21-browser-batch-mwovw8xf/browser-batch-b.pdf
+batch_total_bytes=12582912
+batch_gt_10mb=true
+files_selected_a=true
+files_selected_b=true
+submit_url=http://127.0.0.1:3000/collaboration/work/cmwovw8sw0005jsz8qc1olwc8?tab=milestones&submitted=1&savedAs=https%3A%2F%2Fdrive.example%2Fbrowser-large-batch
+submit_success=true
+reopen_shows_submission=true
+browser_large_batch_pass=true
+download_fileId=cmwovwaxt0074jsqrt0obessx
+persisted_file_count=2
+persisted_file_names=browser-batch-a.pdf,browser-batch-b.pdf
+persisted_total_bytes=12582912
+persisted_batch_gt_10mb=true
+download_owner_status=200 bytes=6291456
+download_influencer_status=200 bytes=6291456
+download_stranger_status=404
+download_signed_out_status=401
+http_download_auth_pass=true
+shots=browser-large-batch-shots/
+evidence_kind=browser_form_select_submit_reload_download
