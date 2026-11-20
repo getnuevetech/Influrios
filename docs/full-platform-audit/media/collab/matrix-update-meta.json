@@ -1,0 +1,17 @@
+{
+  "changed_rows": 136,
+  "owned_ids": 136,
+  "slice_status_counts": {
+    "Pass": 43,
+    "Blocked": 62,
+    "Not tested": 31
+  },
+  "matrix_status_counts": {
+    "Not tested": 89,
+    "Pass": 233,
+    "Fail": 15,
+    "Blocked": 129,
+    "Explicitly deferred": 10
+  },
+  "matrix_rows": 476
+}

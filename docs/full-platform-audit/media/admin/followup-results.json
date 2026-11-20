@@ -1,0 +1,108 @@
+{
+  "mailHealth": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\n← Email settings\nEmail health\n\nSMTP, category switches, and paused templates. A category that is on sends the catalog. A category that is off keeps the older plain-text sender. Pausing an essential template stops that message.\n\nProvider\n\nSMTP is ready (admin).\n\nFrom name: Influrios\n\nFailed mail jobs: 32\n\nPaused templates\n\nNone paused.\n\nLive catalog categories\nYour account\nYour invitations\nYour agreement\nCollaboration funding\nYour collaboration\nPayout update\nCase update\nCancellation update\nRefund update\nPayment update\nOperations alert\nSubscription b",
+  "jobsRecent": [
+    "failed mail job can be queued again. Invitation mail is marked delivered only after SMTP accepts it. The sweep clock enqueues each money sweep from POST /api/cron/sweeps. Auto-approval sweeps skip disputed milestones.",
+    "succeeded · 2026-10-13T15:36:12.760Z",
+    "succeeded id cmv6ufj5m000dut01g2jvu0xh · 2026-10-13T15:36:12.760Z",
+    "succeeded · 2026-10-13T15:36:12.768Z",
+    "succeeded id cmv6ufj5p000eut01t3p0flqz · 2026-10-13T15:36:12.768Z",
+    "succeeded · 2026-10-13T15:36:12.776Z",
+    "succeeded id cmv6ufj5r000fut013dywan8h · 2026-10-13T15:36:12.776Z",
+    "succeeded · 2026-10-13T15:36:12.786Z",
+    "succeeded id cmv6ufj5s000gut01c90ko4yp · 2026-10-13T15:36:12.786Z",
+    "failed_payout_retry_sweep",
+    "succeeded · 2026-10-13T15:36:12.794Z",
+    "succeeded id cmv6ufj5u000hut01lz4pa77u · 2026-10-13T15:36:12.794Z",
+    "succeeded · 2026-10-13T15:36:12.803Z",
+    "succeeded id cmv6ufj5w000iut01kxpy8rk4 · 2026-10-13T15:36:12.803Z",
+    "succeeded · 2026-11-13T22:54:49.252Z",
+    "succeeded id cmwfkqzrb000sry01je9ormgg · 2026-11-13T22:54:49.252Z",
+    "succeeded · 2026-10-13T15:36:12.818Z",
+    "succeeded id cmv6ufj5z000kut016jsvrpko · 2026-10-13T15:36:12.818Z",
+    "succeeded · 2026-10-13T15:36:12.839Z",
+    "succeeded id cmv6ufj61000lut013qd0vrgz · 2026-10-13T15:36:12.839Z",
+    "succeeded · 2026-10-13T15:36:12.849Z",
+    "succeeded id cmv6ufj63000mut012o0ufq60 · 2026-10-13T15:36:12.849Z",
+    "succeeded row yet — confirm crontab + CRON_SECRET.",
+    "succeeded row yet — confirm crontab + CRON_SECRET.",
+    "succeeded row yet — confirm crontab + CRON_SECRET.",
+    "verification_email",
+    "SUCCEEDED · 1 ATTEMPTS",
+    "mail_test",
+    "SUCCEEDED · 1 ATTEMPTS",
+    "SUCCEEDED · 1 ATTEMPTS",
+    "SUCCEEDED · 1 ATTEMPTS",
+    "mail_test",
+    "SUCCEEDED · 1 ATTEMPTS",
+    "SUCCEEDED · 1 ATTEMPTS",
+    "SUCCEEDED · 1 ATTEMPTS",
+    "SUCCEEDED · 1 ATTEMPTS",
+    "SUCCEEDED · 1 ATTEMPTS",
+    "SUCCEEDED · 1 ATTEMPTS",
+    "SUCCEEDED · 1 ATTEMPTS",
+    "SUCCEEDED · 1 ATTEMPTS"
+  ],
+  "jobsSnippet": "Jobs\nTaxonomy\n← View site\nSign out\n← Admin\nJobs\n\nMail, verification, milestone auto-approval, and provider records. A failed mail job can be queued again. Invitation mail is marked delivered only after SMTP accepts it. The sweep clock enqueues each money sweep from POST /api/cron/sweeps. Auto-approval sweeps skip disputed milestones.\n\nmilestone_auto_approval\nlatest: succeeded · 2026-10-13T15:36:12.760Z\nsucceeded id cmv6ufj5m000dut01g2jvu0xh · 2026-10-13T15:36:12.760Z\nreview_deadline_sweep\nlatest: succeeded · 2026-10-13T15:36:12.768Z\nsucceeded id cmv6ufj5p000eut01t3p0flqz · 2026-10-13T15:36:12.768Z\ndispute_sla_sweep\nlatest: succeeded · 2026-10-13T15:36:12.776Z\nsucceeded id cmv6ufj5r000fut013dywan8h · 2026-10-13T15:36:12.776Z\nprovider_hold_warn_sweep\nlatest: succeeded · 2026-10-13T15:36:12.786Z\nsucceeded id cmv6ufj5s000gut01c90ko4yp · 2026-10-13T15:36:12.786Z\nfailed_payout_retry_sweep\nlatest: succeeded · 2026-10-13T15:36:12.794Z\nsucceeded id cmv6ufj5u000hut01lz4pa77u · 2026-10-13T15:36:12.794Z\nfunding_recon_sweep\nlatest: succeeded · 2026-10-13T15:36:12.803Z\nsucceeded id cmv6ufj5w000iut01kxpy8rk4 · 2026-10-13T15:36:12.803Z\nscheduled_release_sweep\nlatest: succeeded · 2026-11-13T22:54:49.252Z\nsucceeded id cmwfkqzrb000sry01je9ormgg · 2026-11-13T22:54:49.252Z\nmarketplace_application_expire_sweep\nlatest: succeeded · 2026-10-13T15:36:12.818Z\nsucceeded id cmv6ufj5z000kut016jsvrpko · 2026-10-13T15:36:12.818Z\nrecurring_cycle_sweep\nlatest: succeeded · 2026-10-13T15:36:12.839Z\nsucceeded id cmv6ufj61000lut013qd0vrgz · 2026-10-13T15:36:12.839Z\nshort_link_schedule_sweep\nlatest: succeeded · 2026-10-13T15:36:12.849Z\nsucceeded id cmv6ufj63000mut012o0ufq60 · 2026-10-13T15:36:12.849Z\ninvitation_followup_sweep\nlatest: never\nNo succeeded row yet — confirm crontab + CRON_SECRET.\nquote_expiry_sw",
+  "dualChrome": {
+    "publicNavLinks": 1,
+    "hasMainMenu": true
+  },
+  "guests": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocum",
+  "shortLinks": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocum",
+  "faqSaveVisible": true,
+  "faqSnippet": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\n",
+  "access": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINA",
+  "templatesDialog": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEmail health\nJobs\nTaxonomy\n← View site\nSign out\n← Email settings\nEmail templates\n\nThese 79 messages ar",
+  "statsSave": true,
+  "influencerInboxLink": "/collaboration/inbox",
+  "influencerInboxUrl": "/collaboration/inbox",
+  "influencerInboxSnippet": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nAg\nLog out\n∞\nInflurios\nDashboard\nAction inbox\nMy Profile\nCollaborations\n1\nContracts\nEarnings & Payouts\n1\nMessages\nSettings\nPlus\nBilling & Plan\nLog out\n\n© 2026 Influrios. All rights reserved.\n\n2\nA\n\nAg Olomola\n\nInfluencer\n\nNeeds your attention\n\nOpening a notification does not complete the task.\n\n4 open tasks\n\nAssigned to me\nWaiting on others\nResolved\nAll types\nDelivery\nContract\nFunding\nPayout\nInvitation\nApply\n\n4th Test Campaign After Pay Engine Rebuilt\n\nDelivery due\n\nABC Holdings · No deadline · Open\n\nOpen workspace\n\n3rd Testing Colabs\n\nDelivery due\n\nABC Holdings · No deadline · Open\n\nOpen workspace\n\n3rd Testing Colabs\n\nDelivery due\n\nABC Holdings · No deadline · Open\n\nOpen workspace\n\n3rd Testing Colabs\n\nDelivery due\n\nABC Holdings · No deadline · Open\n\nOpen workspace\n\nOne task per required action. Complete the action ",
+  "bellAria": "Notifications, 2 unread",
+  "sidebarCollabBadge": "",
+  "notifCounts": {
+    "all": "9",
+    "action": "9"
+  },
+  "businessNav": {
+    "Action inbox": {
+      "href": "/collaboration/inbox",
+      "visible": true
+    },
+    "Collaborations": {
+      "href": "/collaboration/business",
+      "visible": true
+    },
+    "Contracts": {
+      "href": "/collaboration/contracts",
+      "visible": true
+    },
+    "Settings": {
+      "href": "/account?audience=business",
+      "visible": true
+    },
+    "Team": {
+      "href": "/collaboration/team",
+      "visible": true
+    }
+  },
+  "businessInbox": {
+    "url": "/collaboration/inbox",
+    "snippet": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nAgboola\nLog out\n∞\nInflurios\nDashboard\nAction inbox\nCompany Profile\nDiscover Creators\nCollaborations\n2\nContracts\nAnalytics\nTeam\nBilling & Plans\nCollaboration Payments\nVerification\nSettings\nLog out\n\n© 2026 Influrios. All rights reserved.\n\n2\nA\n\nAgboola Olomola\n\nABC Holdings\n\nNeeds your attention\n\nOpening a notification does not complete the task.\n\n4 open tasks\n\nAssigned to me\nWaiting on others\nResolved\nAll types\nDelivery\nContract\nFunding\nPayout\nInvitation\nApply\n\n1 response to review\n\nInvitation\n\nInfluencer · No deadline · Open\n\nReview invitation\n\n3rd Testing Colabs\n\nFunding required\n\nag-olomola-2 · Awaiting confirmation · Blocked\n\n4th Test Campaign After Pay Engine Rebuilt\n\nReview delivery v1\n\nag-olomola-2 · No deadline"
+  },
+  "businessWorkroom": {
+    "url": "/payments?funding=cmw9ybc0m005io901ek96km44",
+    "snippet": "∞\nInflurios\nDashboard\nAction inbox\nCompany Profile\nDiscover Creators\nCollaborations\n2\nContracts\nAnalytics\nTeam\nBilling & Plans\nCollaboration Payments\nVerification\nSettings\nLog out\n\n© 2026 Influrios. All rights reserved.\n\n2\nA\n\nAgboola Olomola\n\nABC Holdings\n\nStart funding from a signed collaboration contract.\n\nCollaboration payments\n\nFunding and influencer payouts for signed agreements. Opening this page does not move money.\n\nCurrency\nUSD\nApply\n\nTotals for USD. Other currencies stay in the selector.\n\nNeeds funding\n\n1\n\nFunds remaining\n\n$4,830.00\n\nInfluencer payouts confirmed\n\n$0.00\n\nRefunds processing\n\n0\n\nFrom\nTo\nSearch\nall\nneeds funding\nfunded\npayout processing\ncompleted\nissues\nCollaboration\tInfluencer\tFunded total\tRemaining\tStatus\tNext action\t\n\n4th Test Campaign After Pay Engine Rebuilt\n\tAg Olomola\t$4,830.00\t$4,830.00\t\n•\nPayout processing\tTrack the pending payout\tView payment\n\n3rd Testing Colabs\n\tAg Olomola\t$0.00\t$0.00\t\n•\nNeeds funding\tFund collaboration\tView payment"
+  },
+  "businessAccountNotif": "∞\nInflurios\nDashboard\nAction inbox\nCompany Profile\nDiscover Creators\nCollaborations\n2\nContracts\nAnalytics\nTeam\nBilling & Plans\nCollaboration Payments\nVerification\nSettings\nLog out\n\n© 2026 Influrios. All rights reserved.\n\n2\nA\n\nAgboola Olomola\n\nABC Holdings\n\nAccount settings\n\nManage your account and preferences.\n\nAccount\nSecurity\nNotifications\nBilling & Plan\nEmail\n\nSecurity mail, including verification codes and password resets, stays on.\n\nCollaboration, invitation, and payout updates\nSubscription receipts and payment problems\nClaim invitations and follow-ups\nProduct news\nSave email preferences\nCommunication preference\n\nInflurios reaches this account by email.\n\nPhone\nSave preference",
+  "businessBilling": {
+    "url": "/business/home",
+    "hasAgency": false,
+    "snippet": "∞\nInflurios\nDashboard\nAction inbox\nCompany Profile\nDiscover Creators\nCollaborations\n2\nContracts\nAnalytics\nTeam\nBilling & Plans\nCollaboration Payments\nVerification\nSettings\nLog out\n\n© 2026 Influrios. All rights reserved.\n\n2\nA\n\nAgboola Olomola\n\nABC Holdings\n\nWelcome back, Agboola.\n\nHere's what needs a decision for ABC Holdings.\n\nContracts\nView all →\n4th Test Campaign After Pay Engine Rebuiltsigned · Fully signed\nOpen →\n3rd Testing Colabssigned · Fully signed\nOpen →\n2nd Collaboration Testsigned · Fully signed\nOpen →\n2nd Collaboration Testsigned · Fully signed\nOpen →\nNeeds your attention\n\n1 response to review\n\nInfluencers have responded to your invites.\n\nReview\n\nReview a submission\n\n4th Test Campaign After Pay Engine Rebuilt · ag-olomola-2\n\nReview\n\nAccount ready. Profile, plan, and workspace details are set.\nEdit profile\n\nACTIVE REQUESTS\n\n7\n\n1 pending responses\n\nSAVED CREATORS\n\n3\n\nOn this wo"
+  },
+  "agencyInvite": {
+    "url": "/agency/invite/invalid-token-audit",
+    "title": "404: This page could not be found.",
+    "text": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nLog in\nJoin Influrios →\n404\nThis page could not be found.\n∞\nInflurios\n\nInfluencers. Collaborations. Real Opportunities.\n\nPLATFORM\nHome\nDiscover\nCollaboration\nInfluencer Card\nFOR BUSINESSES\nFind Influencers\nFor Businesses\nAgency workspace\nIntelligence\nBusiness Pro\nOpportunities\nRESOURCES\nFAQ\nPricing\nCheckout\nProtected payments\nTrust & disputes\nCreate your card\nCategories\nCOMPANY\nContact\nAbout\nPrivacy\nTerms\nLegal Center\n© 2026 Influrios. All rights reserved.",
+    "status": 404
+  }
+}

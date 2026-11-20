@@ -1,0 +1,163 @@
+{
+  "generatedAt": "2026-11-20T22:39:57.597Z",
+  "phase": "influencer-desktop",
+  "counts": {
+    "Pass": 17,
+    "Blocked": 2
+  },
+  "total": 19,
+  "results": [
+    {
+      "status": "Pass",
+      "id": "AUTH-influencer-desktop-resume",
+      "case": "login",
+      "expected": "ok",
+      "actual": "https://influrios.com/creator",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/login-influencer-resume.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-069:desktop:influencer",
+      "case": "route /collaboration/work/cmw9ybc0m005io901ek96km44",
+      "expected": "Loads",
+      "actual": "http=200; url=https://influrios.com/collaboration/work/cmw9ybc0m005io901ek96km44; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations / Workspace 4th Test",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/influencer-workroom.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-029:desktop:influencer",
+      "case": "route /payments",
+      "expected": "Loads",
+      "actual": "http=200; url=https://influrios.com/payments; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Start funding from a signed collabo",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/influencer-payments.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-070:desktop:influencer",
+      "case": "route /collaboration/team",
+      "expected": "Loads",
+      "actual": "http=200; url=https://influrios.com/collaboration/team; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer ← Business hub Coordinated proposal",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/influencer-team.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-C-001:desktop:influencer:/collaboration",
+      "case": "live deposits closed",
+      "expected": "No open-deposit CTA",
+      "actual": "openCta=0; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/influencer-funding-gate_collaboration.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-C-001:desktop:influencer:/payments",
+      "case": "live deposits closed",
+      "expected": "No open-deposit CTA",
+      "actual": "openCta=0; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/influencer-funding-gate_payments.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-066:desktop:influencer:surface",
+      "case": "Contracts list",
+      "expected": "List usable",
+      "actual": "∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Contracts Agreements tied to real parties, and reusable",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/influencer-contracts-list.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-067/INV-P-003:desktop:influencer",
+      "case": "Agreement detail / sign",
+      "expected": "Detail or empty",
+      "actual": "opened=false; signControls=0; url=https://influrios.com/collaboration/contracts; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Contracts Agree",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/influencer-contract-detail.png"
+    },
+    {
+      "status": "Blocked",
+      "id": "INV-A-050:desktop:influencer",
+      "case": "Native sign control path",
+      "expected": "Sign dialog when pending",
+      "actual": "No Sign button; likely already signed/voided; url=https://influrios.com/collaboration/contracts",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/influencer-contract-detail.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-069:desktop:influencer:deep",
+      "case": "Workroom content",
+      "expected": "Workroom content",
+      "actual": "∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations / Workspace 4th Test Campaign After Pay Engine Rebuilt ABC H",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/influencer-workroom.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-D-001-download:desktop:influencer",
+      "case": "Authorized download #536",
+      "expected": "200 bytes",
+      "actual": "status=200; bytes=2015041",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop-influencer-download-status.txt"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-058:desktop:intent-submit",
+      "case": "Milestone submit surface",
+      "expected": "Dialog or terminal state explanation",
+      "actual": "dialogish=true; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations / Workspace 4th Test",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/influencer-intent-submit.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-058:desktop:intent-revise",
+      "case": "Milestone revise surface",
+      "expected": "Dialog or terminal state explanation",
+      "actual": "dialogish=true; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations / Workspace 4th Test",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/influencer-intent-revise.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-058:desktop:intent-add",
+      "case": "Milestone add surface",
+      "expected": "Dialog or terminal state explanation",
+      "actual": "dialogish=true; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations / Workspace 4th Test",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/influencer-intent-add.png"
+    },
+    {
+      "status": "Blocked",
+      "id": "INV-A-066:desktop:influencer",
+      "case": "Cancellation path",
+      "expected": "Visible when allowed",
+      "actual": "cancelControls=0; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations ",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/influencer-cancel-surface.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-N-002:desktop:influencer",
+      "case": "Action inbox",
+      "expected": "Tasks or empty",
+      "actual": "∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Ag Log out ∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserv",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/influencer-inbox.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-026/028:desktop",
+      "case": "Apply controls",
+      "expected": "Apply or empty",
+      "actual": "apply=0; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Invited Discove",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/influencer-opportunities.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-P-022/INV-A-030:desktop",
+      "case": "Invitation accept/decline UI",
+      "expected": "Invitation review controls or empty invitations",
+      "actual": "clickedTab=false; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations Manage invitations, ",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/influencer-invitations.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-D-001-signed-out",
+      "case": "Signed-out deny #536",
+      "expected": "401/403",
+      "actual": "status=401; body=Sign in to open this file.",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/signed-out-deny.txt"
+    }
+  ]
+}
