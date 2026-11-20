@@ -2,55 +2,105 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Design — Upload fail / retry</title>
+  <title>Design — Upload file failure (replace/remove vs retry)</title>
   <link rel="stylesheet" href="_design-system.css" />
   <style>
     .pair { display: grid; gap: 28px; }
     @media (min-width: 1100px) { .pair { grid-template-columns: 1.4fr 390px; } }
+    .stack { display: grid; gap: 22px; }
     .alert { background: var(--rose-wash); color: var(--rose); border-radius: 14px; padding: 12px 14px; font-size: 14px; font-weight: 700; }
-    .file-row { display:flex; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid var(--line); border-radius:14px; margin-top:8px; }
+    .alert.warn { background: var(--amber-wash); color: var(--amber); }
+    .file-row { display:flex; justify-content:space-between; gap:12px; align-items:center; padding:10px 12px; border:1px solid var(--line); border-radius:14px; margin-top:8px; flex-wrap:wrap; }
+    .row-actions { display:flex; gap:8px; }
   </style>
 </head>
 <body>
   <div class="page">
-    <div class="frame-label">PROPOSED · COR-21 · Upload fail + Retry · stay in milestone popup</div>
-    <div class="pair">
-      <div>
-        <div class="frame-label">Desktop</div>
-        <div class="shell">
-          <aside class="sidebar"><div class="brand">Influrios</div><a class="nav-item active" href="#">Collaborations</a></aside>
-          <section class="main" style="position:relative;min-height:560px;">
-            <h1 style="font-size:28px;">Workspace</h1>
-            <div class="scrim" style="position:absolute;border-radius:28px;">
-              <div class="dialog">
-                <div class="dialog-head"><div><h2 style="font-size:22px;">Submit a version</h2><div class="dialog-meta">Kickoff · Version 1</div></div></div>
-                <div class="dialog-body">
-                  <div class="alert">That file type was not saved. Upload a document, media file, or zip. Nothing was submitted.</div>
-                  <div class="field" style="margin-top:14px;"><label>What changed?</label><textarea rows="2">Draft reel v1 notes preserved</textarea></div>
-                  <div class="file-row"><span style="text-decoration:line-through;color:var(--muted);">page.html</span><button class="btn btn-secondary" style="padding:6px 10px;">Remove</button></div>
-                  <div class="file-row"><span>cut.mp4 · ready</span><button class="btn btn-secondary" style="padding:6px 10px;">Remove</button></div>
-                </div>
-                <div class="dialog-foot">
-                  <button class="btn btn-secondary">Cancel</button>
-                  <button class="btn btn-primary">Retry submit</button>
-                  <a href="#" style="margin-left:auto;font-size:13px;">View collaboration payments</a>
+    <div class="frame-label">PROPOSED · COR-21 · Unsupported/oversized → Replace / Remove · Retry only for temporary network/storage</div>
+    <div class="stack">
+      <div class="pair">
+        <div>
+          <div class="frame-label">Desktop · unsupported type (not Retry submit)</div>
+          <div class="shell">
+            <aside class="sidebar"><div class="brand">Influrios</div><a class="nav-item active" href="#">Collaborations</a></aside>
+            <section class="main" style="position:relative;min-height:520px;">
+              <h1 style="font-size:28px;">Workspace</h1>
+              <div class="scrim" style="position:absolute;border-radius:28px;">
+                <div class="dialog">
+                  <div class="dialog-head"><div><h2 style="font-size:22px;">Submit a version</h2><div class="dialog-meta">Kickoff · Version 1</div></div></div>
+                  <div class="dialog-body">
+                    <div class="alert">That file type was not saved. Choose a document, media file, or zip.</div>
+                    <div class="field" style="margin-top:14px;"><label>What changed?</label><textarea rows="2">Draft reel v1 notes preserved</textarea></div>
+                    <div class="file-row">
+                      <span style="text-decoration:line-through;color:var(--muted);">page.html · unsupported</span>
+                      <span class="row-actions">
+                        <button class="btn btn-secondary" style="padding:6px 10px;">Replace file</button>
+                        <button class="btn btn-secondary" style="padding:6px 10px;">Remove file</button>
+                      </span>
+                    </div>
+                    <div class="file-row"><span>cut.mp4 · ready</span><button class="btn btn-secondary" style="padding:6px 10px;">Remove file</button></div>
+                    <p class="note">Do not offer Retry submit for type/size problems — fix the file first.</p>
+                  </div>
+                  <div class="dialog-foot">
+                    <button class="btn btn-secondary">Cancel</button>
+                    <button class="btn btn-primary">Submit version 1</button>
+                    <a href="#" style="margin-left:auto;font-size:13px;">View collaboration payments</a>
+                  </div>
                 </div>
               </div>
+            </section>
+          </div>
+        </div>
+        <div>
+          <div class="frame-label">Mobile 390 · oversized</div>
+          <div class="mobile-shell">
+            <div class="mobile-top"><strong>Submit version</strong><span class="icon-btn">✕</span></div>
+            <div class="menu-sheet">
+              <div class="alert">File too large (max 8 MB). Your note was kept.</div>
+              <div class="field" style="margin-top:14px;"><label>What changed?</label><textarea rows="3">Draft reel v1 notes preserved</textarea></div>
+              <div class="file-row">
+                <span>big.pdf · too large</span>
+                <span class="row-actions">
+                  <button class="btn btn-secondary" style="padding:6px 10px;">Replace file</button>
+                  <button class="btn btn-secondary" style="padding:6px 10px;">Remove file</button>
+                </span>
+              </div>
+              <div style="margin-top:18px;display:flex;flex-direction:column;gap:8px;">
+                <button class="btn btn-primary">Submit version 1</button>
+                <button class="btn btn-secondary">Cancel</button>
+              </div>
             </div>
-          </section>
+          </div>
         </div>
       </div>
-      <div>
-        <div class="frame-label">Mobile 390</div>
-        <div class="mobile-shell">
-          <div class="mobile-top"><strong>Submit version</strong><span class="icon-btn">✕</span></div>
-          <div class="menu-sheet">
-            <div class="alert">File too large (max 8 MB). Your note was kept.</div>
-            <div class="field" style="margin-top:14px;"><label>What changed?</label><textarea rows="3">Draft reel v1 notes preserved</textarea></div>
-            <div class="file-row"><span>big.pdf failed</span><button class="btn btn-secondary" style="padding:6px 10px;">Remove</button></div>
-            <div style="margin-top:18px;display:flex;flex-direction:column;gap:8px;">
-              <button class="btn btn-primary">Retry submit</button>
+
+      <div class="pair">
+        <div>
+          <div class="frame-label">Desktop · temporary network/storage failure → Retry</div>
+          <div class="dialog" style="max-width:720px;">
+            <div class="dialog-head"><div><h2 style="font-size:22px;">Submit a version</h2><div class="dialog-meta">Kickoff · Version 1</div></div></div>
+            <div class="dialog-body">
+              <div class="alert warn">The file could not be stored. Nothing was submitted. Your note and file selection were kept.</div>
+              <div class="field" style="margin-top:14px;"><label>What changed?</label><textarea rows="2">Draft reel v1 notes preserved</textarea></div>
+              <div class="file-row"><span>cut.mp4 · ready to upload</span><button class="btn btn-secondary" style="padding:6px 10px;">Remove file</button></div>
+            </div>
+            <div class="dialog-foot">
               <button class="btn btn-secondary">Cancel</button>
+              <button class="btn btn-primary">Retry upload</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="frame-label">Mobile · temporary storage failure</div>
+          <div class="mobile-shell">
+            <div class="mobile-top"><strong>Submit version</strong><span class="icon-btn">✕</span></div>
+            <div class="menu-sheet">
+              <div class="alert warn">Temporary storage error. Nothing was submitted.</div>
+              <div class="file-row"><span>cut.mp4</span><button class="btn btn-secondary" style="padding:6px 10px;">Remove file</button></div>
+              <div style="margin-top:18px;display:flex;flex-direction:column;gap:8px;">
+                <button class="btn btn-primary">Retry upload</button>
+                <button class="btn btn-secondary">Cancel</button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,12 +1,17 @@
 # COR-21 — Deliverable file upload path (broken / incomplete)
 
 **Priority:** P1 · **Kind:** product / ux · **Package:** R4 workroom (paused)  
-**Evidence class:** Attach control **reproduced**; end-to-end upload/download **not executed**; limits/UX gaps **code-observed**  
+**Evidence class:**  
+- **user-reported** — file upload broken (product owner); must be **reproduced**; lack of audit test evidence ≠ root cause  
+- Attach control **reproduced** in J14 screenshot  
+- Full E2E audit path still **not executed** (keep separate from user-reported)  
+- Limits/UX gaps **code-reviewed**  
+
 **Atlas / boards:** Board 6 · `design-boards/upload-progress.html` · `upload-fail-retry.html`
 
 ## Finding (evidenced)
 
-The Submit version popup shows **Attach files**, and server helpers exist (`deliverable-files.ts`, `saveDeliverableFiles`, `/api/deliverables/[fileId]`). The **end-to-end user path** is not verified and the UX is incomplete:
+The Submit version popup shows **Attach files**, and server helpers exist (`deliverable-files.ts`, `saveDeliverableFiles`, `/api/deliverables/[fileId]`). **User-reported:** upload fails in practice — reproduce that failure before declaring a code root cause. Separately, the **audit E2E path** (select→progress→persist→submit→reopen→business download) remains **not executed**. Incomplete tests do not explain the reported break.
 
 | Step | Expected | Today |
 |------|----------|-------|
@@ -16,17 +21,19 @@ The Submit version popup shows **Attach files**, and server helpers exist (`deli
 | Submit version | Version references files | J14 used **notes only** |
 | Reopen | Files listed on version / Files tab | Unproven |
 | Business view/download | Open/download via authorized URL | Route coded; no audit download proof |
-| Failure: unsupported | Inline explain | Often `fail()` → payments (COR-20) |
-| Failure: too large (>8MB) | Inline | Same |
-| Failure: store error | Inline + no orphan version | Submission deleted then redirect |
-| Remove before submit | Remove control | Missing |
+| Failure: unsupported | Inline + **Replace file** / **Remove file** (not Retry submit) | Often `fail()` → payments (COR-20) |
+| Failure: too large (>8MB) | Inline + Replace / Remove | Same |
+| Failure: temporary network/storage | Inline + **Retry upload**; no orphan version | Submission deleted then redirect |
+| Remove / replace before submit | Controls present | Missing / sr-only |
 | Expired session | Return to same popup with draft | Login next=/payments |
+| User-reported broken upload | Reproduce exact step/error | Reported; reproduction pending in pack |
 
 ### Evidence
 
+- **user-reported:** upload broken — reproduce before root-cause; missing tests ≠ cause  
 - UI: `j14r35-creator-submit-open.png` — Attach files control present  
-- J14 r35 assertions: submission notes only; no `milestoneFile` / download refs  
-- Code: `workspace-milestones.tsx` file input; `actionSubmitMilestone` + `actionAddDeliverableFiles`; `DELIVERABLE_FILE_LIMIT=4`, `DELIVERABLE_FILE_BYTES=8MB`  
+- J14 r35 assertions: submission notes only; no `milestoneFile` / download refs (**not executed** audit path)  
+- Code-reviewed: `workspace-milestones.tsx` file input; `actionSubmitMilestone` + `actionAddDeliverableFiles`; limits 4×8MB  
 - Unit coverage proves type rules, **not** browser upload UX
 
 ## Required behavior (design)
@@ -34,7 +41,7 @@ The Submit version popup shows **Attach files**, and server helpers exist (`deli
 ### Influencer — submit / revise
 
 1. **Select** — Choosing files shows a list (name, size, type icon) under Attach files.  
-2. **Remove** — Each row has Remove (client-only until submit).  
+2. **Replace / Remove** — Each row has Replace file and Remove file (client-only until submit).  
 3. **Progress** — On submit, show uploading/saving state; disable double-submit.  
 4. **Persist** — On success, files bound to that submission version.  
 5. **Reopen** — Version history / Files tab lists them; influencer can re-open own files.  
@@ -44,15 +51,15 @@ The Submit version popup shows **Attach files**, and server helpers exist (`deli
 
 1. Open submitted version → see file list → **View / Download** via `/api/deliverables/{id}`.  
 2. Optional Add files (details mode) uses the same progress + inline error rules.  
-3. Cross-tenant IDs → not found (no leak).
+3. Cross-account IDs → denial (no leak). **Runtime** authorized-download + cross-account-denial required before acceptance (code-reviewed alone is insufficient).
 
 ### Failure / recovery board (must be designed before impl)
 
 | Case | UI |
 |------|----|
-| Unsupported MIME/ext | Inline: “Upload a document, media file, or zip…”; keep other files |
-| Oversize | Inline size message |
-| Network / store failure | Inline + Retry; no submitted version |
+| Unsupported MIME/ext | Inline + **Replace file** / **Remove file**; keep note/other files; **no** Retry submit |
+| Oversize | Inline size + Replace / Remove |
+| Temporary network / store failure | Inline + **Retry upload**; no submitted version |
 | Session expired | Re-auth → restore focus + client draft if possible |
 | Empty file selection on Add files | Inline “Choose a file…” |
 

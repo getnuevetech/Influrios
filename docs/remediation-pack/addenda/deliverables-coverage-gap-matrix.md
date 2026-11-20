@@ -10,9 +10,9 @@
 | Class | Meaning |
 |-------|---------|
 | **reproduced** | Observed in harness/UI with media or probe |
-| **code-observed** | Proven from source / unit tests without fresh UI failure capture |
-| **user-reported** | Owner/reviewer report; harness reproduction pending |
-| **not executed** | Expanded required step not run |
+| **code-observed** / **code-reviewed** | Proven from source / unit tests; **not** runtime acceptance by itself |
+| **user-reported** | Owner/reviewer report; must be reproduced separately — lack of test evidence ≠ root cause |
+| **not executed** | Expanded audit step not run (orthogonal to user-reported) |
 
 Coverage/acceptance classes (Pass / Partial / Gap / Defect / Blocked) describe product outcome; evidence class describes how we know.
 
@@ -27,12 +27,12 @@ Coverage/acceptance classes (Pass / Partial / Gap / Defect / Blocked) describe p
 | Error stay in popup / preserve inputs | — | Today: `fail()` → `/payments` | Defect | **code-observed** | COR-20; `payments/actions.ts` |
 | Deliverable link bare domain | `example.com` · `https://` · `http://` · unsafe | Must normalize/reject inline | Defect | **code-observed** | COR-22; `milestone-delivery.ts` LINK |
 | Attach files control visible | — | — | Partial | **reproduced** | Attach files on j14 screenshot |
-| Full upload path select→persist→download | 0–4 files | Unsupported / >8MB / session | Defect / Gap | **not executed** | COR-21; no file assert in r35 |
-| Selected-file list / remove | — | Missing UI | Gap | **code-observed** | `workspace-milestones.tsx` sr-only |
+| Full upload path select→persist→download | 0–4 files | Unsupported / >8MB → Replace/Remove; network → Retry upload | Defect | **user-reported** failure + audit path **not executed** (keep separate) | COR-21; Attach control reproduced; reproduce reported failure before root-causing |
+| Selected-file list / replace / remove | — | Missing UI | Gap | **code-reviewed** | `workspace-milestones.tsx` sr-only |
 | Upload progress | — | Missing | Gap | **not executed** | COR-21 boards |
 | After success version In review | Reopen | Note path OK | Pass (subtest) | **reproduced** | `j14r35-creator-after-submit.png` |
 | Resubmit after revision | New note/files | v2 UI thin | Partial | **not executed** (UI) / lib **reproduced** | r35 `v2` via lib |
-| Permissions (assigned / business blocked / held) | — | Server + UI gates | Pass | **code-observed** | workspace panel + guards |
+| Permissions (assigned / business blocked / held) | — | Server + UI gates | Pending acceptance | **code-reviewed** · runtime **not executed** | Must pass authorized-download + cross-account-denial before Pass |
 
 ## B. Business — review / files / download
 
@@ -43,8 +43,8 @@ Coverage/acceptance classes (Pass / Partial / Gap / Defect / Blocked) describe p
 | Approve **UI** → release step | — | — | Gap | **not executed** | COR-23; `uiApprove=false` |
 | Lib revise / approve / stale block | — | Stale blocked | Pass (lib subtest) | **reproduced** | r35 assertions |
 | Business add files | Multipart | Errors → `/payments` | Defect | **code-observed** | COR-20/21 |
-| Download `/api/deliverables/{id}` | — | 401/404 | Gap | **not executed** (runtime) / route **code-observed** | COR-21 |
-| Cross-tenant deny | — | 404 | Pass (code) | **code-observed** | deliverables route |
+| Download `/api/deliverables/{id}` | — | 401/404 | Gap | **code-reviewed** · runtime **not executed** | Required before acceptance |
+| Cross-account deny | — | 404/401 · no leak | Gap | **code-reviewed** · runtime **not executed** | Required before acceptance |
 
 ## C. Journey scoring impact
 
@@ -59,6 +59,6 @@ Coverage/acceptance classes (Pass / Partial / Gap / Defect / Blocked) describe p
 | Scenario | Expected | Today | ID | Evidence class |
 |----------|----------|-------|----|----------------|
 | Invalid / bare link | Stay in popup; normalize or inline reject | Redirect `/payments` + rigid https | COR-20+22 | code-observed |
-| Unsupported / oversize file | Inline + preserve | Often `fail()` → payments | COR-20+21 | code-observed / not executed UI |
-| Upload store failure | Inline + Retry; no orphan version | Delete then redirect | COR-21 | code-observed |
+| Unsupported / oversize file | Inline + **Replace/Remove** (not Retry submit) | Often `fail()` → payments | COR-20+21 | user-reported + code-reviewed; reproduce |
+| Upload store / network failure | Inline + **Retry upload**; no orphan version | Delete then redirect | COR-21 | code-reviewed |
 | Session expired | Return to same focus | Login next=/payments | COR-20/21 | code-observed |

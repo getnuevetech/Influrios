@@ -45,6 +45,8 @@ Subtests may still Pass (e.g. J14 note-submission; J18 monthly).
 | `addenda/` | Matrix + COR-20–22 designs |
 | `design-boards/` | Desktop + mobile state boards |
 
-## Next design boards before IPS-14
+## Next before IPS-14
 
-See `design-boards/README.md` — upload progress, upload fail/retry, preserved-input errors, normalized links, business review (desk + mobile).
+1. Ola board corrections applied — see `design-boards/` + `previews/`.  
+2. Approve [`IMPLEMENTATION-SLICE-deliverables.md`](./IMPLEMENTATION-SLICE-deliverables.md) before any product PR.  
+3. No broad remediations until that slice is approved.

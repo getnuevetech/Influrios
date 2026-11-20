@@ -37,7 +37,7 @@ Payments chrome title: “Collaboration payments” (`payments-panel.tsx`).
 | Keep user in milestone popup | On validation/storage/permission-soft failures from submit/revise/add-files |
 | Inline error | One clear message in the dialog (amber/destructive per Spec tokens) |
 | Preserve inputs | Note, link text, and already-selected files remain |
-| Retry | Primary control re-submits without re-navigating |
+| Retry / continue | For validation: fix inputs and submit again. For temporary upload storage/network: **Retry upload**. For unsupported/oversize files: **Replace file** / **Remove file** (not Retry submit). |
 | Navigate away only on explicit action | e.g. Cancel, Close, or labelled “View collaboration payments” |
 | Hard auth failures | Sign-in return URL must restore `/collaboration/work/{id}?tab=…&focus=…&intent=…` (not bare `/payments`) |
 

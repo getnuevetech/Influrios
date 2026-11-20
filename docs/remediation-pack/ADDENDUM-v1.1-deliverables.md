@@ -37,14 +37,18 @@ Deliverable workflow gaps are **IN SCOPE**. This addendum does **not** authorize
 | ID | Pri | Evidence class | Title |
 |----|-----|----------------|-------|
 | **COR-20** | P1 | **code-observed** (+ UI context reproduced) | Update-deliverable errors route to Collaboration payments |
-| **COR-21** | P1 | **not executed** path + **code-observed** UX gaps; Attach control **reproduced** | File upload end-to-end incomplete |
-| **COR-22** | P1 | **code-observed** (regex + unit test); field UI **reproduced** | Literal `https://` required; no bare-domain normalize |
-| **COR-23** | P2 | **not executed** (UI); lib revise/approve **reproduced** | Business Request changes / Approve UI |
+| **COR-21** | P1 | **user-reported** failure + Attach **reproduced** + E2E **not executed** (separate) | File upload broken/incomplete — reproduce reported failure; Replace/Remove vs Retry |
+| **COR-22** | P1 | **code-observed**; field UI **reproduced** | Bare domain normalize; Will save as… / Saved as… |
+| **COR-23** | P2 | **not executed** (UI); lib **reproduced** | Separate Request changes vs Approve confirmation |
 | **COR-24** | P2 | **not executed** (in-app billing download) | Influrios billing-history invoice/receipt actions — does **not** demote J20 hosted invoice Pass |
 | **COR-25** | P2 | **not executed** (attachment fail/retry / workroom composer depth) | Does **not** demote J22 two-party send Pass |
 
 Design/flow/acceptance: [`addenda/`](./addenda/) · boards: [`design-boards/`](./design-boards/).
 
+## Permissions
+
+Rows previously labelled Pass/code-observed for download/deny are now **code-reviewed · runtime not executed**. Acceptance requires authorized-download + cross-account-denial tests.
+
 ## Implementation gate
 
-Do not start IPS-14 / R4 deliverable PRs until Ola reviews this in-repo pack.
+See [`IMPLEMENTATION-SLICE-deliverables.md`](./IMPLEMENTATION-SLICE-deliverables.md) — **awaiting Ola approval**. No broad remediations until approved.

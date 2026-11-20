@@ -11,7 +11,7 @@ Pack is **NOT** complete verified UI/UX remediation. Deliverable gaps **IN SCOPE
 | Column | Meaning |
 |--------|---------|
 | Kind | `product` · `provider` · `audit-label` · `ux` · `security` · `harness` · `test-exec` · `evidence` |
-| Ev | Evidence class: `reproduced` · `code-observed` · `user-reported` · `not-executed` |
+| Ev | Evidence class: `reproduced` · `code-observed`/`code-reviewed` · `user-reported` · `not-executed` (user-reported ≠ missing-test root cause) |
 | Acceptance | Subtest vs **aggregate** journey score |
 
 ## Scoring (expanded aggregate)
@@ -53,9 +53,9 @@ Pack is **NOT** complete verified UI/UX remediation. Deliverable gaps **IN SCOPE
 | COR-19 | — | **closed** | reproduced | J18 redemption | Monthly discounted pay + reservation consumed | Monthly **Pass** (aggregate Partial via COR-04) | `j18-j20-postpay-probe.json` | Annual remains COR-04 |
 | COR-17 | P3 | test-exec | reproduced | Hosted Checkout headless | Card accordion unreliable headless | computerUse used | PL-03 | Harness note |
 | **COR-20** | **P1** | product/ux | **code-observed** | Deliverables | Errors `fail()` → `/payments`; closes popup; inputs lost | Drives J14 aggregate Partial | `payments/actions.ts`; `docs/remediation-pack/addenda/COR-20-*.md`; boards `preserved-input-errors.html` | Stay in popup; inline error; preserve; Retry |
-| **COR-21** | **P1** | product/ux | **not-executed** path; Attach **reproduced** | Deliverables | File upload E2E unproven; progress/remove/fail UX thin | Drives J14 aggregate Partial | j14 Attach control; no file assert; `COR-21-*.md`; boards `upload-*.html` | Full path + failure boards |
-| **COR-22** | **P1** | product/ux | **code-observed** | Deliverables | Literal `https://` required; bare domains rejected | Track link UX | `milestone-delivery.ts`; `payment-route.test.ts`; `COR-22-*.md`; `normalized-links.html` | Normalize bare domain; reject unsafe inline |
-| **COR-23** | **P2** | audit-label | **not-executed** UI; lib **reproduced** | J14 review UI | `uiRevise=false`, `uiApprove=false` | Drives J14 aggregate Partial | `local-journey-r35-results.json`; `business-review-actions.html` | Prove Request changes + Approve in popup |
+| **COR-21** | **P1** | product/ux | **user-reported** + Attach **reproduced** + E2E **not-executed** (keep separate) | Deliverables | Upload broken (user-reported — reproduce); E2E path unproven; Replace/Remove vs Retry rules | Drives J14 aggregate Partial | Ola report; j14 Attach; `COR-21-*.md`; `upload-fail-retry.html` | Reproduce reported failure; full path; unsupported→Replace/Remove; network→Retry upload |
+| **COR-22** | **P1** | product/ux | **code-observed** | Deliverables | Literal `https://` required; bare domains rejected | Track link UX | `milestone-delivery.ts`; `COR-22-*.md`; `normalized-links.html` | Will save as… before submit; Saved as… after persist; reject unsafe |
+| **COR-23** | **P2** | audit-label | **not-executed** UI; lib **reproduced** | J14 review UI | `uiRevise=false`, `uiApprove=false`; Approve must not sit beside feedback | Drives J14 aggregate Partial | r35 JSON; `COR-23-*.md`; `business-review-actions.html` | Separate Request changes vs Approve confirmation |
 | **COR-24** | **P2** | product | **not-executed** | Billing history | In-app `/billing` View invoice / Download PDF **not** proven | **Does not demote J20** (hosted Stripe invoice Pass stands) | Spec §1; `j18j20-billing-after-pay.png` shows history without in-app download proof | Add in-app actions + retest (R2) |
 | **COR-25** | **P2** | evidence | **not-executed** (depth) | Messages | Attachment fail/retry + workroom composer depth thin | **Does not demote J22** two-party send Pass (`J22-local-two-party-messaging`) | nonfunding J22; MSG-REPLY-001 staging gap | Depth/retry evidence; keep J22 Pass |
 

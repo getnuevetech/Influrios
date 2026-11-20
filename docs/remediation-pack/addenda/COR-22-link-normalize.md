@@ -36,7 +36,8 @@ Screenshot: `j14r35-creator-submit-open.png` shows the field with `https://` pla
 
 ### Inline copy (examples)
 
-- Bare domain accepted quietly after normalize (optional subtle “Saved as https://…”).  
+- **Before submit:** “Will save as https://…”  
+- **After persistence only:** “Saved as https://…”  
 - Unsafe: “That link isn’t allowed. Use a normal https web address.”  
 - http: “Only secure https links can be submitted.”
 
