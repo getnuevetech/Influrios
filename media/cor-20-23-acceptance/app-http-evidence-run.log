@@ -1,0 +1,34 @@
+# COR-21 application evidence (HTTP / server action)
+base=http://127.0.0.1:3000
+stamp=mwoq1wlx
+bodySizeLimit=40mb
+fundingId=cmwoq1wpd000ejsiqcm0vmomm
+milestoneId=cmwoq1wpg000gjsiqk8kxcrjv
+creatorEmail=ev-cre-mwoq1wlx@example.com
+businessEmail=ev-biz-mwoq1wlx@example.com
+strangerEmail=ev-str-mwoq1wlx@example.com
+password=EvidencePass1!
+workUrl=http://127.0.0.1:3000/collaboration/work/cmwoq1wpd000ejsiqcm0vmomm?tab=milestones&focus=cmwoq1wpg000gjsiqk8kxcrjv&intent=submit
+app_ready=true
+work_page_status=200
+action_ids=405ab4a2266b5475525e4e103b23164e00f7c2874c
+named_actions={"actionLogout":"407882719e14058f82afcc5b12f88dcc62fe47c5e0","actionSubmitMilestone":"405ab4a2266b5475525e4e103b23164e00f7c2874c"}
+batch_files=/tmp/cor21-mwoq1wlx/batch-a.pdf,/tmp/cor21-mwoq1wlx/batch-b.pdf
+batch_total_bytes=12582912
+submit_large_batch action=405ab4a2266b… status=303 loc=/collaboration/work/cmwoq1wpd000ejsiqcm0vmomm?tab=milestones&submitted=1&savedAs=https%3A%2F%2Fdrive.example%2Fevidence-batch missing= ms=287
+submit_large_batch_body=
+submissions_after_submit=1
+retry_fail_try action=405ab4a2266b… status=200 loc= body=<!DOCTYPE html><html lang="en"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="/_next/static/chunks/src_app_52ba9006._.cs
+submissions_after_forced_fail=0
+retry_ok_try action=405ab4a2266b… status=303 loc=/collaboration/work/cmwoq1x8r000ijsiqrbaa6kpr?tab=milestones&submitted=1&savedAs=https%3A%2F%2Fdrive.example%2Fretry-preserve
+submissions_after_retry=1
+retry_one_success=true
+reopen_status=200
+reopen_shows_submitted=true
+download_fileId=cmwoq1x5z002djsnsezpcavg1
+download_owner_status=200 bytes=6291456
+download_influencer_status=200 bytes=6291456
+download_stranger_status=404
+download_signed_out_status=401
+http_download_auth_pass=true
+wrote=/workspace/media/cor-20-23-acceptance/app-http-evidence.txt

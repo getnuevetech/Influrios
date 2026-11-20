@@ -1,0 +1,26 @@
+{
+  "stamp": "mwoq1wlx",
+  "fundingId": "cmwoq1wpd000ejsiqcm0vmomm",
+  "milestoneId": "cmwoq1wpg000gjsiqk8kxcrjv",
+  "funding2Id": "cmwoq1x8r000ijsiqrbaa6kpr",
+  "milestone2Id": "cmwoq1x8t000kjsiqnk8oweaq",
+  "creatorEmail": "ev-cre-mwoq1wlx@example.com",
+  "businessEmail": "ev-biz-mwoq1wlx@example.com",
+  "strangerEmail": "ev-str-mwoq1wlx@example.com",
+  "workUrl": "http://127.0.0.1:3000/collaboration/work/cmwoq1wpd000ejsiqcm0vmomm?tab=milestones&focus=cmwoq1wpg000gjsiqk8kxcrjv&intent=submit",
+  "workUrl2": "http://127.0.0.1:3000/collaboration/work/cmwoq1x8r000ijsiqrbaa6kpr?tab=milestones&focus=cmwoq1x8t000kjsiqnk8oweaq&intent=submit",
+  "batchFiles": [
+    "/tmp/cor21-mwoq1wlx/batch-a.pdf",
+    "/tmp/cor21-mwoq1wlx/batch-b.pdf"
+  ],
+  "smallPdf": "/tmp/cor21-mwoq1wlx/retry-small.pdf",
+  "notePreserve": "Retry note must stay in the popup after upload failure",
+  "linkPreserve": "https://drive.example/retry-preserve",
+  "fileId": "cmwoq1x5z002djsnsezpcavg1",
+  "actionIds": [
+    "405ab4a2266b5475525e4e103b23164e00f7c2874c"
+  ],
+  "browserFundingId": "cmwor5z0b0003js1bgm7dylz0",
+  "browserMilestoneId": "cmwor5z0d0005js1by37vw3rf",
+  "browserWorkUrl": "http://127.0.0.1:3000/collaboration/work/cmwor5z0b0003js1bgm7dylz0?tab=milestones&focus=cmwor5z0d0005js1by37vw3rf&intent=submit"
+}

@@ -30,8 +30,6 @@ import {
 } from "@/lib/member-settlement";
 import type { WorkroomActionResult } from "@/lib/workroom-action";
 
-export type { WorkroomActionResult } from "@/lib/workroom-action";
-
 const LOGIN = "/login?next=/payments&gate=payments";
 
 async function requirePaymentsAccount() {
