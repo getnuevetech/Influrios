@@ -10,6 +10,7 @@ import {
   issueAdminSetupToken,
   readAdminSetupToken,
   hasPermission,
+  requireAdminBootstrapCredentials,
   resolveAdminSession,
   type AdminAuthStore,
   type AdminSession,
@@ -19,7 +20,7 @@ import { adminMfaPresentation } from "./admin-mfa";
 function sampleSession(overrides: Partial<AdminSession> = {}): AdminSession {
   return {
     userId: "user_super",
-    email: "admin@influrios.com",
+    email: "admin@example.com",
     name: "Super Admin",
     roleId: "role_super",
     roleName: "Super Admin",
@@ -50,7 +51,7 @@ function sampleStore(overrides: Partial<AdminAuthStore> = {}): AdminAuthStore {
     users: [
       {
         id: "user_super",
-        email: "admin@influrios.com",
+        email: "admin@example.com",
         name: "Super Admin",
         roleId: "role_super",
         passwordHash: "x",
@@ -207,5 +208,72 @@ describe("admin permission catalog", () => {
     assert.equal(hasPermission(viewer, "collab_finance.high_risk"), false);
     const risk = sampleSession({ permissions: ["collab_finance.high_risk"] });
     assert.equal(hasPermission(risk, "collab_finance.high_risk"), true);
+  });
+});
+
+describe("COR-SEC-01 admin bootstrap containment", () => {
+  it("rejects production-style bootstrap without ADMIN_SUPER_* env (no default-password fallback)", () => {
+    assert.throws(
+      () =>
+        requireAdminBootstrapCredentials({
+          NODE_ENV: "production",
+          ADMIN_SUPER_EMAIL: "",
+          ADMIN_SUPER_PASSWORD: "",
+        }),
+      /ADMIN_SUPER_PASSWORD is required/,
+    );
+    assert.throws(
+      () =>
+        requireAdminBootstrapCredentials({
+          NODE_ENV: "production",
+          ADMIN_SUPER_EMAIL: "ops@example.com",
+          ADMIN_SUPER_PASSWORD: "",
+        }),
+      /ADMIN_SUPER_PASSWORD is required/,
+    );
+    assert.throws(
+      () =>
+        requireAdminBootstrapCredentials({
+          NODE_ENV: "production",
+          ADMIN_SUPER_EMAIL: "",
+          ADMIN_SUPER_PASSWORD: "sufficiently-long-secret",
+        }),
+      /ADMIN_SUPER_EMAIL is required/,
+    );
+  });
+
+  it("accepts explicit bootstrap env only", () => {
+    const creds = requireAdminBootstrapCredentials({
+      NODE_ENV: "production",
+      ADMIN_SUPER_EMAIL: "Ops@Example.com",
+      ADMIN_SUPER_PASSWORD: "sufficiently-long-secret",
+    });
+    assert.equal(creds.email, "ops@example.com");
+    assert.equal(creds.password, "sufficiently-long-secret");
+  });
+
+  it("keeps hardcoded ADMIN_SUPER password/email fallbacks out of admin-auth source", () => {
+    const auth = readFileSync("src/lib/admin-auth.ts", "utf8");
+    assert.match(auth, /requireAdminBootstrapCredentials/);
+    // Empty-string trim guards (`|| ""`) are fine; concrete default secrets are not.
+    assert.equal(/ADMIN_SUPER_PASSWORD[\s\S]{0,200}\|\|\s*["'][^"']+["']/.test(auth), false);
+    assert.equal(/ADMIN_SUPER_EMAIL[\s\S]{0,160}\|\|\s*["'][^"']+["']/.test(auth), false);
+    assert.equal(/fromEnv\s*\|\|\s*["'][^"']+["']/.test(auth), false);
+  });
+
+  it("keeps public admin login free of concrete bootstrap credential hints", () => {
+    const login = readFileSync("src/app/admin/login/page.tsx", "utf8");
+    assert.equal(login.includes("defaultValue="), false);
+    assert.equal(/Default super admin/i.test(login), false);
+    assert.equal(/ADMIN_SUPER_PASSWORD/i.test(login), false);
+    assert.equal(/ADMIN_SUPER_EMAIL/i.test(login), false);
+    // Help text may mention setup, but must not embed email/password literals
+    assert.equal(/@[a-z0-9.-]+\.[a-z]{2,}/i.test(login), false);
+    assert.match(login, /never shown on this page/i);
+    assert.match(login, /setup invitation link/i);
+    // Setup path remains available outside the public password hint
+    const setup = readFileSync("src/app/admin/setup/page.tsx", "utf8");
+    assert.match(setup, /Set up your account/);
+    assert.match(setup, /invitation link works once/);
   });
 });

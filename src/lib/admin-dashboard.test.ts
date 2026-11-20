@@ -7,7 +7,7 @@ describe("admin dashboard data contract", () => {
   it("exposes the platform overview fields the UI renders", () => {
     const sample: AdminDashboardData = {
       sessionName: "Super Admin",
-      sessionEmail: "admin@influrios.com",
+      sessionEmail: "admin@example.com",
       sessionRole: "Super Admin",
       rangeLabel: "Last 30 days",
       kpis: [],

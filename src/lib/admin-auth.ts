@@ -627,14 +627,27 @@ function normalizeStore(store: AdminAuthStore): AdminAuthStore {
   };
 }
 
-function defaultStore(): AdminAuthStore {
-  const salt = randomBytes(16).toString("hex");
-  const fromEnv = process.env.ADMIN_SUPER_PASSWORD?.trim();
-  if (!fromEnv && process.env.NODE_ENV === "production") {
-    throw new Error("ADMIN_SUPER_PASSWORD is required in production.");
+/**
+ * Bootstrap credentials for an empty admin store. Never hardcode defaults —
+ * public login must not reveal them, and production must fail closed without env.
+ */
+export function requireAdminBootstrapCredentials(
+  env: NodeJS.ProcessEnv = process.env,
+): { email: string; password: string } {
+  const password = env.ADMIN_SUPER_PASSWORD?.trim() || "";
+  const email = env.ADMIN_SUPER_EMAIL?.trim().toLowerCase() || "";
+  if (!password) {
+    throw new Error("ADMIN_SUPER_PASSWORD is required to bootstrap admin auth.");
   }
-  const password = fromEnv || "InfluriosAdmin!2026";
-  const email = (process.env.ADMIN_SUPER_EMAIL || "admin@influrios.com").toLowerCase();
+  if (!email) {
+    throw new Error("ADMIN_SUPER_EMAIL is required to bootstrap admin auth.");
+  }
+  return { email, password };
+}
+
+function defaultStore(env: NodeJS.ProcessEnv = process.env): AdminAuthStore {
+  const salt = randomBytes(16).toString("hex");
+  const { email, password } = requireAdminBootstrapCredentials(env);
   return {
     roles: structuredClone(DEFAULT_ROLES),
     users: [
