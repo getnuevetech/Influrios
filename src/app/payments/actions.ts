@@ -45,11 +45,56 @@ function failWork(fundingId: string, message: string): never {
   redirect(`/collaboration/work/${fundingId}?error=${encodeURIComponent(message)}`);
 }
 
+/** Soft deliverable failures stay on the workroom focus dialog (COR-20). */
+export type WorkroomActionResult = {
+  ok: false;
+  error: string;
+  errorKind?: "validation" | "upload" | "file" | "auth";
+};
+
+function workroomFocusPath(fundingId: string, formData: FormData, extra: Record<string, string | undefined> = {}) {
+  const tab = workspaceTab(String(formData.get("tab") ?? ""));
+  const params = new URLSearchParams();
+  params.set("tab", tab);
+  const focus = String(formData.get("milestoneId") ?? formData.get("focus") ?? "").trim();
+  const intent = String(formData.get("intent") ?? "").trim();
+  const version = String(formData.get("versionNumber") ?? formData.get("version") ?? "").trim();
+  const review = String(formData.get("review") ?? "").trim();
+  if (focus) params.set("focus", focus);
+  if (intent) params.set("intent", intent);
+  if (version) params.set("version", version);
+  if (review) params.set("review", review);
+  for (const [key, value] of Object.entries(extra)) {
+    if (value) params.set(key, value);
+  }
+  return `/collaboration/work/${fundingId}?${params.toString()}`;
+}
+
+function workroomLoginNext(fundingId: string, formData: FormData) {
+  return `/login?next=${encodeURIComponent(workroomFocusPath(fundingId, formData))}&gate=payments`;
+}
+
+async function requireWorkroomAccount(fundingId: string, formData: FormData) {
+  const account = await getAccountSession().catch(() => null);
+  if (!account) redirect(workroomLoginNext(fundingId, formData));
+  return account;
+}
+
+function workroomResult(error: string, errorKind: WorkroomActionResult["errorKind"] = "validation"): WorkroomActionResult {
+  return { ok: false, error, errorKind };
+}
+
 const OPEN_DISPUTE = ["open", "under_review", "refund_requested", "escalated_provider", "escalated_legal"];
 
-function workspaceReturn(fundingId: string, formData: FormData, flag: string) {
+function workspaceReturn(fundingId: string, formData: FormData, flag: string, extra: Record<string, string | undefined> = {}) {
   const tab = workspaceTab(String(formData.get("tab") ?? ""));
-  return `/collaboration/work/${fundingId}?tab=${tab}&${flag}=1`;
+  const params = new URLSearchParams();
+  params.set("tab", tab);
+  params.set(flag, "1");
+  for (const [key, value] of Object.entries(extra)) {
+    if (value) params.set(key, value);
+  }
+  return `/collaboration/work/${fundingId}?${params.toString()}`;
 }
 
 async function loadWorkspaceState(fundingId: string, milestoneId: string, fundingStatus: string): Promise<WorkspaceMilestoneState | null> {
@@ -186,22 +231,26 @@ export async function actionRequestChangeOrder(formData: FormData) {
   redirect("/payments?changed=1");
 }
 
-export async function actionSubmitMilestone(formData: FormData) {
-  const account = await requirePaymentsAccount();
+function isUploadStorageError(message: string) {
+  return /could not be stored|network|temporar|try again/i.test(message);
+}
+
+export async function actionSubmitMilestone(formData: FormData): Promise<WorkroomActionResult> {
   const fundingId = String(formData.get("dealId") ?? "");
   const milestoneId = String(formData.get("milestoneId") ?? "");
+  const account = await requireWorkroomAccount(fundingId, formData);
   const access = await assertFundingAccess(account, fundingId);
-  if (!access.ok) fail(access.error);
+  if (!access.ok) return workroomResult(access.error, "auth");
   if (access.audience !== "creator" || !access.actorSlug) {
-    fail("Only the assigned influencer can submit work.");
+    return workroomResult("Only the assigned influencer can submit work.", "auth");
   }
   const files = filesFromForm(formData);
   const checked = validateDeliverableFiles(files);
-  if (!checked.ok) fail(checked.error);
+  if (!checked.ok) return workroomResult(checked.error, "file");
   const workspaceState = await loadWorkspaceState(access.funding.id, milestoneId, access.funding.status);
-  if (!workspaceState) failWork(access.funding.id, "Milestone not found.");
+  if (!workspaceState) return workroomResult("Milestone not found.");
   const allowed = workspaceMutationAllowed(workspaceState, { audience: "creator", assigned: true }, "submit");
-  if (!allowed.ok) failWork(access.funding.id, allowed.error);
+  if (!allowed.ok) return workroomResult(allowed.error);
   const result = await submitMilestoneWork({
     fundingId: access.funding.id,
     milestoneId,
@@ -210,22 +259,31 @@ export async function actionSubmitMilestone(formData: FormData) {
     linkUrl: String(formData.get("linkUrl") ?? ""),
     files: checked.files,
   });
-  if (!result.ok) fail(result.error);
+  if (!result.ok) {
+    return workroomResult(result.error, isUploadStorageError(result.error) ? "upload" : "validation");
+  }
+  const savedLink = String(formData.get("linkUrl") ?? "").trim()
+    ? (await prisma.milestoneSubmission.findUnique({ where: { id: result.id }, select: { linkUrl: true } }))?.linkUrl
+    : "";
   revalidatePath("/payments");
   revalidatePath("/dashboard");
   revalidatePath(`/collaboration/work/${access.funding.id}`);
-  redirect(workspaceReturn(access.funding.id, formData, "submitted"));
+  redirect(
+    workspaceReturn(access.funding.id, formData, "submitted", {
+      savedAs: savedLink || undefined,
+    }),
+  );
 }
 
-export async function actionRequestRevision(formData: FormData) {
-  const account = await requirePaymentsAccount();
+export async function actionRequestRevision(formData: FormData): Promise<WorkroomActionResult> {
   const fundingId = String(formData.get("dealId") ?? "");
   const milestoneId = String(formData.get("milestoneId") ?? "");
+  const account = await requireWorkroomAccount(fundingId, formData);
   const access = requireBusinessFundingAccess(await assertFundingAccess(account, fundingId));
-  if (!access.ok) fail(access.error);
+  if (!access.ok) return workroomResult(access.error, "auth");
   const files = filesFromForm(formData);
   const checked = validateDeliverableFiles(files);
-  if (!checked.ok) fail(checked.error);
+  if (!checked.ok) return workroomResult(checked.error, "file");
   const versionNumber = Number(formData.get("versionNumber"));
   const submissions = await prisma.milestoneSubmission.findMany({
     where: { milestoneId, fundingId: access.funding.id },
@@ -237,20 +295,20 @@ export async function actionRequestRevision(formData: FormData) {
     intent: "revise",
     note: String(formData.get("note") ?? ""),
   });
-  if (!decision.ok) failWork(access.funding.id, decision.error);
+  if (!decision.ok) return workroomResult(decision.error);
   const workspaceState = await loadWorkspaceState(access.funding.id, milestoneId, access.funding.status);
-  if (!workspaceState) failWork(access.funding.id, "Milestone not found.");
+  if (!workspaceState) return workroomResult("Milestone not found.");
   const allowed = workspaceMutationAllowed(workspaceState, { audience: "business", assigned: false }, "revise", decision.version);
-  if (!allowed.ok) failWork(access.funding.id, allowed.error);
+  if (!allowed.ok) return workroomResult(allowed.error);
   const result = await requestFundingRevision(access.funding.id, milestoneId, String(formData.get("note") ?? ""));
-  if (!result.ok) failWork(access.funding.id, result.error);
+  if (!result.ok) return workroomResult(result.error);
   const marked = await markSubmissionVersion({
     milestoneId,
     version: decision.version,
     status: "revision_requested",
     reviewNote: String(formData.get("note") ?? ""),
   });
-  if (!marked.ok) failWork(access.funding.id, marked.error);
+  if (!marked.ok) return workroomResult(marked.error);
   if (checked.files.length > 0) {
     const latest = await prisma.milestoneSubmission.findFirst({
       where: { milestoneId, fundingId: access.funding.id },
@@ -264,7 +322,9 @@ export async function actionRequestRevision(formData: FormData) {
       audience: "business",
       files: checked.files,
     });
-    if (!stored.ok) fail(stored.error);
+    if (!stored.ok) {
+      return workroomResult(stored.error, isUploadStorageError(stored.error) ? "upload" : "file");
+    }
   }
   revalidatePath("/payments");
   revalidatePath("/dashboard");
@@ -272,25 +332,27 @@ export async function actionRequestRevision(formData: FormData) {
   redirect(workspaceReturn(access.funding.id, formData, "revised"));
 }
 
-export async function actionAddDeliverableFiles(formData: FormData) {
-  const account = await requirePaymentsAccount();
+export async function actionAddDeliverableFiles(formData: FormData): Promise<WorkroomActionResult> {
   const fundingId = String(formData.get("dealId") ?? "");
   const milestoneId = String(formData.get("milestoneId") ?? "");
+  const account = await requireWorkroomAccount(fundingId, formData);
   const access = requireBusinessFundingAccess(await assertFundingAccess(account, fundingId));
-  if (!access.ok) fail(access.error);
-  if (access.funding.status !== "held") fail("Files can be added after the deposit is confirmed.");
+  if (!access.ok) return workroomResult(access.error, "auth");
+  if (access.funding.status !== "held") {
+    return workroomResult("Files can be added after the deposit is confirmed.");
+  }
   const files = filesFromForm(formData);
   const checked = validateDeliverableFiles(files);
-  if (!checked.ok) fail(checked.error);
-  if (checked.files.length === 0) fail("Choose a document, media file, or zip.");
+  if (!checked.ok) return workroomResult(checked.error, "file");
+  if (checked.files.length === 0) return workroomResult("Choose a document, media file, or zip.", "file");
   const milestone = await prisma.fundingMilestone.findFirst({
     where: { id: milestoneId, fundingId: access.funding.id },
     select: { id: true },
   });
-  if (!milestone) fail("Milestone not found.");
+  if (!milestone) return workroomResult("Milestone not found.");
   const workspaceState = await loadWorkspaceState(access.funding.id, milestoneId, access.funding.status);
   if (workspaceState && recordsDisagree(workspaceState).disagree) {
-    failWork(access.funding.id, "These records disagree. Nothing was added.");
+    return workroomResult("These records disagree. Nothing was added.");
   }
   const latest = await prisma.milestoneSubmission.findFirst({
     where: { milestoneId, fundingId: access.funding.id },
@@ -304,7 +366,9 @@ export async function actionAddDeliverableFiles(formData: FormData) {
     audience: "business",
     files: checked.files,
   });
-  if (!stored.ok) fail(stored.error);
+  if (!stored.ok) {
+    return workroomResult(stored.error, isUploadStorageError(stored.error) ? "upload" : "file");
+  }
   revalidatePath("/payments");
   revalidatePath(`/collaboration/work/${access.funding.id}`);
   redirect(workspaceReturn(access.funding.id, formData, "added"));

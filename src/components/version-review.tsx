@@ -100,7 +100,12 @@ export function VersionReview({
           >
             Review approval
           </Link>
-          <form action={actionRequestRevision} className="space-y-2">
+          <form
+            action={async (formData) => {
+              await actionRequestRevision(formData);
+            }}
+            className="space-y-2"
+          >
             <input type="hidden" name="dealId" value={dealId} />
             <input type="hidden" name="milestoneId" value={milestoneId} />
             <input type="hidden" name="versionNumber" value={selected.version} />

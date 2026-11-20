@@ -48,12 +48,57 @@ const BY_TYPE: Record<string, FileRule> = {
 
 const BY_EXT: Record<string, FileRule> = Object.fromEntries(Object.values(BY_TYPE).map((rule) => [rule.ext, rule]));
 
+/** Browser / OS MIME aliases that still map to an allow-listed rule. */
+const TYPE_ALIASES: Record<string, string> = {
+  "image/jpg": "image/jpeg",
+  "image/pjpeg": "image/jpeg",
+  "audio/x-wav": "audio/wav",
+  "audio/wave": "audio/wav",
+  "audio/x-m4a": "audio/mp4",
+  "video/x-quicktime": "video/quicktime",
+  "application/x-zip-compressed": "application/zip",
+  "application/x-zip": "application/zip",
+  "application/x-pdf": "application/pdf",
+};
+
+export const DELIVERABLE_ACCEPT =
+  ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.mov,.mp3,.wav,.m4a,.zip";
+
 export function deliverableFileRule(type: string, fileName: string): FileRule | null {
   const normalized = type.trim().toLowerCase();
+  const aliased = TYPE_ALIASES[normalized];
+  if (aliased && BY_TYPE[aliased]) return BY_TYPE[aliased];
   if (BY_TYPE[normalized]) return BY_TYPE[normalized];
   const ext = path.extname(fileName).replace(".", "").toLowerCase();
-  if ((normalized === "" || normalized === "application/octet-stream") && BY_EXT[ext]) return BY_EXT[ext];
+  const byExt = BY_EXT[ext];
+  if (!byExt) return null;
+  // Trust allow-listed extensions when the browser sends empty, generic, or
+  // vendor MIME types (common user-reported upload failure for zip/docx/mov).
+  if (!normalized || normalized === "application/octet-stream" || !BY_TYPE[normalized]) {
+    return byExt;
+  }
   return null;
+}
+
+export type DeliverableFileIssue = "unsupported" | "oversize" | "ready";
+
+export function classifyDeliverableFile(file: { name: string; type: string; size: number }): {
+  status: DeliverableFileIssue;
+  error: string | null;
+} {
+  if (file.size > DELIVERABLE_FILE_BYTES) {
+    return { status: "oversize", error: "File too large (max 8 MB)." };
+  }
+  if (!deliverableFileRule(file.type || "", file.name || "")) {
+    return { status: "unsupported", error: "That file type was not saved. Choose a document, media file, or zip." };
+  }
+  return { status: "ready", error: null };
+}
+
+export function formatDeliverableBytes(size: number) {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function filesFromForm(formData: FormData) {

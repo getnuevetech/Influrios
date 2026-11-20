@@ -24,6 +24,7 @@ type PanelMilestone = {
   disputeNote: string | null;
   grossCents: number;
   businessFeeCents: number;
+  reviewFiles: { id: string; fileName: string; version: number }[];
 };
 
 export function WorkspacePanel({
@@ -73,8 +74,22 @@ export function WorkspacePanel({
       query.release === focused.milestone.id,
   );
   const mode = focusMode(focused?.decision.action.kind, query.intent, showRelease);
+  const reviewStep = query.review === "changes" ? "changes" : "hub";
   const showSubmitForm = Boolean(focused && mode === "submit" && !business && funding.status === "held");
   const showBusinessFiles = Boolean(business && funding.status === "held" && focused && mode === "details" && !focused.decision.hold);
+  const formError = query.error || null;
+  const draftNote = query.draftNote || "";
+  const draftLink = query.draftLink || "";
+  const waitingVersion =
+    focused?.decision.action.kind === "review" ? focused.decision.action.version : null;
+  const waitingSubmission =
+    waitingVersion != null
+      ? focused?.milestone.state.submissions.find((row) => row.version === waitingVersion) ?? null
+      : null;
+  const reviewFiles =
+    waitingVersion != null
+      ? (focused?.milestone.reviewFiles.filter((file) => file.version === waitingVersion) ?? [])
+      : [];
 
   return (
     <WorkspaceFrame>
@@ -123,6 +138,9 @@ export function WorkspacePanel({
             {notice.text}
           </p>
         ))}
+        {query.savedAs && !focused ? (
+          <p className="mt-4 rounded-xl bg-[#EAF8F2] px-3 py-2 text-sm font-semibold text-[#087B5A]">Saved as {query.savedAs}</p>
+        ) : null}
         {query.release && focused && !showRelease ? (
           <p className="mt-4 text-sm text-amber-900">That version is not the one waiting for review. Nothing was released.</p>
         ) : null}
@@ -199,13 +217,23 @@ export function WorkspacePanel({
           grossCents={focused.milestone.grossCents}
           businessFeeCents={focused.milestone.businessFeeCents}
           closeHref={closeHref}
+          changesHref={workspaceHref(funding.id, {
+            tab,
+            focus: focused.milestone.id,
+            intent: "review",
+            version: String(releaseVersion),
+            review: "changes",
+          })}
           tab={tab}
+          linkUrl={waitingSubmission?.linkUrl || null}
+          note={waitingSubmission?.note || null}
+          files={reviewFiles.map((file) => ({ id: file.id, fileName: file.fileName }))}
         />
       ) : null}
       {focused && mode && !showRelease ? (
         <FocusDialog closeHref={closeHref}>
           <WorkspaceDialogBody
-            title={dialogTitle(focused.milestone.title, focused.decision, mode)}
+            title={dialogTitle(focused.milestone.title, focused.decision, mode, reviewStep)}
             subtitle={dialogSubtitle(focused.milestone.title, focused.decision, mode)}
             closeHref={closeHref}
             feedback={mode === "submit" ? focused.decision.feedback : mode === "review" ? focused.decision.feedback : null}
@@ -214,10 +242,32 @@ export function WorkspacePanel({
             holdReason={focused.decision.holdReason}
             bankLine={focused.decision.bankLine}
             mode={mode}
+            reviewStep={mode === "review" ? reviewStep : "hub"}
             showSubmitForm={showSubmitForm}
             submitLabel={focused.decision.action.kind === "submit_first" || focused.decision.action.kind === "submit_revision" ? `Submit version ${focused.decision.action.version}` : null}
             reviewVersion={focused.decision.action.kind === "review" ? focused.decision.action.version : null}
             canRequestChanges={focused.decision.canRequestChanges}
+            requestChangesHref={
+              focused.decision.action.kind === "review"
+                ? workspaceHref(funding.id, {
+                    tab,
+                    focus: focused.milestone.id,
+                    intent: "review",
+                    version: String(focused.decision.action.version),
+                    review: "changes",
+                  })
+                : null
+            }
+            reviewHubHref={
+              focused.decision.action.kind === "review"
+                ? workspaceHref(funding.id, {
+                    tab,
+                    focus: focused.milestone.id,
+                    intent: "review",
+                    version: String(focused.decision.action.version),
+                  })
+                : null
+            }
             approveHref={
               focused.decision.action.kind === "review"
                 ? workspaceHref(funding.id, {
@@ -228,6 +278,15 @@ export function WorkspacePanel({
                   })
                 : null
             }
+            reviewSummary={
+              waitingSubmission
+                ? {
+                    note: waitingSubmission.note || null,
+                    linkUrl: waitingSubmission.linkUrl || null,
+                    files: reviewFiles.map((file) => ({ id: file.id, fileName: file.fileName })),
+                  }
+                : null
+            }
             dealId={funding.id}
             milestoneId={focused.milestone.id}
             tab={tab}
@@ -235,6 +294,9 @@ export function WorkspacePanel({
             reviseAction={actionRequestRevision}
             filesAction={actionAddDeliverableFiles}
             showBusinessFiles={showBusinessFiles}
+            draftNote={draftNote}
+            draftLink={draftLink}
+            formError={formError}
           />
         </FocusDialog>
       ) : null}
@@ -255,9 +317,17 @@ function focusMode(kind: string | undefined, intent: string | undefined, showRel
   return "details";
 }
 
-function dialogTitle(name: string, decision: ReturnType<typeof workspaceDecision>, mode: "submit" | "review" | "details") {
+function dialogTitle(
+  name: string,
+  decision: ReturnType<typeof workspaceDecision>,
+  mode: "submit" | "review" | "details",
+  reviewStep: "hub" | "changes" = "hub",
+) {
   if (mode === "submit" && decision.action.kind === "submit_revision") return "Submit a revision";
   if (mode === "submit") return "Submit a version";
+  if (mode === "review" && decision.action.kind === "review" && reviewStep === "changes") {
+    return `Request changes · version ${decision.action.version}`;
+  }
   if (mode === "review" && decision.action.kind === "review") return `Review version ${decision.action.version}`;
   return name;
 }

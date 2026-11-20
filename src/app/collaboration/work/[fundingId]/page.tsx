@@ -93,7 +93,8 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
     query.revised ? { tone: "ok" as const, text: "Revision requested on that version." } : null,
     query.approved ? { tone: "ok" as const, text: "That version was approved. Bank payout stays unconfirmed." } : null,
     query.sent ? { tone: "ok" as const, text: "Message sent. It does not move money." } : null,
-    query.error ? { tone: "error" as const, text: query.error } : null,
+    // Inline popup errors keep focus; only surface page chrome errors when the dialog is closed.
+    query.error && !query.focus && !query.release ? { tone: "error" as const, text: query.error } : null,
   ].filter((notice): notice is { tone: "ok" | "error"; text: string } => Boolean(notice));
 
   return (
@@ -139,6 +140,9 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
             : null,
           grossCents: Number(allocation?.grossCents ?? milestone.amountCents),
           businessFeeCents: Number(allocation?.businessCollaborationFeeCents ?? 0),
+          reviewFiles: visible.flatMap((row) =>
+            row.files.map((file) => ({ id: file.id, fileName: file.fileName, version: row.version })),
+          ),
         };
       })}
       files={ordered.flatMap((milestone) =>
