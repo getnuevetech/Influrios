@@ -11,8 +11,15 @@ import {
   readRouteSnapshot,
   sharedRouteChannelOptions,
 } from "./payment-route";
-import { deliverableFileRule, validateDeliverableFiles } from "./deliverable-files";
-import { creatorMaySubmitWork, milestonePayoutLabel, milestoneWorkLabel, submissionIsComplete, visibleSubmissions } from "./milestone-delivery";
+import { deliverableFileRule } from "./deliverable-file-rules";
+import { deliverableLinkPreview, normalizeDeliverableLink, submissionIsComplete } from "./deliverable-link";
+import { validateDeliverableFiles } from "./deliverable-files";
+import {
+  creatorMaySubmitWork,
+  milestonePayoutLabel,
+  milestoneWorkLabel,
+  visibleSubmissions,
+} from "./milestone-delivery";
 
 describe("payment route decision", () => {
   it("uses one provider registry and does not add the marketplace catalog as a second identity", () => {
@@ -161,8 +168,15 @@ describe("milestone delivery", () => {
     assert.equal(submissionIsComplete({ note: "", linkUrl: "" }).ok, false);
     assert.equal(submissionIsComplete({ note: "Cut is ready", linkUrl: "http://example.com" }).ok, false);
     assert.equal(submissionIsComplete({ note: "", linkUrl: "https://example.com/cut" }).ok, true);
+    assert.equal(submissionIsComplete({ note: "", linkUrl: "example.com/cut" }).ok, true);
     assert.equal(submissionIsComplete({ note: "", linkUrl: "", fileCount: 1 }).ok, true);
     assert.equal(submissionIsComplete({ note: "short", linkUrl: "", fileCount: 0 }).ok, false);
+    const bare = normalizeDeliverableLink("drive.google.com/file/d/abc");
+    assert.equal(bare.ok, true);
+    if (bare.ok) assert.equal(bare.url, "https://drive.google.com/file/d/abc");
+    assert.equal(normalizeDeliverableLink("javascript:alert(1)").ok, false);
+    assert.equal(normalizeDeliverableLink("http://example.com").ok, false);
+    assert.match(deliverableLinkPreview("www.behance.net/gallery/1")?.text ?? "", /Will save as https:\/\/www\.behance\.net\/gallery\/1/);
     assert.equal(milestoneWorkLabel("approved"), "Done");
     assert.equal(milestoneWorkLabel("released"), "Done");
     assert.equal(milestoneWorkLabel("pending"), "Open");
@@ -186,19 +200,44 @@ describe("milestone delivery", () => {
     assert.match(work, /assertFundingAccess/);
     assert.match(panel, /!business && funding.status === "held"/);
     assert.match(review, /Version \{row.version\}/);
-    assert.match(fields, /name="files"/);
+    assert.match(readFileSync("src/components/deliverable-submit-form.tsx", "utf8"), /append\("files"/);
     assert.match(panel, /actionAddDeliverableFiles/);
     assert.match(panel, /WorkspaceMessages/);
     assert.match(panel, /id="milestones"/);
+    assert.match(actions, /requireWorkroomAccount/);
+    const submitSlice = actions.slice(
+      actions.indexOf("export async function actionSubmitMilestone"),
+      actions.indexOf("export async function actionRequestRevision"),
+    );
+    assert.match(submitSlice, /workroomResult/);
+    assert.equal(submitSlice.includes("fail("), false);
     assert.match(readFileSync("src/app/collaboration/work/[fundingId]/messages-panel.tsx", "utf8"), /id="messages"/);
     assert.equal(deliverableFileRule("image/png", "shot.png")?.kind, "media");
     assert.equal(deliverableFileRule("application/pdf", "brief.pdf")?.kind, "document");
     assert.equal(deliverableFileRule("application/zip", "pack.zip")?.kind, "file");
+    assert.equal(deliverableFileRule("application/x-zip-compressed", "pack.zip")?.kind, "file");
     assert.equal(deliverableFileRule("text/html", "page.html"), null);
     assert.equal(deliverableFileRule("", "cut.mp4")?.kind, "media");
+    assert.equal(deliverableFileRule("application/octet-stream", "brief.pdf")?.kind, "document");
+    // Specific MIME/extension conflicts must not fall through to extension.
+    assert.equal(deliverableFileRule("text/html", "brief.pdf"), null);
+    assert.equal(deliverableFileRule("image/gif", "shot.png")?.ext, "gif");
+    assert.equal(deliverableFileRule("video/unknown", "cut.mp4"), null);
     const tooBig = new File([new Uint8Array(8 * 1024 * 1024 + 1)], "big.pdf", { type: "application/pdf" });
     assert.equal(validateDeliverableFiles([tooBig]).ok, false);
     const pdf = new File([new Uint8Array([1, 2, 3])], "brief.pdf", { type: "application/pdf" });
     assert.equal(validateDeliverableFiles([pdf]).ok, true);
+    const submitForm = readFileSync("src/components/deliverable-submit-form.tsx", "utf8");
+    const addForm = readFileSync("src/components/deliverable-add-files-form.tsx", "utf8");
+    const fileField = readFileSync("src/components/deliverable-file-field.tsx", "utf8");
+    assert.match(submitForm, /startTransition/);
+    assert.match(addForm, /startTransition/);
+    assert.equal(submitForm.includes("@/lib/milestone-delivery"), false);
+    assert.equal(submitForm.includes("@/lib/deliverable-files"), false);
+    assert.equal(fileField.includes("@/lib/deliverable-files"), false);
+    assert.match(fileField, /@\/lib\/deliverable-file-rules/);
+    assert.match(submitForm, /@\/lib\/deliverable-link/);
+    assert.match(fileField, /Add up to \$\{DELIVERABLE_FILE_LIMIT\} files/);
+    assert.equal(fileField.includes("w-2/3"), false);
   });
 });

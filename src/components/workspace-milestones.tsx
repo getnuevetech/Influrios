@@ -1,6 +1,10 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource react */
 import type { ReactNode } from "react";
+import type { WorkroomActionResult } from "@/lib/workroom-action";
+import { DeliverableAddFilesForm } from "@/components/deliverable-add-files-form";
+import { DeliverableReviseForm } from "@/components/deliverable-revise-form";
+import { DeliverableSubmitForm } from "@/components/deliverable-submit-form";
 
 const TONE = {
   attention: "bg-amber-100 text-amber-900",
@@ -76,7 +80,7 @@ export function WorkspaceMilestoneTable({
   );
 }
 
-type FormAction = (formData: FormData) => void | Promise<void>;
+type WorkroomFormAction = (formData: FormData) => Promise<WorkroomActionResult>;
 
 export function WorkspaceDialogBody({
   title,
@@ -88,11 +92,15 @@ export function WorkspaceDialogBody({
   holdReason,
   bankLine,
   mode,
+  reviewStep = "hub",
   showSubmitForm,
   submitLabel,
   reviewVersion,
   canRequestChanges,
   approveHref,
+  requestChangesHref,
+  reviewHubHref,
+  reviewSummary = null,
   dealId,
   milestoneId,
   tab,
@@ -100,6 +108,10 @@ export function WorkspaceDialogBody({
   reviseAction,
   filesAction,
   showBusinessFiles,
+  draftNote = "",
+  draftLink = "",
+  formError = null,
+  paymentsHref = "/payments",
 }: {
   title: string;
   subtitle: string;
@@ -110,18 +122,26 @@ export function WorkspaceDialogBody({
   holdReason: string | null;
   bankLine: string | null;
   mode: "submit" | "review" | "details";
+  reviewStep?: "hub" | "changes";
   showSubmitForm: boolean;
   submitLabel: string | null;
   reviewVersion: number | null;
   canRequestChanges: boolean;
   approveHref: string | null;
+  requestChangesHref?: string | null;
+  reviewHubHref?: string | null;
+  reviewSummary?: { note: string | null; linkUrl: string | null; files: { id: string; fileName: string }[] } | null;
   dealId: string;
   milestoneId: string;
   tab: string;
-  submitAction?: FormAction;
-  reviseAction?: FormAction;
-  filesAction?: FormAction;
+  submitAction?: WorkroomFormAction;
+  reviseAction?: WorkroomFormAction;
+  filesAction?: WorkroomFormAction;
   showBusinessFiles?: boolean;
+  draftNote?: string;
+  draftLink?: string;
+  formError?: string | null;
+  paymentsHref?: string;
 }) {
   return (
     <section>
@@ -158,86 +178,91 @@ export function WorkspaceDialogBody({
       ) : null}
       {bankLine ? <p className="mt-3 text-sm font-semibold text-emerald-800">{bankLine}</p> : null}
       {mode === "submit" && showSubmitForm && submitAction && submitLabel ? (
-        <form action={submitAction} data-keep-scroll className="mt-4 space-y-3">
-          <input type="hidden" name="dealId" value={dealId} />
-          <input type="hidden" name="milestoneId" value={milestoneId} />
-          <input type="hidden" name="tab" value={tab} />
-          <label className="block text-sm font-semibold text-[#1B1464]">
-            Deliverable link
-            <input
-              name="linkUrl"
-              placeholder="https://"
-              className="mt-1 w-full rounded-xl border border-[#E4E9F5] px-3 py-2 text-sm font-normal"
-            />
-          </label>
-          <label className="block text-sm font-semibold text-[#1B1464]">
-            What changed?
-            <textarea
-              name="note"
-              rows={3}
-              placeholder="Describe the updates in this version..."
-              className="mt-1 w-full rounded-xl border border-[#E4E9F5] px-3 py-2 text-sm font-normal"
-            />
-          </label>
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-[#E4E9F5] px-3 py-2 text-sm font-semibold text-[#1B1464]">
-            Attach files
-            <input
-              name="files"
-              type="file"
-              multiple
-              accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif,.mp4,.webm,.mov,.mp3,.wav,.m4a,.zip"
-              className="sr-only"
-            />
-          </label>
-          <p className="text-xs text-[#667085]">Submitting starts the review window.</p>
-          <div className="flex justify-end gap-2">
-            <a href={closeHref} data-keep-scroll className="inline-flex h-11 items-center rounded-full border border-[#E4E9F5] px-4 text-sm font-semibold text-[#1B1464]">
-              Cancel
-            </a>
-            <button type="submit" className="inline-flex h-11 items-center rounded-full bg-[#6D4AFF] px-4 text-sm font-semibold text-white">
-              {submitLabel}
-            </button>
-          </div>
-        </form>
+        <DeliverableSubmitForm
+          dealId={dealId}
+          milestoneId={milestoneId}
+          tab={tab}
+          submitLabel={submitLabel}
+          closeHref={closeHref}
+          paymentsHref={paymentsHref}
+          action={submitAction}
+          draftNote={draftNote}
+          draftLink={draftLink}
+          initialError={formError}
+        />
       ) : null}
-      {mode === "review" && reviewVersion != null && canRequestChanges && reviseAction ? (
-        <form action={reviseAction} data-keep-scroll className="mt-4 space-y-3">
-          <input type="hidden" name="dealId" value={dealId} />
-          <input type="hidden" name="milestoneId" value={milestoneId} />
-          <input type="hidden" name="versionNumber" value={reviewVersion} />
-          <input type="hidden" name="tab" value={tab} />
-          <label className="block text-sm font-semibold text-[#1B1464]">
-            What should change
-            <textarea name="note" required minLength={8} rows={3} className="mt-1 w-full rounded-xl border border-[#E4E9F5] px-3 py-2 text-sm font-normal" />
-          </label>
-          <button type="submit" className="inline-flex h-11 items-center rounded-full border border-[#E4E9F5] px-4 text-sm font-semibold text-[#1B1464]">
-            Request changes
-          </button>
-        </form>
-      ) : null}
-      {mode === "review" && approveHref ? (
-        <p className="mt-4">
-          <a href={approveHref} data-keep-scroll className="inline-flex h-11 items-center rounded-full bg-[#6D4AFF] px-4 text-sm font-semibold text-white">
-            Approve version {reviewVersion}
-          </a>
-        </p>
-      ) : null}
-      {mode === "review" ? (
-        <p className="mt-3 text-xs text-[#667085]">Approval identifies this version. It does not confirm a bank payout.</p>
+      {mode === "review" && reviewVersion != null ? (
+        <>
+          {reviewSummary ? (
+            <div className="mt-4 rounded-2xl border border-[#E4E9F5] bg-[#FAFBFF] px-3 py-3 text-sm text-[#344054]">
+              <p>
+                <span className="font-semibold text-[#1B1464]">Version under review</span>
+                {reviewSummary.note ? ` · ${reviewSummary.note}` : ""}
+              </p>
+              {reviewSummary.linkUrl ? (
+                <p className="mt-2 font-semibold text-[#087B5A]">Saved as {reviewSummary.linkUrl}</p>
+              ) : null}
+              {reviewSummary.files.length > 0 ? (
+                <ul className="mt-2 space-y-1">
+                  {reviewSummary.files.map((file) => (
+                    <li key={file.id}>
+                      <a href={`/api/deliverables/${file.id}`} className="font-semibold text-[#6D4AFF] hover:underline">
+                        {file.fileName}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
+          {reviewStep === "hub" ? (
+            <div className="mt-4 space-y-3">
+              <p className="text-sm text-[#667085]">Choose one path. Request changes and Approve stay separate so feedback cannot approve a version by accident.</p>
+              <div className="flex flex-wrap gap-2">
+                {canRequestChanges && requestChangesHref ? (
+                  <a
+                    href={requestChangesHref}
+                    data-keep-scroll
+                    className="inline-flex h-11 items-center rounded-full border border-[#E4E9F5] px-4 text-sm font-semibold text-[#1B1464]"
+                  >
+                    Request changes…
+                  </a>
+                ) : null}
+                {approveHref ? (
+                  <a
+                    href={approveHref}
+                    data-keep-scroll
+                    className="inline-flex h-11 items-center rounded-full bg-[#6D4AFF] px-4 text-sm font-semibold text-white"
+                  >
+                    Approve version {reviewVersion}…
+                  </a>
+                ) : null}
+              </div>
+              <p className="text-xs text-[#667085]">Approval identifies this version. It does not confirm a bank payout.</p>
+            </div>
+          ) : null}
+          {reviewStep === "changes" && canRequestChanges && reviseAction ? (
+            <DeliverableReviseForm
+              dealId={dealId}
+              milestoneId={milestoneId}
+              tab={tab}
+              reviewVersion={reviewVersion}
+              hubHref={reviewHubHref || closeHref}
+              action={reviseAction}
+              draftNote={draftNote}
+              initialError={formError}
+            />
+          ) : null}
+        </>
       ) : null}
       {showBusinessFiles && filesAction ? (
-        <form action={filesAction} data-keep-scroll className="mt-4 space-y-2">
-          <input type="hidden" name="dealId" value={dealId} />
-          <input type="hidden" name="milestoneId" value={milestoneId} />
-          <input type="hidden" name="tab" value={tab} />
-          <label className="block text-xs font-semibold text-[#667085]">
-            Add files
-            <input name="files" type="file" multiple className="mt-1 block w-full text-sm font-normal" />
-          </label>
-          <button type="submit" className="rounded-full border border-[#E4E9F5] px-4 py-2 text-sm font-semibold text-[#1B1464]">
-            Add files
-          </button>
-        </form>
+        <DeliverableAddFilesForm
+          dealId={dealId}
+          milestoneId={milestoneId}
+          tab={tab}
+          action={filesAction}
+          initialError={mode === "details" ? formError : null}
+        />
       ) : null}
       {mode !== "submit" ? (
         <p className="mt-4">

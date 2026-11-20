@@ -87,7 +87,11 @@ describe("social callback origin wiring", () => {
     assert.match(connect, /tiktokQuery: network\.code === "tiktok"/);
     assert.match(connect, /callbackAbsoluteUrl/);
     assert.match(readFileSync("src/app/admin/social/page.tsx", "utf8"), /callbackAbsoluteUrl/);
-    assert.match(readFileSync("next.config.ts", "utf8"), /bodySizeLimit:\s*"10mb"/);
+    // 4 × 8 MB deliverable batch + multipart overhead (COR-21).
+    // Both limits must rise together; middleware clone defaults to 10mb.
+    const nextConfig = readFileSync("next.config.ts", "utf8");
+    assert.match(nextConfig, /bodySizeLimit:\s*"40mb"/);
+    assert.match(nextConfig, /middlewareClientMaxBodySize:\s*"40mb"/);
     const compose = readFileSync("docker-compose.yml", "utf8");
     assert.match(compose, /NEXT_PUBLIC_APP_URL: \$\{NEXT_PUBLIC_APP_URL:-https:\/\/influrios\.com\}/);
     assert.equal(compose.includes("NEXT_PUBLIC_APP_URL:-http://localhost:3000"), false);

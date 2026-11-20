@@ -22,11 +22,14 @@ const nextConfig: NextConfig = {
     webpackMemoryOptimizations: true,
     parallelServerBuildTraces: false,
     staticGenerationMaxConcurrency: 1,
-    // Document KYC uploads (and similar) exceed the 1 MB default and used to
-    // surface as a digest-only Application error on /dashboard/kyc.
+    // Deliverable batch = 4 × 8 MB plus multipart overhead (COR-21). KYC and
+    // other document uploads also need headroom above the 1 MB default.
+    // middlewareClientMaxBodySize defaults to 10mb and truncates bodies before
+    // serverActions.bodySizeLimit can apply (Next 15.5 + src/middleware.ts).
+    middlewareClientMaxBodySize: "40mb",
     serverActions: {
-      bodySizeLimit: "10mb",
-      allowedOrigins: ["influrios.com", "www.influrios.com", "localhost:3000"],
+      bodySizeLimit: "40mb",
+      allowedOrigins: ["influrios.com", "www.influrios.com", "localhost:3000", "127.0.0.1:3000"],
     },
   },
   images: {

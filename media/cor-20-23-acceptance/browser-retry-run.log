@@ -1,0 +1,15 @@
+# COR-21 browser retry evidence
+workUrl=http://127.0.0.1:3000/collaboration/work/cmwor5z0b0003js1bgm7dylz0?tab=milestones&focus=cmwor5z0d0005js1by37vw3rf&intent=submit
+store_chmod_fail=555
+fail_error="The file could not be stored. Nothing was saved."
+fail_note_preserved=true
+fail_link_preserved=true
+fail_dialog_open=true
+fail_file_listed=true
+store_chmod_restored=755
+retry_url=http://127.0.0.1:3000/collaboration/work/cmwor5z0b0003js1bgm7dylz0?tab=milestones&submitted=1&savedAs=https%3A%2F%2Fdrive.example%2Fbrowser-retry-preserve
+retry_success_ui=true
+reopen_shows_submission=true
+reopen_sample=∞ Influrios Dashboard Action inbox My Profile Collaborations Contracts Earnings & Payouts Messages Settings Starter Billing & Plan Log out © 2026 Influrios. All rights reserved. E Evidence Creator mwo
+browser_retry_preserve_pass=true
+wrote=/workspace/media/cor-20-23-acceptance/browser-retry-evidence.txt

@@ -98,7 +98,7 @@ describe("workspace decision", () => {
     assert.equal(row.includes("Request changes"), false);
     assert.equal((row.match(/Review version 2/g) ?? []).length, 2);
 
-    const dialog = renderToStaticMarkup(
+    const hub = renderToStaticMarkup(
       <WorkspaceDialogBody
         title="Review version 2"
         subtitle="Draft delivery · Version 2"
@@ -109,21 +109,54 @@ describe("workspace decision", () => {
         holdReason={null}
         bankLine={null}
         mode="review"
+        reviewStep="hub"
         showSubmitForm={false}
         submitLabel={null}
         reviewVersion={2}
         canRequestChanges={review.canRequestChanges}
         approveHref="/collaboration/work/deal?release=m1&version=2"
+        requestChangesHref="/collaboration/work/deal?focus=m1&intent=review&review=changes&version=2"
         dealId="deal"
         milestoneId="m1"
         tab="milestones"
-        reviseAction={async () => undefined}
+        reviseAction={async () => ({ ok: false, error: "unused" })}
       />,
     );
-    assert.match(dialog, /Feedback on version 1/);
-    assert.match(dialog, /Version 1/);
-    assert.match(dialog, /Version 2/);
-    assert.equal(dialog.includes("Submit revision"), false);
+    assert.match(hub, /Feedback on version 1/);
+    assert.match(hub, /Version 1/);
+    assert.match(hub, /Version 2/);
+    assert.match(hub, /Request changes…/);
+    assert.match(hub, /Approve version 2…/);
+    assert.equal(hub.includes("What should change"), false);
+    assert.equal(hub.includes("Submit revision"), false);
+
+    const changes = renderToStaticMarkup(
+      <WorkspaceDialogBody
+        title="Request changes · version 2"
+        subtitle="Draft delivery · Version 2"
+        closeHref="/collaboration/work/deal?tab=milestones"
+        feedback={review.feedback}
+        history={review.history}
+        paymentHistory={review.paymentHistory}
+        holdReason={null}
+        bankLine={null}
+        mode="review"
+        reviewStep="changes"
+        showSubmitForm={false}
+        submitLabel={null}
+        reviewVersion={2}
+        canRequestChanges={review.canRequestChanges}
+        approveHref={null}
+        reviewHubHref="/collaboration/work/deal?focus=m1&intent=review&version=2"
+        dealId="deal"
+        milestoneId="m1"
+        tab="milestones"
+        reviseAction={async () => ({ ok: false, error: "unused" })}
+      />,
+    );
+    assert.match(changes, /What should change/);
+    assert.match(changes, /Send change request/);
+    assert.equal(changes.includes("Approve version"), false);
 
     const approved = approveWorkspaceVersion(submitted.state, 2);
     assert.equal(approved.ok, true);
@@ -250,7 +283,7 @@ describe("workspace decision", () => {
         dealId="deal"
         milestoneId="m1"
         tab="milestones"
-        submitAction={async () => undefined}
+        submitAction={async () => ({ ok: false, error: "unused" })}
       />,
     );
     const feedback = dialog.indexOf("Feedback on version 1");
@@ -312,7 +345,9 @@ describe("workspace decision", () => {
     assert.match(panel, /!business && funding\.status === "held"/);
     assert.match(panel, /actionAddDeliverableFiles/);
     assert.match(panel, /id="milestones"/);
-    assert.match(readFileSync("src/components/workspace-milestones.tsx", "utf8"), /name="files"/);
+    assert.match(readFileSync("src/components/deliverable-submit-form.tsx", "utf8"), /append\("files"/);
+    assert.match(readFileSync("src/components/workspace-milestones.tsx", "utf8"), /Request changes…/);
+    assert.match(readFileSync("src/app/collaboration/work/[fundingId]/release-step.tsx", "utf8"), /Need changes instead/);
     assert.match(page, /WorkspacePanel/);
     assert.match(page, /formatContractMoney/);
     assert.equal(page.includes("formatMoney("), false);

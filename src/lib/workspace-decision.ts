@@ -11,7 +11,7 @@
  */
 import { listReturnQuery } from "@/lib/dialog-behavior";
 import { advanceMilestone, requestRevision } from "@/lib/ledger";
-import { submissionIsComplete } from "@/lib/milestone-delivery";
+import { submissionIsComplete } from "@/lib/deliverable-link";
 import type { MemberDealView } from "@/lib/member-deal-money";
 import { reviewVersionDecision, type ReviewVersion } from "@/lib/version-review";
 
@@ -282,7 +282,8 @@ export function versionHistory(state: WorkspaceMilestoneState) {
     .map((row) => {
       const feedback = row.reviewNote.trim() ? ` Feedback: ${row.reviewNote.trim()}` : "";
       const note = !feedback && row.note.trim() ? ` Note: ${row.note.trim()}` : "";
-      return `Version ${row.version} · ${submissionLabel(row.status)}.${feedback}${note}`;
+      const saved = row.linkUrl.trim() ? ` Saved as ${row.linkUrl.trim()}.` : "";
+      return `Version ${row.version} · ${submissionLabel(row.status)}.${feedback}${note}${saved}`;
     });
 }
 
@@ -452,7 +453,7 @@ export function workspaceTab(value: string | undefined | null): "milestones" | "
   return "milestones";
 }
 
-export const WORKSPACE_RECORD_KEYS = ["focus", "intent", "release", "version"] as const;
+export const WORKSPACE_RECORD_KEYS = ["focus", "intent", "release", "version", "review", "draftNote", "draftLink", "error", "savedAs"] as const;
 
 export function workspaceCloseQuery(query: Record<string, string | undefined>) {
   return listReturnQuery(query, WORKSPACE_RECORD_KEYS);

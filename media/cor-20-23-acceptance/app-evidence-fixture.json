@@ -1,0 +1,12 @@
+{
+  "businessEmail": "ev-biz-mwoq1wlx@example.com",
+  "strangerEmail": "ev-str-mwoq1wlx@example.com",
+  "creatorEmail": "ev-cre-mwoq1wlx@example.com",
+  "correctiveFundingId": "cmwpi87ob0005js42f3i3u3uu",
+  "correctiveMilestoneId": "cmwpi87oj0007js42aol4uge4",
+  "correctiveWorkUrl": "http://127.0.0.1:3000/collaboration/work/cmwpi87ob0005js42f3i3u3uu?tab=milestones&focus=cmwpi87oj0007js42aol4uge4&intent=submit",
+  "largeBatchFundingId": "cmwovw8sw0005jsz8qc1olwc8",
+  "largeBatchMilestoneId": "cmwovw8t30007jsz8kaz49vdh",
+  "largeBatchWorkUrl": "http://127.0.0.1:3000/collaboration/work/cmwovw8sw0005jsz8qc1olwc8?tab=milestones&focus=cmwovw8t30007jsz8kaz49vdh&intent=submit",
+  "largeBatchFileId": "cmwovwaxt0074jsqrt0obessx"
+}

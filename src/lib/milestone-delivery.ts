@@ -1,9 +1,14 @@
 import { prisma } from "@/lib/db";
 import { saveDeliverableFiles } from "@/lib/deliverable-files";
+import { submissionIsComplete } from "@/lib/deliverable-link";
 import { readShareSnapshot } from "@/lib/fx-share";
 import { submitFundingMilestone } from "@/lib/marketplace-ledger";
 
-const LINK = /^https:\/\/\S+$/i;
+export {
+  deliverableLinkPreview,
+  normalizeDeliverableLink,
+  submissionIsComplete,
+} from "@/lib/deliverable-link";
 
 export function creatorSlugsOnFunding(input: { creatorSlug: string; shareSnapshotJson: unknown }) {
   const shares = readShareSnapshot(input.shareSnapshotJson);
@@ -53,20 +58,6 @@ export function milestonePayoutLabel(status: string) {
     return "Pending confirmation";
   }
   return "Not initiated";
-}
-
-export function submissionIsComplete(input: { note: string; linkUrl: string; fileCount?: number }) {
-  const note = input.note.trim();
-  const linkUrl = input.linkUrl.trim();
-  const fileCount = input.fileCount ?? 0;
-  if (linkUrl && !LINK.test(linkUrl)) return { ok: false as const, error: "The work link must start with https://." };
-  if (fileCount < 0 || !Number.isInteger(fileCount)) {
-    return { ok: false as const, error: "Add a note, an https link, or a file so the business can review this version." };
-  }
-  if (note.length < 8 && !linkUrl && fileCount === 0) {
-    return { ok: false as const, error: "Add a note, an https link, or a file so the business can review this version." };
-  }
-  return { ok: true as const, note, linkUrl };
 }
 
 export async function submitMilestoneWork(input: {

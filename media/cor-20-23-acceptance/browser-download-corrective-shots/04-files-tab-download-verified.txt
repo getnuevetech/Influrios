@@ -1,0 +1,8 @@
+method=GET http://127.0.0.1:3000/api/deliverables/cmwpi896z0082jsqrqw2xwxdn with influencer session cookie (same URL as Files tab <a>)
+status=200
+bytes=262144
+sha256=0273231d8d92d1c914227ff95a082f43d2ec26d7b35e0b29aab243048d37df77
+original_bytes=262144
+original_sha256=0273231d8d92d1c914227ff95a082f43d2ec26d7b35e0b29aab243048d37df77
+match=true
+note=Chrome PDF inline navigation can show a viewer stub (~600B); raw fetch of the same href is the byte proof.

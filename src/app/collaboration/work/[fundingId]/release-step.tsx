@@ -13,7 +13,11 @@ export function ReleaseStep({
   grossCents,
   businessFeeCents,
   closeHref,
+  changesHref,
   tab = "milestones",
+  linkUrl = null,
+  files = [],
+  note = null,
 }: {
   fundingId: string;
   milestoneId: string;
@@ -23,7 +27,11 @@ export function ReleaseStep({
   grossCents: number;
   businessFeeCents: number;
   closeHref: string;
+  changesHref: string;
   tab?: string;
+  linkUrl?: string | null;
+  files?: { id: string; fileName: string }[];
+  note?: string | null;
 }) {
   const copy = approvalCopy({
     amountCents: grossCents + businessFeeCents,
@@ -32,12 +40,39 @@ export function ReleaseStep({
     milestoneName,
   });
   return (
-    <RecordDialog title="Approve and release" closeHref={closeHref} wide={false}>
+    <RecordDialog title={`Approve version ${version}?`} closeHref={closeHref} wide={false}>
       <form data-screen="W02" action={actionApproveAndRelease} className="space-y-4">
         <input type="hidden" name="dealId" value={fundingId} />
         <input type="hidden" name="milestoneId" value={milestoneId} />
         <input type="hidden" name="versionNumber" value={version} />
         <input type="hidden" name="tab" value={tab} />
+        <p className="text-sm text-muted">Confirm this version · payment remains separate</p>
+        <div className="rounded-2xl border border-[#E4E9F5] bg-[#FAFBFF] px-3 py-3 text-sm text-[#344054]">
+          <p>
+            <span className="font-semibold text-[#1B1464]">Version</span> · {version}
+            {note ? ` · ${note}` : ""}
+          </p>
+          <p className="mt-2">
+            <span className="font-semibold text-[#1B1464]">Files / link</span>
+            {files.length === 0 && !linkUrl ? " · None attached" : null}
+          </p>
+          {linkUrl ? <p className="mt-1 font-semibold text-[#087B5A]">Saved as {linkUrl}</p> : null}
+          {files.length > 0 ? (
+            <ul className="mt-1 space-y-1">
+              {files.map((file) => (
+                <li key={file.id}>
+                  <a href={`/api/deliverables/${file.id}`} className="font-semibold text-[#6D4AFF] hover:underline">
+                    {file.fileName}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <p className="mt-2">
+            <span className="font-semibold text-[#1B1464]">Consequences</span> · Marks delivery approved for this milestone.
+            Does not pay the influencer or release bank funds by itself until you confirm release below.
+          </p>
+        </div>
         <p className="text-sm text-muted">{copy.note}</p>
         <dl className="space-y-2 text-sm">
           <div className="flex justify-between gap-3"><dt>Milestone</dt><dd className="font-semibold">{milestoneName}</dd></div>
@@ -50,8 +85,22 @@ export function ReleaseStep({
           <input type="checkbox" name="acknowledge" required className="mt-1" />
           <span>{copy.acknowledgement}</span>
         </label>
-        <button type="submit" className="inline-flex h-11 items-center rounded-full bg-violet px-4 text-sm font-semibold text-white">{copy.button}</button>
-        <p><Link href={closeHref} className="text-sm font-semibold text-violet">Back</Link></p>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={changesHref}
+            className="inline-flex h-11 items-center rounded-full border border-[#E4E9F5] px-4 text-sm font-semibold text-[#1B1464]"
+          >
+            Need changes instead
+          </Link>
+          <button type="submit" className="inline-flex h-11 items-center rounded-full bg-violet px-4 text-sm font-semibold text-white">
+            Approve version {version}
+          </button>
+        </div>
+        <p>
+          <Link href={closeHref} className="text-sm font-semibold text-violet">
+            Cancel
+          </Link>
+        </p>
       </form>
     </RecordDialog>
   );
