@@ -22,5 +22,9 @@
   ],
   "browserFundingId": "cmwor5z0b0003js1bgm7dylz0",
   "browserMilestoneId": "cmwor5z0d0005js1by37vw3rf",
-  "browserWorkUrl": "http://127.0.0.1:3000/collaboration/work/cmwor5z0b0003js1bgm7dylz0?tab=milestones&focus=cmwor5z0d0005js1by37vw3rf&intent=submit"
+  "browserWorkUrl": "http://127.0.0.1:3000/collaboration/work/cmwovw8sw0005jsz8qc1olwc8?tab=milestones&focus=cmwovw8t30007jsz8kaz49vdh&intent=submit",
+  "largeBatchFundingId": "cmwovw8sw0005jsz8qc1olwc8",
+  "largeBatchMilestoneId": "cmwovw8t30007jsz8kaz49vdh",
+  "largeBatchWorkUrl": "http://127.0.0.1:3000/collaboration/work/cmwovw8sw0005jsz8qc1olwc8?tab=milestones&focus=cmwovw8t30007jsz8kaz49vdh&intent=submit",
+  "largeBatchFileId": "cmwovwaxt0074jsqrt0obessx"
 }

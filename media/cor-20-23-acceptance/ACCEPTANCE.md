@@ -20,7 +20,7 @@ Product PR only (no #534 audit docs). Live collaboration deposits unchanged.
 |------|----------------|-------|
 | **Helper / unit** | Pure functions + DB helpers (`saveDeliverableFiles`, `assertFundingAccess`) without HTTP | `runtime-upload-path.txt`, `deliverable-upload-path.test.ts` |
 | **HTTP / form POST** | Real Next server: multipart `actionSubmitMilestone` through the workroom page, then `/api/deliverables/[fileId]` | `app-http-evidence.txt` |
-| **Browser (headed automation)** | Select files → submit → popup stays on upload failure with note/link/files → retry → one success → reload | `browser-retry-evidence.txt`, `cor-21-*.png`, `browser-shots/` |
+| **Browser (Chromium)** | Actual form: select files → submit → reload → reopen → download; fail/retry preserve | `browser-large-batch-evidence.txt`, `browser-retry-evidence.txt`, shot folders |
 
 Helper-only TAP is **not** sufficient for COR-21 application claims. Use the HTTP + browser rows below for Ola’s “actual application” bar.
 
@@ -29,39 +29,62 @@ Helper-only TAP is **not** sufficient for COR-21 application claims. Use the HTT
 ```bash
 npx tsx --test src/lib/payment-route.test.ts src/lib/deliverable-upload-path.test.ts src/lib/workspace-decision.test.tsx src/lib/app-origin.test.ts
 DOCKER_BUILD=1 npx next build
-# Against a running server (dev or `next start`) with DATABASE_URL + AUTH_SECRET:
+# Against a running server with DATABASE_URL + AUTH_SECRET:
 EVIDENCE_BASE_URL=http://127.0.0.1:3000 npx tsx scripts/cor-21-app-evidence.ts
-node scripts/cor-21-browser-retry-evidence.mjs   # needs Chrome + seeded fixture from the HTTP script
+node scripts/cor-21-browser-retry-evidence.mjs
+node scripts/cor-21-browser-large-batch-evidence.mjs
 ```
 
-## HTTP application evidence (COR-21)
+## 1) Body size aligned + browser batch >10 MB
 
-See `app-http-evidence.txt` (and run log `app-http-evidence-run.log`).
+Config: both limits `40mb` in `next.config.ts` (asserted in `app-origin.test.ts`).
 
-Proves against the live app:
-
-1. **Valid batch >10 MB** through the workroom submit form (progressive `$ACTION_ID_` multipart POST for `actionSubmitMilestone`): 2×6 MB PDFs → `303` with `submitted=1`; persisted `12582912` bytes (`persisted_batch_gt_10mb=true`) — does **not** fail at the 10mb middleware/body limit before inline validation.
-2. **Reload / reopen**: work page `200` after submit; submission visible.
-3. **Authorized download**: owner + influencer `GET /api/deliverables/{fileId}` → `200` with bytes.
-4. **Deny**: unrelated business account → `404`; signed out → `401`.
-5. **Failed upload + retry (HTTP)**: store dir made unwritable → no submission row; restore → one `submitted=1` (`retry_one_success=true`).
-
-## Browser application evidence (COR-21 retry UX)
-
-See `browser-retry-evidence.txt` and screenshots:
+**Browser proof** (`browser-large-batch-evidence.txt`): Chromium selected `browser-batch-a.pdf` + `browser-batch-b.pdf` (6.0 MB each = **12 MB**), submitted via the workroom dialog → `submitted=1`; persisted `12582912` bytes.
 
 | Shot | File |
 |------|------|
-| Upload fail, popup open, note/link/file preserved, **Retry upload** | `cor-21-upload-fail-popup-preserved.png` |
-| Retry success (`submitted=1`) | `cor-21-retry-success.png` |
-| Reload / reopen after success | `cor-21-reload-reopen.png` |
-| Full sequence | `browser-shots/01` … `05` |
+| Dialog open | `browser-large-batch-shots/01-submit-dialog-open.png` |
+| Two 6 MB files selected | `browser-large-batch-shots/02-files-selected-gt-10mb.png` (+ `cor-21-browser-files-gt-10mb.png`) |
+| Submit success | `browser-large-batch-shots/03-submit-success.png` |
+| Reload milestones | `browser-large-batch-shots/04-reload-milestones.png` |
 
-`browser_retry_preserve_pass=true`: dialog stayed open on “The file could not be stored. Nothing was saved.”; note, link, and `retry.pdf` preserved; retry → single successful submission.
+HTTP progressive POST of the same size class: `app-http-evidence.txt` (`persisted_batch_gt_10mb=true`).
 
-## Helper-only runtime (still useful, not sufficient alone)
+## 2) Browser application path (select → submit → reload → reopen → download)
 
-See `runtime-upload-path.txt` (TAP). Proves helper path persistence + `assertFundingAccess` parties/deny. Prefer HTTP/browser rows above for application acceptance.
+Covered by `browser-large-batch-evidence.txt` + shots above, plus files tab reopen:
+
+- `browser-large-batch-shots/05-authorized-files-tab.png`
+- Authorized GET status: `browser-large-batch-shots/05-authorized-download-status.txt` / HTTP `download_*_status=200`
+
+## 3) HTTP access checks (real requests)
+
+From `browser-large-batch-evidence.txt` and `app-http-evidence.txt` against `/api/deliverables/{fileId}`:
+
+| Actor | Status |
+|-------|--------|
+| Business owner | `200` + bytes |
+| Assigned influencer | `200` + bytes |
+| Unrelated account | `404` |
+| Signed out | `401` |
+
+Deny screenshots: `browser-large-batch-shots/06-stranger-deny.png`, `07-signed-out-deny.png` (+ `.txt` status bodies).
+
+## 4) Failure / retry (popup stays open)
+
+`browser-retry-evidence.txt` + shots:
+
+| Shot | File |
+|------|------|
+| Fail: popup open, note/link/file preserved, **Retry upload** | `cor-21-upload-fail-popup-preserved.png` |
+| Retry success | `cor-21-retry-success.png` |
+| Reload | `cor-21-reload-reopen.png` |
+
+`browser_retry_preserve_pass=true` — one successful submission only after retry.
+
+## 5) Helper-only (not sufficient alone)
+
+`runtime-upload-path.txt` — helper persist + `assertFundingAccess`. Prefer browser/HTTP rows for application acceptance.
 
 Production build log tail: `production-build-tail.txt`
 
