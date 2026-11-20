@@ -20,6 +20,15 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
+// Empty admin tables bootstrap from ADMIN_SUPER_* only (no hardcoded fallback).
+// CI/local journey fixtures must supply them before createAdminRole/User.
+if (!process.env.ADMIN_SUPER_EMAIL?.trim()) {
+  process.env.ADMIN_SUPER_EMAIL = "ci-admin@example.com";
+}
+if (!process.env.ADMIN_SUPER_PASSWORD?.trim()) {
+  process.env.ADMIN_SUPER_PASSWORD = `ci-bootstrap-${randomBytes(18).toString("base64url")}`;
+}
+
 async function collaborationActionIds(cookieHeader: string) {
   const page = await fetch(`${base}/admin/collaborations`, {
     redirect: "manual",

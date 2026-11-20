@@ -23,7 +23,7 @@ describe("chargeback evidence pack", () => {
       reasonCode: "fraudulent",
       notes: "Issuer opened case",
       attachmentUrls: ["https://example.com/a.pdf", ""],
-      recordedBy: "admin@influrios.com",
+      recordedBy: "admin@example.com",
     });
     assert.equal(pack.providerCaseId, "cb_123");
     assert.equal(pack.currency, "USD");
@@ -38,7 +38,7 @@ describe("chargeback evidence pack", () => {
     const pack = buildChargebackEvidencePack({
       amountCents: 4_000,
       currency: "  ",
-      recordedBy: "admin@influrios.com",
+      recordedBy: "admin@example.com",
     });
     assert.equal(pack.currency, "");
     assert.equal(chargebackEvidenceSummary(pack), "4000¢");

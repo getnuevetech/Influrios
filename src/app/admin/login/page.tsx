@@ -47,7 +47,6 @@ export default async function AdminLoginPage({ searchParams }: Props) {
                 type="email"
                 required
                 autoComplete="username"
-                defaultValue="admin@influrios.com"
                 className="mt-1.5 w-full rounded-xl border border-border px-3 py-2.5 text-sm font-medium text-indigo outline-none focus:ring-2 focus:ring-violet"
               />
             </label>
@@ -67,11 +66,8 @@ export default async function AdminLoginPage({ searchParams }: Props) {
           </form>
 
           <p className="mt-6 text-[11px] leading-relaxed text-muted">
-            Default super admin (change via{" "}
-            <code className="text-indigo">ADMIN_SUPER_EMAIL</code> /{" "}
-            <code className="text-indigo">ADMIN_SUPER_PASSWORD</code>):{" "}
-            <span className="font-semibold text-indigo">admin@influrios.com</span> /{" "}
-            <span className="font-semibold text-indigo">InfluriosAdmin!2026</span>
+            First-time operators set the bootstrap admin through server environment configuration and the
+            private setup invitation link. Credentials are never shown on this page.
           </p>
           <Link href="/" className="mt-4 inline-block text-sm font-semibold text-violet hover:underline">
             ← Back to site

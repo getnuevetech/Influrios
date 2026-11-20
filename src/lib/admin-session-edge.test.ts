@@ -33,7 +33,7 @@ describe("admin session edge cookie verify", () => {
     try {
       const session: AdminSession = {
         userId: "user_super",
-        email: "admin@influrios.com",
+        email: "admin@example.com",
         name: "Super",
         roleId: "role_super",
         roleName: "Super Admin",

@@ -1,0 +1,5 @@
+# Live https://influrios.com/admin/login probe (pre-deploy of this PR)
+has_Default_super_admin_phrase=True
+email_like_tokens_found=2
+defaultValue_emails=0
+note=Do not print credential values. If phrase/emails present, treat prior bootstrap secret as potentially usable until rotated under authorization.

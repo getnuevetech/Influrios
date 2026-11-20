@@ -47,6 +47,9 @@ jobs:
         env:
           AUTH_SECRET: ci-journey-secret
           ADMIN_SESSION_SECRET: ci-journey-secret
+          # Ephemeral CI bootstrap only — never printed on /admin/login.
+          ADMIN_SUPER_EMAIL: ci-admin@example.com
+          ADMIN_SUPER_PASSWORD: ci-bootstrap-journey-secret-not-for-prod
           JOURNEY_BASE_URL: http://127.0.0.1:3456
         run: |
           npx tsx scripts/release-evidence.ts

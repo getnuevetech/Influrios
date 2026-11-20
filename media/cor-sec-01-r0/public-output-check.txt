@@ -1,0 +1,15 @@
+# COR-SEC-01 / R0 public-output checks (source)
+
+PASS	no_email_defaultValue
+PASS	no_Default_super_admin
+PASS	no_ADMIN_SUPER_in_login
+PASS	no_email_literal_in_login
+PASS	mentions_setup_invitation
+PASS	requireAdminBootstrapCredentials_exported
+PASS	no_password_string_fallback
+PASS	setup_page_preserved
+
+login_sha256=772ee509c03f68981d7c47998dd79314134008d2dab1c696f7a7d14765e9cb8e
+
+# CI fix
+authz-journey + workflow set ADMIN_SUPER_* for empty-store bootstrap; production still has no hardcoded fallback; public login unchanged.
