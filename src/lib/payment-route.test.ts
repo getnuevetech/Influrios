@@ -11,14 +11,13 @@ import {
   readRouteSnapshot,
   sharedRouteChannelOptions,
 } from "./payment-route";
-import { deliverableFileRule, validateDeliverableFiles } from "./deliverable-files";
+import { deliverableFileRule } from "./deliverable-file-rules";
+import { deliverableLinkPreview, normalizeDeliverableLink, submissionIsComplete } from "./deliverable-link";
+import { validateDeliverableFiles } from "./deliverable-files";
 import {
   creatorMaySubmitWork,
-  deliverableLinkPreview,
   milestonePayoutLabel,
   milestoneWorkLabel,
-  normalizeDeliverableLink,
-  submissionIsComplete,
   visibleSubmissions,
 } from "./milestone-delivery";
 
@@ -219,9 +218,26 @@ describe("milestone delivery", () => {
     assert.equal(deliverableFileRule("application/x-zip-compressed", "pack.zip")?.kind, "file");
     assert.equal(deliverableFileRule("text/html", "page.html"), null);
     assert.equal(deliverableFileRule("", "cut.mp4")?.kind, "media");
+    assert.equal(deliverableFileRule("application/octet-stream", "brief.pdf")?.kind, "document");
+    // Specific MIME/extension conflicts must not fall through to extension.
+    assert.equal(deliverableFileRule("text/html", "brief.pdf"), null);
+    assert.equal(deliverableFileRule("image/gif", "shot.png")?.ext, "gif");
+    assert.equal(deliverableFileRule("video/unknown", "cut.mp4"), null);
     const tooBig = new File([new Uint8Array(8 * 1024 * 1024 + 1)], "big.pdf", { type: "application/pdf" });
     assert.equal(validateDeliverableFiles([tooBig]).ok, false);
     const pdf = new File([new Uint8Array([1, 2, 3])], "brief.pdf", { type: "application/pdf" });
     assert.equal(validateDeliverableFiles([pdf]).ok, true);
+    const submitForm = readFileSync("src/components/deliverable-submit-form.tsx", "utf8");
+    const addForm = readFileSync("src/components/deliverable-add-files-form.tsx", "utf8");
+    const fileField = readFileSync("src/components/deliverable-file-field.tsx", "utf8");
+    assert.match(submitForm, /startTransition/);
+    assert.match(addForm, /startTransition/);
+    assert.equal(submitForm.includes("@/lib/milestone-delivery"), false);
+    assert.equal(submitForm.includes("@/lib/deliverable-files"), false);
+    assert.equal(fileField.includes("@/lib/deliverable-files"), false);
+    assert.match(fileField, /@\/lib\/deliverable-file-rules/);
+    assert.match(submitForm, /@\/lib\/deliverable-link/);
+    assert.match(fileField, /Add up to \$\{DELIVERABLE_FILE_LIMIT\} files/);
+    assert.equal(fileField.includes("w-2/3"), false);
   });
 });

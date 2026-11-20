@@ -1,7 +1,7 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource react */
 import type { ReactNode } from "react";
-import type { WorkroomActionResult } from "@/app/payments/actions";
+import type { WorkroomActionResult } from "@/lib/workroom-action";
 import { DeliverableAddFilesForm } from "@/components/deliverable-add-files-form";
 import { DeliverableReviseForm } from "@/components/deliverable-revise-form";
 import { DeliverableSubmitForm } from "@/components/deliverable-submit-form";

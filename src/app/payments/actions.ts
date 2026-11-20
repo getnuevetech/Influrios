@@ -28,6 +28,9 @@ import {
   requestMemberCancellation,
   type SettlementParty,
 } from "@/lib/member-settlement";
+import type { WorkroomActionResult } from "@/lib/workroom-action";
+
+export type { WorkroomActionResult } from "@/lib/workroom-action";
 
 const LOGIN = "/login?next=/payments&gate=payments";
 
@@ -44,13 +47,6 @@ function fail(message: string): never {
 function failWork(fundingId: string, message: string): never {
   redirect(`/collaboration/work/${fundingId}?error=${encodeURIComponent(message)}`);
 }
-
-/** Soft deliverable failures stay on the workroom focus dialog (COR-20). */
-export type WorkroomActionResult = {
-  ok: false;
-  error: string;
-  errorKind?: "validation" | "upload" | "file" | "auth";
-};
 
 function workroomFocusPath(fundingId: string, formData: FormData, extra: Record<string, string | undefined> = {}) {
   const tab = workspaceTab(String(formData.get("tab") ?? ""));

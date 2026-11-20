@@ -2,10 +2,10 @@
 
 /** @jsxRuntime automatic */
 /** @jsxImportSource react */
-import { useActionState, useEffect, useState, type FormEvent } from "react";
-import type { WorkroomActionResult } from "@/app/payments/actions";
+import { startTransition, useActionState, useEffect, useState, type FormEvent } from "react";
 import { DeliverableFileField, useDeliverableFiles } from "@/components/deliverable-file-field";
-import { deliverableLinkPreview, submissionIsComplete } from "@/lib/milestone-delivery";
+import { deliverableLinkPreview, submissionIsComplete } from "@/lib/deliverable-link";
+import type { WorkroomActionResult } from "@/lib/workroom-action";
 
 type SubmitAction = (formData: FormData) => Promise<WorkroomActionResult>;
 
@@ -37,13 +37,13 @@ export function DeliverableSubmitForm({
   const [note, setNote] = useState(draftNote);
   const [linkUrl, setLinkUrl] = useState(draftLink);
   const [clientError, setClientError] = useState<string | null>(initialError);
-  const { files, readyFiles, hasBlocking, addFiles, replaceFile, removeFile } = useDeliverableFiles();
+  const { files, readyFiles, hasBlocking, limitError, addFiles, replaceFile, removeFile } = useDeliverableFiles();
   const [state, formAction, pending] = useActionState(
     async (_prev: WorkroomActionResult | null, formData: FormData) => action(formData),
     null,
   );
   const preview = deliverableLinkPreview(linkUrl);
-  const error = clientError || state?.error || null;
+  const error = clientError || limitError || state?.error || null;
   const errorKind = state?.errorKind;
   const showRetryUpload = errorKind === "upload";
   const fieldError = Boolean(error);
@@ -64,10 +64,19 @@ export function DeliverableSubmitForm({
     return data;
   }
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  function dispatchSubmit(event: FormEvent<HTMLFormElement>) {
+    if (pending) {
+      event.preventDefault();
+      return;
+    }
     if (hasBlocking) {
       event.preventDefault();
       setClientError("Replace or remove files that are unsupported or too large before submitting.");
+      return;
+    }
+    if (limitError) {
+      event.preventDefault();
+      setClientError(limitError);
       return;
     }
     const complete = submissionIsComplete({ note, linkUrl, fileCount: readyFiles.length });
@@ -77,26 +86,21 @@ export function DeliverableSubmitForm({
       return;
     }
     setClientError(null);
+    // Rebuild file parts from React state; dispatch via startTransition (not a bare formAction call).
+    event.preventDefault();
+    const data = buildFormData();
+    startTransition(() => {
+      formAction(data);
+    });
   }
 
   return (
-    <form
-      action={formAction}
-      data-keep-scroll
-      className="mt-4 space-y-3"
-      onSubmit={(event) => {
-        onSubmit(event);
-        if (event.defaultPrevented) return;
-        // Rebuild file parts from React state (native input is uncontrolled/empty after select).
-        event.preventDefault();
-        formAction(buildFormData());
-      }}
-    >
+    <form action={formAction} data-keep-scroll className="mt-4 space-y-3" onSubmit={dispatchSubmit}>
       {error ? (
         <div
           role="alert"
           className={`rounded-2xl px-3 py-3 text-sm font-semibold ${
-            errorKind === "file" || errorKind === "upload" ? "bg-[#FFF8F7] text-[#B42318]" : "bg-[#FFF7E8] text-[#B54708]"
+            errorKind === "file" || errorKind === "upload" || limitError ? "bg-[#FFF8F7] text-[#B42318]" : "bg-[#FFF7E8] text-[#B54708]"
           }`}
         >
           {error}
@@ -140,6 +144,7 @@ export function DeliverableSubmitForm({
         onRemove={removeFile}
         disabled={pending}
         uploading={pending}
+        limitError={limitError}
       />
       <p className="text-xs text-[#667085]">Submitting starts the review window.</p>
       <div className="flex flex-wrap items-center justify-end gap-2">

@@ -3,7 +3,7 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource react */
 import { useActionState, useState } from "react";
-import type { WorkroomActionResult } from "@/app/payments/actions";
+import type { WorkroomActionResult } from "@/lib/workroom-action";
 
 type ReviseAction = (formData: FormData) => Promise<WorkroomActionResult>;
 

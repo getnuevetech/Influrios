@@ -11,7 +11,7 @@
  */
 import { listReturnQuery } from "@/lib/dialog-behavior";
 import { advanceMilestone, requestRevision } from "@/lib/ledger";
-import { submissionIsComplete } from "@/lib/milestone-delivery";
+import { submissionIsComplete } from "@/lib/deliverable-link";
 import type { MemberDealView } from "@/lib/member-deal-money";
 import { reviewVersionDecision, type ReviewVersion } from "@/lib/version-review";
 

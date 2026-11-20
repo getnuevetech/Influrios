@@ -9,7 +9,7 @@ import {
   classifyDeliverableFile,
   formatDeliverableBytes,
   type DeliverableFileIssue,
-} from "@/lib/deliverable-files";
+} from "@/lib/deliverable-file-rules";
 
 export type PendingDeliverableFile = {
   key: string;
@@ -30,24 +30,34 @@ function toPending(file: File): PendingDeliverableFile {
 
 export function useDeliverableFiles(initial: PendingDeliverableFile[] = []) {
   const [files, setFiles] = useState<PendingDeliverableFile[]>(initial);
+  const [limitError, setLimitError] = useState<string | null>(null);
   const readyFiles = files.filter((row) => row.status === "ready").map((row) => row.file);
   const hasBlocking = files.some((row) => row.status !== "ready");
 
   function addFiles(list: FileList | File[]) {
     const incoming = Array.from(list).map(toPending);
-    setFiles((current) => [...current, ...incoming].slice(0, DELIVERABLE_FILE_LIMIT));
+    setFiles((current) => {
+      if (current.length + incoming.length > DELIVERABLE_FILE_LIMIT) {
+        setLimitError(`Add up to ${DELIVERABLE_FILE_LIMIT} files.`);
+        return current;
+      }
+      setLimitError(null);
+      return [...current, ...incoming];
+    });
   }
 
   function replaceFile(key: string, file: File) {
     const next = toPending(file);
+    setLimitError(null);
     setFiles((current) => current.map((row) => (row.key === key ? { ...next, key } : row)));
   }
 
   function removeFile(key: string) {
+    setLimitError(null);
     setFiles((current) => current.filter((row) => row.key !== key));
   }
 
-  return { files, setFiles, readyFiles, hasBlocking, addFiles, replaceFile, removeFile };
+  return { files, setFiles, readyFiles, hasBlocking, limitError, addFiles, replaceFile, removeFile };
 }
 
 export function DeliverableFileField({
@@ -58,6 +68,7 @@ export function DeliverableFileField({
   onRemove,
   disabled,
   uploading,
+  limitError = null,
 }: {
   label?: string;
   files: PendingDeliverableFile[];
@@ -66,6 +77,7 @@ export function DeliverableFileField({
   onRemove: (key: string) => void;
   disabled?: boolean;
   uploading?: boolean;
+  limitError?: string | null;
 }) {
   const inputId = useId();
   const replaceKey = useRef<string | null>(null);
@@ -92,6 +104,11 @@ export function DeliverableFileField({
         />
       </label>
       <p className="text-xs text-[#667085]">Up to {DELIVERABLE_FILE_LIMIT} files · 8 MB each · documents, media, or zip.</p>
+      {limitError ? (
+        <p role="alert" className="rounded-xl bg-[#FFF8F7] px-3 py-2 text-xs font-semibold text-[#B42318]">
+          {limitError}
+        </p>
+      ) : null}
       {files.length > 0 ? (
         <ul className="space-y-2">
           {files.map((row) => (
@@ -136,7 +153,7 @@ export function DeliverableFileField({
         <div className="rounded-2xl border border-[#E4E9F5] bg-[#F6F7FC] px-3 py-3" role="status" aria-live="polite">
           <p className="text-sm font-semibold text-[#1B1464]">Uploading files…</p>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#E4E8F3]">
-            <div className="h-full w-2/3 animate-pulse rounded-full bg-[#6D4AFF]" />
+            <div className="h-full w-full animate-pulse rounded-full bg-[#6D4AFF]/50" />
           </div>
         </div>
       ) : null}
