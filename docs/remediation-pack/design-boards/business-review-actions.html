@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Design — Business review actions</title>
+  <link rel="stylesheet" href="_design-system.css" />
+  <style>
+    .pair { display: grid; gap: 28px; }
+    @media (min-width: 1100px) { .pair { grid-template-columns: 1.4fr 390px; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="frame-label">PROPOSED · COR-23 · Business Request changes + Approve in popup (UI must be proven; lib-only is not enough)</div>
+    <div class="pair">
+      <div>
+        <div class="frame-label">Desktop · Review version</div>
+        <div class="shell">
+          <aside class="sidebar"><div class="brand">Influrios</div><a class="nav-item active" href="#">Collaborations</a></aside>
+          <section class="main" style="position:relative;min-height:560px;">
+            <h1 style="font-size:28px;">Workspace</h1>
+            <div class="scrim" style="position:absolute;border-radius:28px;">
+              <div class="dialog wide">
+                <div class="dialog-head">
+                  <div>
+                    <h2 style="font-size:22px;">Review version 2</h2>
+                    <div class="dialog-meta">Kickoff · Influencer submission · Funds held (payment separate)</div>
+                  </div>
+                  <button class="btn btn-secondary" style="padding:6px 10px;">✕</button>
+                </div>
+                <div class="dialog-body">
+                  <p><strong>Version history</strong></p>
+                  <ul>
+                    <li>v1 · revision requested · draft reel</li>
+                    <li>v2 · submitted · outro extended · <a href="#">cut.mp4</a> · <a href="#">https://drive.example/cut</a></li>
+                  </ul>
+                  <div class="field" style="margin-top:14px;">
+                    <label>What should change</label>
+                    <textarea rows="3" placeholder="Required when requesting changes"></textarea>
+                  </div>
+                  <p class="note">Approval identifies this version. It does not confirm a bank payout.</p>
+                </div>
+                <div class="dialog-foot">
+                  <button class="btn btn-secondary">Request changes</button>
+                  <button class="btn btn-primary">Approve version 2</button>
+                  <a href="#" style="margin-left:auto;font-size:13px;">View collaboration payments</a>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+      <div>
+        <div class="frame-label">Mobile 390</div>
+        <div class="mobile-shell">
+          <div class="mobile-top"><strong>Review v2</strong><span class="icon-btn">✕</span></div>
+          <div class="menu-sheet">
+            <p class="note">Kickoff · submitted</p>
+            <p><a href="#">cut.mp4</a><br/><a href="#">https://drive.example/cut</a></p>
+            <div class="field"><label>What should change</label><textarea rows="4"></textarea></div>
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;">
+              <button class="btn btn-primary">Approve version 2</button>
+              <button class="btn btn-secondary">Request changes</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

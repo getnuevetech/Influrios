@@ -2,6 +2,8 @@
   "revision": "j18-j20-complete",
   "recordedAt": "2026-11-19T22:51:00.000Z",
   "baseCommit": "3924de3",
+  "historicalEvidenceCommit": "db64224",
+  "reviewabilityNote": "Preserve this file as historical execution evidence. Expanded aggregate scoring (20 Pass / 10 Partial) and J14 Partial live in phase1-acceptance-matrix.json / final-coverage-report.md — do not treat db64224 checklist as complete platform coverage. J18 monthly Pass here; aggregate Partial via annual Fail. J20 Pass = hosted invoice; COR-24 in-app download not executed.",
   "method": "Influrios UI checkout + computerUse Stripe TEST Card 4242; success/completeCheckout confirmed payment via Stripe API (no fabricated webhook; no hardcoded taxPercent)",
   "freshCode": "AUDITPRO15MAC4C",
   "email": "audit.r3mrvlgh.influencer-unrelated@example.com",
@@ -32,16 +34,19 @@
   "journeys": {
     "J18": {
       "coverage": "Complete",
-      "acceptance": "Pass",
-      "note": "Monthly discounted Apply→pay→redemption Pass. Annual Apply remains product Fail COR-04 for remediation.",
+      "acceptanceSubtestMonthly": "Pass",
+      "acceptanceAggregate": "Partial",
+      "note": "Monthly discounted Apply→pay→redemption Pass. Annual Apply remains product Fail COR-04. Aggregate Partial for all-required-branches.",
       "subtests": { "apply_to_stripe_and_redeem": "Pass", "annual_apply": "Fail (COR-04 preserved)" }
     },
     "J20": {
       "coverage": "Complete",
       "acceptance": "Pass",
-      "note": "Same transaction: Influrios UI quote→tax→Stripe TEST pay→invoice/PDF reconcile (subtotal/discount/tax/total)."
+      "note": "Same transaction: Influrios UI quote→tax→Stripe TEST pay→hosted invoice/PDF reconcile. COR-24 in-app billing download is separate and not executed."
     }
   },
   "acceptance": "Pass",
-  "coverage": "Complete"
+  "acceptanceNote": "Historical monthly J18+J20 Pass at execution time; expanded platform aggregate is 20/10 in phase1-acceptance-matrix.json",
+  "coverage": "Complete",
+  "coverageNote": "Complete for this payment checklist only; not expanded deliverable/messages completeness"
 }

@@ -1,56 +1,52 @@
-# Final coverage report — J18/J20 completion (#534)
+# Final coverage report — #534 (reviewability revision)
 
-**Revision:** j18-j20-complete · **Base:** `3924de3`  
-**Scope:** Complete remaining J18/J20 execution evidence only. Remediation **PAUSED**. No DB repairs, fabricated webhooks, or hardcoded tax.
+**Historical execution freeze:** `db64224` (J18/J20 completion). That checklist is **not** complete platform coverage.  
+**This revision:** scoring + pack reviewability only. Remediation **PAUSED**. No product fixes.
 
-## Executive counts (J01–J30)
+## Executive counts — expanded aggregate
 
 | Acceptance | Count | IDs |
 |------------|------:|-----|
-| Pass | **22** | J01–J02, J04–J14, **J18**, J19, **J20**, J21–J24, J26, J29 |
-| Partial | **8** | J03, J15, J16, J17, J25, J27, J28, J30 |
-| Coverage Incomplete | **0** | |
+| Pass | **20** | J01–J02, J04–J13, J19–J24, J26, J29 |
+| Partial | **10** | J03, **J14**, J15, J16, J17, **J18**, J25, J27, J28, J30 |
 
-**Reporting qualification:** J18 is labelled Pass for the **monthly** branch while annual remains Fail (COR-04). For an all-required-branches aggregate, treat J18 as Partial → **21 Pass / 9 Partial**. Publish branch labels alongside either count; never imply annual discounts passed.
+### Subtest vs aggregate
 
-One Stripe TEST transaction satisfies **both** J18 and J20 monthly acceptance criteria.
+| Journey | Subtest | Aggregate |
+|---------|---------|-----------|
+| **J14** | Note-submission **Pass** | **Partial** — file upload + business Approve/Request changes UI **not executed** (COR-21, COR-23); error/link defects COR-20/22 |
+| **J18** | Monthly Apply→pay→redeem **Pass** | **Partial** — annual Fail (COR-04) |
+| **J20** | Hosted invoice/PDF reconcile **Pass** | **Pass** — COR-24 is separate in-app billing download gap |
+| **J22** | Two-party send **Pass** | **Pass** — COR-25 is depth/retry gap, not a demotion |
 
-## J18 + J20 completed transaction
+## Coverage Incomplete scoping
+
+| Scope | Coverage Incomplete |
+|-------|---------------------|
+| Old `db64224` checklist (required steps as closed at freeze) | **0** |
+| Expanded audit (upload E2E, biz review UI, reply depth, in-app invoice download) | Steps remain **not executed** — **do not** cite the zero as expanded completeness |
+
+## J18 + J20 completed transaction (historical @ `db64224`)
 
 | Field | Value |
 |-------|-------|
 | Session | `cs_test_a0EmDMZuI8eydnfk4Q7mmX0qws8ubVjVzYpvrImu1MdQ6Q2bH4QaoI1ryt` |
 | Code | `AUDITPRO15MAC4C` (15% month Pro) |
-| Path | Influrios `/billing` Upgrade to Pro → Apply → tax preview → Stripe → computerUse Card `4242` |
 | Checkout | subtotal 2900 · discount 435 · tax 203 · **total 2668** |
-| Invoice | `in_1UddzZ1geYv2y1v8tm2vcCBe` paid — same amounts; hosted + PDF |
-| Influrios | `SubscriptionState` **active** `creator_pro` month; `CheckoutAttempt` **completed** |
-| Redemption | `DiscountOffer.redeemedCount=1`; reservation **consumed** / `providerOutcome=confirmed` |
+| Invoice | `in_1UddzZ1geYv2y1v8tm2vcCBe` paid — hosted + PDF |
+| Influrios | `SubscriptionState` **active** `creator_pro` month; redemption consumed |
 
-### Required-step outcomes
+**J18** monthly subtest Pass; aggregate Partial (annual).  
+**J20** Pass for Influrios UI quote→payment→**hosted** invoice (same txn). In-app billing-history download = COR-24 **not executed**.
 
-| Step | Result | Evidence |
-|------|--------|----------|
-| Influrios quote + Apply monthly discount | executed_successfully | `j18j20-preview-applied.png` |
-| Open Stripe Checkout with coupon | executed_successfully | `j18j20-stripe-hosted.png`, `j20-unrelated-pre-subscribe.png` |
-| Complete Stripe TEST payment | executed_successfully | computerUse; `j18-j20-discounted-checkout-payment.mp4` |
-| Provider → Influrios entitlement | executed_successfully | `j18-j20-postpay-probe.json` |
-| Discount redemption persisted | executed_successfully | offer redeemedCount=1; reservation consumed |
-| Customer billing history | executed_successfully | `j18j20-billing-after-pay.png` |
-| Invoice + PDF reconcile | executed_successfully | `j20-invoice-details.png`, `j20-invoice-pdf.png`, `j18j20-invoice.pdf` |
+## Preserved / expanded defects (impl paused)
 
-**J18 acceptance Pass** for monthly Apply→pay→redeem. **Annual Apply remains Fail (COR-04)** — preserved for remediation, not silently repaired.  
-**J20 acceptance Pass** for Influrios UI quote→payment→invoice (same txn).
+Prior: COR-SEC-01 · COR-01 · COR-03/04 · COR-07/11/12 · COR-09a/b · COR-10 · COR-13–18 · PL-01  
 
-## Preserved defects (remediation still paused)
-
-COR-03 annual offers · COR-04 annual Apply · COR-07/11/12 proration · COR-10 managed_intro fee · COR-09a/b · COR-18 mobile overflow · COR-13/14/15 · PL-01 payout · COR-SEC-01  
-
-**Deliverables expansion (2026-11-20, design/register only):** COR-20 error→payments · COR-21 file upload path · COR-22 bare-link normalize · COR-23 J14 review UI gap · COR-24 billing invoice download · COR-25 messages reply. Pack is **NOT** complete verified UI/UX remediation; deliverable gaps **IN SCOPE**. See `docs/remediation-pack/` in the Project store.
+Deliverables/reviewability: **COR-20–25** — see [`correction-register.md`](./correction-register.md) and in-repo [`docs/remediation-pack/`](../remediation-pack/).
 
 ## Pack
 
-- `j18-j20-complete-results.json` · `j18-j20-postpay-probe.json`  
-- `phase1-acceptance-matrix.json` · `correction-register.md` · `journeys.md`  
-- Media: `media-local-journeys-closure/j18j20-*`, `j20-invoice-*`  
-- Recording: `/opt/cursor/artifacts/j18-j20-discounted-checkout-payment.mp4`
+- Historical: `j18-j20-complete-results.json` · media under `media-local-journeys-closure/`  
+- Reviewability: `correction-register.md` · `journeys.md` · `phase1-acceptance-matrix.json` · `remediation-pack-expansion-note.md`  
+- Designs: `docs/remediation-pack/design-boards/` (desktop + mobile)

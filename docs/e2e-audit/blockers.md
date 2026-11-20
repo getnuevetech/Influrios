@@ -1,4 +1,4 @@
-# Blockers / limitations — after J18/J20 completion
+# Blockers / limitations — #534
 
 ## Provider
 
@@ -13,11 +13,24 @@
 - COR-09a/b · COR-18 visual  
 - COR-13 / COR-14 / COR-15  
 
-## Closed this pass
+## Deliverables (design expansion — impl paused)
 
-- J18 monthly Apply→pay→redemption  
-- J20 Influrios UI quote→payment→invoice/PDF reconcile  
+- COR-20 milestone error → Collaboration payments (must stay in popup) — **code-observed**  
+- COR-21 file upload path incomplete — **not executed** E2E  
+- COR-22 bare-domain links rejected — **code-observed**  
+- COR-23 J14 business revise/approve UI unproven — **not executed**  
+- COR-24 in-app billing invoice download — **not executed** (does not demote J20 hosted Pass)  
+- COR-25 messages reply depth/retry — **not executed** (does not demote J22 send Pass)  
+
+## Closed this pass (historical @ `db64224`)
+
+- J18 monthly Apply→pay→redemption (aggregate still Partial via annual)  
+- J20 Influrios UI quote→payment→**hosted** invoice/PDF reconcile  
 
 ## Security
 
 - COR-SEC-01 admin login credential hint  
+
+## Scoring
+
+Expanded aggregate **20 Pass / 10 Partial**. Old-checklist Coverage Incomplete **0** @ `db64224` only.
