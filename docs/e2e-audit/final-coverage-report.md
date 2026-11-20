@@ -11,6 +11,8 @@
 | Partial | **8** | J03, J15, J16, J17, J25, J27, J28, J30 |
 | Coverage Incomplete | **0** | |
 
+**Reporting qualification:** J18 is labelled Pass for the **monthly** branch while annual remains Fail (COR-04). For an all-required-branches aggregate, treat J18 as Partial → **21 Pass / 9 Partial**. Publish branch labels alongside either count; never imply annual discounts passed.
+
 One Stripe TEST transaction satisfies **both** J18 and J20 monthly acceptance criteria.
 
 ## J18 + J20 completed transaction
@@ -42,7 +44,9 @@ One Stripe TEST transaction satisfies **both** J18 and J20 monthly acceptance cr
 
 ## Preserved defects (remediation still paused)
 
-COR-03 annual offers · COR-04 annual Apply · COR-07/11/12 proration · COR-10 managed_intro fee · COR-09a/b · COR-18 mobile overflow · COR-13/14/15 · PL-01 payout · COR-SEC-01
+COR-03 annual offers · COR-04 annual Apply · COR-07/11/12 proration · COR-10 managed_intro fee · COR-09a/b · COR-18 mobile overflow · COR-13/14/15 · PL-01 payout · COR-SEC-01  
+
+**Deliverables expansion (2026-11-20, design/register only):** COR-20 error→payments · COR-21 file upload path · COR-22 bare-link normalize · COR-23 J14 review UI gap · COR-24 billing invoice download · COR-25 messages reply. Pack is **NOT** complete verified UI/UX remediation; deliverable gaps **IN SCOPE**. See `docs/remediation-pack/` in the Project store.
 
 ## Pack
 
