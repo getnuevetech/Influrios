@@ -1,0 +1,341 @@
+{
+  "runId": "AUDIT_LOCAL_R36",
+  "revision": "r3.6",
+  "recordedAt": "2026-11-19T14:48:56.833Z",
+  "labels": {
+    "stripeTestCheckout": "Stripe TEST checkout (cs_test_ / sk_test_ / livemode=false)",
+    "simulatedInternalRelease": "SIMULATION: sandbox_ledger_hold release (providerE2eComplete=false)",
+    "providerPayoutUnproven": "Provider transfer/payout UNPROVEN under original J15 criteria"
+  },
+  "stopRule": "Remaining: J15 Partial forever (no provider payout); J16 year Fail (no annualOffers/year Price); J17 Partial (cs_test_ externalId + empty billing.prices); J28 Partial (no managed_intro fee rule). J18/J20 Pass.",
+  "results": [
+    {
+      "runId": "AUDIT_LOCAL_R36",
+      "buildId": "local-dev-r36",
+      "environment": "local-dedicated",
+      "revision": "r3.6",
+      "startedAt": "2026-11-19T14:44:21.417Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j16r36-pricing-annual-toggle.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j16r36-pricing-annual-toggle.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "rca",
+          "yearStart": {
+            "ok": false,
+            "error": "Annual billing is not available for this plan. You can stay on monthly. Nothing was charged."
+          },
+          "annualOffersEmpty": true
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PRODUCT/PROVIDER LIMITATION: annual unavailable — billing.annualOffers empty AND no Stripe year Price; monthly Plus Pass retained; do not invent Pass",
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J16-r36-annual-blocked-rca",
+      "journeyId": "J16",
+      "role": "system",
+      "expected": "New user annual purchase — genuine sandbox payment + entitlement",
+      "actual": "{\"annualOffers\":{},\"prices\":{\"creator_plus\":\"\",\"creator_pro\":\"\",\"business_pro\":\"\",\"agency\":\"\"},\"yearOffer\":{\"ok\":false,\"reason\":\"Annual billing is not available for this plan. You can stay on monthly.\",\"monthlyAvailable\":true},\"yearStart\":{\"ok\":false,\"error\":\"Annual billing is not available for this plan. You can stay on monthly. Nothing was charged.\"},\"stripeYearPrices\":{\"yearActive\":[],\"allActive\":[{\"id\":\"price_1UdKNn1geYv2y1v8zetPPRPQ\",\"amount\":1900,\"interval\":\"month\",\"active\":true}]},\"rca\":[\"PlatformSetting billing.annualOffers empty\",\"No active Stripe Price with recurring.interval=year in TEST account\",\"startCheckout year refused before charge\"],\"note\":\"NOT Pass — product/provider config limitation\"}",
+      "functionalResult": "Fail",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:44:21.417Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R36",
+      "buildId": "local-dev-r36",
+      "environment": "local-dedicated",
+      "revision": "r3.6",
+      "startedAt": "2026-11-19T14:44:21.479Z",
+      "screenshotRefs": [],
+      "assertionRefs": [
+        {
+          "type": "simulation",
+          "providerE2eComplete": false
+        },
+        {
+          "type": "payout",
+          "status": "UNPROVEN"
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PARTIAL FOREVER until Connect/bank payout proven — simulation ≠ Pass",
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J15-r36-sim-forever-partial",
+      "journeyId": "J15",
+      "role": "system",
+      "expected": "Provider transfer/payout",
+      "actual": "{\"release\":{\"ok\":true,\"reference\":\"sim_sandbox_ledger_hold:mkt_release_cmwnnvd5w0001jsyynxre1vmn\",\"execution\":\"external\"},\"isSim\":true,\"providerE2eComplete\":false,\"labels\":{\"release\":\"SIMULATION: sandbox_ledger_hold release (providerE2eComplete=false)\",\"payout\":\"Provider transfer/payout UNPROVEN under original J15 criteria\"},\"policy\":\"J15 stays Partial forever without real provider payout — never Pass\"}",
+      "functionalResult": "Partial",
+      "visualResult": "N/A",
+      "completedAt": "2026-11-19T14:44:21.479Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R36",
+      "buildId": "local-dev-r36",
+      "environment": "local-dedicated",
+      "revision": "r3.6",
+      "startedAt": "2026-11-19T14:44:26.681Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j17r36-billing.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j17r36-billing.png"
+        },
+        {
+          "rel": "local-journeys/j17r36-no-portal-control.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j17r36-no-portal-control.png"
+        },
+        {
+          "rel": "local-journeys/j17r36-change-controls.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j17r36-change-controls.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "product-gap",
+          "externalIdIsCheckoutSession": true
+        },
+        {
+          "type": "preview",
+          "previewNative": {
+            "ok": false,
+            "error": "Stripe did not return the current subscription. Nothing was changed."
+          },
+          "previewAfterRepair": {
+            "ok": false,
+            "gap": "After mapping externalId→sub_, still blocked",
+            "currentOk": true,
+            "proPriceId": "",
+            "plusPriceId": "",
+            "detail": "Pro/Plus offer.priceId empty — billing.prices unset; cannot preview proration"
+          }
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PRODUCT LIMITATION: proration blocked — SubscriptionState.externalId is cs_test_ not sub_; Pro priceId empty in billing.prices; portal/proration UI cannot confirm amount due",
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J17-r36-proration-portal",
+      "journeyId": "J17",
+      "role": "influencer",
+      "expected": "Existing subscriber changes — proration confirm through UI",
+      "actual": "{\"subRow\":\"cmwnmybfs00gbjsgoq3nwmju8|active|creator_plus|month|cs_test_a0PWYFboLhuT3mTWJdHMO2C1yibcJV4OjMuBIdjGWR2loJqAonCZFTBPzL|\",\"userStripeBefore\":\"\",\"stripeSub\":{\"realSubId\":\"sub_1UdWAW1geYv2y1v8hmCR3J6b\",\"customerId\":\"cus_Vepq6MQL0O5gJ2\",\"storedExternalId\":\"cs_test_a0PWYFboLhuT3mTWJdHMO2C1yibcJV4OjMuBIdjGWR2loJqAonCZFTBPzL\",\"mismatch\":true},\"previewNative\":{\"ok\":false,\"error\":\"Stripe did not return the current subscription. Nothing was changed.\"},\"previewAfterRepair\":{\"ok\":false,\"gap\":\"After mapping externalId→sub_, still blocked\",\"currentOk\":true,\"proPriceId\":\"\",\"plusPriceId\":\"\",\"detail\":\"Pro/Plus offer.priceId empty — billing.prices unset; cannot preview proration\"},\"portalAttempt\":{\"clicked\":false,\"note\":\"No portal control visible on billing\"},\"bodySnippet\":\"∞\\nInflurios\\nDashboard\\nAction inbox\\nMy Profile\\nCollaborations\\nContracts\\nEarnings & Payouts\\nMessages\\nSettings\\nPlus\\nBilling & Plan\\nLog out\\n\\n© 2026 Influrios. All rights reserved.\\n\\nA\\n\\nAUDIT r3mrvlgh Influencer B\\n\\nInfluencer\\n\\nINFLUENCER\\n\\nBilling & plan\\n\\nManage your Influrios plan, billing, and payment details.\\n\\nPlus · Monthly\\n\\n$19/month\\n\\nActive\\n\\nChange \",\"productGaps\":[\"SubscriptionState.externalId stored as cs_test_ (checkout session) by completeCheckout/applyPlanOnce — not sub_; native readStripeSubscription fails\",\"billing.prices / offer.priceId empty for creator_pro — actionPreviewTierChange requires priceId\",\"User.stripeCustomerId was empty until harness backfill from Checkout session customer\"]}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:44:26.681Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R36",
+      "buildId": "local-dev-r36",
+      "environment": "local-dedicated",
+      "revision": "r3.6",
+      "startedAt": "2026-11-19T14:45:01.658Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j18r36-pro-panel-open.png"
+        },
+        {
+          "rel": "local-journeys/j18r36-year-on-month-reject.png"
+        },
+        {
+          "rel": "local-journeys/j18r36-pro-month-applied.png"
+        },
+        {
+          "rel": "local-journeys/j18r36-after-preview.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "ui-apply",
+          "applied": true,
+          "rejectedYearOnMonth": true
+        },
+        {
+          "type": "quote",
+          "discountCents": 435,
+          "taxCents": 203,
+          "totalCents": 2668
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": true,
+      "caseKind": "journey",
+      "caseId": "J18-r36-discount-apply-pro-month",
+      "journeyId": "J18",
+      "role": "influencer",
+      "expected": "Discount Apply through Checkout UI; reject wrong interval; Pro month path",
+      "actual": "{\"opened\":true,\"path\":\"/billing → Upgrade to Pro → Confirm your plan\",\"yearCodeRejected\":true,\"yearCode\":\"AUDITANNW9YL6\",\"monthCode\":\"AUDITPRO15M\",\"applied\":true,\"quote\":{\"subtotal\":2900,\"discount\":435,\"tax825\":203,\"amountDue\":2668},\"media\":[\"local-journeys/j18r36-pro-panel-open.png\",\"local-journeys/j18r36-year-on-month-reject.png\",\"local-journeys/j18r36-pro-month-applied.png\",\"local-journeys/j18r36-after-preview.png\"],\"note\":\"Annual Apply still product-blocked; Pro month Apply Pass\"}",
+      "functionalResult": "Pass",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:45:01.658Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R36",
+      "buildId": "local-dev-r36",
+      "environment": "local-dedicated",
+      "revision": "r3.6",
+      "startedAt": "2026-11-19T14:48:43.231Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j20r36-computeruse-paid.png"
+        },
+        {
+          "rel": "local-journeys/j20r36-hosted-invoice.png"
+        },
+        {
+          "rel": "local-journeys/j20r36-tax-admin.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "stripe-test-checkout",
+          "paid": true,
+          "amount_total": 3139,
+          "tax": 239
+        },
+        {
+          "type": "invoice",
+          "id": "in_1UdWrP1geYv2y1v8mrCiKQJR",
+          "tax": 239,
+          "total": 3139,
+          "hosted": true,
+          "pdf": true
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": null,
+      "integrationLevel": "L3-provider-sandbox",
+      "journeyCompletion": true,
+      "caseKind": "journey",
+      "caseId": "J20-r36-quote-charge-tax-invoice",
+      "journeyId": "J20",
+      "role": "influencer+admin",
+      "expected": "Quote through final charge — tax once; invoice/receipt reconcile",
+      "actual": "{\"stripeSessionId\":\"cs_test_a04c8wCL6RFF8UctDgwcJywpL27yWEnKII2C7zYKQVZfUbDmRlcAMq9MtD\",\"localId\":\"cs_mwno7srh_yj6by7\",\"paid\":{\"payment_status\":\"paid\",\"amount_total\":3139,\"tax\":239},\"invoice\":{\"id\":\"in_1UdWrP1geYv2y1v8mrCiKQJR\",\"tax\":239,\"total\":3139,\"subtotal\":2900,\"hosted\":\"https://invoice.stripe.com/i/acct_1TqpBo1geYv2y1v8/test_YWNjdF8xVHFwQm8xZ2VZdjJ5MXY4LF9WZXFZV3ZOTTRrS1hiemZ1Tjk5MENoRUVNbm85MzhPLDE4NTY0MTQ3MA0200hA9eZpYC?s=ap\",\"pdf\":true,\"status\":\"paid\"},\"completeCheckout\":{\"ok\":true,\"product\":{\"sku\":\"creator_pro\",\"name\":\"Influencer Pro\"}},\"expected\":{\"base\":2900,\"tax825bps\":239,\"total\":3139},\"label\":\"Stripe TEST checkout (cs_test_ / sk_test_ / livemode=false)\",\"media\":[\"local-journeys/j20r36-computeruse-paid.png\",\"local-journeys/j20r36-hosted-invoice.png\"]}",
+      "functionalResult": "Pass",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:48:43.231Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R36",
+      "buildId": "local-dev-r36",
+      "environment": "local-dedicated",
+      "revision": "r3.6",
+      "startedAt": "2026-11-19T14:48:46.386Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/j28r36-matching-after-advance.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j28r36-matching-after-advance.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "lifecycle",
+          "timeline": [
+            {
+              "status": "outreach",
+              "ok": true,
+              "id": "cmwmwy6kp02qjjs31ohy7k3p9"
+            },
+            {
+              "status": "introduced",
+              "ok": true,
+              "id": "cmwmwy6kp02qjjs31ohy7k3p9"
+            },
+            {
+              "status": "in_conversation",
+              "ok": true,
+              "id": "cmwmwy6kp02qjjs31ohy7k3p9"
+            }
+          ],
+          "statusNow": "in_conversation||"
+        },
+        {
+          "type": "fee",
+          "feeQuote": {
+            "ok": false,
+            "error": "No active fee rule matched this context."
+          },
+          "introRules": "0"
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "PARTIAL: lifecycle advanced draft→outreach→introduced→in_conversation; fee quote blocked — no managed_intro CollaborationFeeRule",
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": false,
+      "caseKind": "journey",
+      "caseId": "J28-r36-matching-lifecycle",
+      "journeyId": "J28",
+      "role": "admin",
+      "expected": "Matching lifecycle beyond intros — advance + fee quote/checkout",
+      "actual": "{\"introId\":\"cmwmwy6kp02qjjs31ohy7k3p9\",\"timeline\":[{\"status\":\"outreach\",\"ok\":true,\"id\":\"cmwmwy6kp02qjjs31ohy7k3p9\"},{\"status\":\"introduced\",\"ok\":true,\"id\":\"cmwmwy6kp02qjjs31ohy7k3p9\"},{\"status\":\"in_conversation\",\"ok\":true,\"id\":\"cmwmwy6kp02qjjs31ohy7k3p9\"}],\"statusNow\":\"in_conversation||\",\"events\":\"draft|Intro created from shortlist\\noutreach|AUDIT J28 advance → outreach\\nintroduced|AUDIT J28 advance → introduced\\nin_conversation|AUDIT J28 advance → in_conversation\",\"feeQuote\":{\"ok\":false,\"error\":\"No active fee rule matched this context.\"},\"introRules\":\"0\",\"productGap\":\"No active CollaborationFeeRule for serviceLevel=managed_intro — requestIntroFeeSettlement cannot quote\"}",
+      "functionalResult": "Partial",
+      "visualResult": "Pass",
+      "completedAt": "2026-11-19T14:48:46.386Z"
+    },
+    {
+      "runId": "AUDIT_LOCAL_R36",
+      "buildId": "local-dev-r36",
+      "environment": "local-dedicated",
+      "revision": "r3.6",
+      "startedAt": "2026-11-19T14:48:56.813Z",
+      "screenshotRefs": [
+        {
+          "rel": "local-journeys/vis36-admin-dual-chrome.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis36-admin-dual-chrome.png"
+        },
+        {
+          "rel": "local-journeys/vis36-billing-subscriber.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis36-billing-subscriber.png"
+        },
+        {
+          "rel": "local-journeys/vis36-pricing.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis36-pricing.png"
+        },
+        {
+          "rel": "local-journeys/vis36-admin-accounts-mob.png",
+          "path": "/cursor/stores/self/media/e2e-audit/local-journeys/vis36-admin-accounts-mob.png"
+        }
+      ],
+      "assertionRefs": [
+        {
+          "type": "visual-findings",
+          "findings": [
+            "ADMIN DUAL CHROME reproduced on /admin",
+            "TERMINOLOGY: Creator categories label on admin overview"
+          ]
+        }
+      ],
+      "providerEventRefs": [],
+      "issueIds": [],
+      "blocker": "Findings remain (tracked in correction register): ADMIN DUAL CHROME reproduced on /admin; TERMINOLOGY: Creator categories label on admin overview",
+      "integrationLevel": "L2-app-internal",
+      "journeyCompletion": true,
+      "caseKind": "journey",
+      "caseId": "J30-r36-visual-gap-fill",
+      "journeyId": "J30",
+      "role": "multi",
+      "expected": "Visual gaps closed or registered",
+      "actual": "{\"findings\":[\"ADMIN DUAL CHROME reproduced on /admin\",\"TERMINOLOGY: Creator categories label on admin overview\"],\"shotCount\":4}",
+      "functionalResult": "Pass",
+      "visualResult": "Partial",
+      "completedAt": "2026-11-19T14:48:56.813Z"
+    }
+  ],
+  "patchedAt": "2026-11-19T15:04:51.415Z"
+}

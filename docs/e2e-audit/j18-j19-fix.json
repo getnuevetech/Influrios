@@ -1,0 +1,42 @@
+{
+  "recordedAt": "2026-11-19T02:02:21.936Z",
+  "j18": {
+    "functionalResult": "Partial",
+    "journeyCompletion": false,
+    "note": "Member Checkout Apply UI not reachable: influencer Plus/Pro marked temporarily unavailable on /pricing (no discount field until checkout panel). Server eligibility + quote proven instead.",
+    "serverEligibilityProven": true,
+    "evidence": {
+      "annualCode": "AUDITANNW9YL6",
+      "expiredCode": "AUDITEXPW9YL6",
+      "planCode": "STARTER",
+      "billingInterval": "year",
+      "percentBps": 1500,
+      "monthlyBlocked": true,
+      "monthReason": "This code is valid for annual Starter subscriptions.",
+      "annualAllowed": true,
+      "yearReason": null,
+      "yearQuote": {
+        "ok": true,
+        "discountCents": 3420
+      },
+      "expiredBlocked": true,
+      "expiredReason": "This code expired on 2024-06-01.",
+      "pricingUiNote": "Member Checkout Apply UI not reachable: influencer Plus/Pro marked temporarily unavailable on /pricing (no discount field until checkout panel). Server eligibility + quote proven instead."
+    }
+  },
+  "j19": {
+    "functionalResult": "Pass",
+    "journeyCompletion": true,
+    "uiSaved": true,
+    "reusedPriorUiSave": true,
+    "seededFallback": false,
+    "seedId": null,
+    "before": "0",
+    "after": "1",
+    "after2": "1",
+    "latest": "cmwmwm6b700ppjs31fq8h4w9s|US · All subscription plans · 8.25%|ready|US|percentage|825",
+    "notice": "Reused TaxPolicyVersion from prior UI Save rule this boot (j19c-*.png)",
+    "launch": "ERROR:CollaborationLaunchGate-query-failed",
+    "note": "Tax rule saved via admin UI (SearchableSelect + Save rule); launch approvals already mutated"
+  }
+}

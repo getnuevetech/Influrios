@@ -1,0 +1,307 @@
+{
+  "revision": "phase1-bounded-closure",
+  "recordedAt": "2026-11-19T20:37:28.257Z",
+  "rule": "Coverage = required-step outcomes; acceptance separate",
+  "journeys": {
+    "J26": {
+      "coverage": "Complete",
+      "acceptance": "Pass",
+      "steps": [
+        {
+          "id": "open_plans",
+          "result": "executed_successfully",
+          "detail": "Admin plans page loaded",
+          "evidence": [
+            "local-journeys/j26c-plans-open.png"
+          ]
+        },
+        {
+          "id": "open_edit_dialog",
+          "result": "executed_successfully",
+          "detail": "Clicked Edit to open plan meta dialog",
+          "evidence": [
+            "local-journeys/j26c-edit-dialog.png"
+          ]
+        },
+        {
+          "id": "edit_plan_meta",
+          "result": "executed_successfully",
+          "detail": "saveBanner=true; dbHasMarker=true; before=Short link, QR, and NFC. Campaign links start at zero and ca",
+          "evidence": [
+            "local-journeys/j26c-after-save-attempt.png"
+          ]
+        },
+        {
+          "id": "reload_verify",
+          "result": "executed_successfully",
+          "detail": "reloadDb=AUDIT-J26-CLOSURE mwo0duwr; markerVisible=false",
+          "evidence": [
+            "local-journeys/j26c-reload.png"
+          ]
+        },
+        {
+          "id": "restore_description",
+          "result": "executed_successfully",
+          "detail": "Restored PLUS description after audit marker"
+        }
+      ],
+      "note": "Catalog inventory alone is not Pass; requires edit\u2192save\u2192reload"
+    },
+    "J27": {
+      "coverage": "Complete",
+      "acceptance": "Partial",
+      "steps": [
+        {
+          "id": "open_jobs",
+          "result": "executed_successfully",
+          "detail": "\u221e\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nAR\n\nAUDIT r3mrvlgh Super\n\naudit.admin@example.com\n\n\u25be\nCreate\n\nSigned in as Super Admin (audit.admin@example.com)\n\nInflurios Adm",
+          "evidence": [
+            "local-journeys/j27c-jobs.png"
+          ]
+        },
+        {
+          "id": "jobs_retry_failed",
+          "result": "blocked_by_named_dependency",
+          "detail": "OBSTACLE: No failed job with Retry control present in harness job list \u2014 cannot exercise retry without a failed row. Cron sweeps require CRON_SECRET (noted on page).",
+          "evidence": [
+            "local-journeys/j27c-jobs.png"
+          ]
+        },
+        {
+          "id": "banners_save",
+          "result": "executed_successfully",
+          "detail": "Banner save/update succeeded",
+          "evidence": [
+            "local-journeys/j27c-banners.png",
+            "local-journeys/j27c-banners-saved.png"
+          ]
+        },
+        {
+          "id": "homepage_save",
+          "result": "executed_successfully",
+          "detail": "Homepage save succeeded",
+          "evidence": [
+            "local-journeys/j27c-homepage.png",
+            "local-journeys/j27c-homepage-saved.png"
+          ]
+        },
+        {
+          "id": "route_/admin/cms",
+          "result": "blocked_by_named_dependency",
+          "detail": "OBSTACLE: /admin/cms returns 404 \u2014 CMS publish path is /admin/banners + /admin/homepage, not /admin/cms",
+          "evidence": [
+            "local-journeys/j27c-_admin_cms.png"
+          ]
+        },
+        {
+          "id": "route_/admin/content",
+          "result": "blocked_by_named_dependency",
+          "detail": "OBSTACLE: /admin/content returns 404 \u2014 CMS publish path is /admin/banners + /admin/homepage, not /admin/content",
+          "evidence": [
+            "local-journeys/j27c-_admin_content.png"
+          ]
+        }
+      ],
+      "note": "Route inventory alone not Pass; publish/run attempted with per-action obstacles documented"
+    },
+    "J18": {
+      "coverage": "Incomplete",
+      "acceptance": "Partial",
+      "subtests": {
+        "apply_to_stripe": "Pass",
+        "annual_apply": "Fail/Unresolved (COR-03/COR-04)",
+        "completed_discounted_redemption": "Unresolved (not_executed)"
+      },
+      "steps": [
+        {
+          "id": "apply_month_ui",
+          "result": "executed_successfully",
+          "detail": "Fresh code AUDITPRO15M7B7B Apply UI",
+          "evidence": [
+            "local-journeys/j18c2-apply-month.png",
+            "local-journeys/j18c2-preview.png"
+          ]
+        },
+        {
+          "id": "apply_to_stripe_hosted",
+          "result": "executed_successfully",
+          "detail": "url=https://checkout.stripe.com/g/pay/cs_test_a0cToeWr1cpdHLcLSsbMBhhU2bglQ3VZD0XfdfDx0XSq0CPuiR7nRlUt2W#fidnandhYHdWcXxpYCc%2FJ2FgY2RwaXEnKSdicyc%2FNiknZHVsTmB8Jz8; couponVisible=True. Hosted form \u2260 redemption.",
+          "evidence": [
+            "local-journeys/j18c2-stripe-with-coupon.png",
+            "local-journeys/j18p1-us-checkout.png"
+          ]
+        },
+        {
+          "id": "annual_apply",
+          "result": "executed_with_reproducible_failure",
+          "detail": "Annual Apply gated COR-03/COR-04; evidence j18c-annual-*",
+          "evidence": [
+            "local-journeys/j18c-annual-attempt.png",
+            "local-journeys/j18c-annual-apply.png"
+          ]
+        },
+        {
+          "id": "completed_discounted_payment_redemption",
+          "result": "not_executed",
+          "detail": "UNRESOLVED: paid discounted Checkout + Influrios redemption not completed this bounded pass. Hosted coupon \u2260 redemption Pass."
+        }
+      ],
+      "note": "Preserve Apply-to-Stripe Pass; journey acceptance Partial until redemption + annual resolved",
+      "retry": {
+        "freshCode": "AUDITPRO15M7B7B",
+        "applyUi": "executed_successfully",
+        "applyEvidence": [
+          "local-journeys/j18c2-apply-month.png",
+          "local-journeys/j18c2-preview.png"
+        ],
+        "applyDetail": "\u221e\nInflurios\nDashboard\nAction inbox\nMy Profile\nCollaborations\nContracts\nEarnings & Payouts\nMessages\nSettings\nStarter\nBilling & Plan\nLog out\n\n\u00a9 2026 Influrios. All rights reserved.\n\nA\n\nAUDIT r3mrvlgh Unrelated\n\nInfluencer\n\nINFLUENCER\n\nBilling & plan\n\nManage your Influrios plan, billing, and payment details.\n\nStarter\n\nFree\n\nChange plan\n\nChoose a plan and billing cadence that works for you.\n\nMonthly\nA",
+        "stripeUrl": "https://checkout.stripe.com/g/pay/cs_test_a0cToeWr1cpdHLcLSsbMBhhU2bglQ3VZD0XfdfDx0XSq0CPuiR7nRlUt2W#fidnandhYHdWcXxpYCc%2FJ2FgY2RwaXEnKSdicyc%2FNiknZHVsTmB8Jz8",
+        "stripeResult": "executed_successfully",
+        "couponVisible": true,
+        "stripeEvidence": [
+          "local-journeys/j18c2-stripe-with-coupon.png"
+        ],
+        "note": "Hosted coupon \u2260 completed redemption. Prior j18p1-us-checkout.png retained as Apply-to-Stripe Pass.",
+        "annual": "not re-attempted beyond prior COR-03/COR-04 Fail",
+        "redemption": "not_executed"
+      }
+    },
+    "J20": {
+      "coverage": "Incomplete",
+      "acceptance": "Partial",
+      "demotion": "Prior Pass demoted \u2014 hardcoded-tax/API direct checkout insufficient for Influrios UI quote\u2192payment\u2192invoice Pass",
+      "steps": [
+        {
+          "id": "login_screen",
+          "result": "executed_successfully",
+          "detail": "Login captured",
+          "evidence": [
+            "local-journeys/j20c2-login.png"
+          ]
+        },
+        {
+          "id": "authenticated_shell",
+          "result": "executed_successfully",
+          "detail": "Post-login shell",
+          "evidence": [
+            "local-journeys/j20c2-post-login.png"
+          ]
+        },
+        {
+          "id": "influrios_quote_ui",
+          "result": "executed_successfully",
+          "detail": "Billing plan cards show tax quote",
+          "evidence": [
+            "local-journeys/j20c2-billing-quote.png"
+          ]
+        },
+        {
+          "id": "influrios_tax_preview",
+          "result": "executed_successfully",
+          "detail": "Confirm plan tax preview via Influrios UI",
+          "evidence": [
+            "local-journeys/j20c2-tax-preview.png"
+          ]
+        },
+        {
+          "id": "influrios_to_stripe_checkout",
+          "result": "executed_successfully",
+          "detail": "https://checkout.stripe.com/g/pay/cs_test_a0sOtHbrBk8BA6f9iDp54S6HB0JoXB7ENQXdMJekSZ3LuusGNWyk6qg1KR#fidnandhYHdWcXxpYCc%2FJ2FgY2RwaXEnKSdicyc%2FNiknZHVsTmB8Jz8",
+          "evidence": [
+            "local-journeys/j20c2-hosted-from-ui.png"
+          ]
+        },
+        {
+          "id": "complete_payment_from_ui_checkout",
+          "result": "blocked_by_named_dependency",
+          "detail": "PL-03 headless Card accordion; computerUse payment not run in bounded closure"
+        },
+        {
+          "id": "invoice_receipt_from_ui_payment",
+          "result": "not_executed",
+          "detail": "Blocked upstream \u2014 no UI-path payment completion. Prior API invoice j20r36-* retained as subtest only, not journey Pass."
+        }
+      ],
+      "retainedSubtests": {
+        "api_tax_invoice_prior": "Pass (subtest only; not journey Pass)",
+        "influrios_quote_and_preview": "executed_successfully",
+        "influrios_opens_stripe": "executed_successfully"
+      },
+      "retry": {
+        "loginEvidence": [
+          "local-journeys/j20c2-login.png"
+        ],
+        "taxPreview": "executed_successfully",
+        "previewEvidence": [
+          "local-journeys/j20c2-tax-preview.png"
+        ],
+        "stripeUrl": "https://checkout.stripe.com/g/pay/cs_test_a0sOtHbrBk8BA6f9iDp54S6HB0JoXB7ENQXdMJekSZ3LuusGNWyk6qg1KR#fidnandhYHdWcXxpYCc%2FJ2FgY2RwaXEnKSdicyc%2FNiknZHVsTmB8Jz8",
+        "influriosToStripe": "executed_successfully",
+        "hostedEvidence": [
+          "local-journeys/j20c2-hosted-from-ui.png"
+        ],
+        "paymentComplete": "blocked_by_named_dependency (PL-03 headless Card accordion; computerUse not in this bounded pass)",
+        "invoiceFromUiPayment": "not_executed",
+        "acceptance": "Partial",
+        "demotion": "Prior API startCheckout(taxPercent) Pass demoted \u2014 insufficient for Influrios UI quote\u2192payment\u2192invoice"
+      }
+    },
+    "J30": {
+      "coverage": "Complete",
+      "acceptance": "Partial",
+      "steps": [
+        {
+          "id": "mobile_admin_accounts_layout",
+          "result": "executed_successfully",
+          "detail": "Measured overflowPx=0; clipped=true",
+          "evidence": [
+            "local-journeys/j30c-admin-accounts-mob-overflow.png"
+          ]
+        }
+      ],
+      "defect": {
+        "id": "COR-18",
+        "finding": "Mobile /admin/accounts content clipped/overflows viewport (horizontal scroll or table bleed)",
+        "evidence": [
+          "local-journeys/j30c-admin-accounts-mob-overflow.png"
+        ],
+        "metrics": {
+          "scrollWidth": 390,
+          "clientWidth": 390,
+          "overflowPx": 0,
+          "tables": [
+            {
+              "tag": "DIV",
+              "w": 150,
+              "left": 240,
+              "right": 390
+            },
+            {
+              "tag": "DIV",
+              "w": 116,
+              "left": 257,
+              "right": 373
+            },
+            {
+              "tag": "TABLE",
+              "w": 658,
+              "left": 257,
+              "right": 915
+            }
+          ]
+        }
+      },
+      "priorFindings": [
+        "COR-09a admin dual chrome",
+        "COR-09b Creator terminology"
+      ]
+    }
+  },
+  "counts": {
+    "pass": 20,
+    "partial": 10,
+    "failWholeJourney": 0,
+    "coverageIncomplete": 2
+  },
+  "closureNote": "Ola bounded closure @ 3929086: required-step coverage; remediation PAUSED; no product fixes"
+}

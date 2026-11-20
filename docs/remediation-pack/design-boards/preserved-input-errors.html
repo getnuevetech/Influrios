@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Design — Preserved-input submission errors</title>
+  <link rel="stylesheet" href="_design-system.css" />
+  <style>
+    .pair { display: grid; gap: 28px; }
+    @media (min-width: 1100px) { .pair { grid-template-columns: 1.4fr 390px; } }
+    .alert { background: var(--amber-wash); color: var(--amber); border-radius: 14px; padding: 12px 14px; font-size: 14px; font-weight: 700; }
+    .wrong { outline: 2px solid #f4a3a0; background: #fff8f7; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="frame-label">PROPOSED · COR-20 · Validation error stays in popup · inputs preserved · Retry</div>
+    <p class="note">Today: many failures `redirect(/payments?error=…)`. Target: never leave the milestone dialog unless the user chooses View collaboration payments.</p>
+    <div class="pair">
+      <div>
+        <div class="frame-label">Desktop</div>
+        <div class="shell">
+          <aside class="sidebar"><div class="brand">Influrios</div><a class="nav-item active" href="#">Collaborations</a><a class="nav-item" href="#">Collaboration Payments</a></aside>
+          <section class="main" style="position:relative;min-height:560px;">
+            <h1 style="font-size:28px;">Workspace</h1>
+            <div class="scrim" style="position:absolute;border-radius:28px;">
+              <div class="dialog">
+                <div class="dialog-head"><div><h2 style="font-size:22px;">Submit a version</h2><div class="dialog-meta">Kickoff · Version 1 · still open</div></div></div>
+                <div class="dialog-body">
+                  <div class="alert">Add a note, an https link, or a file so the business can review this version.</div>
+                  <div class="field" style="margin-top:14px;"><label>Deliverable link</label><input class="wrong" value="" placeholder="https:// or paste a domain" /></div>
+                  <div class="field"><label>What changed?</label><textarea rows="2" class="wrong">short</textarea></div>
+                  <p class="note">Note text “short” and empty link remain editable. No navigation occurred.</p>
+                </div>
+                <div class="dialog-foot">
+                  <button class="btn btn-secondary">Cancel</button>
+                  <button class="btn btn-primary">Retry</button>
+                  <a href="#" style="margin-left:auto;font-size:13px;">View collaboration payments</a>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+      <div>
+        <div class="frame-label">Mobile 390</div>
+        <div class="mobile-shell">
+          <div class="mobile-top"><strong>Submit version</strong><span class="icon-btn">✕</span></div>
+          <div class="menu-sheet">
+            <div class="alert">Add a note, an https link, or a file…</div>
+            <div class="field" style="margin-top:14px;"><label>Link</label><input class="wrong" value="" /></div>
+            <div class="field"><label>What changed?</label><textarea class="wrong" rows="3">short</textarea></div>
+            <div style="margin-top:18px;display:flex;flex-direction:column;gap:8px;">
+              <button class="btn btn-primary">Retry</button>
+              <button class="btn btn-secondary">Cancel</button>
+              <a href="#" style="text-align:center;font-size:13px;">View collaboration payments</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

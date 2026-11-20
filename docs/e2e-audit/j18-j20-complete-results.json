@@ -1,0 +1,52 @@
+{
+  "revision": "j18-j20-complete",
+  "recordedAt": "2026-11-19T22:51:00.000Z",
+  "baseCommit": "3924de3",
+  "historicalEvidenceCommit": "db64224",
+  "reviewabilityNote": "Preserve this file as historical execution evidence. Expanded aggregate scoring (20 Pass / 10 Partial) and J14 Partial live in phase1-acceptance-matrix.json / final-coverage-report.md — do not treat db64224 checklist as complete platform coverage. J18 monthly Pass here; aggregate Partial via annual Fail. J20 Pass = hosted invoice; COR-24 in-app download not executed.",
+  "method": "Influrios UI checkout + computerUse Stripe TEST Card 4242; success/completeCheckout confirmed payment via Stripe API (no fabricated webhook; no hardcoded taxPercent)",
+  "freshCode": "AUDITPRO15MAC4C",
+  "email": "audit.r3mrvlgh.influencer-unrelated@example.com",
+  "stripeSessionId": "cs_test_a0EmDMZuI8eydnfk4Q7mmX0qws8ubVjVzYpvrImu1MdQ6Q2bH4QaoI1ryt",
+  "subscriptionId": "sub_1UddzZ1geYv2y1v8vgifqqnT",
+  "invoiceId": "in_1UddzZ1geYv2y1v8tm2vcCBe",
+  "expected": { "base": 2900, "discount": 435, "discountedBase": 2465, "tax": 203, "total": 2668 },
+  "reconcile": {
+    "checkout": { "amount_total": 2668, "amount_subtotal": 2900, "amount_discount": 435, "amount_tax": 203, "payment_status": "paid" },
+    "invoice": { "subtotal": 2900, "discount": 435, "tax": 203, "total": 2668, "status": "paid" },
+    "matches": { "total": true, "tax": true, "discount": true }
+  },
+  "db": {
+    "subscription": "active|creator_pro|month|cs_test_a0EmDMZuI8eydnfk4Q7mmX0qws8ubVjVzYpvrImu1MdQ6Q2bH4QaoI1ryt",
+    "discountOffer": "AUDITPRO15MAC4C|1|0|active",
+    "reservation": "consumed|435|2900|cs_test_...|confirmed",
+    "checkoutAttempt": "completed"
+  },
+  "steps": [
+    { "id": "influrios_quote_apply_discount", "result": "executed_successfully", "evidence": ["local-journeys/j18j20-preview-applied.png"] },
+    { "id": "open_stripe_checkout", "result": "executed_successfully", "evidence": ["local-journeys/j18j20-stripe-hosted.png", "local-journeys/j20-unrelated-pre-subscribe.png"] },
+    { "id": "stripe_test_payment", "result": "executed_successfully", "detail": "computerUse Card 4242 Subscribe; payment_status=paid", "evidence": ["local-journeys/j20-unrelated-paid-success.png", "local-journeys/j18-j20-discounted-checkout-payment.mp4"] },
+    { "id": "provider_event_to_influrios", "result": "executed_successfully", "detail": "CheckoutAttempt completed; SubscriptionState active creator_pro" },
+    { "id": "discount_redemption_persisted", "result": "executed_successfully", "detail": "DiscountOffer.redeemedCount=1; DiscountReservation status=consumed providerOutcome=confirmed" },
+    { "id": "customer_billing_history", "result": "executed_successfully", "evidence": ["local-journeys/j18j20-billing-after-pay.png"] },
+    { "id": "invoice_pdf_reconcile", "result": "executed_successfully", "evidence": ["local-journeys/j20-invoice-details.png", "local-journeys/j20-invoice-pdf.png", "local-journeys/j18j20-invoice.pdf"] }
+  ],
+  "journeys": {
+    "J18": {
+      "coverage": "Complete",
+      "acceptanceSubtestMonthly": "Pass",
+      "acceptanceAggregate": "Partial",
+      "note": "Monthly discounted Apply→pay→redemption Pass. Annual Apply remains product Fail COR-04. Aggregate Partial for all-required-branches.",
+      "subtests": { "apply_to_stripe_and_redeem": "Pass", "annual_apply": "Fail (COR-04 preserved)" }
+    },
+    "J20": {
+      "coverage": "Complete",
+      "acceptance": "Pass",
+      "note": "Same transaction: Influrios UI quote→tax→Stripe TEST pay→hosted invoice/PDF reconcile. COR-24 in-app billing download is separate and not executed."
+    }
+  },
+  "acceptance": "Pass",
+  "acceptanceNote": "Historical monthly J18+J20 Pass at execution time; expanded platform aggregate is 20/10 in phase1-acceptance-matrix.json",
+  "coverage": "Complete",
+  "coverageNote": "Complete for this payment checklist only; not expanded deliverable/messages completeness"
+}

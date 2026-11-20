@@ -1,0 +1,70 @@
+[
+  {
+    "id": "ISSUE-P0-ADMIN-LOGIN-DEFAULT-CREDS",
+    "severity": "P0",
+    "role": "admin",
+    "route": "/admin/login",
+    "caseId": "J02-admin-exposure",
+    "buildId": "ada9c7f5d90d4d61e78627da2765cbe14004cbc4",
+    "runId": "AUDIT_20261118170047",
+    "prerequisites": "Public unauthenticated access",
+    "steps": "Open /admin/login; observe default super-admin hint rendering concrete credentials",
+    "expected": "No concrete default credentials on login page",
+    "actual": "Page renders default super-admin email and password hint (values redacted from pack)",
+    "impact": "Credential exposure / unauthorized admin access risk",
+    "reproducibility": "Always",
+    "evidenceLinks": [
+      "media/e2e-audit/preflight/01-admin-login-public.png (redacted)"
+    ],
+    "suspectedCause": "Login page intentionally prints ADMIN_SUPER_* defaults for bootstrap",
+    "proposedCorrection": "Remove concrete credential rendering; show setup-needed state only when no admin exists",
+    "ownerRole": "Engineering",
+    "retestResult": "Not retested"
+  },
+  {
+    "id": "ISSUE-VIS-ADMIN-DUAL-CHROME",
+    "severity": "P2",
+    "role": "admin",
+    "route": "/admin/*",
+    "caseId": "J30-admin-chrome",
+    "buildId": "ada9c7f5d90d4d61e78627da2765cbe14004cbc4",
+    "runId": "AUDIT_20261118170047",
+    "prerequisites": "Admin session",
+    "steps": "Open any /admin page (e.g. payment-settings tax)",
+    "expected": "Ops chrome without competing marketing public nav (A-ADMIN-CHROME-01)",
+    "actual": "Marketing Home/Discover/\u2026 nav remains visible above admin ops sidebar",
+    "impact": "Dual headers / confused navigation in admin",
+    "reproducibility": "Always on sampled admin pages",
+    "evidenceLinks": [
+      "media/e2e-audit/screenshots/admin/desktop/j30-popup-admin-admin-payment-settings-section-tax__popup-open.png",
+      "docs/e2e-audit/visual-review.md"
+    ],
+    "suspectedCause": "Admin layout still wrapped in public ChromeFrame",
+    "proposedCorrection": "Separate admin shell per UX package (separate product PR)",
+    "ownerRole": "Engineering",
+    "retestResult": "Not retested"
+  },
+  {
+    "id": "ISSUE-VIS-TERM-CREATORS",
+    "severity": "P2",
+    "role": "business",
+    "route": "/business/*",
+    "caseId": "J30-term-creators",
+    "buildId": "ada9c7f5d90d4d61e78627da2765cbe14004cbc4",
+    "runId": "AUDIT_20261118170047",
+    "prerequisites": "Business session",
+    "steps": "View business sidebar on Collaborations",
+    "expected": "Influencer wording for discovery (A-TERM-CREATOR-001)",
+    "actual": "Sidebar label \u201cDiscover Creators\u201d",
+    "impact": "Terminology inconsistency vs product language",
+    "reproducibility": "Always on sampled business shell",
+    "evidenceLinks": [
+      "media/e2e-audit/screenshots/business/desktop/j30-popup-business-collaboration-business__popup-open.png",
+      "docs/e2e-audit/visual-review.md"
+    ],
+    "suspectedCause": "Nav copy not updated to Influencer term",
+    "proposedCorrection": "Rename nav label (separate product PR)",
+    "ownerRole": "Engineering",
+    "retestResult": "Not retested"
+  }
+]

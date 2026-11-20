@@ -1,0 +1,95 @@
+{
+  "revision": "reviewability-v1.1-deliverables",
+  "recordedAt": "2026-11-20T06:20:00.000Z",
+  "historicalEvidenceCommit": "db64224",
+  "rules": {
+    "coverage": "Required-step outcomes on a named checklist. Old-checklist Coverage Incomplete 0 at db64224 does NOT mean expanded upload/review/reply/download edges were executed.",
+    "acceptance": "Pass | Fail | Partial. When subtest and aggregate differ, publish both.",
+    "evidenceClass": "reproduced | code-observed | user-reported | not-executed",
+    "remediation": "PAUSED — no product fixes this pass"
+  },
+  "counts": {
+    "pass": 20,
+    "partial": 10,
+    "failWholeJourney": 0,
+    "oldChecklistCoverageIncomplete": 0,
+    "note": "Expanded edges (file upload E2E, business review UI, reply depth, in-app invoice download) remain not executed"
+  },
+  "journeys": [
+    { "id": "J01", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J02", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J03", "coverage": "Complete", "acceptance": "Partial", "productFailure": "COR-13" },
+    { "id": "J04", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J05", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J06", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J07", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J08", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J09", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J10", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J11", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J12", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J13", "coverage": "Complete", "acceptance": "Pass" },
+    {
+      "id": "J14",
+      "coverage": "Complete",
+      "coverageNote": "Old checklist note-path complete; expanded file/review-UI edges not executed",
+      "acceptance": "Partial",
+      "subtests": {
+        "note_submission": "Pass",
+        "file_upload_e2e": "not_executed (COR-21)",
+        "business_request_changes_ui": "not_executed (COR-23)",
+        "business_approve_ui": "not_executed (COR-23)",
+        "lib_revise_approve_stale_block": "Pass"
+      },
+      "productFailure": "COR-20 COR-21 COR-22 COR-23",
+      "evidence": ["local-journey-r35-results.json", "j14r35-creator-submit-open.png"]
+    },
+    { "id": "J15", "coverage": "Complete", "acceptance": "Partial", "providerLimitation": "PL-01" },
+    { "id": "J16", "coverage": "Complete", "acceptance": "Partial", "steps": { "month": "Pass", "year": "Fail" }, "productFailure": "COR-03" },
+    { "id": "J17", "coverage": "Complete", "acceptance": "Partial", "productFailure": "COR-07" },
+    {
+      "id": "J18",
+      "coverage": "Complete",
+      "acceptance": "Partial",
+      "subtests": { "monthly_apply_pay_redeem": "Pass", "annual_apply": "Fail (COR-04 preserved for remediation)" },
+      "evidence": ["j18j20-preview-applied.png", "j18j20-stripe-hosted.png", "j18-j20-complete-results.json"],
+      "transaction": "cs_test_a0EmDMZuI8eydnfk4Q7mmX0qws8ubVjVzYpvrImu1MdQ6Q2bH4QaoI1ryt"
+    },
+    { "id": "J19", "coverage": "Complete", "acceptance": "Pass" },
+    {
+      "id": "J20",
+      "coverage": "Complete",
+      "acceptance": "Pass",
+      "label": "Influrios UI quote→discounted Stripe TEST pay→hosted invoice/PDF reconcile",
+      "subtests": {
+        "hosted_invoice_pdf": "Pass",
+        "in_app_billing_history_download": "not_executed (COR-24; does not demote journey Pass)"
+      },
+      "evidence": ["j20-invoice-details.png", "j20-invoice-pdf.png", "j18j20-invoice.pdf", "j18-j20-complete-results.json"],
+      "transaction": "cs_test_a0EmDMZuI8eydnfk4Q7mmX0qws8ubVjVzYpvrImu1MdQ6Q2bH4QaoI1ryt",
+      "reconcile": { "subtotal": 2900, "discount": 435, "tax": 203, "total": 2668 }
+    },
+    { "id": "J21", "coverage": "Complete", "acceptance": "Pass" },
+    {
+      "id": "J22",
+      "coverage": "Complete",
+      "acceptance": "Pass",
+      "subtests": {
+        "two_party_send": "Pass",
+        "attachment_fail_retry_depth": "not_executed (COR-25; does not demote journey Pass)"
+      },
+      "evidence": ["local-journey-nonfunding-results.json#J22-local-two-party-messaging"]
+    },
+    { "id": "J23", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J24", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J25", "coverage": "Complete", "acceptance": "Partial", "productFailure": "COR-14" },
+    { "id": "J26", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J27", "coverage": "Complete", "acceptance": "Partial", "productFailure": "COR-15" },
+    { "id": "J28", "coverage": "Complete", "acceptance": "Partial", "productFailure": "COR-10" },
+    { "id": "J29", "coverage": "Complete", "acceptance": "Pass" },
+    { "id": "J30", "coverage": "Complete", "acceptance": "Partial", "productFailure": "COR-09a COR-09b COR-18" }
+  ],
+  "agency": "Deferred",
+  "remediationPhase": "PAUSED",
+  "pack": "docs/remediation-pack/"
+}

@@ -1,0 +1,753 @@
+[
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "buildId": "local-dev",
+    "environment": "local-dedicated",
+    "startedAt": "2026-11-18T23:52:01.406Z",
+    "screenshotRefs": [],
+    "assertionRefs": [
+      {
+        "type": "local-db",
+        "database": "influrios_audit@127.0.0.1",
+        "mail": "mailpit:1025"
+      }
+    ],
+    "providerEventRefs": [],
+    "issueIds": [],
+    "blocker": null,
+    "integrationLevel": "L2-app-internal",
+    "journeyCompletion": true,
+    "caseKind": "journey",
+    "caseId": "ENV-local-dedicated",
+    "journeyId": "preflight",
+    "role": "system",
+    "expected": "Dedicated local DB + Mailpit + synthetic fixtures",
+    "actual": "BASE=http://127.0.0.1:3000; fixtures=r3mrvlgh; mailpit=http://127.0.0.1:8025",
+    "functionalResult": "Pass",
+    "visualResult": "Not applicable",
+    "completedAt": "2026-11-18T23:52:01.406Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "buildId": "local-dev",
+    "environment": "local-dedicated",
+    "startedAt": "2026-11-18T23:52:04.256Z",
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j02-login-business.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j02-login-business.png"
+      }
+    ],
+    "assertionRefs": [],
+    "providerEventRefs": [],
+    "issueIds": [],
+    "blocker": null,
+    "integrationLevel": "L2-app-internal",
+    "journeyCompletion": true,
+    "caseKind": "journey",
+    "caseId": "J02-local-login-business",
+    "journeyId": "J02",
+    "role": "business",
+    "startUrl": "http://127.0.0.1:3000/login",
+    "finalUrl": "http://127.0.0.1:3000/business/home",
+    "viewport": "desktop",
+    "expected": "Login synthetic business",
+    "actual": "http://127.0.0.1:3000/business/home",
+    "functionalResult": "Pass",
+    "visualResult": "Pass",
+    "fixtureIds": [
+      "audit.r3mrvlgh.business-a@example.com"
+    ],
+    "completedAt": "2026-11-18T23:52:04.256Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "buildId": "local-dev",
+    "environment": "local-dedicated",
+    "startedAt": "2026-11-18T23:52:08.021Z",
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j02-login-influencer.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j02-login-influencer.png"
+      }
+    ],
+    "assertionRefs": [],
+    "providerEventRefs": [],
+    "issueIds": [],
+    "blocker": null,
+    "integrationLevel": "L2-app-internal",
+    "journeyCompletion": true,
+    "caseKind": "journey",
+    "caseId": "J02-local-login-influencer",
+    "journeyId": "J02",
+    "role": "influencer",
+    "startUrl": "http://127.0.0.1:3000/login",
+    "finalUrl": "http://127.0.0.1:3000/creator",
+    "viewport": "desktop",
+    "expected": "Login synthetic influencer",
+    "actual": "http://127.0.0.1:3000/creator",
+    "functionalResult": "Pass",
+    "visualResult": "Pass",
+    "fixtureIds": [
+      "audit.r3mrvlgh.influencer-a@example.com"
+    ],
+    "completedAt": "2026-11-18T23:52:08.021Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "buildId": "local-dev",
+    "environment": "local-dedicated",
+    "startedAt": "2026-11-18T23:52:12.018Z",
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j02-login-admin.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j02-login-admin.png"
+      }
+    ],
+    "assertionRefs": [
+      {
+        "type": "doc",
+        "rel": "admin-login-root-cause.md"
+      }
+    ],
+    "providerEventRefs": [],
+    "issueIds": [],
+    "blocker": "Harness used AuditLocalPass!2026 fallback while DB hash is ADMIN_SUPER_PASSWORD (AuditLocalAdmin!2026). See admin-login-root-cause.md",
+    "integrationLevel": "L2-app-internal",
+    "journeyCompletion": true,
+    "caseKind": "journey",
+    "caseId": "J02-local-login-admin",
+    "journeyId": "J02",
+    "role": "admin",
+    "startUrl": "http://127.0.0.1:3000/admin/login",
+    "finalUrl": "http://127.0.0.1:3000/admin/login",
+    "expected": "Admin login on local",
+    "actual": "http://127.0.0.1:3000/admin/login | RCA: password-source mismatch (harness fallback ≠ seeded ADMIN_SUPER_PASSWORD); re-probe with env password → /admin Pass",
+    "functionalResult": "Fail",
+    "visualResult": "Pass",
+    "completedAt": "2026-11-18T23:52:12.018Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "buildId": "local-dev",
+    "environment": "local-dedicated",
+    "startedAt": "2026-11-18T23:52:22.239Z",
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j23-mailpit-test.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j23-mailpit-test.png"
+      }
+    ],
+    "assertionRefs": [
+      {
+        "type": "mailpit",
+        "gained": 1,
+        "total": 1
+      }
+    ],
+    "providerEventRefs": [],
+    "issueIds": [],
+    "blocker": null,
+    "integrationLevel": "L2-app-internal",
+    "journeyCompletion": true,
+    "caseKind": "journey",
+    "caseId": "J23-local-mailpit-interception",
+    "journeyId": "J23",
+    "role": "admin",
+    "expected": "Mailpit captures SMTP test to synthetic influencer",
+    "actual": "before=0; after=1; gained=1; sample=[{\"id\":\"Npyxqj5AvuCxkLDmf8K4rq\",\"to\":[{\"Name\":\"\",\"Address\":\"audit.r3mrvlgh.influencer-a@example.com\"}],\"subject\":\"Preview recipient, your Influrios profile is ready\"}]",
+    "functionalResult": "Pass",
+    "visualResult": "Pass",
+    "completedAt": "2026-11-18T23:52:22.239Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "buildId": "local-dev",
+    "environment": "local-dedicated",
+    "startedAt": "2026-11-18T23:52:52.814Z",
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j24-unrelated-request.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j24-unrelated-request.png"
+      }
+    ],
+    "assertionRefs": [],
+    "providerEventRefs": [],
+    "issueIds": [],
+    "blocker": null,
+    "integrationLevel": "L2-app-internal",
+    "journeyCompletion": true,
+    "caseKind": "journey",
+    "caseId": "J24-local-unrelated-request",
+    "journeyId": "J24",
+    "role": "influencer",
+    "startUrl": "http://127.0.0.1:3000/collaboration/business/request/AUDIT_FAKE",
+    "finalUrl": "http://127.0.0.1:3000/creator",
+    "expected": "Unrelated influencer denied business request",
+    "actual": "denied=true; url=http://127.0.0.1:3000/creator",
+    "functionalResult": "Pass",
+    "visualResult": "Pass",
+    "completedAt": "2026-11-18T23:52:52.814Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "buildId": "local-dev",
+    "environment": "local-dedicated",
+    "startedAt": "2026-11-18T23:52:56.951Z",
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j30-mobile-business-collab.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j30-mobile-business-collab.png"
+      }
+    ],
+    "assertionRefs": [
+      {
+        "type": "a11y-smoke",
+        "unlabeledButtons": 0,
+        "unlabeledInputs": 1
+      }
+    ],
+    "providerEventRefs": [],
+    "issueIds": [],
+    "blocker": null,
+    "integrationLevel": "L2-app-internal",
+    "journeyCompletion": false,
+    "caseKind": "visual",
+    "caseId": "J30-local-mobile-business-a11y-smoke",
+    "journeyId": "J30",
+    "role": "business",
+    "viewport": "mobile",
+    "expected": "Mobile collaborations usable; no mass unlabeled controls",
+    "actual": "{\"unlabeledButtons\":0,\"unlabeledInputs\":1}",
+    "functionalResult": "Pass",
+    "visualResult": "Pass",
+    "completedAt": "2026-11-18T23:52:56.951Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "caseId": "J04-local-create-and-invite-ui",
+    "journeyId": "J04",
+    "role": "business",
+    "caseKind": "journey",
+    "environment": "local-dedicated",
+    "integrationLevel": "L2-app-internal",
+    "expected": "Create request and send private invitations",
+    "actual": "briefs=cmwms5ddg00ncjsu70yjkim0x|AUDIT debug send|draft\ncmwms41i300mcjsu77wn66by9|AUDIT r3mrvlgh Main mwms3x9b|draft\ncmwms2k0300l8jsu73109vwx0|AUDIT r3mrvlgh Main mwms2efp|active; apps=cmwms5ddq00ndjsu7koishj64|REQUESTED|audit-r3mrvlgh-a\ncmwms41ip00mdjsu7wkmlliks|ACCEPTED|audit-r3mrvlgh-a; mailpitTotal=3",
+    "functionalResult": "Pass",
+    "visualResult": "Pass",
+    "journeyCompletion": true,
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j04c-brief.png"
+      },
+      {
+        "rel": "local-journeys/j04c-after.png"
+      },
+      {
+        "rel": "local-journeys/j04c-review.png"
+      }
+    ],
+    "assertionRefs": [
+      {
+        "type": "db",
+        "briefs": "cmwms5ddg00ncjsu70yjkim0x|AUDIT debug send|draft\ncmwms41i300mcjsu77wn66by9|AUDIT r3mrvlgh Main mwms3x9b|draft\ncmwms2k0300l8jsu73109vwx0|AUDIT r3mrvlgh Main mwms2efp|active",
+        "apps": "cmwms5ddq00ndjsu7koishj64|REQUESTED|audit-r3mrvlgh-a\ncmwms41ip00mdjsu7wkmlliks|ACCEPTED|audit-r3mrvlgh-a"
+      },
+      {
+        "type": "mailpit",
+        "total": 3
+      }
+    ],
+    "fixtureIds": [
+      "audit.r3mrvlgh.business-a@example.com"
+    ],
+    "startedAt": "2026-11-18T23:57:34.377Z",
+    "completedAt": "2026-11-18T23:57:34.377Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "caseId": "J05-local-accept-invitation",
+    "journeyId": "J05",
+    "role": "influencer",
+    "caseKind": "journey",
+    "environment": "local-dedicated",
+    "integrationLevel": "L2-app-internal",
+    "expected": "Accept invitation; persisted status",
+    "actual": "apps=cmwms5ddq00ndjsu7koishj64|REQUESTED|audit-r3mrvlgh-a\ncmwms41ip00mdjsu7wkmlliks|ACCEPTED|audit-r3mrvlgh-a; acceptedHeuristic=true",
+    "functionalResult": "Pass",
+    "visualResult": "Pass",
+    "journeyCompletion": true,
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j05-review.png"
+      },
+      {
+        "rel": "local-journeys/j05-accepted-final.png"
+      }
+    ],
+    "assertionRefs": [
+      {
+        "type": "db",
+        "apps": "cmwms5ddq00ndjsu7koishj64|REQUESTED|audit-r3mrvlgh-a\ncmwms41ip00mdjsu7wkmlliks|ACCEPTED|audit-r3mrvlgh-a"
+      }
+    ],
+    "fixtureIds": [
+      "audit.r3mrvlgh.influencer-a@example.com"
+    ],
+    "blocker": null,
+    "startedAt": "2026-11-18T23:57:34.377Z",
+    "completedAt": "2026-11-18T23:57:34.377Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "caseId": "J06-local-response-review",
+    "journeyId": "J06",
+    "role": "business",
+    "caseKind": "journey",
+    "environment": "local-dedicated",
+    "integrationLevel": "L2-app-internal",
+    "expected": "Business reviews accepted response / collaboration",
+    "actual": "acceptedOrSignedVisible=true",
+    "functionalResult": "Pass",
+    "visualResult": "Pass",
+    "journeyCompletion": true,
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j06-final-panel.png"
+      },
+      {
+        "rel": "local-journeys/j06-contracts-signed.png"
+      }
+    ],
+    "fixtureIds": [
+      "audit.r3mrvlgh.business-a@example.com"
+    ],
+    "startedAt": "2026-11-19T00:14:25.369Z",
+    "completedAt": "2026-11-19T00:14:25.370Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "caseId": "J07-local-delete-unaccepted-request",
+    "journeyId": "J07",
+    "role": "business",
+    "caseKind": "journey",
+    "environment": "local-dedicated",
+    "integrationLevel": "L2-app-internal",
+    "expected": "Delete draft request with no signed obligations",
+    "actual": "pureDraft deleted; url=.../collaboration/business?tab=requests&saved=deleted; still=0",
+    "functionalResult": "Pass",
+    "visualResult": "Pass",
+    "journeyCompletion": true,
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j07-details-open.png"
+      },
+      {
+        "rel": "local-journeys/j07-deleted-ok.png"
+      }
+    ],
+    "assertionRefs": [
+      {
+        "type": "db",
+        "still": "0"
+      },
+      {
+        "type": "url",
+        "saved": "deleted"
+      }
+    ],
+    "fixtureIds": [
+      "cmwmsrmk30001jsouia2gt5fu"
+    ],
+    "blocker": null,
+    "startedAt": "2026-11-19T00:14:31.551Z",
+    "completedAt": "2026-11-19T00:14:31.551Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "caseId": "J08-local-withdraw-accepted",
+    "journeyId": "J08",
+    "role": "influencer",
+    "caseKind": "journey",
+    "environment": "local-dedicated",
+    "integrationLevel": "L2-app-internal",
+    "expected": "Withdraw accepted participation before sign",
+    "actual": "before=cmwmsrmk60005jsou6iklidzm|ACCEPTED; after=cmwmsrmk60005jsou6iklidzm|WITHDRAWN; openedVia=true",
+    "functionalResult": "Pass",
+    "visualResult": "Pass",
+    "journeyCompletion": true,
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j08-before-withdraw.png"
+      },
+      {
+        "rel": "local-journeys/j08-after-withdraw.png"
+      }
+    ],
+    "assertionRefs": [
+      {
+        "type": "db",
+        "before": "cmwmsrmk60005jsou6iklidzm|ACCEPTED",
+        "after": "cmwmsrmk60005jsou6iklidzm|WITHDRAWN"
+      }
+    ],
+    "fixtureIds": [
+      "audit.r3mrvlgh.influencer-b@example.com",
+      "cmwmsrmk60005jsou6iklidzm"
+    ],
+    "note": "REQUESTED application fixture-seeded; accept+withdraw via UI",
+    "blocker": null,
+    "startedAt": "2026-11-19T00:14:42.227Z",
+    "completedAt": "2026-11-19T00:14:42.227Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "caseId": "J09-local-protect-signed",
+    "journeyId": "J09",
+    "role": "business",
+    "caseKind": "journey",
+    "environment": "local-dedicated",
+    "integrationLevel": "L2-app-internal",
+    "expected": "Signed agreement preserved on delete attempt",
+    "actual": "Delete blocked with settlement redirect; doc remains signed; parties signed; error=A signed agreement... Open cancellation and settlement instead of deleting.",
+    "functionalResult": "Pass",
+    "visualResult": "Pass",
+    "journeyCompletion": true,
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j09-via-menu.png"
+      }
+    ],
+    "assertionRefs": [
+      {
+        "type": "db",
+        "brief": "cmwms41i300mcjsu77wn66by9|closed",
+        "doc": "cmwmsgt1p01c9jsu7j1cibafm|signed",
+        "parties": "business|signed\ncreator|signed"
+      }
+    ],
+    "fixtureIds": [
+      "cmwmsgt1p01c9jsu7j1cibafm"
+    ],
+    "startedAt": "2026-11-19T00:14:48.737Z",
+    "completedAt": "2026-11-19T00:14:48.737Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "caseId": "J12-local-signing-version-guard",
+    "journeyId": "J12",
+    "role": "business",
+    "caseKind": "journey",
+    "environment": "local-dedicated",
+    "integrationLevel": "L2-app-internal",
+    "expected": "Signed agreement remains fully signed / guarded",
+    "actual": "Status: signed · Influrios in-app · 2/2 signed; doc=signed",
+    "functionalResult": "Pass",
+    "visualResult": "Pass",
+    "journeyCompletion": true,
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j12-signed-contract.png"
+      }
+    ],
+    "fixtureIds": [
+      "cmwmsgt1p01c9jsu7j1cibafm"
+    ],
+    "startedAt": "2026-11-19T00:14:52.856Z",
+    "completedAt": "2026-11-19T00:14:52.856Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "caseId": "J10-local-prepare-send-signature",
+    "journeyId": "J10",
+    "role": "business",
+    "caseKind": "journey",
+    "environment": "local-dedicated",
+    "integrationLevel": "L2-app-internal",
+    "expected": "Prepare+send for signature",
+    "actual": "cmwmsgt1p01c9jsu7j1cibafm|signed|native",
+    "functionalResult": "Pass",
+    "visualResult": "Pass",
+    "journeyCompletion": true,
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j10-pm-sent.png"
+      }
+    ],
+    "fixtureIds": [
+      "cmwmsgt1p01c9jsu7j1cibafm"
+    ],
+    "startedAt": "2026-11-19T00:14:52.929Z",
+    "completedAt": "2026-11-19T00:14:52.929Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "caseId": "J11-local-dual-sign",
+    "journeyId": "J11",
+    "role": "both",
+    "caseKind": "journey",
+    "environment": "local-dedicated",
+    "integrationLevel": "L2-app-internal",
+    "expected": "Dual party sign",
+    "actual": "business|signed\ncreator|signed",
+    "functionalResult": "Pass",
+    "visualResult": "Pass",
+    "journeyCompletion": true,
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j11b2-after.png"
+      },
+      {
+        "rel": "local-journeys/j11i2-after.png"
+      }
+    ],
+    "fixtureIds": [
+      "cmwmsgt1p01c9jsu7j1cibafm"
+    ],
+    "startedAt": "2026-11-19T00:14:52.984Z",
+    "completedAt": "2026-11-19T00:14:52.984Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "caseId": "J01-local-signup-mailpit",
+    "journeyId": "J01",
+    "role": "public",
+    "caseKind": "journey",
+    "environment": "local-dedicated",
+    "integrationLevel": "L2-app-internal",
+    "expected": "Signup creates account and/or verification mail in Mailpit",
+    "actual": "email=audit.r3mrvlgh.signup.mwmst7q8@example.com; user=audit.r3mrvlgh.signup.mwmst7q8@example.com; mailDelta=1; url=http://127.0.0.1:3000/account/verify?email=audit.r3mrvlgh.signup.mwmst7q8%40example.com&next=%2Fcreator%3Fwelcome%3D1; subjects=[\"Your Influrios verification code\",\"Fully signed: “AUDIT r3mrvlgh Main mwms3x9b”\",\"Fully signed: “AUDIT r3mrvlgh Main mwms3x9b”\"]",
+    "functionalResult": "Pass",
+    "visualResult": "Pass",
+    "journeyCompletion": true,
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j01-signup.png"
+      },
+      {
+        "rel": "local-journeys/j01-after-submit.png"
+      }
+    ],
+    "assertionRefs": [
+      {
+        "type": "db",
+        "user": "audit.r3mrvlgh.signup.mwmst7q8@example.com"
+      },
+      {
+        "type": "mailpit",
+        "gained": 1
+      }
+    ],
+    "fixtureIds": [
+      "audit.r3mrvlgh.signup.mwmst7q8@example.com"
+    ],
+    "blocker": null,
+    "startedAt": "2026-11-19T00:15:01.789Z",
+    "completedAt": "2026-11-19T00:15:01.789Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "buildId": "local-dev",
+    "environment": "local-dedicated",
+    "startedAt": "2026-11-19T01:35:18.889Z",
+    "screenshotRefs": [],
+    "assertionRefs": [
+      {
+        "type": "probe",
+        "file": "stripe-secret-probe.json"
+      }
+    ],
+    "providerEventRefs": [],
+    "issueIds": [],
+    "blocker": null,
+    "integrationLevel": "L3-provider-sandbox",
+    "journeyCompletion": true,
+    "caseKind": "journey",
+    "caseId": "PROBE-stripe-secrets-fresh-boot",
+    "journeyId": "preflight",
+    "role": "system",
+    "expected": "sk_test_ + whsec_ present; sandbox API reachable",
+    "actual": "{\"secret\":{\"presentInAgentShell\":true,\"presentInDotEnvLocal\":true,\"prefix\":\"sk_test_\",\"length\":107,\"mode\":\"sandbox\"},\"webhook\":{\"presentInAgentShell\":true,\"presentInDotEnvLocal\":true,\"prefix\":\"whsec_\",\"length\":38},\"api\":{\"ok\":true,\"status\":200,\"firstLivemode\":false,\"firstIdPrefix\":\"cs_test_\"}}",
+    "functionalResult": "Pass",
+    "visualResult": "Not applicable",
+    "completedAt": "2026-11-19T01:35:18.889Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "buildId": "local-dev",
+    "environment": "local-dedicated",
+    "startedAt": "2026-11-19T01:35:27.650Z",
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j02-admin-reprobe-envlocal-load.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j02-admin-reprobe-envlocal-load.png"
+      },
+      {
+        "rel": "local-journeys/j02-admin-reprobe-member-pwd-fail.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j02-admin-reprobe-member-pwd-fail.png"
+      }
+    ],
+    "assertionRefs": [
+      {
+        "type": "admin-rca",
+        "file": "admin-login-root-cause.md"
+      },
+      {
+        "type": "harness",
+        "loadEnvLocal": true
+      }
+    ],
+    "providerEventRefs": [],
+    "issueIds": [],
+    "blocker": null,
+    "integrationLevel": "L2-app-internal",
+    "journeyCompletion": true,
+    "caseKind": "journey",
+    "caseId": "J02-local-login-admin-reprobe",
+    "journeyId": "J02",
+    "role": "admin",
+    "startUrl": "http://127.0.0.1:3000/admin/login",
+    "finalUrl": "http://127.0.0.1:3000/admin",
+    "expected": "Admin login Pass when harness loads ADMIN_SUPER_PASSWORD from .env.local",
+    "actual": "envPwdPass=true; memberPwdStaysOnLogin=true; adminPasswordSource=ADMIN_SUPER_PASSWORD; url=http://127.0.0.1:3000/admin",
+    "functionalResult": "Pass",
+    "visualResult": "Pass",
+    "completedAt": "2026-11-19T01:35:27.650Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "buildId": "local-dev",
+    "environment": "local-dedicated",
+    "startedAt": "2026-11-19T01:35:39.805Z",
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j13-checkout-page.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j13-checkout-page.png"
+      }
+    ],
+    "assertionRefs": [
+      {
+        "type": "product-gate",
+        "gate": {
+          "ok": false,
+          "error": "New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged."
+        }
+      },
+      {
+        "type": "probe",
+        "file": "stripe-secret-probe.json"
+      },
+      {
+        "type": "db",
+        "fundingId": "cmwmvouoj0004jst2hs8vu4lc",
+        "status": "awaiting_provider"
+      }
+    ],
+    "providerEventRefs": [],
+    "issueIds": [],
+    "blocker": "PRODUCT_GATE: collaborationCollectionGate refuses new collaboration card deposit — New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged.",
+    "integrationLevel": "L3-provider-sandbox",
+    "journeyCompletion": false,
+    "caseKind": "journey",
+    "caseId": "J13-local-sandbox-checkout",
+    "journeyId": "J13",
+    "role": "business",
+    "startUrl": "http://127.0.0.1:3000/payments/checkout/cmwmvouoj0004jst2hs8vu4lc",
+    "expected": "Sandbox collaboration funding checkout with provider objects",
+    "actual": "{\"productGate\":{\"ok\":false,\"error\":\"New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged.\"},\"startFundingDeposit\":{\"ok\":false,\"error\":\"New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged.\"},\"checkoutPageSnippet\":\"∞\\nInflurios\\nDashboard\\nAction inbox\\nCompany Profile\\nDiscover Creators\\nCollaborations\\nContracts\\nAnalytics\\nTeam\\nBilling & Plans\\nCollaboration Payments\\nVerification\\nSettings\\nLog out\\n\\n© 2026 Influrios. All rights reserved.\\n\\nA\\n\\nAUDIT r3mrvlgh Co A\\n\\nAUDIT r3mrvlgh Co A\\n\\nBack to payments\\n\\nFUNDING CHECKOUT\\n\\nAUDIT J13 Stripe funding\\n•\\nNeeds funding\\nSigned breakdown\\n\\nGross work $45.00\\n\\nBusiness collaboration\",\"dualParty\":{\"business\":\"audit.r3mrvlgh.business-a@example.com\",\"influencer\":\"audit.r3mrvlgh.influencer-a@example.com\",\"creatorSlug\":\"audit-r3mrvlgh-a\",\"fundingId\":\"cmwmvouoj0004jst2hs8vu4lc\",\"milestoneId\":\"cmwmvouoj0005jst25dyddwpw\"},\"secretsPresent\":true,\"stripeApiProbe\":{\"ok\":true,\"status\":200,\"firstLivemode\":false,\"firstIdPrefix\":\"cs_test_\"}}",
+    "functionalResult": "Blocked",
+    "visualResult": "Pass",
+    "fixtureIds": [
+      "cmwmvouoj0004jst2hs8vu4lc",
+      "audit.r3mrvlgh.business-a@example.com",
+      "audit.r3mrvlgh.influencer-a@example.com"
+    ],
+    "completedAt": "2026-11-19T01:35:39.805Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "buildId": "local-dev",
+    "environment": "local-dedicated",
+    "startedAt": "2026-11-19T01:36:44.683Z",
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j16-pricing.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j16-pricing.png"
+      },
+      {
+        "rel": "local-journeys/j16-stripe-checkout.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j16-stripe-checkout.png"
+      },
+      {
+        "rel": "local-journeys/j16-stripe-after-pay.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j16-stripe-after-pay.png"
+      }
+    ],
+    "assertionRefs": [
+      {
+        "type": "stripe-checkout",
+        "localSessionId": "cs_mwmvp3k3_hxto60",
+        "stripeSessionIdPrefix": "cs_test_a0cC",
+        "paymentStatus": "unpaid"
+      },
+      {
+        "type": "webhook"
+      }
+    ],
+    "providerEventRefs": [],
+    "issueIds": [],
+    "blocker": "PARTIAL: Checkout session opened in Stripe sandbox; paid+webhook evidence incomplete (card UI / confirm path)",
+    "integrationLevel": "L3-provider-sandbox",
+    "journeyCompletion": false,
+    "caseKind": "journey",
+    "caseId": "J16-local-subscription-checkout",
+    "journeyId": "J16",
+    "role": "influencer",
+    "startUrl": "http://127.0.0.1:3000/pricing",
+    "expected": "Sandbox subscription checkout via Stripe test + webhook evidence",
+    "actual": "{\"started\":{\"ok\":true,\"mode\":\"stripe\",\"sessionId\":\"cs_mwmvp3k3_hxto60\",\"urlHost\":\"checkout.stripe.com\"},\"sessionMeta\":{\"localSessionId\":\"cs_mwmvp3k3_hxto60\",\"stripeSessionIdPrefix\":\"cs_test_a0cC\",\"paymentStatus\":\"unpaid\"},\"webhook\":null,\"checkoutAttempts\":\"1\",\"account\":\"audit.r3mrvlgh.influencer-a@example.com\"}",
+    "functionalResult": "Partial",
+    "visualResult": "Pass",
+    "fixtureIds": [
+      "audit.r3mrvlgh.influencer-a@example.com"
+    ],
+    "completedAt": "2026-11-19T01:36:44.683Z"
+  },
+  {
+    "runId": "AUDIT_LOCAL_R3",
+    "buildId": "local-dev",
+    "environment": "local-dedicated",
+    "startedAt": "2026-11-19T01:36:50.808Z",
+    "screenshotRefs": [
+      {
+        "rel": "local-journeys/j15-payments-mobile-blocked.png",
+        "path": "/cursor/stores/self/media/e2e-audit/local-journeys/j15-payments-mobile-blocked.png"
+      }
+    ],
+    "assertionRefs": [
+      {
+        "type": "upstream",
+        "fundingStatus": "awaiting_provider",
+        "gate": "New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged."
+      }
+    ],
+    "providerEventRefs": [],
+    "issueIds": [],
+    "blocker": "UPSTREAM_J13: funding status=awaiting_provider (need held after Stripe deposit). Product gate blocked card deposit; payout sandbox not executed on Stripe-funded deal.",
+    "integrationLevel": "L3-provider-sandbox",
+    "journeyCompletion": false,
+    "caseKind": "journey",
+    "caseId": "J15-local-payout",
+    "journeyId": "J15",
+    "role": "influencer",
+    "expected": "Sandbox payout/release after funded collaboration",
+    "actual": "{\"fundingStatus\":\"awaiting_provider\",\"fundingId\":\"cmwmvouoj0004jst2hs8vu4lc\",\"milestoneId\":\"cmwmvouoj0005jst25dyddwpw\",\"upstream\":{\"ok\":false,\"error\":\"New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged.\"},\"productGate\":\"New collaboration funding is disabled until Stripe allocated funds or Treasury access is proven. Nothing was charged.\",\"note\":\"Secrets present; collaborationCollectionGate blocks Stripe card funding initiation\"}",
+    "functionalResult": "Blocked",
+    "visualResult": "Pass",
+    "fixtureIds": [
+      "cmwmvouoj0004jst2hs8vu4lc",
+      "cmwmvouoj0005jst25dyddwpw"
+    ],
+    "completedAt": "2026-11-19T01:36:50.808Z"
+  }
+]

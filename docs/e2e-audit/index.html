@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Influrios E2E Audit — AUDIT_20261118170047 r2</title>
+<style>
+:root{--bg:#f4f7fb;--card:#fff;--ink:#14213d;--muted:#5b6b7c;--line:#d7e0ea;--pass:#0f7b4b;--fail:#b42318;--blocked:#a15c00}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 ui-sans-serif,system-ui,sans-serif;background:linear-gradient(180deg,#eaf1ff,#f7fafc);color:var(--ink)}
+header{padding:28px 24px 12px;max-width:1200px;margin:0 auto}h1{margin:0 0 6px;font-size:26px}.sub{color:var(--muted)}
+.note{background:#fff8e8;border:1px solid #f0d59a;padding:10px 12px;border-radius:10px;margin:12px 0}
+.ok{background:#ecfdf3;border:1px solid #abefc6}
+nav{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}nav a{color:#3b4fd8;font-weight:600;text-decoration:none}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;max-width:1200px;margin:0 auto 16px;padding:0 24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}.card b{display:block;font-size:22px}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px 40px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+select{padding:6px 8px;border-radius:8px;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left;font-size:13px}
+th{background:#eef3fa;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+tr.hidden{display:none}pre{white-space:pre-wrap;max-width:420px}
+.tag-Pass{color:var(--pass);font-weight:700}.tag-Fail{color:var(--fail);font-weight:700}.tag-Blocked{color:var(--blocked);font-weight:700}
+</style></head><body>
+<header>
+<h1>Influrios E2E audit pack <small>r2</small></h1>
+<div class="sub">AUDIT_20261118170047 · build <code>ada9c7f5d90d4d61e78627da2765cbe14004cbc4</code> · https://influrios.com</div>
+<div class="note"><b>Verdict: Audit incomplete with blockers.</b> PR #534 kept open for revision. Route-open screenshots are <b>inventory</b>, not journey completion. Mutating paths blocked pending isolation evidence.</div>
+<div class="note ok"><b>Mail sink:</b> controlled delivery proven (job cmwmi5v4b08nlpb01rxivghrn · SMTP 250). See <a href="./mail-sink-proof.md">mail-sink-proof.md</a>.</div>
+<nav>
+<a href="./executive-summary.md">Executive</a>
+<a href="./coverage.md">Coverage</a>
+<a href="./journeys.md">Journeys</a>
+<a href="./isolation-evidence.md">Isolation</a>
+<a href="./mail-sink-proof.md">Mail sink</a>
+<a href="./blockers.md">Blockers</a>
+<a href="./downloads/">Downloads</a>
+<a href="./results.json">results.json</a>
+</nav>
+</header>
+<section class="cards">
+<div class="card"><span>J01–J30 Blocked</span><b>20</b></div>
+<div class="card"><span>J01–J30 Partial</span><b>9</b></div>
+<div class="card"><span>J01–J30 Pass</span><b>0</b></div>
+<div class="card"><span>Case rows</span><b>153</b></div>
+<div class="card"><span>Journey completion Pass</span><b>7</b></div>
+</section>
+<div class="wrap">
+<div class="filters">
+<label>Kind <select id="kind"><option value="">All</option></select></label>
+<label>Journey <select id="journey"><option value="">All</option></select></label>
+<label>Functional <select id="fn"><option value="">All</option></select></label>
+<label>Role <select id="role"><option value="">All</option></select></label>
+</div>
+<table><thead><tr><th>Case</th><th>Kind</th><th>Journey</th><th>Role</th><th>Viewport</th><th>Fn</th><th>Vis</th><th>Blocker</th><th>Evidence</th><th>Detail</th></tr></thead>
+<tbody id="tbody"><tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-home</td><td>inventory</td><td>J29</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-home__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Home for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Influrios — Find the right influence; redirected=false; path=/&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J03" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-discover</td><td>inventory</td><td>J03</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-discover__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Discover for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Discover Influencers · Influrios; redirected=false; path=/discover&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/discover&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J16" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-pricing</td><td>inventory</td><td>J16</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-pricing__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Pricing for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Influencer plans · Influrios; redirected=false; path=/pricing&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/pricing&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J01" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-signup</td><td>inventory</td><td>J01</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-signup__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Signup for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Create account · Influrios; redirected=false; path=/signup&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/signup&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J02" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-login</td><td>inventory</td><td>J02</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-login__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Login for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Log in · Influrios; redirected=false; path=/login&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/login&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J01" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-claim</td><td>inventory</td><td>J01</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-claim__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Claim for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Create your Influrios account · Influrios; redirected=false; path=/claim&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/claim&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-business</td><td>inventory</td><td>J29</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-business__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Business landing for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=For Businesses · Influrios · Influrios; redirected=false; path=/business&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/business&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-collaboration</td><td>inventory</td><td>J29</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-collaboration__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Collaboration landing for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Collaborations · Influrios · Influrios; redirected=false; path=/collaboration&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J03" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-card</td><td>inventory</td><td>J03</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-card__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Card for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Influencer Card · Influrios; redirected=false; path=/card&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/card&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-faq</td><td>inventory</td><td>J29</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-faq__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach FAQ for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=FAQ · Influrios; redirected=false; path=/faq&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/faq&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-legal</td><td>inventory</td><td>J29</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-legal__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Legal for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Legal Center · Influrios; redirected=false; path=/legal&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/legal&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-categories</td><td>inventory</td><td>J29</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-categories__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Categories for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Categories · Influrios · Influrios; redirected=false; path=/categories&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/categories&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-mentorship</td><td>inventory</td><td>J29</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-mentorship__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Mentorship for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Log in · Influrios; redirected=true; path=/login&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/login?next=%2Fmentorship&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-trust</td><td>inventory</td><td>J29</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-trust__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Trust for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Trust &amp; Disputes · Influrios; redirected=false; path=/trust&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/trust&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J13" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-payments</td><td>inventory</td><td>J13</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-payments__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Payments for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Log in · Influrios; redirected=true; path=/login&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/login?next=/payments&amp;gate=payments&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="AGENCY" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-agency</td><td>inventory</td><td>AGENCY</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-agency__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Agency (deferred) for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Agency Workspace · Influrios; redirected=false; path=/agency&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/agency&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J02" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-admin-login</td><td>inventory</td><td>J02</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-admin-login__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Admin login for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Admin login · Influrios; redirected=false; path=/admin/login&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/login&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J02" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-reset</td><td>inventory</td><td>J02</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-reset__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Password reset for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Reset password · Influrios; redirected=false; path=/account/reset&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/account/reset&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-404</td><td>inventory</td><td>J29</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/route-public-404__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach 404 recovery for role public&quot;,
+  &quot;actual&quot;: &quot;status=404; title=Influrios — Find the right influence; redirected=false; path=/this-route-should-404-audit&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/this-route-should-404-audit&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J16" data-kind="visual" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>J16-pricing-visual-desktop</td><td>visual</td><td>J16</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/j16-pricing-visual__pricing.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Monthly/Annual visible; comparison usable&quot;,
+  &quot;actual&quot;: &quot;monthly=true; annual=true&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/pricing&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Visual/popup geometry sample — not a full mutating journey.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-home</td><td>inventory</td><td>J29</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-home__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Home for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Influrios — Find the right influence; redirected=false; path=/&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J03" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-discover</td><td>inventory</td><td>J03</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-discover__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Discover for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Discover Influencers · Influrios; redirected=false; path=/discover&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/discover&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J16" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-pricing</td><td>inventory</td><td>J16</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-pricing__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Pricing for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Influencer plans · Influrios; redirected=false; path=/pricing&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/pricing&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J01" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-signup</td><td>inventory</td><td>J01</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-signup__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Signup for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Create account · Influrios; redirected=false; path=/signup&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/signup&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J02" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-login</td><td>inventory</td><td>J02</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-login__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Login for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Log in · Influrios; redirected=false; path=/login&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/login&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J01" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-claim</td><td>inventory</td><td>J01</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-claim__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Claim for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Create your Influrios account · Influrios; redirected=false; path=/claim&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/claim&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-business</td><td>inventory</td><td>J29</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-business__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Business landing for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=For Businesses · Influrios · Influrios; redirected=false; path=/business&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/business&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-collaboration</td><td>inventory</td><td>J29</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-collaboration__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Collaboration landing for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Collaborations · Influrios · Influrios; redirected=false; path=/collaboration&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J03" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-card</td><td>inventory</td><td>J03</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-card__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Card for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Influencer Card · Influrios; redirected=false; path=/card&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/card&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-faq</td><td>inventory</td><td>J29</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-faq__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach FAQ for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=FAQ · Influrios; redirected=false; path=/faq&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/faq&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-legal</td><td>inventory</td><td>J29</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-legal__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Legal for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Legal Center · Influrios; redirected=false; path=/legal&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/legal&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-categories</td><td>inventory</td><td>J29</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-categories__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Categories for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Categories · Influrios · Influrios; redirected=false; path=/categories&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/categories&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-mentorship</td><td>inventory</td><td>J29</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-mentorship__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Mentorship for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Log in · Influrios; redirected=true; path=/login&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/login?next=%2Fmentorship&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-trust</td><td>inventory</td><td>J29</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-trust__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Trust for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Trust &amp; Disputes · Influrios; redirected=false; path=/trust&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/trust&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J13" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-payments</td><td>inventory</td><td>J13</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-payments__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Payments for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Log in · Influrios; redirected=true; path=/login&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/login?next=/payments&amp;gate=payments&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="AGENCY" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-agency</td><td>inventory</td><td>AGENCY</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-agency__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Agency (deferred) for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Agency Workspace · Influrios; redirected=false; path=/agency&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/agency&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J02" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-admin-login</td><td>inventory</td><td>J02</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-admin-login__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Admin login for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Admin login · Influrios; redirected=false; path=/admin/login&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/login&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J02" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-reset</td><td>inventory</td><td>J02</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-reset__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Password reset for role public&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Reset password · Influrios; redirected=false; path=/account/reset&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/account/reset&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J29" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-public-404</td><td>inventory</td><td>J29</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/route-public-404__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach 404 recovery for role public&quot;,
+  &quot;actual&quot;: &quot;status=404; title=Influrios — Find the right influence; redirected=false; path=/this-route-should-404-audit&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/this-route-should-404-audit&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J16" data-kind="visual" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>J16-pricing-visual-mobile</td><td>visual</td><td>J16</td><td>public</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/mobile/j16-pricing-visual__pricing.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Monthly/Annual visible; comparison usable&quot;,
+  &quot;actual&quot;: &quot;monthly=true; annual=true&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/pricing&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Visual/popup geometry sample — not a full mutating journey.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J02" data-kind="journey" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>J02-login-influencer</td><td>journey</td><td>J02</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/j02-login-influencer__after-login.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Authenticated influencer home&quot;,
+  &quot;actual&quot;: &quot;https://influrios.com/creator&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/creator&quot;,
+  &quot;journeyCompletion&quot;: true
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J03" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-creator</td><td>inventory</td><td>J03</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-creator__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Creator home for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Dashboard · Influrios; redirected=false; path=/creator&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/creator&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J05" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-inbox</td><td>inventory</td><td>J05</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-inbox__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Inbox for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Action inbox · Influrios; redirected=false; path=/collaboration/inbox&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/inbox&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J03" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-dashboard</td><td>inventory</td><td>J03</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-dashboard__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Profile for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=My profile · Influrios; redirected=false; path=/dashboard&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/dashboard&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J03" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-details</td><td>inventory</td><td>J03</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-details__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Details for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Details &amp; Preferences · Influrios; redirected=false; path=/dashboard/details&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/dashboard/details&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J03" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-social</td><td>inventory</td><td>J03</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-social__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Social for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Social accounts · Influrios; redirected=false; path=/dashboard/social&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/dashboard/social&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J03" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-links</td><td>inventory</td><td>J03</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-links__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Links for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Links &amp; payments · Influrios; redirected=false; path=/dashboard/links&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/dashboard/links&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J03" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-kyc</td><td>inventory</td><td>J03</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-kyc__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach KYC for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Identity KYC · Influrios; redirected=false; path=/dashboard/kyc&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/dashboard/kyc&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J03" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-prefs</td><td>inventory</td><td>J03</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-prefs__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Prefs for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Details &amp; Preferences · Influrios; redirected=true; path=/dashboard/details&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/dashboard/details&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J29" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-media-kit</td><td>inventory</td><td>J29</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-media-kit__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Media kit for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Media kit · Influrios; redirected=false; path=/creator/media-kit&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/creator/media-kit&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J29" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-analytics</td><td>inventory</td><td>J29</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-analytics__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Analytics for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Analytics · Influrios; redirected=false; path=/creator/analytics&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/creator/analytics&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J14" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-hub</td><td>inventory</td><td>J14</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-hub__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Hub for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Collaborations · Influrios; redirected=false; path=/collaboration/hub&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/hub?view=collaborations&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J10" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-contracts</td><td>inventory</td><td>J10</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-contracts__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Contracts for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Contracts · Influrios; redirected=false; path=/collaboration/contracts&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/contracts&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J15" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-earnings</td><td>inventory</td><td>J15</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-earnings__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Earnings for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Earnings · Influrios; redirected=false; path=/creator/earnings&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/creator/earnings&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J22" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-messages</td><td>inventory</td><td>J22</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-messages__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Messages for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Messages · Influrios; redirected=false; path=/creator/messages&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/creator/messages&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J23" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-notifications</td><td>inventory</td><td>J23</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-notifications__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Notifications for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Notifications · Influrios; redirected=false; path=/creator/notifications&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/creator/notifications&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J02" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-account</td><td>inventory</td><td>J02</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-account__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Account for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Account settings · Influrios; redirected=false; path=/account&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/account&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J16" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-billing</td><td>inventory</td><td>J16</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-billing__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Billing for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Billing &amp; plan · Influrios; redirected=false; path=/billing&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/billing&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J13" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-payments</td><td>inventory</td><td>J13</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/route-influencer-payments__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Payments for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Collaboration Payments · Influrios; redirected=false; path=/payments&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/payments&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J30" data-kind="visual" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>J30-popup-influencer-collaboration-contracts-desktop</td><td>visual</td><td>J30</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/j30-popup-influencer-collaboration-contracts__list.png" target="_blank" rel="noreferrer">shot</a> <a href="../../media/e2e-audit/screenshots/influencer/desktop/j30-popup-influencer-collaboration-contracts__popup-open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Centered desktop popup over list&quot;,
+  &quot;actual&quot;: &quot;opened=/view/i; dialog=true; geom={\&quot;box\&quot;:{\&quot;x\&quot;:260,\&quot;y\&quot;:207.5,\&quot;width\&quot;:920,\&quot;height\&quot;:485},\&quot;dx\&quot;:0,\&quot;dy\&quot;:0,\&quot;rightDrawer\&quot;:false,\&quot;fullBleedMobile\&quot;:false,\&quot;centeredDesktop\&quot;:true}&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/contracts?view=agreements&amp;tab=all&amp;q=&amp;page=1&amp;open=cmw9y7zii0042o9019bmtkc2j&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Visual/popup geometry sample — not a full mutating journey.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J03" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-creator</td><td>inventory</td><td>J03</td><td>influencer</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/mobile/route-influencer-creator__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Creator home for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Dashboard · Influrios; redirected=false; path=/creator&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/creator&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J05" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-inbox</td><td>inventory</td><td>J05</td><td>influencer</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/mobile/route-influencer-inbox__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Inbox for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Action inbox · Influrios; redirected=false; path=/collaboration/inbox&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/inbox&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J03" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-dashboard</td><td>inventory</td><td>J03</td><td>influencer</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/mobile/route-influencer-dashboard__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Profile for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=My profile · Influrios; redirected=false; path=/dashboard&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/dashboard&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J03" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-details</td><td>inventory</td><td>J03</td><td>influencer</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/mobile/route-influencer-details__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Details for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Details &amp; Preferences · Influrios; redirected=false; path=/dashboard/details&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/dashboard/details&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J03" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-social</td><td>inventory</td><td>J03</td><td>influencer</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/mobile/route-influencer-social__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Social for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Social accounts · Influrios; redirected=false; path=/dashboard/social&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/dashboard/social&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J03" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-links</td><td>inventory</td><td>J03</td><td>influencer</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/mobile/route-influencer-links__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Links for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Links &amp; payments · Influrios; redirected=false; path=/dashboard/links&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/dashboard/links&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J03" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-kyc</td><td>inventory</td><td>J03</td><td>influencer</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/mobile/route-influencer-kyc__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach KYC for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Identity KYC · Influrios; redirected=false; path=/dashboard/kyc&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/dashboard/kyc&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J03" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-influencer-prefs</td><td>inventory</td><td>J03</td><td>influencer</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/mobile/route-influencer-prefs__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Prefs for role influencer&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Details &amp; Preferences · Influrios; redirected=true; path=/dashboard/details&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/dashboard/details&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J02" data-kind="journey" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>J02-login-business</td><td>journey</td><td>J02</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/j02-login-business__after-login.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Authenticated business home&quot;,
+  &quot;actual&quot;: &quot;https://influrios.com/business/home&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/business/home&quot;,
+  &quot;journeyCompletion&quot;: true
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J04" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-home</td><td>inventory</td><td>J04</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/route-business-home__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Business home for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Business account · Influrios; redirected=false; path=/business/home&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/business/home&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J05" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-inbox</td><td>inventory</td><td>J05</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/route-business-inbox__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Inbox for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Action inbox · Influrios; redirected=false; path=/collaboration/inbox&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/inbox&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J29" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-profile</td><td>inventory</td><td>J29</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/route-business-profile__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Profile for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Company profile · Influrios; redirected=false; path=/business/profile&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/business/profile&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J03" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-discover</td><td>inventory</td><td>J03</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/route-business-discover__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Discover for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Discover Influencers · Influrios; redirected=false; path=/discover&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/discover&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J04" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-collab</td><td>inventory</td><td>J04</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/route-business-collab__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Collaborations/requests for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Collaborations · Influrios · Influrios; redirected=false; path=/collaboration/business&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/business&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J10" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-contracts</td><td>inventory</td><td>J10</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/route-business-contracts__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Contracts for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Contracts · Influrios; redirected=false; path=/collaboration/contracts&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/contracts&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J29" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-intelligence</td><td>inventory</td><td>J29</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/route-business-intelligence__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Intelligence for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Business · Intelligence · Influrios; redirected=false; path=/business/intelligence&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/business/intelligence&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J29" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-team</td><td>inventory</td><td>J29</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/route-business-team__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Team for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Coordinated proposals · Influrios; redirected=false; path=/collaboration/team&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/team&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J16" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-billing</td><td>inventory</td><td>J16</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/route-business-billing__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Billing for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Business billing &amp; plans · Influrios; redirected=false; path=/business/billing&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/business/billing&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J16" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-plans</td><td>inventory</td><td>J16</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/route-business-plans__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Plans for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Business plans · Influrios; redirected=false; path=/business/plans&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/business/plans&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J29" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-campaigns</td><td>inventory</td><td>J29</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/route-business-campaigns__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Campaigns for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Collaborations · Influrios · Influrios; redirected=true; path=/collaboration/business&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/business?tab=requests&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J29" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-workspace</td><td>inventory</td><td>J29</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/route-business-workspace__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Workspace for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Collaborations · Influrios · Influrios; redirected=true; path=/collaboration/business&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/business&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J13" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-payments</td><td>inventory</td><td>J13</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/route-business-payments__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Payments for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Collaboration Payments · Influrios; redirected=false; path=/payments&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/payments&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J04" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-propose</td><td>inventory</td><td>J04</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/route-business-propose__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Propose for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Propose Collaboration · Influrios; redirected=false; path=/collaboration/propose&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/propose&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J29" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-records</td><td>inventory</td><td>J29</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/route-business-records__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Records for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Active Collaborations · Influrios; redirected=false; path=/collaboration/records&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/records&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J30" data-kind="visual" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>J30-popup-business-collaboration-business-desktop</td><td>visual</td><td>J30</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/j30-popup-business-collaboration-business__list.png" target="_blank" rel="noreferrer">shot</a> <a href="../../media/e2e-audit/screenshots/business/desktop/j30-popup-business-collaboration-business__popup-open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Centered desktop popup over list&quot;,
+  &quot;actual&quot;: &quot;opened=/new request/i; dialog=true; geom={\&quot;box\&quot;:{\&quot;x\&quot;:336,\&quot;y\&quot;:32,\&quot;width\&quot;:768,\&quot;height\&quot;:681},\&quot;dx\&quot;:0,\&quot;dy\&quot;:0.08611111111111111,\&quot;rightDrawer\&quot;:false,\&quot;fullBleedMobile\&quot;:false,\&quot;centeredDesktop\&quot;:true}&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/business/request/new?step=0&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Visual/popup geometry sample — not a full mutating journey.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J04" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-home</td><td>inventory</td><td>J04</td><td>business</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/mobile/route-business-home__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Business home for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Business account · Influrios; redirected=false; path=/business/home&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/business/home&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J05" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-inbox</td><td>inventory</td><td>J05</td><td>business</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/mobile/route-business-inbox__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Inbox for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Action inbox · Influrios; redirected=false; path=/collaboration/inbox&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/inbox&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J29" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-profile</td><td>inventory</td><td>J29</td><td>business</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/mobile/route-business-profile__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Profile for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Company profile · Influrios; redirected=false; path=/business/profile&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/business/profile&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J03" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-discover</td><td>inventory</td><td>J03</td><td>business</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/mobile/route-business-discover__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Discover for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Discover Influencers · Influrios; redirected=false; path=/discover&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/discover&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J04" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-collab</td><td>inventory</td><td>J04</td><td>business</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/mobile/route-business-collab__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Collaborations/requests for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Collaborations · Influrios · Influrios; redirected=false; path=/collaboration/business&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/business&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J10" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-contracts</td><td>inventory</td><td>J10</td><td>business</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/mobile/route-business-contracts__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Contracts for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Contracts · Influrios; redirected=false; path=/collaboration/contracts&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/contracts&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J29" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-intelligence</td><td>inventory</td><td>J29</td><td>business</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/mobile/route-business-intelligence__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Intelligence for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Business · Intelligence · Influrios; redirected=false; path=/business/intelligence&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/business/intelligence&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J29" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-business-team</td><td>inventory</td><td>J29</td><td>business</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/mobile/route-business-team__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Team for role business&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Coordinated proposals · Influrios; redirected=false; path=/collaboration/team&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/team&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J30" data-kind="visual" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>J30-popup-business-mobile</td><td>visual</td><td>J30</td><td>business</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/mobile/j30-popup-business-mobile__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Full-screen mobile editor with title/Close&quot;,
+  &quot;actual&quot;: &quot;{\&quot;opened\&quot;:{},\&quot;geom\&quot;:{\&quot;box\&quot;:{\&quot;x\&quot;:0,\&quot;y\&quot;:0,\&quot;width\&quot;:390,\&quot;height\&quot;:844},\&quot;dx\&quot;:0,\&quot;dy\&quot;:0,\&quot;rightDrawer\&quot;:false,\&quot;fullBleedMobile\&quot;:true,\&quot;centeredDesktop\&quot;:false}}&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/business?tab=requests&amp;request=cmwln5xuz0035oe014lrdzm7r&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Visual/popup geometry sample — not a full mutating journey.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J02" data-kind="journey" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>J02-login-admin</td><td>journey</td><td>J02</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/j02-login-admin__after-login.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Authenticated admin home&quot;,
+  &quot;actual&quot;: &quot;https://influrios.com/admin&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin&quot;,
+  &quot;journeyCompletion&quot;: true
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J25" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-dash</td><td>inventory</td><td>J25</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-dash__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Dashboard for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Platform Overview · Admin · Influrios; redirected=false; path=/admin&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J25" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-accounts</td><td>inventory</td><td>J25</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-accounts__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Influencer accounts for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=User Accounts · Admin · Influrios; redirected=false; path=/admin/accounts&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/accounts&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J25" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-biz-accounts</td><td>inventory</td><td>J25</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-biz-accounts__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Business accounts for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Business Accounts · Admin · Influrios; redirected=false; path=/admin/business-accounts&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/business-accounts&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J25" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-admin-users</td><td>inventory</td><td>J25</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-admin-users__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Admin users for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Admin Users · Admin · Influrios; redirected=false; path=/admin/admin-users&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/admin-users&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J25" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-access</td><td>inventory</td><td>J25</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-access__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Access levels for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Access Levels · Admin · Influrios; redirected=false; path=/admin/access&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/access&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J26" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-plans</td><td>inventory</td><td>J26</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-plans__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Plans for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Plans &amp; features · Admin · Influrios; redirected=false; path=/admin/plans&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/plans&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J16" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-billing</td><td>inventory</td><td>J16</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-billing__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Billing for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Billing activity · Admin · Influrios; redirected=false; path=/admin/billing&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/billing&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J19" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-payment-settings</td><td>inventory</td><td>J19</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-payment-settings__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Payment settings for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Payment settings · Admin · Influrios; redirected=false; path=/admin/payment-settings&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/payment-settings&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J19" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-tax</td><td>inventory</td><td>J19</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-tax__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Tax for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Payment settings · Admin · Influrios; redirected=false; path=/admin/payment-settings&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/payment-settings?section=tax&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J18" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-discounts</td><td>inventory</td><td>J18</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-discounts__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Discounts for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Payment settings · Admin · Influrios; redirected=false; path=/admin/payment-settings&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/payment-settings?section=discounts&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J11" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-signing</td><td>inventory</td><td>J11</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-signing__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Signing for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Document signing · Admin · Influrios; redirected=false; path=/admin/signing&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/signing&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J10" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-contracts</td><td>inventory</td><td>J10</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-contracts__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Contracts for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Contracts · Admin · Influrios; redirected=false; path=/admin/contracts&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/contracts&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J23" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-mail</td><td>inventory</td><td>J23</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-mail__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Mail for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Email · Admin · Influrios; redirected=false; path=/admin/mail&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/mail&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J27" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-jobs</td><td>inventory</td><td>J27</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-jobs__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Jobs for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Jobs · Admin · Influrios; redirected=false; path=/admin/jobs&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/jobs&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J15" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-marketplace</td><td>inventory</td><td>J15</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-marketplace__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Marketplace for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Admin · Marketplace ledger · Influrios; redirected=false; path=/admin/marketplace&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/marketplace&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J14" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-collaborations</td><td>inventory</td><td>J14</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-collaborations__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Collaborations for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Collaborations · Admin · Influrios; redirected=false; path=/admin/collaborations&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/collaborations&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J14" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-deals</td><td>inventory</td><td>J14</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-deals__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Deals for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Deals · Admin · Influrios; redirected=false; path=/admin/deals&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/deals&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J28" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-ai</td><td>inventory</td><td>J28</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-ai__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach AI for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=AI pipelines · Admin · Influrios; redirected=false; path=/admin/ai&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/ai&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J28" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-matching</td><td>inventory</td><td>J28</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-matching__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Matching for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Admin · Managed Matching · Influrios; redirected=false; path=/admin/matching&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/matching&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J27" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-homepage</td><td>inventory</td><td>J27</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-homepage__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Homepage CMS for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Homepage · Admin · Influrios; redirected=false; path=/admin/homepage&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/homepage&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="AGENCY" data-kind="inventory" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-agency</td><td>inventory</td><td>AGENCY</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/route-admin-agency__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Agency admin page for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Admin · Agency · Influrios; redirected=false; path=/admin/agency&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/agency&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J30" data-kind="visual" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>J30-popup-admin-admin-accounts-desktop</td><td>visual</td><td>J30</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/j30-popup-admin-admin-accounts__list.png" target="_blank" rel="noreferrer">shot</a> <a href="../../media/e2e-audit/screenshots/admin/desktop/j30-popup-admin-admin-accounts__popup-open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Centered desktop popup over list&quot;,
+  &quot;actual&quot;: &quot;opened=/view/i; dialog=true; geom={\&quot;box\&quot;:{\&quot;x\&quot;:280,\&quot;y\&quot;:123,\&quot;width\&quot;:880,\&quot;height\&quot;:634},\&quot;dx\&quot;:0,\&quot;dy\&quot;:0.011111111111111112,\&quot;rightDrawer\&quot;:false,\&quot;fullBleedMobile\&quot;:false,\&quot;centeredDesktop\&quot;:true}&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/accounts?view=cmv6f0eb40061od01b8jvjlpk&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Visual/popup geometry sample — not a full mutating journey.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J30" data-kind="visual" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>J30-popup-admin-admin-payment-settings-section-tax-desktop</td><td>visual</td><td>J30</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/j30-popup-admin-admin-payment-settings-section-tax__list.png" target="_blank" rel="noreferrer">shot</a> <a href="../../media/e2e-audit/screenshots/admin/desktop/j30-popup-admin-admin-payment-settings-section-tax__popup-open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Centered desktop popup over list&quot;,
+  &quot;actual&quot;: &quot;opened=/edit/i; dialog=true; geom={\&quot;box\&quot;:{\&quot;x\&quot;:496,\&quot;y\&quot;:228.5,\&quot;width\&quot;:448,\&quot;height\&quot;:443},\&quot;dx\&quot;:0,\&quot;dy\&quot;:0,\&quot;rightDrawer\&quot;:false,\&quot;fullBleedMobile\&quot;:false,\&quot;centeredDesktop\&quot;:true}&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/payment-settings?section=tax&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Visual/popup geometry sample — not a full mutating journey.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J30" data-kind="visual" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>J30-popup-admin-admin-plans-desktop</td><td>visual</td><td>J30</td><td>admin</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/desktop/j30-popup-admin-admin-plans__list.png" target="_blank" rel="noreferrer">shot</a> <a href="../../media/e2e-audit/screenshots/admin/desktop/j30-popup-admin-admin-plans__popup-open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Centered desktop popup over list&quot;,
+  &quot;actual&quot;: &quot;opened=/edit/i; dialog=true; geom={\&quot;box\&quot;:{\&quot;x\&quot;:340,\&quot;y\&quot;:45,\&quot;width\&quot;:760,\&quot;height\&quot;:810},\&quot;dx\&quot;:0,\&quot;dy\&quot;:0,\&quot;rightDrawer\&quot;:false,\&quot;fullBleedMobile\&quot;:false,\&quot;centeredDesktop\&quot;:true}&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/plans&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Visual/popup geometry sample — not a full mutating journey.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J25" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-dash</td><td>inventory</td><td>J25</td><td>admin</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/mobile/route-admin-dash__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Dashboard for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Platform Overview · Admin · Influrios; redirected=false; path=/admin&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J25" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-accounts</td><td>inventory</td><td>J25</td><td>admin</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/mobile/route-admin-accounts__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Influencer accounts for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=User Accounts · Admin · Influrios; redirected=false; path=/admin/accounts&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/accounts&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J25" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-biz-accounts</td><td>inventory</td><td>J25</td><td>admin</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/mobile/route-admin-biz-accounts__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Business accounts for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Business Accounts · Admin · Influrios; redirected=false; path=/admin/business-accounts&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/business-accounts&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J25" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-admin-users</td><td>inventory</td><td>J25</td><td>admin</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/mobile/route-admin-admin-users__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Admin users for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Admin Users · Admin · Influrios; redirected=false; path=/admin/admin-users&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/admin-users&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J25" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-access</td><td>inventory</td><td>J25</td><td>admin</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/mobile/route-admin-access__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Access levels for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Access Levels · Admin · Influrios; redirected=false; path=/admin/access&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/access&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J26" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-plans</td><td>inventory</td><td>J26</td><td>admin</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/mobile/route-admin-plans__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Plans for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Plans &amp; features · Admin · Influrios; redirected=false; path=/admin/plans&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/plans&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J16" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-billing</td><td>inventory</td><td>J16</td><td>admin</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/mobile/route-admin-billing__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Billing for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Billing activity · Admin · Influrios; redirected=false; path=/admin/billing&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/billing&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="admin" data-journey="J19" data-kind="inventory" data-viewport="mobile" data-fn="Pass" data-vis="Pass">
+<td>ROUTE-admin-payment-settings</td><td>inventory</td><td>J19</td><td>admin</td><td>mobile</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/admin/mobile/route-admin-payment-settings__open.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Reach Payment settings for role admin&quot;,
+  &quot;actual&quot;: &quot;status=200; title=Payment settings · Admin · Influrios; redirected=false; path=/admin/payment-settings&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/admin/payment-settings&quot;,
+  &quot;journeyCompletion&quot;: false,
+  &quot;notes&quot;: &quot;Inventory/route-open only — not evidence that a customer journey completed.&quot;
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J24" data-kind="journey" data-viewport="desktop" data-fn="Not tested" data-vis="Pass">
+<td>J24-permission-cross-contract</td><td>journey</td><td>J24</td><td>influencer</td><td>desktop</td>
+<td>Not tested</td><td>Pass</td><td>No fixture contract link visible</td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/j24-permission-cross-contract__direct-link.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Unrelated influencer denied business contract detail&quot;,
+  &quot;actual&quot;: &quot;No contract href on business list — Not tested&quot;,
+  &quot;finalUrl&quot;: null
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J01" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J01-mutating-main</td><td>journey</td><td>J01</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-MAIL-SINK</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Signup + email verification&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-MAIL-SINK. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J04" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J04-mutating-main</td><td>journey</td><td>J04</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-ISOLATION</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Create/edit/publish request&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-ISOLATION. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J05" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J05-mutating-main</td><td>journey</td><td>J05</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-MAIL-SINK</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Invite + accept across accounts&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-MAIL-SINK. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J06" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J06-mutating-main</td><td>journey</td><td>J06</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-ISOLATION</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Response review + selection&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-ISOLATION. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J07" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J07-mutating-main</td><td>journey</td><td>J07</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-ISOLATION</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Delete unaccepted request&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-ISOLATION. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J08" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J08-mutating-main</td><td>journey</td><td>J08</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-ISOLATION</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Withdraw accepted participants&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-ISOLATION. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J09" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J09-mutating-main</td><td>journey</td><td>J09</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-ISOLATION</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Protect signed/funded work&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-ISOLATION. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J10" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J10-mutating-main</td><td>journey</td><td>J10</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-ISOLATION</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Prepare agreement (mutating)&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-ISOLATION. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J11" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J11-mutating-main</td><td>journey</td><td>J11</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-ISOLATION</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Sign from both accounts&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-ISOLATION. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J12" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J12-mutating-main</td><td>journey</td><td>J12</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-ISOLATION</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Signing failure/version changes&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-ISOLATION. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J13" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J13-mutating-main</td><td>journey</td><td>J13</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-ISOLATION</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Business collaboration checkout&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-ISOLATION. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J14" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J14-mutating-main</td><td>journey</td><td>J14</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-ISOLATION</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Deliver/review/revise/approve&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-ISOLATION. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J15" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J15-mutating-main</td><td>journey</td><td>J15</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-ISOLATION</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Release/transfer/payout&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-ISOLATION. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J16" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J16-mutating-main</td><td>journey</td><td>J16</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-ISOLATION</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;New sandbox subscription purchases&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-ISOLATION. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J17" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J17-mutating-main</td><td>journey</td><td>J17</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-ISOLATION</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Existing subscriber changes&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-ISOLATION. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J18" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J18-mutating-main</td><td>journey</td><td>J18</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-ISOLATION</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Discount eligibility mutations&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-ISOLATION. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J19" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J19-mutating-main</td><td>journey</td><td>J19</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-ISOLATION</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Configure tax mutations&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-ISOLATION. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J20" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J20-mutating-main</td><td>journey</td><td>J20</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-ISOLATION</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Quote through final charge&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-ISOLATION. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J22" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J22-mutating-main</td><td>journey</td><td>J22</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-ISOLATION</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Two-party messaging send&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-ISOLATION. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="multi" data-journey="J23" data-kind="journey" data-viewport="desktop" data-fn="Blocked" data-vis="Not tested">
+<td>J23-mutating-main</td><td>journey</td><td>J23</td><td>multi</td><td>desktop</td>
+<td>Blocked</td><td>Not tested</td><td>BLK-MAIL-SINK</td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Lifecycle notification delivery&quot;,
+  &quot;actual&quot;: &quot;Not executed — blocker BLK-MAIL-SINK. Read-only related surfaces may still have ROUTE-* / login evidence.&quot;,
+  &quot;finalUrl&quot;: null,
+  &quot;journeyCompletion&quot;: false
+}</pre></details></td></tr>
+<tr data-role="agency" data-journey="AGENCY" data-kind="journey" data-viewport="desktop" data-fn="Not applicable" data-vis="Not applicable">
+<td>AGENCY-deferred</td><td>journey</td><td>AGENCY</td><td>agency</td><td>desktop</td>
+<td>Not applicable</td><td>Not applicable</td><td></td><td>—</td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Agency workflow certification&quot;,
+  &quot;actual&quot;: &quot;Deferred per preferences — inventory only&quot;,
+  &quot;finalUrl&quot;: null
+}</pre></details></td></tr>
+<tr data-role="business" data-journey="J21" data-kind="journey" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>J21-cross-screen-business-readonly</td><td>journey</td><td>J21</td><td>business</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/business/desktop/j21-cross-screen__business-home.png" target="_blank" rel="noreferrer">shot</a> <a href="../../media/e2e-audit/screenshots/business/desktop/j21-cross-screen__collaboration-inbox.png" target="_blank" rel="noreferrer">shot</a> <a href="../../media/e2e-audit/screenshots/business/desktop/j21-cross-screen__collaboration-business.png" target="_blank" rel="noreferrer">shot</a> <a href="../../media/e2e-audit/screenshots/business/desktop/j21-cross-screen__collaboration-contracts.png" target="_blank" rel="noreferrer">shot</a> <a href="../../media/e2e-audit/screenshots/business/desktop/j21-cross-screen__business-billing.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Dashboard/inbox/collab/contracts/billing reachable for same session&quot;,
+  &quot;actual&quot;: &quot;Captured 5 surfaces (IDs not reconciled — no main-journey entity yet)&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/business/billing&quot;,
+  &quot;journeyCompletion&quot;: true
+}</pre></details></td></tr>
+<tr data-role="public" data-journey="J02" data-kind="journey" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>J02-invalid-login</td><td>journey</td><td>J02</td><td>public</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/public/desktop/j02-invalid-login.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Generic auth failure without account disclosure&quot;,
+  &quot;actual&quot;: &quot;stillLogin=true; genericError=true; disclosesAccount=false&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/login?error=Email+or+password+is+incorrect.&amp;next=%2Fcreator&quot;,
+  &quot;journeyCompletion&quot;: true
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J24" data-kind="journey" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>J24-fake-contract-id</td><td>journey</td><td>J24</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/j24-fake-contract-id.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Synthetic foreign contract id denied / not found&quot;,
+  &quot;actual&quot;: &quot;deniedHeuristic=true; path=https://influrios.com/collaboration/contracts/AUDIT_FAKE_CONTRACT_ID_1795022002570; snippet=404 This page could not be found.&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/collaboration/contracts/AUDIT_FAKE_CONTRACT_ID_1795022002570&quot;,
+  &quot;journeyCompletion&quot;: true
+}</pre></details></td></tr>
+<tr data-role="influencer" data-journey="J24" data-kind="journey" data-viewport="desktop" data-fn="Pass" data-vis="Pass">
+<td>J24-fake-business-request</td><td>journey</td><td>J24</td><td>influencer</td><td>desktop</td>
+<td>Pass</td><td>Pass</td><td></td><td><a href="../../media/e2e-audit/screenshots/influencer/desktop/j24-fake-business-request.png" target="_blank" rel="noreferrer">shot</a></td>
+<td><details><summary>detail</summary><pre>{
+  &quot;expected&quot;: &quot;Influencer cannot open foreign business request&quot;,
+  &quot;actual&quot;: &quot;deniedHeuristic=true; redirectedAway=true; path=https://influrios.com/creator&quot;,
+  &quot;finalUrl&quot;: &quot;https://influrios.com/creator&quot;,
+  &quot;journeyCompletion&quot;: true
+}</pre></details></td></tr></tbody></table>
+</div>
+<script>
+const sels=['kind','journey','fn','role'];
+const vals={};
+for (const tr of document.querySelectorAll('#tbody tr')) {
+  for (const [k,attr] of [['kind','data-kind'],['journey','data-journey'],['fn','data-fn'],['role','data-role']]) {
+    vals[k]=vals[k]||new Set(); vals[k].add(tr.getAttribute(attr)||'');
+  }
+}
+for (const k of sels){const el=document.getElementById(k); [...vals[k]].filter(Boolean).sort().forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o)}); el.addEventListener('change',apply);}
+function apply(){const f=Object.fromEntries(sels.map(k=>[k,document.getElementById(k).value]));
+for(const tr of document.querySelectorAll('#tbody tr')){
+ const ok=(!f.kind||tr.dataset.kind===f.kind)&&(!f.journey||tr.dataset.journey===f.journey)&&(!f.fn||tr.dataset.fn===f.fn)&&(!f.role||tr.dataset.role===f.role);
+ tr.classList.toggle('hidden',!ok);
+}}
+for (const td of document.querySelectorAll('td')) if(['Pass','Fail','Blocked'].includes(td.textContent)) td.classList.add('tag-'+td.textContent);
+</script>
+</body></html>

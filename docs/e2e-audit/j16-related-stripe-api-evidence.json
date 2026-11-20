@@ -1,0 +1,20 @@
+{
+  "recordedAt": "2026-11-19T01:45:00.592Z",
+  "vmBcId": "bc-133de653-91be-5ca5-b717-41c2ea63f52d",
+  "webhookUnsigned": {
+    "status": 400,
+    "body": "{\"error\":\"Missing Stripe-Signature header.\"}"
+  },
+  "apiSubscriptions": [
+    {
+      "customerPrefix": "cus_VedfiEom",
+      "subPrefix": "sub_1UdKNn1g",
+      "status": "active",
+      "livemode": false,
+      "amount": 1900,
+      "interval": "month"
+    }
+  ],
+  "note": "Related Stripe sandbox path: API subscription with pm_card_visa reached active/paid. Hosted Checkout UI opened (cs_test_) but headless card confirm incomplete — J16 remains Partial.",
+  "noSecretValues": true
+}

@@ -1,0 +1,22 @@
+{
+  "run": "r3mrvlgh",
+  "passwordEnv": "AUDIT_LOCAL_PASSWORD or default",
+  "members": {
+    "businessA": "audit.r3mrvlgh.business-a@example.com",
+    "businessB": "audit.r3mrvlgh.business-b@example.com",
+    "influencerA": "audit.r3mrvlgh.influencer-a@example.com",
+    "influencerB": "audit.r3mrvlgh.influencer-b@example.com",
+    "influencerUnrelated": "audit.r3mrvlgh.influencer-unrelated@example.com"
+  },
+  "admin": {
+    "super": "audit.admin@example.com",
+    "limited": "audit.r3mrvlgh.admin-limited@example.com"
+  },
+  "ids": {
+    "businessA": "cmwmvi0ey0050jsnckwh9y150",
+    "businessB": "cmwmvi0g10051jsncfd6d407i",
+    "influencerA": "cmwmvi0h9005ajsncyoee4mdx",
+    "influencerB": "cmwmvi0i3005bjsncvjfdc7mk",
+    "influencerUnrelated": "cmwmvi0iw005cjsncfovposxb"
+  }
+}

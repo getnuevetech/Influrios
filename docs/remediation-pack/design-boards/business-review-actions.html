@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Design — Business review actions (separated)</title>
+  <link rel="stylesheet" href="_design-system.css" />
+  <style>
+    .pair { display: grid; gap: 28px; }
+    @media (min-width: 1100px) { .pair { grid-template-columns: 1.4fr 390px; } }
+    .stack { display: grid; gap: 28px; }
+    .choice { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+    .panel { border:1px solid var(--line); border-radius:16px; padding:14px; background:#fafbff; margin-top:12px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="frame-label">PROPOSED · COR-23 · Request changes ≠ Approve · never Approve beside revision text</div>
+    <div class="stack">
+      <!-- REQUEST CHANGES FLOW -->
+      <div class="pair">
+        <div>
+          <div class="frame-label">Desktop · A. Request changes (feedback required · no Approve)</div>
+          <div class="shell">
+            <aside class="sidebar"><div class="brand">Influrios</div><a class="nav-item active" href="#">Collaborations</a></aside>
+            <section class="main" style="position:relative;min-height:560px;">
+              <h1 style="font-size:28px;">Workspace</h1>
+              <div class="scrim" style="position:absolute;border-radius:28px;">
+                <div class="dialog wide">
+                  <div class="dialog-head">
+                    <div>
+                      <h2 style="font-size:22px;">Request changes · version 2</h2>
+                      <div class="dialog-meta">Kickoff · Influencer submission</div>
+                    </div>
+                    <button class="btn btn-secondary" style="padding:6px 10px;">✕</button>
+                  </div>
+                  <div class="dialog-body">
+                    <p><strong>Version under review</strong> · v2 · outro extended · <a href="#">cut.mp4</a></p>
+                    <div class="field" style="margin-top:14px;">
+                      <label>What should change <span style="color:var(--rose)">*</span></label>
+                      <textarea rows="3" placeholder="Required feedback for the influencer">Extend the CTA by 2 seconds</textarea>
+                    </div>
+                    <p class="note">Approve is not available on this step. Clear feedback or go back to choose Approve.</p>
+                  </div>
+                  <div class="dialog-foot">
+                    <button class="btn btn-secondary">Back</button>
+                    <button class="btn btn-primary">Send change request</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+        <div>
+          <div class="frame-label">Mobile · Request changes only</div>
+          <div class="mobile-shell">
+            <div class="mobile-top"><strong>Request changes</strong><span class="icon-btn">✕</span></div>
+            <div class="menu-sheet">
+              <p class="note">Version 2 · Kickoff</p>
+              <div class="field"><label>What should change *</label><textarea rows="4">Extend the CTA by 2 seconds</textarea></div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;">
+                <button class="btn btn-primary">Send change request</button>
+                <button class="btn btn-secondary">Back</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- APPROVE FLOW -->
+      <div class="pair">
+        <div>
+          <div class="frame-label">Desktop · B. Approve confirmation (version + consequences · no feedback field)</div>
+          <div class="shell">
+            <aside class="sidebar"><div class="brand">Influrios</div><a class="nav-item active" href="#">Collaborations</a></aside>
+            <section class="main" style="position:relative;min-height:560px;">
+              <div class="scrim" style="position:absolute;border-radius:28px;">
+                <div class="dialog wide">
+                  <div class="dialog-head">
+                    <div>
+                      <h2 style="font-size:22px;">Approve version 2?</h2>
+                      <div class="dialog-meta">Confirm this version · payment remains separate</div>
+                    </div>
+                    <button class="btn btn-secondary" style="padding:6px 10px;">✕</button>
+                  </div>
+                  <div class="dialog-body">
+                    <div class="panel">
+                      <p><strong>Version</strong> · 2 · outro extended</p>
+                      <p><strong>Files / link</strong> · <a href="#">cut.mp4</a> · <a href="#">https://drive.example/cut</a></p>
+                      <p><strong>Consequences</strong> · Marks delivery approved for this milestone. Does not pay the influencer or release bank funds by itself.</p>
+                    </div>
+                    <div class="choice">
+                      <button class="btn btn-secondary">Need changes instead</button>
+                    </div>
+                    <p class="note">No revision textarea on this screen — prevents accidental approve while typing feedback.</p>
+                  </div>
+                  <div class="dialog-foot">
+                    <button class="btn btn-secondary">Cancel</button>
+                    <button class="btn btn-primary">Approve version 2</button>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+        <div>
+          <div class="frame-label">Mobile · Approve confirmation</div>
+          <div class="mobile-shell">
+            <div class="mobile-top"><strong>Approve v2?</strong><span class="icon-btn">✕</span></div>
+            <div class="menu-sheet">
+              <div class="panel">
+                <p><strong>Version 2</strong></p>
+                <p>Approves this delivery. Payout stays on Payments.</p>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;">
+                <button class="btn btn-primary">Approve version 2</button>
+                <button class="btn btn-secondary">Need changes instead</button>
+                <button class="btn btn-secondary">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHOOSER -->
+      <div>
+        <div class="frame-label">Desktop · Review hub (choose one path)</div>
+        <div class="dialog" style="max-width:720px;">
+          <div class="dialog-head"><div><h2 style="font-size:22px;">Review version 2</h2><div class="dialog-meta">Pick one action</div></div></div>
+          <div class="dialog-body">
+            <p>v2 · submitted · <a href="#">cut.mp4</a></p>
+            <div class="choice">
+              <button class="btn btn-secondary">Request changes…</button>
+              <button class="btn btn-primary">Approve version 2…</button>
+            </div>
+            <p class="note">Each path opens its own step — never show Approve next to a feedback box.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,43 @@
+{
+  "runId": "AUDIT_20261118170047",
+  "buildId": "ada9c7f5d90d4d61e78627da2765cbe14004cbc4",
+  "baseUrl": "https://influrios.com",
+  "startedAt": "2026-11-18T17:06:20.231Z",
+  "assets": [
+    {
+      "type": "recording",
+      "path": "/cursor/stores/self/media/e2e-audit/recordings/influencer-desktop-nav.webm",
+      "sha256": null
+    },
+    {
+      "type": "recording",
+      "path": "/cursor/stores/self/media/e2e-audit/recordings/business-desktop-nav.webm",
+      "sha256": null
+    },
+    {
+      "type": "recording",
+      "path": "/cursor/stores/self/media/e2e-audit/recordings/admin-desktop-nav.webm",
+      "sha256": null
+    }
+  ],
+  "completedAt": "2026-11-18T17:10:30.624Z",
+  "caseCount": 153,
+  "issueCount": 1,
+  "packGeneratedAt": "2026-11-18T19:19:48.865Z",
+  "downloads": [
+    "/cursor/stores/self/docs/e2e-audit/downloads/influrios-e2e-audit-docs.zip",
+    "/cursor/stores/self/docs/e2e-audit/downloads/influrios-e2e-audit-screenshots.zip",
+    "/cursor/stores/self/docs/e2e-audit/downloads/influrios-e2e-audit-recordings.zip",
+    "/cursor/stores/self/docs/e2e-audit/downloads/influrios-e2e-audit-preflight.zip"
+  ],
+  "revision": "r2",
+  "verdict": "Audit incomplete with blockers",
+  "mailSink": {
+    "proven": true,
+    "jobId": "cmwmi5v4b08nlpb01rxivghrn"
+  },
+  "isolation": {
+    "status": "evidence-plus-residual-attestation",
+    "totalAccountsObserved": 5
+  }
+}
