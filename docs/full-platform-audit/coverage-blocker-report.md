@@ -103,7 +103,11 @@ The first two are corrected in this commit. Counts are unaffected.
 
 ---
 
-## 7. What this report does not claim
+## 7. Who runs the remaining checks
+
+Every Blocked and Not-tested row has a runner, gate and next action in [check-handoff.md](./check-handoff.md): 46 ready to run on the isolated audit host, 11 waiting on an isolated fixture or dependency, 30 waiting on R6 payments-sandbox approval, 3 waiting on provider credentials.
+
+## 8. What this report does not claim
 
 - That the platform is fully audited or remediated
 - That any Fail row is closed by design work on #540 or #533

@@ -5,6 +5,7 @@
 **NT chase:** [execution/not-tested-chase-results.md](./execution/not-tested-chase-results.md) (IPS-25).  
 **Dashboard consistency:** [execution/dashboard-consistency-results.md](./execution/dashboard-consistency-results.md) (IPS-29 · INV-DC-* · **RC-DASHBOARD**).  
 **Mail-sink restore:** [execution/mail-sink-restore-results.md](./execution/mail-sink-restore-results.md) (IPS-31 · isolated Mailpit; deposit+mail rows stay Blocked).  
+**Runner handoff (every open check → runner + next action):** [check-handoff.md](./check-handoff.md)  
 **Latest open-items summary:** [coverage-blocker-report.md](./coverage-blocker-report.md) (Fail / Blocked / Not tested / hidden partials).  
 **Audit-continue + reconcile:** [execution/audit-continue-alongside-design-results.md](./execution/audit-continue-alongside-design-results.md) (IPS-40/42).  
 **Remediation plan (provisional):** [remediation-plan.md](./remediation-plan.md) — **24 Fail → 9 root causes** (incl. **RC-JOBS**, **RC-DASHBOARD**); blocked deps mapped. **Not** remediated; no new product PRs from this plan.  
