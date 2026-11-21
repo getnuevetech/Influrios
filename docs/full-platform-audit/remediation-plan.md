@@ -564,6 +564,25 @@ See patch **RC-DASHBOARD** (DB1–DB6). Package **R4b**. Deposits stay closed; n
 
 ---
 
+## Payment remediation requirement — milestone release with frozen fee allocations (R6 · Package 5)
+
+**Added 2026-11-21 per Ola.** Governs the R6 payment remediation and Package 5 ledger acceptance. Full text: #540 `docs/ux-remediation/master-spec.md` §13 (MS1–MS8). **Status: Open. Not satisfied by existing helper code (`readMilestoneAllocation`, `settlementCommandKey`, `partialLegRecovery`) or by simulated releases.**
+
+| ID | Requirement | Evidence required | Status |
+|----|-------------|-------------------|--------|
+| MS1 | Use the contract's frozen fee rules and milestone allocations | Per milestone: business fee, influencer fee, influencer net, platform allocation from the signed version; no recalculation with today's settings | Open |
+| MS2 | Release both allocated amounts | One release authorization linking influencer leg + platform Operations leg | Open |
+| MS3 | Partial success handled honestly | One leg ok / one failed → “Partially completed”; retry only the unfinished leg | Open |
+| MS4 | No duplicates | Repeated approval, retries, duplicate callbacks never duplicate either payment | Open |
+| MS5 | Every amount reconciles | Allocations total contract amounts incl. rounding; taxes/liabilities separately identified | Open |
+| MS6 | Complete admin ledger | Contract → milestone → both legs: accounts, currency, amount, status, provider refs | Open |
+| MS7 | Operations transfer ≠ bank withdrawal | Separate movements and records | Open |
+| MS8 | Actual movement proven | Sandbox provider evidence per external transfer; simulation labelled and never counts as completion | Open |
+
+**Delivery approval vs release (P1-AUD-08, decided):** authorized approval of a valid submitted version persists and clears the review task even with payout setup incomplete; release waits for readiness and the MS controls; UI “Approved · payout setup required”; auto-approval follows the same rule. Retest: INV-N-016T (currently Blocked) moves to its Package 1 acceptance AUD2 once approval is decoupled; the release half stays under MS1–MS8 + R6.
+
+---
+
 ## Retained remediation-pack (still applicable)
 
 | Item | Status vs this provisional plan |
