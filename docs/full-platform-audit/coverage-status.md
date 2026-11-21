@@ -11,7 +11,7 @@
 **Slice evidence:** [execution/auth-results.md](./execution/auth-results.md) · [execution/collab-results.md](./execution/collab-results.md) · [execution/billing-results.md](./execution/billing-results.md) · [execution/admin-results.md](./execution/admin-results.md)  
 **Remediation plan (IPS-20):** [remediation-plan.md](./remediation-plan.md) — **PROVISIONAL**; **24 Fail → 9 root causes** (incl. **RC-JOBS**, **RC-DASHBOARD**); blocked deps mapped; no new product PRs; **not** platform-wide completion
 
-> **This report does not claim the platform is fully audited, fully remediated, or platform-wide complete.** **29 Fail** and **80 Blocked** remain open; **Not tested = 1** (INV-D-007E) after IPS-44; Agency stays Explicitly deferred; defects are not fixed by this audit. Prior Pass aggregates are **superseded** (IPS-30 demotions + IPS-31 + IPS-40 + IPS-42). Live deposits remain closed. **Do not endorse blanket IPS-40 24/24 Pass.**
+> **This report does not claim the platform is fully audited, fully remediated, or platform-wide complete.** **39 Fail** and **57 Blocked** remain open; **Not tested = 0** after IPS-45; Agency stays Explicitly deferred; defects are not fixed by this audit. Prior Pass aggregates are **superseded** (IPS-30 demotions + IPS-31 + IPS-40 + IPS-42). Live deposits remain closed. **Do not endorse blanket IPS-40 24/24 Pass.**
 
 ---
 
@@ -35,10 +35,10 @@ Do **not** preserve the old **287 Pass** (or post–IPS-29 **296**) where eviden
 
 | Status | Count | Meaning here |
 |--------|------:|--------------|
-| Pass | **382** | Required cases executed; expected met (incl. IPS-31/40 isolated Mailpit; IPS-42 narrowed notify/View Passes) |
-| Fail | **29** | Defect with evidence — see §2 (prior 17 + 5 INV-DC-* + INV-C-014 + INV-N-004) |
-| Blocked | **84→80** | IPS-44 executed 5 Blocked rows on the isolated r5 host; INV-N-016T newly Blocked |
-| Not tested | **1** | INV-D-007E media-kit export (others executed IPS-44) |
+| Pass | **396** | Required cases executed; expected met (incl. IPS-31/40 isolated Mailpit; IPS-42 narrowed notify/View Passes) |
+| Fail | **39** | Defect with evidence — see §2 (prior 17 + 5 INV-DC-* + INV-C-014 + INV-N-004) |
+| Blocked | **57** | IPS-44 executed 5 Blocked rows on the isolated r5 host; INV-N-016T newly Blocked |
+| Not tested | **0** | all executed (IPS-44/45) |
 | Explicitly deferred | 10 | Agency product entries only (destination checks recorded) |
 | **Matrix rows** | **502** | IPS-43 split hidden gaps into tracked rows (+9) |
 
@@ -47,6 +47,7 @@ Do **not** preserve the old **287 Pass** (or post–IPS-29 **296**) where eviden
 **IPS-31 mail-sink restore:** +70 Pass · −70 Blocked (isolated Mailpit; 15 MAIL_SINK + 14 deposit+mail remain Blocked).  
 **IPS-40 audit-continue:** +24 Pass / −15 Blocked / −9 NT (pre-reconcile).  
 **IPS-42 evidence reconcile:** −1 Pass → +1 NT (INV-J-010); INV-D-007 View/Export split; INV-N-010…017/027 Pass narrowed to delivery isolation.  
+**IPS-45 isolated r5 round 2:** 37 remaining ready rows → +14 Pass · +10 Fail · 8 still Blocked · 5 not run. [Results](./execution/r5-isolated-round2-results.md).  
 **IPS-44 isolated r5 run:** 10 Package 1 checks executed → +4 Pass (INV-DC-010, INV-A-031, INV-N-013T, INV-J-010) · +5 Fail (INV-DC-013, INV-DC-014, INV-A-048, INV-N-015T, INV-N-017T) · INV-N-016T Blocked. [Results](./execution/r5-isolated-package1-results.md).  
 **IPS-43 hidden-gap split:** +9 rows → +4 Blocked · +5 Not tested (Pass unchanged). INV-D-007E export; INV-N-0xxT originating triggers linked to INV-A-050/057/058/059/060/066 and INV-J-010; INV-N-014 trigger = INV-J-011.  
 **Chase delta (89 former Not tested, IPS-25):** historically 54 Pass · 2 Fail · 33 Blocked — several of those Passes demoted under IPS-30.

@@ -1,0 +1,23 @@
+Notification centre
+
+Unread and action required are different. Opening a notice marks it read and does not complete the task.
+
+All (2)
+Action required (2)
+Invitations (0)
+Work (2)
+Payments (0)
+COUNTERPARTY
+AUDIT r5 DC-010 Launch
+Signature · Your signature is needed
+Unread
+Signature
+2 min ago
+Open
+AUDIT-R5ISO01-B
+AUDIT r5 Workroom notices
+Work · Submission from audit-r5iso01-b
+Unread
+Work
+33 min ago
+Open

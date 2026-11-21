@@ -1,0 +1,27 @@
+{
+  "check": "INV-R-062",
+  "steps": [
+    "admin saved creator opening (form has no visible submit button — submitted with Enter/requestSubmit)"
+  ],
+  "statusOptions": [
+    "Published",
+    "Draft",
+    "Closed"
+  ],
+  "openingId": "cmwqow7xg00t17d9ijichchbu",
+  "http": 200,
+  "shows": false,
+  "applyForm": [
+    "Preview my card"
+  ],
+  "result": "Pass (influencer view; business view lands on card-signup page — observation)",
+  "influencerView": {
+    "url": "http://127.0.0.1:3000/collaboration/openings/cmwqow7xg00t17d9ijichchbu",
+    "http": 200,
+    "shows": true,
+    "buttons": [
+      "Connect"
+    ]
+  },
+  "businessView": "business is redirected to a card-signup page (screenshot 3)"
+}

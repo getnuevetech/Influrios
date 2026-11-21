@@ -1,0 +1,23 @@
+{
+  "steps": [],
+  "bizControls": [
+    "Request cancellation"
+  ],
+  "reasons": [
+    "brand_before_start",
+    "brand_after_start",
+    "partial_delivery_accepted"
+  ],
+  "afterRequestUrl": "http://127.0.0.1:3000/payments?deal=cmwqnkk1f00037dc25lwesptv&tab=settlement&error=A%20payout%20is%20still%20with%20the%20provider.%20The%20settlement%20waits%20until%20that%20result%20is%20known.%20Nothing%20was%20refunded.",
+  "afterRequestMsg": [],
+  "settlement": "",
+  "fundingStatus": "held",
+  "bizOverviewHasCaseLink": false,
+  "infHasCaseLink": false,
+  "infControls": [
+    "Request cancellation"
+  ],
+  "settlementAfter": "",
+  "fundingStatusAfter": "held",
+  "mail": []
+}

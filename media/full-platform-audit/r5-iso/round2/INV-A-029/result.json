@@ -1,0 +1,55 @@
+{
+  "check": "INV-A-029",
+  "steps": [
+    "business invited Unrelated via wizard",
+    "influencer declined from hub popup"
+  ],
+  "before": {
+    "homeBanner": 1,
+    "homeStat": 1,
+    "homeAttention": 1,
+    "homePayoutReminder": false,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 1,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 1,
+    "hubInvitationsCard": 1,
+    "hubNoInvitesCopy": false,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Ready",
+    "inboxOpenTasks": 1
+  },
+  "status": "DECLINED",
+  "after": {
+    "homeBanner": null,
+    "homeStat": 0,
+    "homeAttention": null,
+    "homePayoutReminder": false,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 0,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 2,
+    "hubInvitationsCard": 0,
+    "hubNoInvitesCopy": true,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Ready",
+    "inboxOpenTasks": 0
+  },
+  "result": "Pass"
+}

@@ -1,0 +1,6 @@
+{
+  "check": "INV-A-042",
+  "steps": [],
+  "found": [],
+  "result": "Fail: action exists in code but no UI control on business surfaces"
+}

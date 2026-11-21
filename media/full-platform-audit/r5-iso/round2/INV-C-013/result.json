@@ -1,0 +1,16 @@
+{
+  "check": "INV-C-013",
+  "steps": [
+    "admin turned public_pages_live on (Homepage)"
+  ],
+  "liveBefore": false,
+  "profiles": [
+    "audit-r5iso01-a:CLAIMED:true",
+    "audit-r5iso01-b:CLAIMED:true",
+    "audit-r5iso01-u:CLAIMED:true",
+    "audit-r5iso01-unclaimed:UNCLAIMED:false"
+  ],
+  "listed": [],
+  "unpublishedListed": [],
+  "result": "Pass"
+}

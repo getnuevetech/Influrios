@@ -1,7 +1,7 @@
 # Blocked-check register (IPS-28)
 
 **Purpose:** Account for every **Blocked** row in the full-platform coverage matrix so env/fixture gates cannot vanish into Pass.
-**Source matrix:** [coverage-matrix.md](./coverage-matrix.md) (Blocked = **80** after IPS-44: INV-DC-010/013/014, INV-A-031, INV-A-048 executed on the isolated r5 host; INV-N-016T added as Blocked).
+**Source matrix:** [coverage-matrix.md](./coverage-matrix.md) (Blocked = **57** after IPS-45 round 2 (23 rows executed); earlier: Blocked = 80 after IPS-44: INV-DC-010/013/014, INV-A-031, INV-A-048 executed on the isolated r5 host; INV-N-016T added as Blocked).
 **Execution narratives:** [execution/](./execution/) (`auth|collab|billing|admin|not-tested-chase|mail-sink-restore|audit-continue-alongside-design`-results.md).
 **Policy:** Do **not** enable live collaboration deposits (`journey_funding`) merely to clear audit counts. Prefer isolated staging + Mailpit / `MAIL_SINK_TO`.
 **Baseline:** Phase B live host; deposits closed; Agency Explicitly deferred.
@@ -10,11 +10,13 @@
 
 | Metric | Value |
 |--------|------:|
-| Blocked rows accounted for | **80** |
-| Matrix Blocked (authoritative) | 80 |
+| Blocked rows accounted for | **57** |
+| Matrix Blocked (authoritative) | 57 |
 | Match | YES |
 
 ### By blocker cluster
+
+> Cluster counts below predate IPS-45; 23 rows left Blocked in IPS-45 (see round-2 results). Authoritative total: **57** (matches matrix).
 
 | Cluster | Count | Owner (default) |
 |---------|------:|-----------------|
@@ -116,25 +118,12 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 
 | ID | Journey / surface | Exact blocker (this row) | Notes from matrix |
 |----|-------------------|--------------------------|-------------------|
-| INV-T-009 | P-11 Agreement dialog tabs | Dialog/mutation path incomplete on fixture — entry partial or CTA absent | Dialog not fully opened to tabs |
-| INV-T-013 | P-15 Payments dialog tabs | Dialog/mutation path incomplete on fixture — entry partial or CTA absent | Entry partial; dialog tabs incomplete |
-| INV-P-005 | P-15 Collaboration payments dialog | Dialog/mutation path incomplete on fixture — entry partial or CTA absent | View payments entry from workroom; full dialog tabs not fully captured |
 | INV-P-012 | P-16 Payout detail dialog | Dialog/mutation path incomplete on fixture — entry partial or CTA absent | Automation did not open dialog; deposits closed for new fixtures |
-| INV-A-034 | P-07 Refresh campaign suggestions | Required control/CTA not exposed on audit fixture state (or state-gated) | refreshControls=0; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contract |
-| INV-A-039 | P-09 Transition marketplace application | Required control/CTA not exposed on audit fixture state (or state-gated) | transitionish=0; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts  |
-| INV-A-040 | P-09 Withdraw participation | Dialog/mutation path incomplete on fixture — entry partial or CTA absent | Withdraw menuitem not visible; close/archive controls present on requests |
-| INV-A-042 | P-07 Request managed match | Required control/CTA not exposed on audit fixture state (or state-gated) | controls=0; text=false |
-| INV-A-047 | P-10 Advance collab / queue signature | Dialog/mutation path incomplete on fixture — entry partial or CTA absent | Records page reached; advance not mutated |
 | INV-A-053 | P-11 Apply collab discount | Required control/CTA not exposed on audit fixture state (or state-gated) | discountSignals=false |
 | INV-A-062 | P-15 Request change order | Required control/CTA not exposed on audit fixture state (or state-gated) | controls=0 |
 | INV-A-063 | P-15 Cancel prefund | Dialog/mutation path incomplete on fixture — entry partial or CTA absent | Payments needs_funding surface; explicit cancel-prefund CTA not found on held funding |
-| INV-A-064 | P-17 Open dispute / add evidence | Required control/CTA not exposed on audit fixture state (or state-gated) | workroom=0; payments=0 |
-| INV-A-065 | P-15 Stop series / convert ambassador | Required control/CTA not exposed on audit fixture state (or state-gated) | controls=0; text=false |
-| INV-A-066 | P-17 Request cancellation | Dialog/mutation path incomplete on fixture — entry partial or CTA absent | No Request cancellation control found on held workroom/payments for audit fixture |
 | INV-N-027T | P-17 Notification trigger: collaboration cancelled | Originating cancellation not executable (linked INV-A-066 UI_FIXTURE_GAP) | IPS-43 split; delivery proven separately (INV-N-027) |
 | INV-A-067 | P-17 Settlement accept/question/dispute | Dialog/mutation path incomplete on fixture — entry partial or CTA absent | Settlement-related workroom copy present; accept/question/dispute not reachable without cancellation case |
-| INV-A-069 | P-15 Own-milestone dashboard path | Required control/CTA not exposed on audit fixture state (or state-gated) | Business home lacked distinct own-milestone dashboard funding actions; workroom path is separate INV-A-058..060 |
-| INV-A-079 | P-17 Open dispute (trust page) | Required control/CTA not exposed on audit fixture state (or state-gated) | openDispute=0; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Agboola Log out TRUST &  |
 
 ### `DEPOSITS_CLOSED_AND_MAIL_SINK` (14)
 
@@ -215,11 +204,7 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 
 | ID | Journey / surface | Exact blocker (this row) | Notes from matrix |
 |----|-------------------|--------------------------|-------------------|
-| INV-R-061 | P-09 Application detail | No application/opening/record deep-link id on audit business fixture | No /collaboration/applications/{id} on business opportunities |
-| INV-R-062 | P-09 Opening detail | No application/opening/record deep-link id on audit business fixture | No /collaboration/openings/{id} link found |
 | INV-R-065 | P-10 Record detail | No application/opening/record deep-link id on audit business fixture | list http=200; no /collaboration/records/{id} href on fixture |
-| INV-A-029 | P-09 Creator transition application | No application/opening/record deep-link id on audit business fixture | appLinks=0; transitionish=0 |
-| INV-A-045 | P-09 Transition application detail | No application/opening/record deep-link id on audit business fixture | Depends on INV-R-061 application id — none on fixture |
 
 ### `FEATURE_GATE` (2)
 
@@ -242,8 +227,6 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 
 | ID | Journey / surface | Exact blocker (this row) | Notes from matrix |
 |----|-------------------|--------------------------|-------------------|
-| INV-A-036 | P-07 Inquiry send/reply/decline | No inquiry thread/actions on audit business fixture | inquiryish=0 |
-| INV-A-037 | P-07 Advance/shortlist from inquiry | No inquiry thread/actions on audit business fixture | inquiryish=0; shortlist note: Discover demo blocks shortlist (COR-13) |
 
 ### `PENDING_SIGN_FIXTURE` (3)
 
@@ -254,8 +237,6 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 
 | ID | Journey / surface | Exact blocker (this row) | Notes from matrix |
 |----|-------------------|--------------------------|-------------------|
-| INV-R-067 | P-11 Agreement detail/sign | No pending native Sign CTA — audit contracts already signed | List surface Pass; pending Sign CTA absent on funded already-signed deal; dialog open flaky via row click |
-| INV-A-050 | P-11 Sign native contract | No pending native Sign CTA — audit contracts already signed | No Sign CTA on audit contracts (already signed for funded workroom) |
 | INV-N-010T | P-11 Notification trigger: funding required | No pending native sign fixture (linked INV-A-050) | IPS-43 split; delivery proven separately (INV-N-010) |
 
 ### `PROVIDER_OAUTH` (2)
@@ -279,7 +260,6 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 
 | ID | Journey / surface | Exact blocker (this row) | Notes from matrix |
 |----|-------------------|--------------------------|-------------------|
-| INV-C-013 | P-05 Unpublished profile Discover gate | public_pages_live off — Discover is Sample directory demo; unpublished-vs-live gating not validatable | Cannot validate: Discover is Sample directory demo (public_pages_live off) — live publish gating not observable |
 
 ### `DESTRUCTIVE_FIXTURE` (1)
 
@@ -301,7 +281,6 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 
 | ID | Journey / surface | Exact blocker (this row) | Notes from matrix |
 |----|-------------------|--------------------------|-------------------|
-| INV-J-001 | P-08 invitation_email job | invitation_email kind not listed on /admin/jobs until enqueued | invitation_email listed=false; invitation-ish=true |
 
 ### `NO_TRIGGER` (1)
 
@@ -398,7 +377,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** On sandbox: Checkout session created under test mode + ledger hold. On live: evidence of closed-gate behavior only (404/refusal) — Blocked may remain until sandbox retest.
 - **Existing evidence (partial):** `media/full-platform-audit/collab/desktop/business-checkout-probe.png`
 
-### INV-R-061
+### INV-R-061 — resolved IPS-45 (Pass); kept for history
 
 - **Exact blocker:** No application/opening/record deep-link id on audit business fixture
 - **Affected journey:** P-09 Application detail
@@ -408,7 +387,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** HTTP 200 detail page for seeded id; screenshot; no console/auth error.
 - **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-r-061-062-opps.png`
 
-### INV-R-062
+### INV-R-062 — resolved IPS-45 (Pass); kept for history
 
 - **Exact blocker:** No application/opening/record deep-link id on audit business fixture
 - **Affected journey:** P-09 Opening detail
@@ -428,7 +407,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** HTTP 200 detail page for seeded id; screenshot; no console/auth error.
 - **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-r-065-records-list.png`
 
-### INV-R-067
+### INV-R-067 — resolved IPS-45 (Pass); kept for history
 
 - **Exact blocker:** No pending native Sign CTA — audit contracts already signed
 - **Affected journey:** P-11 Agreement detail/sign
@@ -438,7 +417,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** Sign CTA visible; both parties can complete; agreement status updates; optional sign email in sink.
 - **Existing evidence (partial):** `media/full-platform-audit/collab/manual/biz-contract-open.png`
 
-### INV-T-009
+### INV-T-009 — resolved IPS-45 (Pass); kept for history
 
 - **Exact blocker:** Dialog/mutation path incomplete on fixture — entry partial or CTA absent
 - **Affected journey:** P-11 Agreement dialog tabs
@@ -448,7 +427,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
 - **Existing evidence (partial):** `media/full-platform-audit/collab/manual/biz-contract-open.png`
 
-### INV-T-013
+### INV-T-013 — resolved IPS-45 (Pass); kept for history
 
 - **Exact blocker:** Dialog/mutation path incomplete on fixture — entry partial or CTA absent
 - **Affected journey:** P-15 Payments dialog tabs
@@ -468,7 +447,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** AI tailor dialog opens with draft context when gate on; screenshot.
 - **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-c-009-ai-tailor.png`
 
-### INV-P-005
+### INV-P-005 — resolved IPS-45 (Pass); kept for history
 
 - **Exact blocker:** Dialog/mutation path incomplete on fixture — entry partial or CTA absent
 - **Affected journey:** P-15 Collaboration payments dialog
@@ -544,7 +523,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
 
-### INV-A-029
+### INV-A-029 — resolved IPS-45 (Pass); kept for history
 
 - **Exact blocker:** No application/opening/record deep-link id on audit business fixture
 - **Affected journey:** P-09 Creator transition application
@@ -563,7 +542,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Safe test method:** Disposable AUDIT invitee on the isolated host; mint token; open /invite/[token]; Decline.
 - **Acceptance evidence needed:** Decline executed; after reload the token page and invitation record show Declined; invitee counts (home, hub, Collaborations badge, action inbox) and the business response view update accordingly.
 
-### INV-A-034
+### INV-A-034 — resolved IPS-45 (Fail); kept for history
 
 - **Exact blocker:** Required control/CTA not exposed on audit fixture state (or state-gated)
 - **Affected journey:** P-07 Refresh campaign suggestions
@@ -573,7 +552,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
 - **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-034-refresh.png`
 
-### INV-A-036
+### INV-A-036 — resolved IPS-45 (Fail); kept for history
 
 - **Exact blocker:** No inquiry thread/actions on audit business fixture
 - **Affected journey:** P-07 Inquiry send/reply/decline
@@ -583,7 +562,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** Inquiry actions succeed; thread updated; screenshot before/after.
 - **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-036-inquiry.png`
 
-### INV-A-037
+### INV-A-037 — resolved IPS-45 (Fail); kept for history
 
 - **Exact blocker:** No inquiry thread/actions on audit business fixture
 - **Affected journey:** P-07 Advance/shortlist from inquiry
@@ -593,7 +572,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** Inquiry actions succeed; thread updated; screenshot before/after.
 - **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-036-inquiry.png`
 
-### INV-A-039
+### INV-A-039 — resolved IPS-45 (Pass); kept for history
 
 - **Exact blocker:** Required control/CTA not exposed on audit fixture state (or state-gated)
 - **Affected journey:** P-09 Transition marketplace application
@@ -603,7 +582,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
 - **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-039-transition.png`
 
-### INV-A-040
+### INV-A-040 — resolved IPS-45 (Pass); kept for history
 
 - **Exact blocker:** Dialog/mutation path incomplete on fixture — entry partial or CTA absent
 - **Affected journey:** P-09 Withdraw participation
@@ -613,7 +592,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
 - **Existing evidence (partial):** `media/full-platform-audit/collab/manual/biz-withdraw-menu.png`
 
-### INV-A-042
+### INV-A-042 — resolved IPS-45 (Fail); kept for history
 
 - **Exact blocker:** Required control/CTA not exposed on audit fixture state (or state-gated)
 - **Affected journey:** P-07 Request managed match
@@ -623,7 +602,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
 - **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-042-match.png`
 
-### INV-A-045
+### INV-A-045 — resolved IPS-45 (Pass); kept for history
 
 - **Exact blocker:** No application/opening/record deep-link id on audit business fixture
 - **Affected journey:** P-09 Transition application detail
@@ -633,7 +612,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** HTTP 200 detail page for seeded id; screenshot; no console/auth error.
 - **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-r-061-062-opps.png`
 
-### INV-A-047
+### INV-A-047 — resolved IPS-45 (Pass); kept for history
 
 - **Exact blocker:** Dialog/mutation path incomplete on fixture — entry partial or CTA absent
 - **Affected journey:** P-10 Advance collab / queue signature
@@ -653,7 +632,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
 - **Existing evidence (partial):** `media/full-platform-audit/collab/desktop/business-team.png`
 
-### INV-A-050
+### INV-A-050 — resolved IPS-45 (Pass); kept for history
 
 - **Exact blocker:** No pending native Sign CTA — audit contracts already signed
 - **Affected journey:** P-11 Sign native contract
@@ -753,7 +732,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
 - **Existing evidence (partial):** `media/full-platform-audit/collab/manual/biz-payments.png`
 
-### INV-A-064
+### INV-A-064 — resolved IPS-45 (Fail); kept for history
 
 - **Exact blocker:** Required control/CTA not exposed on audit fixture state (or state-gated)
 - **Affected journey:** P-17 Open dispute / add evidence
@@ -763,7 +742,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
 - **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-064-dispute.png`
 
-### INV-A-065
+### INV-A-065 — resolved IPS-45 (Fail); kept for history
 
 - **Exact blocker:** Required control/CTA not exposed on audit fixture state (or state-gated)
 - **Affected journey:** P-15 Stop series / convert ambassador
@@ -773,7 +752,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
 - **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-065-series.png`
 
-### INV-A-066
+### INV-A-066 — resolved IPS-45 (Fail); kept for history
 
 - **Exact blocker:** Dialog/mutation path incomplete on fixture — entry partial or CTA absent
 - **Affected journey:** P-17 Request cancellation
@@ -802,7 +781,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Safe test method:** Retest only on isolated sandbox with test Stripe keys. On live production: verify gate copy + checkout 404/refusal only — do not start funding deposits to clear Blocked rows.
 - **Acceptance evidence needed:** On sandbox: Checkout session created under test mode + ledger hold. On live: evidence of closed-gate behavior only (404/refusal) — Blocked may remain until sandbox retest.
 
-### INV-A-069
+### INV-A-069 — resolved IPS-45 (Fail); kept for history
 
 - **Exact blocker:** Required control/CTA not exposed on audit fixture state (or state-gated)
 - **Affected journey:** P-15 Own-milestone dashboard path
@@ -812,7 +791,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
 - **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-069-dashboard.png`
 
-### INV-A-079
+### INV-A-079 — resolved IPS-45 (Fail); kept for history
 
 - **Exact blocker:** Required control/CTA not exposed on audit fixture state (or state-gated)
 - **Affected journey:** P-17 Open dispute (trust page)
@@ -822,7 +801,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
 - **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-079-trust.png`
 
-### INV-J-001
+### INV-J-001 — resolved IPS-45 (Pass); kept for history
 
 - **Exact blocker:** invitation_email kind not listed on /admin/jobs until enqueued
 - **Affected journey:** P-08 invitation_email job
@@ -1877,7 +1856,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
 - **Existing evidence (partial):** `media/full-platform-audit/admin/06-admin-mail-health.png; media/full-platform-audit/admin/15-admin-mail-after-test.png`
 
-### INV-C-013
+### INV-C-013 — resolved IPS-45 (Pass); kept for history
 
 - **Exact blocker:** public_pages_live off — Discover is Sample directory demo; unpublished-vs-live gating not validatable
 - **Affected journey:** P-05 Unpublished profile Discover gate

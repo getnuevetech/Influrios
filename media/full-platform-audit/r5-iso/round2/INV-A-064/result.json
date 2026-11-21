@@ -1,0 +1,6 @@
+{
+  "check": "INV-A-064",
+  "steps": [],
+  "disputeControls": [],
+  "result": "Fail: no member dispute entry on this surface"
+}

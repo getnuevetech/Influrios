@@ -1,0 +1,15 @@
+{
+  "check": "INV-J-001",
+  "steps": [],
+  "jobs": [
+    "invitation_email:succeeded:1",
+    "invitation_email:succeeded:1"
+  ],
+  "events": [
+    "send_queued",
+    "send_delivered",
+    "send_queued",
+    "send_delivered"
+  ],
+  "result": "Pass (admin Send email → invitation_email job succeeded → SMTP sink delivery; INV-A-031 evidence)"
+}

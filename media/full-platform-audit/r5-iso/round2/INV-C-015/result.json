@@ -1,0 +1,6 @@
+{
+  "check": "INV-C-015",
+  "steps": [],
+  "controls": [],
+  "result": "Blocked: signed request (fixture without brief) has no delete control on its page"
+}

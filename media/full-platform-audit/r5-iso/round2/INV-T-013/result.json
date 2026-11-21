@@ -1,0 +1,19 @@
+{
+  "check": "INV-T-013",
+  "steps": [],
+  "tabs": [
+    "overview",
+    "breakdown",
+    "milestones",
+    "transactions",
+    "documents"
+  ],
+  "tabResults": {
+    "overview": "200 deal shown",
+    "breakdown": "200 deal shown",
+    "milestones": "200 deal shown",
+    "transactions": "200 deal shown",
+    "documents": "200 deal shown"
+  },
+  "result": "Pass"
+}

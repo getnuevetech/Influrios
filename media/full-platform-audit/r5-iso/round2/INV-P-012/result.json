@@ -1,0 +1,10 @@
+{
+  "check": "INV-P-012",
+  "steps": [],
+  "payoutControls": [
+    "Earnings & Payouts",
+    "payout processing",
+    "View payout status"
+  ],
+  "error": "Command failed: psql -h 127.0.0.1 -p 5433 -U postgres influrios_audit -Atc select count(*) from \"PayoutRecord\"\nERROR:  relation \"PayoutRecord\" does not exist\nLINE 1: select count(*) from \"PayoutRecord\"\n                             ^\n"
+}

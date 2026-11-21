@@ -1,0 +1,117 @@
+∞
+Influrios
+Dashboard
+Action inbox
+My Profile
+Collaborations
+Contracts
+Earnings & Payouts
+Messages
+Settings
+Starter
+Billing & Plan
+Log out
+
+© 2026 Influrios. All rights reserved.
+
+2
+A
+
+AUDIT r5iso01 Influencer B
+
+Influencer
+
+Start funding from a signed collaboration contract.
+
+Collaboration payments
+
+Funding and influencer payouts for signed agreements. Opening this page does not move money.
+
+Currency
+USD
+Apply
+
+Totals for USD. Other currencies stay in the selector.
+
+Needs funding
+
+0
+
+Funds remaining
+
+$800.00
+
+Influencer payouts confirmed
+
+$0.00
+
+Refunds processing
+
+0
+
+From
+To
+Search
+all
+needs funding
+funded
+payout processing
+completed
+issues
+Collaboration	Influencer	Funded total	Remaining	Status	Next action	
+
+AUDIT r5 Workroom notices
+	AUDIT r5iso01 Influencer B	$800.00	$800.00	
+•
+Payout processing	Track the pending payout	View payment
+AUDIT r5 Workroom notices
+×
+
+AUDIT r5iso01 Co A · AUDIT r5iso01 Influencer B
+
+•
+Payout processing
+
+No action needed. We will update this record when the provider confirms the payout.
+
+Overview
+Breakdown
+Milestones
+Transactions
+Documents
+
+No action needed. We will update this record when the provider confirms the payout.
+
+Transaction	Status
+
+
+Funding received
+
+Provider collection
+
+	Confirmed
+
+
+Milestone approved
+
+Work approval is not a payout
+
+	Complete
+
+
+Transfer to influencer account
+
+Provider account transfer
+
+	Processing
+
+
+Bank payout
+
+Provider to the influencer's bank
+
+	Processing
+
+Paid appears only after the provider confirms the bank payout. A return does not refund the business.
+
+View payout status

@@ -1,0 +1,17 @@
+const { chromium, BASE, U, session } = require('./lib'); const C = require('./capture'); const db = require('./db'); const fs = require('fs');
+const dir = process.env.EV + '/CONTRACT-CHAIN'; fs.mkdirSync(dir, { recursive: true }); const r = {};
+const URL = BASE + '/collaboration/contract?creator=audit-r5iso01-a&application=cmwqn2cdw00lr7do5nbnpcd87&currency=USD&title=AUDIT+r5+DC-010+Launch&scope=1+YouTube+video&jurisdiction=US&serviceLevel=discovery&gross=800&mode=template&step=preview';
+(async () => { const b = await chromium.launch(); const biz = await session(b, U.bizA); const p = biz.p;
+  await p.goto(URL); await p.waitForLoadState('networkidle');
+  r.payoutMethods = await p.$$eval('select[name=payoutMethod] option', os => os.map(x => x.value + ':' + x.innerText.trim()));
+  const pm = r.payoutMethods.map(x => x.split(':')[0]).filter(Boolean); if (pm.length) await p.selectOption('select[name=payoutMethod]', pm[0]);
+  await p.waitForLoadState('networkidle'); await p.waitForTimeout(1500);
+  for (const n of ['feeDisclosureAccepted', 'partyAccepted']) await p.check(`input[name=${n}]`);
+  await p.waitForTimeout(500); r.checkedAtSend = await p.evaluate(() => ['feeDisclosureAccepted','partyAccepted'].map(n => document.querySelector(`input[name=${n}]`).checked));
+  r.serviceLevelAtSend = await p.$eval('select[name=serviceLevel]', s => s.value); r.payoutAtSend = await p.$eval('select[name=payoutMethod]', s => s.value);
+  await C.shot(p, dir, '3-preview-filled');
+  await Promise.all([p.waitForNavigation().catch(() => {}), p.click('button[name=intent]:has-text("Send for signature")')]); await p.waitForLoadState('networkidle');
+  const t = await C.shot(p, dir, '4-after-send'); r.urlAfterSend = p.url();
+  r.banners = (t.match(/[^\n]*(sent|error|could not|required|choose|tax|signature)[^\n]*/gi) || []).slice(0, 6);
+  r.contract = db(`select id||'|'||status from "ContractDocument" order by "createdAt" desc limit 1`);
+  fs.writeFileSync(dir + '/step-send.json', JSON.stringify(r, null, 2)); console.log(JSON.stringify(r, null, 1)); await b.close(); })();
