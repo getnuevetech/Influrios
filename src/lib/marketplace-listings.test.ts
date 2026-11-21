@@ -194,12 +194,9 @@ describe("marketplace application state machine", () => {
     assert.equal(creatorApplicationRole({ fromSlug: "maya" }, "maya"), "applicant");
     assert.equal(creatorApplicationRole({ toSlug: "maya" }, "maya"), "invitee");
     assert.deepEqual(creatorApplicationTransitions("REQUESTED", "invitee"), []);
-    assert.deepEqual(creatorApplicationTransitions("VIEWED", "invitee").sort(), [
-      "ACCEPTED",
-      "DECLINED",
-      "WITHDRAWN",
-    ]);
-    assert.ok(!creatorApplicationTransitions("VIEWED", "invitee").includes("RESPONDED"));
+    // P1-AUD-10: invitees never get Accept/Withdraw from the status machine; they respond via the §2.2b matrix.
+    assert.deepEqual(creatorApplicationTransitions("VIEWED", "invitee"), []);
+    assert.deepEqual(creatorApplicationTransitions("RESPONDED", "invitee"), []);
     assert.deepEqual(creatorApplicationTransitions("VIEWED", "applicant"), ["WITHDRAWN"]);
     assert.ok(!businessApplicationTransitions("REQUESTED").includes("VIEWED"));
     assert.ok(businessApplicationTransitions("REQUESTED").includes("DECLINED"));

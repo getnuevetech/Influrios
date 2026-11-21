@@ -6,7 +6,8 @@ import { getAccountSession } from "@/lib/accounts";
 import { selectedMonthWindow } from "@/lib/business-status";
 import { isInfluencerReleaseEntry } from "@/lib/earnings-measures";
 import { agreementPresentation, isCurrentCollaboration } from "@/lib/collaboration-hub";
-import { applicationIsInvitation, applicationIsOpenPipeline } from "@/lib/marketplace-listings";
+import { applicationIsInvitation } from "@/lib/marketplace-listings";
+import { invitationWaitingForInvitee } from "@/lib/invitation-turn";
 import { isPlaceholderBio } from "@/lib/onboarding";
 import { completenessFor, draftToSeedCreator, getCreatorSessionDraft } from "@/lib/claim";
 import { loadCreatorHub } from "@/lib/collaboration-hub";
@@ -440,14 +441,15 @@ export async function loadCreatorHome(userId: string) {
   const invitationRows = (hub?.applications ?? []).filter(
     (row) =>
       applicationIsInvitation(row) &&
-      applicationIsOpenPipeline(row.status) &&
+      // master-spec §1: only invitations whose turn is the invitee's (cases 1 and 3), not past the deadline.
+      invitationWaitingForInvitee(row) &&
       (row.toSlug === slug || row.creatorSlug === slug),
   );
   const attention: HomeAttentionItem[] = [
     ...invitationRows.map((row) => ({
       id: `invitation:${row.id}`,
       title: row.requestBrand || row.opportunityLookingFor || "Campaign invitation",
-      detail: "New campaign invitation",
+      detail: row.status === "NEGOTIATING" ? `${row.requestBrand || "The business"} replied` : "Waiting for your reply",
       action: "Review invitation",
       href: `/collaboration/applications/${row.id}`,
       kind: "invitation" as const,

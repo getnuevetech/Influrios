@@ -3,6 +3,7 @@
  * persisted match records, and application state machine).
  */
 import { applicationLinkPlan } from "@/lib/collaboration-links";
+import { businessInvitationActions, invitationState, type InvitationTurn } from "@/lib/invitation-turn";
 import { prisma } from "@/lib/db";
 import {
   BUSINESS_REQUESTS,
@@ -29,10 +30,12 @@ export type MarketplaceApplicationStatus = (typeof MARKETPLACE_APPLICATION_STATU
 
 const APPLICATION_TRANSITIONS: Record<MarketplaceApplicationStatus, MarketplaceApplicationStatus[]> = {
   REQUESTED: ["VIEWED", "DECLINED", "EXPIRED", "WITHDRAWN"],
-  // ACCEPTED from VIEWED lets an invitee accept after opening the detail (auto-VIEWED).
-  VIEWED: ["RESPONDED", "ACCEPTED", "DECLINED", "EXPIRED", "WITHDRAWN"],
+  // VIEWED → NEGOTIATING: an invitee question no longer passes through RESPONDED (which records interest).
+  // ACCEPTED from VIEWED stays for business-side application review; invitations gate it on interest (invitation-turn.ts).
+  VIEWED: ["RESPONDED", "NEGOTIATING", "ACCEPTED", "DECLINED", "EXPIRED", "WITHDRAWN"],
   RESPONDED: ["NEGOTIATING", "ACCEPTED", "DECLINED", "EXPIRED", "WITHDRAWN"],
-  NEGOTIATING: ["ACCEPTED", "DECLINED", "EXPIRED", "WITHDRAWN"],
+  // NEGOTIATING → RESPONDED (P1-D1): interest recorded after a business answer. Never accepts work.
+  NEGOTIATING: ["RESPONDED", "ACCEPTED", "DECLINED", "EXPIRED", "WITHDRAWN"],
   ACCEPTED: ["COLLABORATION_DRAFTED", "WITHDRAWN"],
   COLLABORATION_DRAFTED: [],
   DECLINED: [],
@@ -679,11 +682,15 @@ export async function transitionMarketplaceApplication(input: {
   if (!allowed.includes(input.toStatus)) {
     throw new Error(`Cannot move application from ${row.status} to ${input.toStatus}.`);
   }
+  const closing = !["REQUESTED", "VIEWED", "RESPONDED", "NEGOTIATING"].includes(input.toStatus);
   const updated = await prisma.$transaction(async (tx) => {
-    const updated = await tx.marketplaceApplication.update({
-      where: { id: input.id },
-      data: { status: input.toStatus },
+    // Conditional on the status we read, so a concurrent change (e.g. withdrawal) is never overwritten.
+    const changed = await tx.marketplaceApplication.updateMany({
+      where: { id: input.id, status: row.status },
+      data: closing ? { status: input.toStatus, turn: "none", openQuestion: false } : { status: input.toStatus },
     });
+    if (changed.count !== 1) throw new Error("This item changed while you were working. Refresh to see its current state.");
+    const updated = await tx.marketplaceApplication.findUniqueOrThrow({ where: { id: input.id } });
     await tx.marketplaceApplicationEvent.create({
       data: {
         applicationId: input.id,
@@ -835,15 +842,28 @@ export function creatorApplicationTransitions(
   if (role === "applicant") {
     return next.filter((status) => status === "WITHDRAWN");
   }
-  // Invitee: no business-ops transitions; Accept/Decline only after the invite was opened (VIEWED+).
-  if (from === "REQUESTED") return [];
-  return next.filter(
-    (status) =>
-      status === "ACCEPTED" ||
-      status === "DECLINED" ||
-      status === "WITHDRAWN" ||
-      status === "NEGOTIATING",
-  );
+  // Invitee (P1-AUD-10): never Accept or Withdraw. Responses go through the §2.2b matrix only
+  // (actionRespondToInvitation), the same on the popup and the detail page.
+  return [];
+}
+
+/**
+ * Business transitions for one row. Open invitations follow the §2.2b matrix
+ * (Accept only after interest is recorded); everything else keeps the status machine.
+ */
+export function businessTransitionsFor(row: {
+  status: string;
+  fromSlug?: string | null;
+  toSlug?: string | null;
+  turn?: string | null;
+  interestRecorded?: boolean | null;
+  openQuestion?: boolean | null;
+  responseDeadline?: string | null;
+}): MarketplaceApplicationStatus[] {
+  if (applicationIsInvitation(row) && applicationIsOpenPipeline(row.status)) {
+    return businessInvitationActions(invitationState(row), { responseDeadline: row.responseDeadline }).actions;
+  }
+  return businessApplicationTransitions(row.status);
 }
 
 export type InviteeResponseIntent = "interested" | "question" | "decline";
@@ -1017,6 +1037,10 @@ export type MarketplaceApplicationRow = {
   deliverables: string;
   responseDeadline: string | null;
   createdAt: string;
+  /** Invitations: who acts next, and the §2.2b inputs. */
+  turn: InvitationTurn;
+  interestRecorded: boolean;
+  openQuestion: boolean;
   /** Creator slug on either side of the application. */
   creatorSlug: string | null;
   requestBrand: string | null;
@@ -1043,6 +1067,9 @@ function mapApplication(row: {
   offerText?: string | null;
   deliverables?: string | null;
   responseDeadline?: Date | null;
+  turn?: string | null;
+  interestRecorded?: boolean | null;
+  openQuestion?: boolean | null;
   status: string;
   note: string | null;
   createdAt: Date;
@@ -1082,6 +1109,7 @@ function mapApplication(row: {
     deliverables: row.deliverables ?? "",
     responseDeadline: row.responseDeadline ? row.responseDeadline.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
+    ...(({ turn, interestRecorded, openQuestion }) => ({ turn, interestRecorded, openQuestion }))(invitationState(row)),
     creatorSlug,
     requestBrand: row.businessRequest?.brand ?? null,
     requestBudget: row.businessRequest?.budget ?? null,

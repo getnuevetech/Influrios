@@ -13,8 +13,8 @@ import {
   applicationIsInvitation,
   applicationKindLabel,
   applicationTransitionLabel,
-  businessApplicationTransitions,
   businessOwnsApplication,
+  businessTransitionsFor,
   creatorApplicationRole,
   creatorApplicationTransitions,
   creatorOwnsApplication,
@@ -23,13 +23,21 @@ import {
   transitionMarketplaceApplication,
 } from "@/lib/marketplace-listings";
 import { actionAddShortlist } from "@/app/collaboration/business/actions";
-import { actionTransitionApplicationDetail } from "../actions";
+import { actionAnswerInvitationQuestion, actionTransitionApplicationDetail } from "../actions";
+import { InvitationResponsePanel } from "@/components/account/invitation-review";
+import {
+  businessCaseLabel,
+  invitationCase,
+  invitationConversation,
+  invitationState,
+  inviteeInvitationView,
+} from "@/lib/invitation-turn";
 
 export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ app?: string; error?: string; opened?: string }>;
+  searchParams: Promise<{ app?: string; error?: string; opened?: string; responded?: string; answered?: string; invitation?: string }>;
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -81,10 +89,11 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
   const creatorRole = draft?.slug ? creatorApplicationRole(application, draft.slug) : null;
   const isInvite = applicationIsInvitation(application);
 
-  // Opening the detail marks REQUESTED → VIEWED for the reviewing party (business or invitee).
+  // Opening the detail marks REQUESTED → VIEWED for the reviewing party: the invitee on an invitation,
+  // the business on an application. Viewing never changes whose turn it is (master-spec §2.2a).
   const shouldMarkViewed =
     application.status === "REQUESTED" &&
-    ((asBusiness && !asCreator) || (asCreator && creatorRole === "invitee"));
+    (isInvite ? asCreator && creatorRole === "invitee" : asBusiness && !asCreator);
   if (shouldMarkViewed) {
     await transitionMarketplaceApplication({
       id: application.id,
@@ -110,8 +119,15 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
       shortlistedSlugs,
     });
   const accepted = applicationIsAcceptedPipeline(application.status);
+  const inviteeView = isInvite && asCreator && creatorRole === "invitee"
+    ? inviteeInvitationView(application, application.requestBrand || "The business")
+    : null;
+  const businessCase = isInvite && asBusiness
+    ? invitationCase(invitationState(application), { responseDeadline: application.responseDeadline })
+    : null;
+  const conversation = isInvite ? invitationConversation(application.events) : { question: null, answer: null };
   const nextStatuses = (asBusiness
-    ? businessApplicationTransitions(application.status)
+    ? businessTransitionsFor(application)
     : creatorRole
       ? creatorApplicationTransitions(application.status, creatorRole)
       : []
@@ -154,6 +170,16 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
       {query.app ? (
         <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
           Updated to {query.app.replaceAll("_", " ")}.
+        </p>
+      ) : null}
+      {query.responded ? (
+        <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+          {query.responded === "decline" ? "You declined this invitation." : query.responded === "question" ? "Your question was sent." : "We let the business know you're interested."}
+        </p>
+      ) : null}
+      {query.answered ? (
+        <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+          Your answer was sent.
         </p>
       ) : null}
       {query.error ? (
@@ -306,6 +332,44 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
             </section>
           ) : null}
 
+          {inviteeView ? (
+            <section className="rounded-2xl border border-[#E6ECF7] bg-white p-4" aria-label="Your response">
+              <InvitationResponsePanel
+                id={application.id}
+                brand={application.requestBrand || "The business"}
+                view={inviteeView}
+                returnTo={`/collaboration/applications/${application.id}`}
+              />
+            </section>
+          ) : null}
+          {businessCase !== null && businessCase !== "closed" ? (
+            <section className="rounded-2xl border border-[#E6ECF7] bg-white p-4" aria-label="Influencer response">
+              <p className="text-sm font-bold text-indigo">
+                {businessCaseLabel(businessCase, counterpart?.displayName || application.creatorSlug || "The influencer")}
+              </p>
+              {conversation.question ? (
+                <p className="mt-2 rounded-xl border border-[#E4E9F5] px-3 py-2 text-xs text-[#1B1464]">
+                  <span className="font-semibold">Question: </span>“{conversation.question}”
+                </p>
+              ) : null}
+              {conversation.answer ? (
+                <p className="mt-2 rounded-xl border border-[#E4E9F5] bg-[#F8F6FF] px-3 py-2 text-xs text-[#1B1464]">
+                  <span className="font-semibold">Your answer: </span>“{conversation.answer}”
+                </p>
+              ) : null}
+              {businessCase === 2 || businessCase === 5 ? (
+                <form action={actionAnswerInvitationQuestion} className="mt-3 space-y-2">
+                  <input type="hidden" name="applicationId" value={application.id} />
+                  <label className="block text-xs font-semibold text-muted">
+                    Your answer
+                    <textarea name="answer" required minLength={2} maxLength={1000} rows={3} className="mt-1 w-full rounded-xl border border-[#E4E9F5] px-3 py-2 text-sm text-indigo" />
+                  </label>
+                  <button type="submit" className="btn-primary !py-2 text-sm">Send answer</button>
+                </form>
+              ) : null}
+            </section>
+          ) : null}
+          {inviteeView ? null : (
           <div className="rounded-2xl border border-[#E6ECF7] bg-[#F8F6FF] p-4">
             {accepted && asBusiness && !offerReady ? (
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -367,9 +431,9 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
             {nextStatuses.length > 0 ? (
               <div className={showContractLink ? "mt-4 border-t border-[#E6ECF7] pt-4" : ""}>
                 <p className="mb-2 text-sm font-bold text-indigo">Actions</p>
-                <p className="mb-3 text-xs text-muted">
-                  These actions appear only after you open this {isInvite ? "invitation" : "application"}.
-                </p>
+                {isInvite ? null : (
+                  <p className="mb-3 text-xs text-muted">These actions appear only after you open this application.</p>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {nextStatuses.map((status) => (
                     <form key={status} action={actionTransitionApplicationDetail}>
@@ -385,7 +449,7 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
                               : "border border-violet/30 text-violet"
                         }`}
                       >
-                        {applicationTransitionLabel(status)}
+                        {isInvite && asBusiness && status === "DECLINED" ? "Not a fit" : applicationTransitionLabel(status)}
                       </button>
                     </form>
                   ))}
@@ -395,6 +459,7 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
               <p className="text-sm text-muted">No further actions on this {isInvite ? "invitation" : "application"}.</p>
             ) : null}
           </div>
+          )}
         </div>
       </article>
     </div>

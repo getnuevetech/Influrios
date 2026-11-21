@@ -27,7 +27,8 @@ describe("invitation popup response", () => {
     });
     assert.equal(plan.ok, true);
     if (!plan.ok) return;
-    assert.deepEqual(plan.steps, ["RESPONDED", "NEGOTIATING"]);
+    // A question no longer passes through RESPONDED (which records interest).
+    assert.deepEqual(plan.steps, ["NEGOTIATING"]);
     assert.equal(plan.note, "Can the first post stay on the brief?");
   });
 

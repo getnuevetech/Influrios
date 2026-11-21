@@ -4,6 +4,7 @@ import { InvitationReview } from "@/components/account/invitation-review";
 import { IconCalendar, IconCheck, IconHandshake, IconMail } from "@/components/icons";
 import { agreementPresentation, PIPELINE_STAGES, type loadCreatorHub } from "@/lib/collaboration-hub";
 import { applicationIsInvitation, applicationIsOpenPipeline } from "@/lib/marketplace-listings";
+import { invitationIsOpen, invitationWaitingForInvitee, inviteeInvitationView } from "@/lib/invitation-turn";
 import { formatStoredMoney } from "@/lib/money";
 import type { listTeamProposalsForCreator } from "@/lib/team-proposal";
 
@@ -51,7 +52,11 @@ export function CreatorCollaborations({
   query = "",
   page = 1,
   savedMatches = [],
+  openInvitationId = null,
+  notice = null,
 }: {
+  openInvitationId?: string | null;
+  notice?: { kind: "error" | "success"; text: string } | null;
   hub: Hub;
   proposals: Proposals;
   creatorSlug: string;
@@ -76,9 +81,10 @@ export function CreatorCollaborations({
       ? tab
       : "overview";
   const q = query.trim().toLowerCase();
-  const invitations = hub.applications.filter(
-    (row) => applicationIsInvitation(row) && applicationIsOpenPipeline(row.status),
-  );
+  // master-spec §1: open = every unexpired open invitation; waiting = turn is the invitee's.
+  const now = new Date();
+  const invitations = hub.applications.filter((row) => applicationIsInvitation(row) && invitationIsOpen(row, now));
+  const waitingInvitations = invitations.filter((row) => invitationWaitingForInvitee(row, now));
   const applications = hub.applications.filter((row) => !applicationIsInvitation(row) && applicationIsOpenPipeline(row.status));
   const openProposals = proposals.filter((proposal) => {
     if (closedProposal(proposal.status) || proposal.status === "accepted") return false;
@@ -88,6 +94,7 @@ export function CreatorCollaborations({
   const completed = hub.pipeline.filter((row) => row.stage === "Released");
   const history = hub.history ?? [];
   const invitationCount = invitations.length + openProposals.length + hub.status.pending;
+  const waitingCount = waitingInvitations.length + openProposals.length + hub.status.pending;
   const payoutAccountOnFile = Boolean(hub.payout.readiness?.accountOnFile || hub.payout.readiness?.hasVerifiedMethod);
   const payoutReady = Boolean(hub.payout.readiness?.globalPayoutReady);
   const matches = (text: string) => !q || text.toLowerCase().includes(q);
@@ -111,16 +118,25 @@ export function CreatorCollaborations({
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Active" value={active.length} icon={<IconHandshake size={18} />} tone="bg-[#F4F0FF] text-[#6D4AFF]" />
-        <Stat label="Invitations" value={invitationCount} icon={<IconMail size={18} />} tone="bg-[#F3EEFF] text-[#6D4AFF]" />
+        <Stat label="Invitations" value={invitationCount} sub={`${waitingCount} waiting for your reply`} icon={<IconMail size={18} />} tone="bg-[#F3EEFF] text-[#6D4AFF]" />
         <Stat label="Due this week" value={dueThisWeek} icon={<IconCalendar size={18} />} tone="bg-[#FFF6E8] text-[#C47B12]" />
         <Stat label="Completed" value={hub.status.completed} icon={<IconCheck size={18} />} tone="bg-[#E8F8EE] text-[#178A45]" />
       </div>
 
-      {invitationCount > 0 ? (
+      {notice ? (
+        <p
+          role={notice.kind === "error" ? "alert" : "status"}
+          className={`rounded-2xl border px-4 py-3 text-sm ${notice.kind === "error" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-emerald-200 bg-emerald-50 text-emerald-800"}`}
+        >
+          {notice.text}
+        </p>
+      ) : null}
+
+      {waitingCount > 0 ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#F3D7A1] bg-[#FFF8EC] px-4 py-3 text-sm text-[#8A5A12]">
           <span className="inline-flex items-center gap-2 font-medium">
             <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#F6E2B8] text-[11px]">!</span>
-            {invitationCount} invitation{invitationCount === 1 ? "" : "s"} need your review.
+            {waitingCount} invitation{waitingCount === 1 ? "" : "s"} waiting for your reply.
           </span>
           <Link href="/collaboration/hub?view=collaborations&tab=invitations" className="rounded-full border border-[#E7C48A] bg-white px-3 py-1.5 text-xs font-semibold text-[#8A5A12]">
             Review invitations →
@@ -133,7 +149,7 @@ export function CreatorCollaborations({
           [
             ["overview", "Overview", null],
             ["applications", "Applications", applications.length],
-            ["invitations", "Invitations", invitationCount],
+            ["invitations", "Invitations", waitingCount],
             ["active", "Active", active.length],
             ["proposals", "Coordinated proposals", openProposals.length],
             ["completed", "Completed", completed.length],
@@ -376,7 +392,9 @@ export function CreatorCollaborations({
                   budget: [row.requestCurrency, row.requestBudget].filter(Boolean).join(" "),
                   deadline: row.responseDeadline || "",
                   status: row.status,
+                  view: inviteeInvitationView(row, row.requestBrand || "The business", now),
                 }))}
+                initialOpenId={openInvitationId && invitations.some((row) => row.id === openInvitationId) ? openInvitationId : null}
               />
               <ul className="mt-3 divide-y divide-[#EEF2F7]">
               {openProposals.map((proposal) => (
@@ -541,13 +559,14 @@ function Avatar({ label }: { label: string }) {
   );
 }
 
-function Stat({ label, value, icon, tone }: { label: string; value: number; icon: ReactNode; tone: string }) {
+function Stat({ label, value, icon, tone, sub }: { label: string; value: number; icon: ReactNode; tone: string; sub?: string }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-[#E7ECF5] bg-white px-4 py-3.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
       <span className={`flex h-11 w-11 items-center justify-center rounded-2xl ${tone}`}>{icon}</span>
       <div>
         <p className="text-[13px] font-medium text-[#667085]">{label}</p>
         <p className="font-display text-[1.7rem] font-bold leading-none text-[#1B1464]">{value}</p>
+        {sub ? <p className="mt-1 text-xs text-[#667085]">{sub}</p> : null}
       </div>
     </div>
   );

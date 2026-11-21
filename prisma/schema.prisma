@@ -1036,6 +1036,12 @@ model MarketplaceApplication {
   deliverables      String                         @default("")
   /// This recipient's response deadline. Other invitees have their own.
   responseDeadline  DateTime?
+  /// Invitations only: who acts next — invitee | business | none. Changed only by actions, never by reads (master-spec §2.2a).
+  turn              String                         @default("invitee")
+  /// Invitations only: the invitee said "I'm interested". Never cleared while open.
+  interestRecorded  Boolean                        @default(false)
+  /// Invitations only: an invitee question the business hasn't answered yet.
+  openQuestion      Boolean                        @default(false)
   createdAt         DateTime                       @default(now())
   updatedAt         DateTime                       @updatedAt
   events            MarketplaceApplicationEvent[]
