@@ -1,7 +1,7 @@
 # Master remediation specification
 
 **Scope today:** Package 1 rules (nav · dashboards · payout readiness · invitations · notifications · inbox dedupe · terminology), plus the master finance scope (§12). Expand when Packages 2–5 land.
-**Revision:** 2026-11-21 (round 4). Corrects the six Ola review findings, the six round-2 follow-ups the five round-3 consistency rules and the two round-4 invitation rules on Package 1 (see [package-01/README.md § Finding checklist](./package-01/README.md#finding-to-file-checklist)).
+**Revision:** 2026-11-21 (round 5: rules added from the IPS-44 isolated-host test results, P1-AUD-01…09). Corrects the six Ola review findings, the six round-2 follow-ups the five round-3 consistency rules and the two round-4 invitation rules on Package 1 (see [package-01/README.md § Finding checklist](./package-01/README.md#finding-to-file-checklist)).
 **Builds on:** [#533 shared-ui-spec](https://github.com/getnuevetech/Influrios/blob/cursor/ux-design-package-e893/docs/ux-design-package/shared-ui-spec.md) and [navigation-map](https://github.com/getnuevetech/Influrios/blob/cursor/ux-design-package-e893/docs/ux-design-package/navigation-map.md). For what #533 still governs, see its [supersession index](https://github.com/getnuevetech/Influrios/blob/cursor/ux-design-package-e893/docs/ux-design-package/supersession-index.md).
 **Audit feed:** RC-DASHBOARD · INV-DC-* · INV-C-014 · INV-N-004 ([#539](https://github.com/getnuevetech/Influrios/pull/539))
 **Constraints:** Live deposits closed · Agency deferred · Centered popups for list detail (one explicit exception: §12 ledger rows) · Original influencer card unchanged · No implementation until the package is accepted
@@ -90,12 +90,18 @@ Semantics follow `APPLICATION_TRANSITIONS` and `inviteeResponsePlan`: “I'm int
 
 **Continuation after a question:** what a business answer does to the turn is defined only by the §2.2b action matrix. Before interest is recorded, the answer returns the turn to the invitee (case 3, “{Business} replied”: counts again until they respond; “I'm interested” available). After interest is recorded, answering a follow-up keeps the business's turn (case 6): the invitee gets a message and no new action-required task.
 
+**Expiry (P1-AUD-03):** an invitation expires at its **Respond-by deadline** (or the admin age rule, whichever comes first). Once the deadline passes it is treated as Expired for every count and action immediately, even before the sweep persists the status; it never shows as “Waiting for your reply” while replies are rejected.
+
+**Team states (P1-AUD-05):** when a team proposal closes (a teammate declined, or the business closed it), every member, including those who accepted, sees “This invitation is closed”; no member keeps “waiting for teammates”.
+
 #### 2.2a Turn tracking (independent of read state)
 
 - Each open invitation carries **turn** = `invitee` | `business` | `none`, persisted server-side.
 - Turn changes **only** on a persisted action, exactly as listed in the §2.2b turn-transition table (e.g. a business answer gives the turn to the invitee only when interest isn't yet recorded). Accept/decline/withdraw/expire → `none`.
 - **Reading never changes turn.** Opening the invitation, the reply notice, or the Messages thread marks those items read but leaves the response task, banner, attention row and badge in place until the invitee responds.
 - Every projection, badge and action-enablement rule uses the §2.2b matrix, never unread state.
+
+**Approval vs payout readiness — decision needed (P1-AUD-08):** today approving a delivery is refused while the influencer's payout setup is incomplete, because approval and release run as one action. Proposed rule: approving the delivery is always possible and records the approval; release waits for payout readiness (§2.1), and the business sees “Approved · release waits for the influencer's payout setup”. Needs Ola's decision before implementation because it touches the payment flow.
 
 #### 2.2b Action matrix (single rule for spec, boards and server)
 
@@ -186,6 +192,8 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 3a. Clearing action-required **never deletes a notice and never changes read state**. Notices stay in history (All); an unopened notice stays Unread. Unrelated notices and messages are untouched.
 4. Notice detail opens as a centered popup (desktop) or sheet (mobile). The primary CTA goes to the task.
 5. The Action required filter counts deduplicated live tasks only.
+6. **Every action-required event creates an in-app notice as well as its email (P1-AUD-06):** invitation sent, question answered, content submitted, changes requested, approved / auto-approved, agreement ready. Email alone is not enough.
+7. **Withdrawal and expiry notify the invitee (P1-AUD-01/02):** an in-app notice + the withdrawal/expiry email template (never the invitation template). The original invitation notice stays in history and drops out of Action required at the same moment the invitation leaves the invitee's turn.
 
 ---
 
@@ -206,6 +214,8 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 - Genuinely distinct tasks stay separate: different milestones, different invitations, or different action kinds on the same collaboration.
 - Completing the task removes the row from To do and clears the **action-required** flag on that task's notices. The notices remain in Notifications history with their own read/unread state; nothing is deleted or silently marked read, and unrelated unread messages/notices are untouched.
 - Badges and Needs your attention count deduplicated tasks, never raw notices.
+- **Every row names its subject (P1-AUD-07):** collaboration + milestone (or invitation) + action, e.g. “Review delivery v2 · Spring Launch Reel · Milestone 1”. A task leaves To do as soon as its state changes by any path, including auto-approval.
+- Invitation tasks include team invitations (P1-AUD-04): the hub Invitations list, action inbox and attention all list team invitations that are waiting for the influencer.
 
 ---
 
@@ -250,6 +260,7 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 | DB5 | Open unread decreases bell; action required unchanged by read alone |
 | DB6 | Refresh + re-login + desktop↔mobile keep agreed counts |
 | DB7 | Business dashboard: attention = Collaborations badge + Contracts badge; every attention row opens a working popup/sheet; empty/loading/error per board |
+| AUD1 | IPS-44 failures retest Pass: INV-DC-013, INV-DC-014, INV-A-048, INV-N-015T, INV-N-017T (rules §2.2 expiry/team, §5.6–5.7, §7) |
 | INB1 | ≤1 open inbox row per task identity; distinct milestones never merge (A-INBOX-01); completing a task keeps its notices in history and leaves read state unchanged |
 | TERM1 | No customer-facing “Creator(s)” in member navigation or CTAs |
 | CARD1 | Home card is the live component, fully visible, proportional at desktop and 390 px |

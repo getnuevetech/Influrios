@@ -143,7 +143,10 @@ def build_notifications():
         for st, kind, t, sub, pk, pt in rows_data:
             dot = '<span style="width:8px;height:8px;border-radius:9px;background:var(--violet);flex:0 0 auto"></span>' if st == "Unread" else '<span style="width:8px;flex:0 0 auto"></span>'
             tag = pill(pk, pt) if pk else ""
-            out.append(f'<div class="list-row">{dot}<div class="t"><b style="font-weight:{700 if st=="Unread" else 500}">{t}</b><span>{kind} · {sub}</span></div>{tag}</div>')
+            if mobile:
+                out.append(f'<div class="list-row" style="align-items:flex-start">{dot}<div class="t"><b style="font-weight:{700 if st=="Unread" else 500}">{t}</b><span>{kind} · {sub}</span>{('<div style="margin-top:6px">'+tag+'</div>') if tag else ''}</div></div>')
+            else:
+                out.append(f'<div class="list-row">{dot}<div class="t"><b style="font-weight:{700 if st=="Unread" else 500}">{t}</b><span>{kind} · {sub}</span></div>{tag}</div>')
         return "".join(out)
     filters = f'<div style="display:flex;gap:8px;margin-bottom:6px">{pill("violet","All")}{pill("gray","Unread 3")}{pill("gray","Action required 1")}</div>'
     centre = f'<div class="ph"><h1>Notifications</h1><p>Unread means you haven\'t opened it. Action required means a task is still open.</p></div><div class="card">{filters}{rows()}</div>'

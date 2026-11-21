@@ -112,7 +112,7 @@ def build_admin():
     content = f"""<div class="ph"><h1>Jobs</h1><p>Scheduled work and failures.</p></div>
 {banner("rose","alert","2 jobs failed in the last 24 hours","Open each failure to see what happened and retry.",'<span class="btn sec sm">View failures</span>')}
 <div class="card"><table class="t"><thead><tr><th>Job</th><th>Last run</th><th>Result</th><th></th></tr></thead><tbody>
-<tr><td><b>invitation_expiry_sweep</b></td><td><small>21 Nov 02:00</small></td><td>{pill("rose","Failed")}</td><td><span class="btn sec sm">Retry</span></td></tr>
+<tr><td><b>marketplace_application_expire_sweep</b></td><td><small>21 Nov 02:00</small></td><td>{pill("rose","Failed")}</td><td><span class="btn sec sm">Retry</span></td></tr>
 <tr><td><b>quote_expiry_sweep</b></td><td><small>21 Nov 02:05</small></td><td>{pill("rose","Failed")}</td><td><span class="btn sec sm">Retry</span></td></tr>
 <tr><td><b>milestone_auto_approval</b></td><td><small>21 Nov 03:00</small></td><td>{pill("green","Succeeded")}</td><td></td></tr></tbody></table></div>"""
     adm = f'<div class="app" id="desktop"><aside class="side"><div class="wordmark"><span class="mark">∞</span>Influrios Admin</div><nav class="nav"><a>{i("home")}<span>Overview</span></a><a>{i("users")}<span>Users</span></a><a>{i("wallet")}<span>Marketplace ledger</span></a><a class="on">{i("clock")}<span>Jobs</span><span class="nb" style="background:var(--rose)">2</span></a><a>{i("mail")}<span>Mail</span></a><a>{i("settings")}<span>Settings</span></a></nav></aside><div class="main"><div class="top"><div class="grow"></div><div class="who"><span class="ava">S</span><div><b>Ops admin</b><span>Super admin</span></div></div></div><div class="content"><div class="stack">{content}</div></div></div></div>'

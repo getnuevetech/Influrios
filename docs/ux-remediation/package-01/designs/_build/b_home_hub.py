@@ -79,13 +79,20 @@ def build_home():
 
 def hub_content(mobile=False):
     status = f"""<div class="{'m-stats' if mobile else 'stats'}">
- {stat("mail","Invitations","2","1 waiting for your reply")}
+ {stat("mail","Invitations","3","1 waiting for your reply")}
  {stat("handshake","Active","2","1 needs content")}
  {stat("wallet","Payment readiness",pill("green","Ready"),"You can receive payouts")}
  {stat("check","Completed","4")}
 </div>"""
-    rows = f"""<div class="list-row"><span class="mono-ava">N</span><div class="t"><b>Free Tech Support</b><span>Northwind Studio · Reply by 28 Nov</span></div>{pill("violet","Waiting for your reply")}{'' if mobile else '<span class="btn pri sm">Review</span>'}</div>
-<div class="list-row"><span class="mono-ava">L</span><div class="t"><b>Autumn Glow Series</b><span>Lumen Skincare · You asked a question on 19 Nov</span></div>{pill("blue","Waiting for Lumen Skincare")}{'' if mobile else '<span class="btn sec sm">Open</span>'}</div>"""
+    ROWS = [
+        ("N", "Free Tech Support", "Northwind Studio · Reply by 28 Nov", ("violet", "Waiting for your reply"), ("pri", "Review")),
+        ("L", "Autumn Glow Series", "Lumen Skincare · You asked a question on 19 Nov", ("blue", "Waiting for Lumen Skincare"), ("sec", "Open")),
+        ("W", "Winter Unboxing · Team", "Northwind Studio · with 2 influencers · You accepted", ("green", "Waiting for teammates"), ("sec", "Open")),
+    ]
+    if mobile:
+        rows = "".join(f'<div class="list-row" style="align-items:flex-start"><span class="mono-ava">{a}</span><div class="t"><b>{t}</b><span>{sub}</span><div style="margin-top:6px">{pill(*pl)}</div></div></div>' for a, t, sub, pl, bt in ROWS)
+    else:
+        rows = "".join(f'<div class="list-row"><span class="mono-ava">{a}</span><div class="t"><b>{t}</b><span>{sub}</span></div>{pill(*pl)}<span class="btn {bt[0]} sm">{bt[1]}</span></div>' for a, t, sub, pl, bt in ROWS)
     tabs = '<div class="tabs"><a>Overview</a><a class="on">Invitations <span class="nb">1</span></a><a>Applications</a><a>Active</a><a>Completed</a></div>' if not mobile else '<div class="tabs" style="gap:14px;font-size:13px"><a class="on">Invitations <span class="nb">1</span></a><a>Active</a><a>Applications</a></div>'
     return f"""<div class="ph"><h1>Collaborations</h1><p>Invitations, applications, and active work.</p></div>
 {status}
@@ -98,7 +105,8 @@ def build_hub():
 {frame("Mobile · 390", phone("inf","collab",INF_BADGES,3,hub_content(True)))}
 <div>
 {notes("Projection (DB1 · finding 4)",[
- "Invitations card shows <b>open</b> invitations (2) with the <b>waiting for your reply</b> subset (1). Home shows only the subset, so the two screens agree.",
+ "Invitations card shows <b>open</b> invitations (3) with the <b>waiting for your reply</b> subset (1). Home shows only the subset, so the two screens agree.",
+ "<b>Team invitations are listed here</b> like marketplace invitations (P1-AUD-04, found in the IPS-44 run): pending ones count as waiting; accepted-awaiting-teammates rows stay listed with “Waiting for teammates”.",
  "The Invitations tab badge and the Collaborations sidebar badge count only invitations waiting for your reply (1).",
  "Question sent and Interested rows stay listed with a status naming who acts next. They drop out of the badge until the business replies.",
  "Empty copy “No invitations are waiting” appears only when open invitations = 0.",

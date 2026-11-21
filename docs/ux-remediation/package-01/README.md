@@ -10,6 +10,11 @@ Constraints: live deposits closed · Agency deferred · centered popups · origi
 
 ---
 
+## Status (2026-11-21)
+
+- **Visual review:** [visual-review.md](./visual-review.md). Decision: ready for Ola's final sign-off after four fixes.
+- **Test results:** 10 Package 1 gating checks run on an isolated host (#539 IPS-44): 4 Pass · 5 Fail · 1 Blocked. Defects P1-AUD-01…09 added to [backlog](./backlog.md) and the master spec. Acceptance AUD1 = the 5 Fails retest Pass.
+
 ## Finding-to-file checklist
 
 | # | Finding | Correction | HTML | PNG (desktop / mobile) | Spec / flow / acceptance |
@@ -101,13 +106,13 @@ Package 1 can't be accepted as implemented until these #539 checks pass on the i
 
 | Check | What it proves for Package 1 | Acceptance anchor | Runner status |
 |-------|------------------------------|-------------------|---------------|
-| INV-DC-010 | Business creates an invitation → influencer counts agree | DB1, DB6 | Ready to run |
-| INV-DC-013 | Business withdraws a pending invite → counts/badges agree | DB1, DB4, DB4b (rejected outcome) | Ready to run |
-| INV-DC-014 | Invitation expires → counts agree | DB1, DB4 | Ready to run |
-| INV-A-031 | Decline on token page persists; counts drop | DB4 | Ready to run |
-| INV-A-048 | Team proposal send/respond | DB4 (team), DB4d | Ready to run |
-| INV-N-013T · INV-N-015T · INV-N-016T | Collaboration actions emit their notices (action-required source) | DB5, INB1 | Ready to run |
-| INV-J-010 → INV-N-017T | Auto-approval sweep and its notices | DB5 | Ready to run → then gated on INV-J-010 |
+| INV-DC-010 | Business creates an invitation → influencer counts agree | DB1, DB6 | **Pass** (IPS-44) |
+| INV-DC-013 | Business withdraws a pending invite → counts/badges agree | DB1, DB4, DB4b (rejected outcome) | **Fail** (IPS-44): P1-AUD-01/02 |
+| INV-DC-014 | Invitation expires → counts agree | DB1, DB4 | **Fail** (IPS-44): P1-AUD-01/03 |
+| INV-A-031 | Decline on token page persists; counts drop | DB4 | **Pass** (IPS-44) |
+| INV-A-048 | Team proposal send/respond | DB4 (team), DB4d | **Fail** (IPS-44): P1-AUD-04/05 |
+| INV-N-013T · INV-N-015T · INV-N-016T | Collaboration actions emit their notices (action-required source) | DB5, INB1 | 013T **Pass** · 015T **Fail** (P1-AUD-06) · 016T **Blocked** (P1-AUD-08) |
+| INV-J-010 → INV-N-017T | Auto-approval sweep and its notices | DB5 | J-010 **Pass** · 017T **Fail** (P1-AUD-06/07) |
 | INV-DC-001/002/006/012/015 · INV-C-014 · INV-N-004 (Fail) | The RC-DASHBOARD defects Package 1 fixes | DB1–DB4, DB2 | Retest after implementation |
 
 ---

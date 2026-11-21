@@ -21,4 +21,18 @@ No code in this design phase. Tasks for after Ola accepts Package 1.
 | P1-T14 | Home card uses live `InfluencerCardView`, proportional scaling, full content on mobile | `/creator` card column | — | CARD1 |
 | P1-T15 | Visual parity check: no serif, tokens/icons per master-spec §0 | shared components | — | VIS1 |
 
+### From the IPS-44 isolated test run (#539 `execution/r5-isolated-package1-results.md`)
+
+| ID | Task | Touchpoints | Acceptance |
+|----|------|-------------|------------|
+| P1-AUD-01 | Clear Action required on notices when an invitation is withdrawn/expired | notification centre filters | DB5, AUD1 |
+| P1-AUD-02 | Withdrawal: send withdrawal template (not `invite.collaboration`) + in-app notice | `actionWithdrawParticipation` | AUD1 |
+| P1-AUD-03 | Expire at Respond-by deadline; treat past-deadline as expired in projections | `sweepExpiredMarketplaceApplications`, invitation projections | DB1, AUD1 |
+| P1-AUD-04 | List team invitations in hub Invitations and action inbox | hub list, `action-inbox-load` | DB1, INB1 |
+| P1-AUD-05 | Closed team proposal: all members see “This invitation is closed” | `/collaboration/team/[id]` | DB4 |
+| P1-AUD-06 | In-app notice for revision requested / approved / auto-approved; influencer attention + badge include revision tasks | `notifyCollabFundingEvent`, sidebar badges | DB5, AUD1 |
+| P1-AUD-07 | Inbox rows name collaboration + milestone; clear on auto-approval | `action-inbox-load` | INB1 |
+| P1-AUD-08 | **Decision needed:** approval vs payout readiness (approve coupled to release) | `payments/standard-actions.ts` | after decision |
+| P1-AUD-09 | Business Collaborations badge counts review tasks, not collaborations | `sidebar-badges` | §3 |
+
 Not in this backlog: live deposit/withdraw/fund paths · Agency · Package 2 field schemas · admin ledger/reconciliation (Package 5) · card redesign.
