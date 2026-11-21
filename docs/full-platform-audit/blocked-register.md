@@ -561,8 +561,8 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Affected journey:** P-08 Decline invite (token page)
 - **Responsible owner:** Collaboration invite fixture owner
 - **Prerequisite:** Fresh invite token emailed to AUDIT sink mailbox (requires mail sink)
-- **Safe test method:** Send invite to AUDIT sink; open `/invite/[token]`; Decline on disposable invite only.
-- **Acceptance evidence needed:** Token page loads; Decline completes; invite state updated.
+- **Safe test method:** Disposable AUDIT invitee on the isolated host; mint token; open /invite/[token]; Decline.
+- **Acceptance evidence needed:** Decline executed; after reload the token page and invitation record show Declined; invitee counts (home, hub, Collaborations badge, action inbox) and the business response view update accordingly.
 
 ### INV-A-034
 

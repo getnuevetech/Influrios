@@ -24,6 +24,10 @@
 
 **Suggested order for ISO:** (1) INV-J-010 then INV-N-017T · (2) INV-N-013T/015T/016T (re-use the INV-A-058/059/060 fixtures) · (3) INV-D-007E · (4) PENDING_SIGN (incl. INV-N-010T) · (5) UI_FIXTURE_GAP · DEEP_LINK · DASHBOARD_CONSISTENCY fixtures · (6) EVENT_NOT_FIREABLE once the dispute/ops/ledger fixture exists.
 
+**Package 1 gating checks (run first among Ready):** INV-DC-010, INV-DC-013, INV-DC-014, INV-A-031, INV-A-048, INV-N-013T, INV-N-015T, INV-N-016T, INV-J-010 (→ INV-N-017T). These are attached to Package 1 acceptance in #540 (`docs/ux-remediation/package-01/README.md`). Payout/provider blockers remain separate.
+
+**Execution status:** recorded responsibility only — **none of the 46 ready checks has been executed yet.** Execution evidence will update the matrix rows.
+
 **Reporting rule:** each run updates the matrix row with evidence path and status. Pass only with the acceptance evidence in [blocked-register.md](./blocked-register.md). Then recount and update [coverage-blocker-report.md](./coverage-blocker-report.md).
 
 ## Every open check
@@ -42,7 +46,7 @@
 | INV-P-012 | Blocked | PayoutDetailDialog | `UI_FIXTURE_GAP` | **ISO** isolated audit host runner | — | Advance a disposable AUDIT fixture to the state that exposes the CTA/dialog; execute; reload; inspect record | Ready to run |
 | INV-P-019 | Blocked | NoticeDialog generic notices | `NO_TRIGGER` | **ISO** isolated audit host runner | — | Add an isolated trigger path per register; execute; inspect | Ready to run |
 | INV-A-029 | Blocked | creator transition application | `DEEP_LINK_FIXTURE` | **ISO** isolated audit host runner | — | Seed the referenced ids; open the deep link; verify destination + auth | Ready to run |
-| INV-A-031 | Blocked | decline on token page | `TOKEN_FIXTURE` | **ISO** isolated audit host runner | — | Mint the invite token on the isolated host; open; verify accept path | Ready to run |
+| INV-A-031 | Blocked | decline on token page | `TOKEN_FIXTURE` | **ISO** isolated audit host runner | — | Mint an invite token for a disposable AUDIT invitee on the isolated host; open /invite/[token]; **Decline**; reload and prove the decline persisted (token page + invitation record); verify invitation and task counts drop for invitee (home, hub, badge, action inbox) and business (response view) | Ready to run |
 | INV-A-034 | Blocked | refresh campaign suggestions | `UI_FIXTURE_GAP` | **ISO** isolated audit host runner | — | Advance a disposable AUDIT fixture to the state that exposes the CTA/dialog; execute; reload; inspect record | Ready to run |
 | INV-A-036 | Blocked | Send/reply/decline inquiry | `INQUIRY_FIXTURE` | **ISO** isolated audit host runner | — | Seed an inquiry fixture; execute the journey; inspect record | Ready to run |
 | INV-A-037 | Blocked | Advance lead / shortlist from inquiry | `INQUIRY_FIXTURE` | **ISO** isolated audit host runner | — | Seed an inquiry fixture; execute the journey; inspect record | Ready to run |
