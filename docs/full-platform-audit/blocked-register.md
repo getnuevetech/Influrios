@@ -1,8 +1,8 @@
 # Blocked-check register (IPS-28)
 
 **Purpose:** Account for every **Blocked** row in the full-platform coverage matrix so env/fixture gates cannot vanish into Pass.
-**Source matrix:** [coverage-matrix.md](./coverage-matrix.md) (Blocked = **95**; IPS-31 mail-sink restore).
-**Execution narratives:** [execution/](./execution/) (`auth|collab|billing|admin|not-tested-chase|mail-sink-restore`-results.md).
+**Source matrix:** [coverage-matrix.md](./coverage-matrix.md) (Blocked = **80**; IPS-40 audit-continue).
+**Execution narratives:** [execution/](./execution/) (`auth|collab|billing|admin|not-tested-chase|mail-sink-restore|audit-continue-alongside-design`-results.md).
 **Policy:** Do **not** enable live collaboration deposits (`journey_funding`) merely to clear audit counts. Prefer isolated staging + Mailpit / `MAIL_SINK_TO`.
 **Baseline:** Phase B live host; deposits closed; Agency Explicitly deferred.
 
@@ -10,15 +10,15 @@
 
 | Metric | Value |
 |--------|------:|
-| Blocked rows accounted for | **95** |
-| Matrix Blocked (authoritative) | 95 |
+| Blocked rows accounted for | **80** |
+| Matrix Blocked (authoritative) | 80 |
 | Match | YES |
 
 ### By blocker cluster
 
 | Cluster | Count | Owner (default) |
 |---------|------:|-----------------|
-| `MAIL_SINK` | 15 | Platform Ops (R5 mail) + Audit harness owner |
+| `MAIL_SINK` | 0 | — cleared IPS-40 (claim draft + notify kinds Pass on isolated host) |
 | `UI_FIXTURE_GAP` | 19 | Collaboration / product surface owner (fixture state) |
 | `DASHBOARD_CONSISTENCY_FIXTURE` | 3 | Collaboration QA (IPS-29 INV-DC-010/013/014) |
 | `DEPOSITS_CLOSED_AND_MAIL_SINK` | 14 | Payments (event) + Platform Ops (sink) |
@@ -42,22 +42,22 @@
 
 | Prefix | Count |
 |--------|------:|
-| INV-A-* | 31 |
+| INV-A-* | 28 |
 | INV-C-* | 2 |
 | INV-DC-* | 3 |
 | INV-E-* | 14 |
 | INV-I-* | 2 |
 | INV-J-* | 3 |
-| INV-N-* | 26 |
+| INV-N-* | 17 |
 | INV-P-* | 4 |
-| INV-R-* | 8 |
+| INV-R-* | 5 |
 | INV-T-* | 2 |
 
 ## Controllable test infrastructure
 
 ### Mail sink — Mailpit / `MAIL_SINK` / `MAIL_SINK_TO`
 
-**IPS-31 restored isolated Mailpit** (`127.0.0.1:1025` SMTP / `8025` API) with local Postgres fixtures; INV-I-019 Pass; 70 MAIL_SINK rows Pass. Live Phase B still has no Mailpit UI — do not treat live SMTP 250 as sink proof. Remaining MAIL_SINK blockers: claim-draft fixture (6) + notification event fire (9). Deposit+mail combo (14) stays Blocked (mail portion proven; money event closed).
+**IPS-31 restored isolated Mailpit**; **IPS-40** cleared remaining MAIL_SINK claim-draft (6) + notify-kind (9) on isolated host — cluster **0**. Live Phase B still has no Mailpit UI — do not treat live SMTP 250 as sink proof. Deposit+mail combo (14) stays Blocked (mail portion proven; money event closed).
 
 #### Local / isolated staging (preferred)
 
@@ -82,11 +82,7 @@ Historical local proof pattern: `docs/e2e-audit/mail-sink-proof.md`, `docs/e2e-a
 
 #### Rows unlocked by mail-sink restore (retest batch)
 
-Count touching mail sink: **99** (includes combo deposit+sink). **IPS-31 result:** 70 Pass · 15 MAIL_SINK still Blocked · 14 combo still Blocked. Evidence: [execution/mail-sink-restore-results.md](./execution/mail-sink-restore-results.md).
-
-Primary auth/claim/job unlocks after sink alone (no deposit reopen):
-
-`INV-I-019`, `INV-A-004`, `INV-A-005`, `INV-A-013`, `INV-A-014`, `INV-A-015`, `INV-R-017`, `INV-R-018`, `INV-R-019`, `INV-J-002`, `INV-J-003`, `INV-J-004`, `INV-E-001`, `INV-E-002`, `INV-E-003`, `INV-E-004`, `INV-E-005`, `INV-E-006`, `INV-E-007`, `INV-E-008`, `INV-E-009`, `INV-E-011`, `INV-E-012`, `INV-E-013`, `INV-E-014`, `INV-E-015`, `INV-E-016`, `INV-E-017`, `INV-E-018`, `INV-E-019`, `INV-E-020`, `INV-E-021`, `INV-E-022`, `INV-E-023`, `INV-E-024`, `INV-E-025`, `INV-E-026`, `INV-E-027`, `INV-E-028`, `INV-E-029`, `INV-E-030`, `INV-E-031`, `INV-E-032`, `INV-E-033`, `INV-E-034`, `INV-E-035`, `INV-E-036`, `INV-E-037`, `INV-E-038`, `INV-E-039`, `INV-E-040`, `INV-E-041`, `INV-E-053`, `INV-E-054`, `INV-E-055`, `INV-E-056`, `INV-E-057`, `INV-E-058`, `INV-E-059`, `INV-E-060`, `INV-E-061`, `INV-E-062`, `INV-E-066`, `INV-E-067`, `INV-E-068`, `INV-E-069`, `INV-E-070`, `INV-E-071`, `INV-E-072`, `INV-E-073`, `INV-E-074`, `INV-E-075`, `INV-E-076`, `INV-E-077`, `INV-E-078`, `INV-E-079`, `INV-N-010`, `INV-N-011`, `INV-N-012`, `INV-N-013`, `INV-N-014`, `INV-N-015`, `INV-N-016`, `INV-N-017`, `INV-N-027`
+Count touching mail sink: **99** (includes combo deposit+sink). **IPS-31:** 70 Pass · 15 remaining. **IPS-40:** remaining 15 → Pass (claim draft + notify kinds). Combo **14** still Blocked. Evidence: [execution/mail-sink-restore-results.md](./execution/mail-sink-restore-results.md), [execution/audit-continue-alongside-design-results.md](./execution/audit-continue-alongside-design-results.md).
 
 ### Other controllable infrastructure
 
@@ -105,31 +101,10 @@ Primary auth/claim/job unlocks after sink alone (no deposit reopen):
 
 Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **Safe test method**, **Acceptance evidence**.
 
-### `MAIL_SINK` (15)
+### `MAIL_SINK` (0)
 
-- **Default owner:** Platform Ops (R5 mail) + Audit harness owner
-- **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
-- **Safe test method:** Local/staging: Mailpit binary or Docker :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
-- **IPS-31 (2026-11-21):** Isolated Mailpit restored (`127.0.0.1:1025`/`8025`); INV-I-019 Pass; **70** former MAIL_SINK rows → Pass (see [execution/mail-sink-restore-results.md](./execution/mail-sink-restore-results.md)). **15** remain Blocked below.
-- **Acceptance evidence:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-
-| ID | Journey / surface | Exact blocker (this row) | Notes from matrix |
-|----|-------------------|--------------------------|-------------------|
-| INV-R-017 | P-01 Claim draft preview | CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
-| INV-R-018 | P-01/P-02 Claim verify | CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
-| INV-R-019 | P-01 Claim publish | CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
-| INV-A-013 | P-01 Claim draft email verify | CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
-| INV-A-014 | P-01 Claim draft publish | CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
-| INV-A-015 | P-01/P-06 Claim draft social | CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
-| INV-N-010 | P-15/P-17 Notification `funding_required` · `funding_required` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
-| INV-N-011 | P-15/P-17 Notification `funding_successful` · `funding_successful` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
-| INV-N-012 | P-15/P-17 Notification `funding_failed` · `funding_failed` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
-| INV-N-013 | P-15/P-17 Notification `milestone_submitted` · `milestone_submitted` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
-| INV-N-014 | P-15/P-17 Notification `review_deadline_approaching` · `review_deadline_approaching` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
-| INV-N-015 | P-15/P-17 Notification `revision_requested` · `revision_requested` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
-| INV-N-016 | P-15/P-17 Notification `milestone_approved` · `milestone_approved` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
-| INV-N-017 | P-15/P-17 Notification `milestone_auto_approved` · `milestone_auto_approved` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
-| INV-N-027 | P-15/P-17 Notification `collaboration_cancelled` · `collaboration_cancelled` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
+- **Cleared IPS-40 (2026-11-21):** Claim draft path + collab notification kind emails Pass on isolated Mailpit — see [execution/audit-continue-alongside-design-results.md](./execution/audit-continue-alongside-design-results.md). Former rows: `INV-R-017/018/019`, `INV-A-013/014/015`, `INV-N-010…017`, `INV-N-027`.
+- Deposit+mail combo remains under `DEPOSITS_CLOSED_AND_MAIL_SINK` (14).
 
 ### `UI_FIXTURE_GAP` (19)
 
@@ -417,7 +392,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Isolated sandbox with journey_funding enabled for AUDIT tenants only — never reopen live production deposits solely to clear matrix rows
 - **Safe test method:** Retest only on isolated sandbox with test Stripe keys. On live production: verify gate copy + checkout 404/refusal only — do not start funding deposits to clear Blocked rows.
 - **Acceptance evidence needed:** On sandbox: Checkout session created under test mode + ledger hold. On live: evidence of closed-gate behavior only (404/refusal) — Blocked may remain until sandbox retest.
-- **Existing evidence (partial):** `media/collab/desktop/business-checkout-probe.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/desktop/business-checkout-probe.png`
 
 ### INV-R-061
 
@@ -427,7 +402,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Seeded AUDIT application/opening/record with known ids and /collaboration/.../{id} hrefs
 - **Safe test method:** Seed read-only deep links via fixture script; open detail pages; no funded-deal mutation required.
 - **Acceptance evidence needed:** HTTP 200 detail page for seeded id; screenshot; no console/auth error.
-- **Existing evidence (partial):** `media/nt-chase/inv-r-061-062-opps.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-r-061-062-opps.png`
 
 ### INV-R-062
 
@@ -437,7 +412,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Seeded AUDIT application/opening/record with known ids and /collaboration/.../{id} hrefs
 - **Safe test method:** Seed read-only deep links via fixture script; open detail pages; no funded-deal mutation required.
 - **Acceptance evidence needed:** HTTP 200 detail page for seeded id; screenshot; no console/auth error.
-- **Existing evidence (partial):** `media/nt-chase/inv-r-061-062-opps.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-r-061-062-opps.png`
 
 ### INV-R-065
 
@@ -447,7 +422,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Seeded AUDIT application/opening/record with known ids and /collaboration/.../{id} hrefs
 - **Safe test method:** Seed read-only deep links via fixture script; open detail pages; no funded-deal mutation required.
 - **Acceptance evidence needed:** HTTP 200 detail page for seeded id; screenshot; no console/auth error.
-- **Existing evidence (partial):** `media/nt-chase/inv-r-065-records-list.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-r-065-records-list.png`
 
 ### INV-R-067
 
@@ -457,7 +432,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dual-party AUDIT deal in pending-signature state (unsigned native contract)
 - **Safe test method:** Create disposable AUDIT unsigned agreement; exercise Sign CTA both sides; do not resign production funded deal.
 - **Acceptance evidence needed:** Sign CTA visible; both parties can complete; agreement status updates; optional sign email in sink.
-- **Existing evidence (partial):** `media/collab/manual/biz-contract-open.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/biz-contract-open.png`
 
 ### INV-T-009
 
@@ -467,7 +442,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/collab/manual/biz-contract-open.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/biz-contract-open.png`
 
 ### INV-T-013
 
@@ -477,7 +452,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/collab/manual/biz-payments-detail.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/biz-payments-detail.png`
 
 ### INV-P-004
 
@@ -487,7 +462,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Enable contract_ai_tailor on AUDIT env only + draft contract context
 - **Safe test method:** Toggle product switch on staging only; open AI tailor on draft; revert switch after evidence.
 - **Acceptance evidence needed:** AI tailor dialog opens with draft context when gate on; screenshot.
-- **Existing evidence (partial):** `media/nt-chase/inv-c-009-ai-tailor.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-c-009-ai-tailor.png`
 
 ### INV-P-005
 
@@ -497,7 +472,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/collab/manual/biz-payments-detail.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/biz-payments-detail.png`
 
 ### INV-P-012
 
@@ -507,7 +482,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/billing/55b-payout-detail.png`
+- **Existing evidence (partial):** `media/full-platform-audit/billing/55b-payout-detail.png`
 
 ### INV-P-019
 
@@ -526,7 +501,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/auth/inv-a-004-verify-page.png`
+- **Existing evidence (partial):** `media/full-platform-audit/auth/inv-a-004-verify-page.png`
 
 ### INV-A-005
 
@@ -536,7 +511,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/auth/inv-a-005-*.png; retest-INV-A-005-reset-mobile.png`
+- **Existing evidence (partial):** `media/full-platform-audit/auth/inv-a-005-*.png; retest-INV-A-005-reset-mobile.png`
 
 ### INV-A-013
 
@@ -573,7 +548,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Seeded AUDIT application/opening/record with known ids and /collaboration/.../{id} hrefs
 - **Safe test method:** Seed read-only deep links via fixture script; open detail pages; no funded-deal mutation required.
 - **Acceptance evidence needed:** HTTP 200 detail page for seeded id; screenshot; no console/auth error.
-- **Existing evidence (partial):** `media/nt-chase/inv-a-029-transition.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-029-transition.png`
 
 ### INV-A-031
 
@@ -592,7 +567,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/nt-chase/inv-a-034-refresh.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-034-refresh.png`
 
 ### INV-A-036
 
@@ -602,7 +577,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Business fixture with open inquiry thread + send/reply/decline CTAs (or non-demo Discover shortlist)
 - **Safe test method:** Use seeded inquiry or non-demo Discover; avoid mutating real customer shortlists.
 - **Acceptance evidence needed:** Inquiry actions succeed; thread updated; screenshot before/after.
-- **Existing evidence (partial):** `media/nt-chase/inv-a-036-inquiry.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-036-inquiry.png`
 
 ### INV-A-037
 
@@ -612,7 +587,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Business fixture with open inquiry thread + send/reply/decline CTAs (or non-demo Discover shortlist)
 - **Safe test method:** Use seeded inquiry or non-demo Discover; avoid mutating real customer shortlists.
 - **Acceptance evidence needed:** Inquiry actions succeed; thread updated; screenshot before/after.
-- **Existing evidence (partial):** `media/nt-chase/inv-a-036-inquiry.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-036-inquiry.png`
 
 ### INV-A-039
 
@@ -622,7 +597,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/nt-chase/inv-a-039-transition.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-039-transition.png`
 
 ### INV-A-040
 
@@ -632,7 +607,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/collab/manual/biz-withdraw-menu.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/biz-withdraw-menu.png`
 
 ### INV-A-042
 
@@ -642,7 +617,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/nt-chase/inv-a-042-match.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-042-match.png`
 
 ### INV-A-045
 
@@ -652,7 +627,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Seeded AUDIT application/opening/record with known ids and /collaboration/.../{id} hrefs
 - **Safe test method:** Seed read-only deep links via fixture script; open detail pages; no funded-deal mutation required.
 - **Acceptance evidence needed:** HTTP 200 detail page for seeded id; screenshot; no console/auth error.
-- **Existing evidence (partial):** `media/nt-chase/inv-r-061-062-opps.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-r-061-062-opps.png`
 
 ### INV-A-047
 
@@ -662,7 +637,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/collab/desktop/business-records.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/desktop/business-records.png`
 
 ### INV-A-048
 
@@ -672,7 +647,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/collab/desktop/business-team.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/desktop/business-team.png`
 
 ### INV-A-050
 
@@ -682,7 +657,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dual-party AUDIT deal in pending-signature state (unsigned native contract)
 - **Safe test method:** Create disposable AUDIT unsigned agreement; exercise Sign CTA both sides; do not resign production funded deal.
 - **Acceptance evidence needed:** Sign CTA visible; both parties can complete; agreement status updates; optional sign email in sink.
-- **Existing evidence (partial):** `media/collab/desktop/influencer-contracts-list.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/desktop/influencer-contracts-list.png`
 
 ### INV-A-052
 
@@ -692,7 +667,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Isolated sandbox with journey_funding enabled for AUDIT tenants only — never reopen live production deposits solely to clear matrix rows
 - **Safe test method:** Retest only on isolated sandbox with test Stripe keys. On live production: verify gate copy + checkout 404/refusal only — do not start funding deposits to clear Blocked rows.
 - **Acceptance evidence needed:** On sandbox: Checkout session created under test mode + ledger hold. On live: evidence of closed-gate behavior only (404/refusal) — Blocked may remain until sandbox retest.
-- **Existing evidence (partial):** `media/collab/manual/biz-funding-start-result.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/biz-funding-start-result.png`
 
 ### INV-A-053
 
@@ -702,7 +677,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/nt-chase/inv-a-053-discount.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-053-discount.png`
 
 ### INV-A-054
 
@@ -712,7 +687,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Enable contract_ai_tailor on AUDIT env only + draft contract context
 - **Safe test method:** Toggle product switch on staging only; open AI tailor on draft; revert switch after evidence.
 - **Acceptance evidence needed:** AI tailor dialog opens with draft context when gate on; screenshot.
-- **Existing evidence (partial):** `media/nt-chase/inv-c-009-ai-tailor.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-c-009-ai-tailor.png`
 
 ### INV-A-055
 
@@ -722,7 +697,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Isolated sandbox with journey_funding enabled for AUDIT tenants only — never reopen live production deposits solely to clear matrix rows
 - **Safe test method:** Retest only on isolated sandbox with test Stripe keys. On live production: verify gate copy + checkout 404/refusal only — do not start funding deposits to clear Blocked rows.
 - **Acceptance evidence needed:** On sandbox: Checkout session created under test mode + ledger hold. On live: evidence of closed-gate behavior only (404/refusal) — Blocked may remain until sandbox retest.
-- **Existing evidence (partial):** `media/nt-chase/inv-a-055-create-deal.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-055-create-deal.png`
 
 ### INV-A-056
 
@@ -732,7 +707,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Isolated sandbox with journey_funding enabled for AUDIT tenants only — never reopen live production deposits solely to clear matrix rows
 - **Safe test method:** Retest only on isolated sandbox with test Stripe keys. On live production: verify gate copy + checkout 404/refusal only — do not start funding deposits to clear Blocked rows.
 - **Acceptance evidence needed:** On sandbox: Checkout session created under test mode + ledger hold. On live: evidence of closed-gate behavior only (404/refusal) — Blocked may remain until sandbox retest.
-- **Existing evidence (partial):** `media/collab/manual/biz-funding-start-result.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/biz-funding-start-result.png`
 
 ### INV-A-057
 
@@ -742,7 +717,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Isolated sandbox with journey_funding enabled for AUDIT tenants only — never reopen live production deposits solely to clear matrix rows
 - **Safe test method:** Retest only on isolated sandbox with test Stripe keys. On live production: verify gate copy + checkout 404/refusal only — do not start funding deposits to clear Blocked rows.
 - **Acceptance evidence needed:** On sandbox: Checkout session created under test mode + ledger hold. On live: evidence of closed-gate behavior only (404/refusal) — Blocked may remain until sandbox retest.
-- **Existing evidence (partial):** `media/collab/manual/biz-funding-gate-copy.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/biz-funding-gate-copy.png`
 
 ### INV-A-061
 
@@ -752,7 +727,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Isolated funded workroom with approve→release sandbox payout; ledger hold simulation OK
 - **Safe test method:** Sandbox approve+release with simulated payout; assert UI success vs payout status separately; no live bank transfer.
 - **Acceptance evidence needed:** Approval saved independently of payout; payout status transitions in sandbox; screenshots of both.
-- **Existing evidence (partial):** `media/collab/manual/cor23-approve-after-click.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/cor23-approve-after-click.png`
 
 ### INV-A-062
 
@@ -762,7 +737,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/nt-chase/inv-a-062-change-order.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-062-change-order.png`
 
 ### INV-A-063
 
@@ -772,7 +747,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/collab/manual/biz-payments.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/biz-payments.png`
 
 ### INV-A-064
 
@@ -782,7 +757,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/nt-chase/inv-a-064-dispute.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-064-dispute.png`
 
 ### INV-A-065
 
@@ -792,7 +767,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/nt-chase/inv-a-065-series.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-065-series.png`
 
 ### INV-A-066
 
@@ -802,7 +777,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/collab/manual/biz-payments-detail.png; media/collab/desktop/business-cancel-surface.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/biz-payments-detail.png; media/full-platform-audit/collab/desktop/business-cancel-surface.png`
 
 ### INV-A-067
 
@@ -812,7 +787,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/collab/results.tsv`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/results.tsv`
 
 ### INV-A-068
 
@@ -831,7 +806,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/nt-chase/inv-a-069-dashboard.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-069-dashboard.png`
 
 ### INV-A-079
 
@@ -841,7 +816,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
 - **Safe test method:** Advance disposable fixture state; screenshot CTA + dialog; skip destructive paths on shared live data.
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
-- **Existing evidence (partial):** `media/nt-chase/inv-a-079-trust.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-079-trust.png`
 
 ### INV-J-001
 
@@ -851,7 +826,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Enqueue invitation_email via invite mutation on AUDIT fixture (mail sink preferred)
 - **Safe test method:** Send AUDIT invite (sink mailbox); confirm invitation_email appears on /admin/jobs and SUCCEEDS.
 - **Acceptance evidence needed:** Kind listed; latest run SUCCEEDED; evidence on /admin/jobs.
-- **Existing evidence (partial):** `media/nt-chase/inv-j-001-jobs-detail.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-j-001-jobs-detail.png`
 
 ### INV-J-002
 
@@ -906,7 +881,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/collab/manual/inf-inbox-tasks.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/inf-inbox-tasks.png`
 
 ### INV-N-011
 
@@ -916,7 +891,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/collab/manual/inf-inbox-tasks.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/inf-inbox-tasks.png`
 
 ### INV-N-012
 
@@ -926,7 +901,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/collab/manual/inf-inbox-tasks.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/inf-inbox-tasks.png`
 
 ### INV-N-013
 
@@ -936,7 +911,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/collab/manual/inf-inbox-tasks.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/inf-inbox-tasks.png`
 
 ### INV-N-014
 
@@ -946,7 +921,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/collab/manual/inf-inbox-tasks.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/inf-inbox-tasks.png`
 
 ### INV-N-015
 
@@ -956,7 +931,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/collab/manual/inf-inbox-tasks.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/inf-inbox-tasks.png`
 
 ### INV-N-016
 
@@ -966,7 +941,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/collab/manual/inf-inbox-tasks.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/inf-inbox-tasks.png`
 
 ### INV-N-017
 
@@ -976,7 +951,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/collab/manual/inf-inbox-tasks.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/inf-inbox-tasks.png`
 
 ### INV-N-018
 
@@ -1031,7 +1006,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Isolated dispute/ops/ledger fixture that emits the kind without affecting live customers
 - **Safe test method:** Fire kind on isolated fixture; confirm centre row + optional email in Mailpit; no live dispute manufacture.
 - **Acceptance evidence needed:** Centre shows kind after fire; optional email in Mailpit; kind id matches inventory.
-- **Existing evidence (partial):** `media/nt-chase/inv-n-kinds-centre.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-n-kinds-centre.png`
 
 ### INV-N-024
 
@@ -1041,7 +1016,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Isolated dispute/ops/ledger fixture that emits the kind without affecting live customers
 - **Safe test method:** Fire kind on isolated fixture; confirm centre row + optional email in Mailpit; no live dispute manufacture.
 - **Acceptance evidence needed:** Centre shows kind after fire; optional email in Mailpit; kind id matches inventory.
-- **Existing evidence (partial):** `media/nt-chase/inv-n-kinds-centre.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-n-kinds-centre.png`
 
 ### INV-N-025
 
@@ -1051,7 +1026,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Isolated dispute/ops/ledger fixture that emits the kind without affecting live customers
 - **Safe test method:** Fire kind on isolated fixture; confirm centre row + optional email in Mailpit; no live dispute manufacture.
 - **Acceptance evidence needed:** Centre shows kind after fire; optional email in Mailpit; kind id matches inventory.
-- **Existing evidence (partial):** `media/nt-chase/inv-n-kinds-centre.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-n-kinds-centre.png`
 
 ### INV-N-026
 
@@ -1061,7 +1036,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Isolated dispute/ops/ledger fixture that emits the kind without affecting live customers
 - **Safe test method:** Fire kind on isolated fixture; confirm centre row + optional email in Mailpit; no live dispute manufacture.
 - **Acceptance evidence needed:** Centre shows kind after fire; optional email in Mailpit; kind id matches inventory.
-- **Existing evidence (partial):** `media/nt-chase/inv-n-kinds-centre.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-n-kinds-centre.png`
 
 ### INV-N-027
 
@@ -1071,7 +1046,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/collab/manual/inf-inbox-tasks.png`
+- **Existing evidence (partial):** `media/full-platform-audit/collab/manual/inf-inbox-tasks.png`
 
 ### INV-N-028
 
@@ -1090,7 +1065,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Isolated dispute/ops/ledger fixture that emits the kind without affecting live customers
 - **Safe test method:** Fire kind on isolated fixture; confirm centre row + optional email in Mailpit; no live dispute manufacture.
 - **Acceptance evidence needed:** Centre shows kind after fire; optional email in Mailpit; kind id matches inventory.
-- **Existing evidence (partial):** `media/nt-chase/inv-n-kinds-centre.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-n-kinds-centre.png`
 
 ### INV-N-030
 
@@ -1100,7 +1075,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Isolated dispute/ops/ledger fixture that emits the kind without affecting live customers
 - **Safe test method:** Fire kind on isolated fixture; confirm centre row + optional email in Mailpit; no live dispute manufacture.
 - **Acceptance evidence needed:** Centre shows kind after fire; optional email in Mailpit; kind id matches inventory.
-- **Existing evidence (partial):** `media/nt-chase/inv-n-kinds-centre.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-n-kinds-centre.png`
 
 ### INV-N-031
 
@@ -1110,7 +1085,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Isolated dispute/ops/ledger fixture that emits the kind without affecting live customers
 - **Safe test method:** Fire kind on isolated fixture; confirm centre row + optional email in Mailpit; no live dispute manufacture.
 - **Acceptance evidence needed:** Centre shows kind after fire; optional email in Mailpit; kind id matches inventory.
-- **Existing evidence (partial):** `media/nt-chase/inv-n-kinds-centre.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-n-kinds-centre.png`
 
 ### INV-N-032
 
@@ -1120,7 +1095,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Isolated dispute/ops/ledger fixture that emits the kind without affecting live customers
 - **Safe test method:** Fire kind on isolated fixture; confirm centre row + optional email in Mailpit; no live dispute manufacture.
 - **Acceptance evidence needed:** Centre shows kind after fire; optional email in Mailpit; kind id matches inventory.
-- **Existing evidence (partial):** `media/nt-chase/inv-n-kinds-centre.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-n-kinds-centre.png`
 
 ### INV-N-033
 
@@ -1130,7 +1105,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Isolated dispute/ops/ledger fixture that emits the kind without affecting live customers
 - **Safe test method:** Fire kind on isolated fixture; confirm centre row + optional email in Mailpit; no live dispute manufacture.
 - **Acceptance evidence needed:** Centre shows kind after fire; optional email in Mailpit; kind id matches inventory.
-- **Existing evidence (partial):** `media/nt-chase/inv-n-kinds-centre.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-n-kinds-centre.png`
 
 ### INV-N-034
 
@@ -1140,7 +1115,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Isolated dispute/ops/ledger fixture that emits the kind without affecting live customers
 - **Safe test method:** Fire kind on isolated fixture; confirm centre row + optional email in Mailpit; no live dispute manufacture.
 - **Acceptance evidence needed:** Centre shows kind after fire; optional email in Mailpit; kind id matches inventory.
-- **Existing evidence (partial):** `media/nt-chase/inv-n-kinds-centre.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-n-kinds-centre.png`
 
 ### INV-E-001
 
@@ -1177,7 +1152,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/admin/05-admin-mail-templates.png; media/admin/deep-results.json`
+- **Existing evidence (partial):** `media/full-platform-audit/admin/05-admin-mail-templates.png; media/full-platform-audit/admin/deep-results.json`
 
 ### INV-E-005
 
@@ -1610,7 +1585,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/admin/05-admin-mail-templates.png; media/admin/deep-results.json`
+- **Existing evidence (partial):** `media/full-platform-audit/admin/05-admin-mail-templates.png; media/full-platform-audit/admin/deep-results.json`
 
 ### INV-E-054
 
@@ -1620,7 +1595,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/admin/05-admin-mail-templates.png; media/admin/deep-results.json`
+- **Existing evidence (partial):** `media/full-platform-audit/admin/05-admin-mail-templates.png; media/full-platform-audit/admin/deep-results.json`
 
 ### INV-E-055
 
@@ -1630,7 +1605,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/admin/05-admin-mail-templates.png; media/admin/deep-results.json`
+- **Existing evidence (partial):** `media/full-platform-audit/admin/05-admin-mail-templates.png; media/full-platform-audit/admin/deep-results.json`
 
 ### INV-E-056
 
@@ -1640,7 +1615,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/admin/05-admin-mail-templates.png; media/admin/deep-results.json`
+- **Existing evidence (partial):** `media/full-platform-audit/admin/05-admin-mail-templates.png; media/full-platform-audit/admin/deep-results.json`
 
 ### INV-E-057
 
@@ -1650,7 +1625,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/admin/05-admin-mail-templates.png; media/admin/deep-results.json`
+- **Existing evidence (partial):** `media/full-platform-audit/admin/05-admin-mail-templates.png; media/full-platform-audit/admin/deep-results.json`
 
 ### INV-E-058
 
@@ -1732,7 +1707,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/admin/05-admin-mail-templates.png; media/admin/deep-results.json`
+- **Existing evidence (partial):** `media/full-platform-audit/admin/05-admin-mail-templates.png; media/full-platform-audit/admin/deep-results.json`
 
 ### INV-E-067
 
@@ -1742,7 +1717,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/admin/05-admin-mail-templates.png; media/admin/deep-results.json`
+- **Existing evidence (partial):** `media/full-platform-audit/admin/05-admin-mail-templates.png; media/full-platform-audit/admin/deep-results.json`
 
 ### INV-E-068
 
@@ -1752,7 +1727,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/admin/05-admin-mail-templates.png; media/admin/deep-results.json`
+- **Existing evidence (partial):** `media/full-platform-audit/admin/05-admin-mail-templates.png; media/full-platform-audit/admin/deep-results.json`
 
 ### INV-E-069
 
@@ -1762,7 +1737,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/admin/05-admin-mail-templates.png; media/admin/deep-results.json`
+- **Existing evidence (partial):** `media/full-platform-audit/admin/05-admin-mail-templates.png; media/full-platform-audit/admin/deep-results.json`
 
 ### INV-E-070
 
@@ -1772,7 +1747,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/admin/05-admin-mail-templates.png; media/admin/deep-results.json`
+- **Existing evidence (partial):** `media/full-platform-audit/admin/05-admin-mail-templates.png; media/full-platform-audit/admin/deep-results.json`
 
 ### INV-E-071
 
@@ -1782,7 +1757,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/admin/05-admin-mail-templates.png; media/admin/deep-results.json`
+- **Existing evidence (partial):** `media/full-platform-audit/admin/05-admin-mail-templates.png; media/full-platform-audit/admin/deep-results.json`
 
 ### INV-E-072
 
@@ -1792,7 +1767,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/admin/05-admin-mail-templates.png; media/admin/deep-results.json`
+- **Existing evidence (partial):** `media/full-platform-audit/admin/05-admin-mail-templates.png; media/full-platform-audit/admin/deep-results.json`
 
 ### INV-E-073
 
@@ -1802,7 +1777,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/admin/05-admin-mail-templates.png; media/admin/deep-results.json`
+- **Existing evidence (partial):** `media/full-platform-audit/admin/05-admin-mail-templates.png; media/full-platform-audit/admin/deep-results.json`
 
 ### INV-E-074
 
@@ -1857,7 +1832,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/admin/05-admin-mail-templates.png; media/admin/deep-results.json`
+- **Existing evidence (partial):** `media/full-platform-audit/admin/05-admin-mail-templates.png; media/full-platform-audit/admin/deep-results.json`
 
 ### INV-N-103
 
@@ -1867,7 +1842,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Sandbox SMS provider or explicit SMS mock; never send to real phones
 - **Safe test method:** Mock SMS adapter or sandbox credentials; verify queue/job only — no real SMS.
 - **Acceptance evidence needed:** SMS job queued/succeeded in sandbox OR explicit Not applicable with provider-off evidence.
-- **Existing evidence (partial):** `media/admin/07-admin-jobs.png`
+- **Existing evidence (partial):** `media/full-platform-audit/admin/07-admin-jobs.png`
 
 ### INV-I-004
 
@@ -1886,7 +1861,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Sandbox Meta app credentials + test user consent; webhook signing secret
 - **Safe test method:** Use Meta test app + sandbox user; capture launch URL + callback without production page tokens.
 - **Acceptance evidence needed:** Launch → consent → callback stores connection; webhook signature accepted for test event.
-- **Existing evidence (partial):** `media/auth/inv-a-020-social-panel.png`
+- **Existing evidence (partial):** `media/full-platform-audit/auth/inv-a-020-social-panel.png`
 
 ### INV-I-019
 
@@ -1896,7 +1871,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
 - **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
 - **Acceptance evidence needed:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
-- **Existing evidence (partial):** `media/admin/06-admin-mail-health.png; media/admin/15-admin-mail-after-test.png`
+- **Existing evidence (partial):** `media/full-platform-audit/admin/06-admin-mail-health.png; media/full-platform-audit/admin/15-admin-mail-after-test.png`
 
 ### INV-C-013
 
@@ -1906,7 +1881,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** public_pages_live on for AUDIT env OR dedicated Discover fixture with unpublished vs published profiles
 - **Safe test method:** Enable public_pages_live on staging OR document demo mode and retest unpublished hide there.
 - **Acceptance evidence needed:** Unpublished profile absent from live Discover when public_pages_live on.
-- **Existing evidence (partial):** `media/auth/retest-P-07-discover-business.png`
+- **Existing evidence (partial):** `media/full-platform-audit/auth/retest-P-07-discover-business.png`
 
 ### INV-C-015
 
@@ -1916,7 +1891,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Prerequisite:** Disposable signed/funded AUDIT request (not production held workroom)
 - **Safe test method:** Attempt delete on disposable funded AUDIT request; expect protect/deny; never delete live held workroom.
 - **Acceptance evidence needed:** Delete denied/protected on signed/funded request with clear UI/error; fixture remains.
-- **Existing evidence (partial):** `media/nt-chase/inv-c-015-delete-protect.png`
+- **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-c-015-delete-protect.png`
 
 ## ID index (162)
 

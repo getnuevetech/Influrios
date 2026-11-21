@@ -10,7 +10,7 @@
 | **Status** | Provisional design / planning artifact |
 | **Audit execution baseline** | Live host probed @ `40b6288` (#536); matrix post IPS-25 |
 | **Code note** | #537 COR-SEC-01 **merged** → `5a5f4c0` on `main`; live redeploy + credential rotation **not** confirmed |
-| **Matrix** | **355 Pass · 24 Fail · 95 Blocked · 9 Not tested · 10 Explicitly deferred** (493 rows) — +IPS-29/30 + **IPS-31** mail-sink (+70 Pass / −70 Blocked) |
+| **Matrix** | **379 Pass · 24 Fail · 80 Blocked · 0 Not tested · 10 Explicitly deferred** (493 rows) — +IPS-29/30/31 + **IPS-40** audit-continue (+24 Pass / −15 Blocked / −9 NT) |
 | **Authoritative matrix** | [coverage-matrix.md](./coverage-matrix.md) |
 | **Coverage narrative** | [coverage-status.md](./coverage-status.md) |
 | **Execution** | [execution/](./execution/) (auth, collab, billing, admin, [not-tested-chase-results.md](./execution/not-tested-chase-results.md), [dashboard-consistency-results.md](./execution/dashboard-consistency-results.md), [mail-sink-restore-results.md](./execution/mail-sink-restore-results.md)) |
@@ -92,7 +92,7 @@ Until that PR exists and is reviewable on GitHub, treat every remediation item b
 
 Blocked rows are **not** Fail. They **block proof** of related remediations and must be called out on each correction.
 
-| Blocker theme (**95 Blocked** post IPS-31; +9 Not tested IPS-30) | Blocks proof of… | Remediations still designable? |
+| Blocker theme (**80 Blocked** post IPS-40; NT cleared) | Blocks proof of… | Remediations still designable? |
 |------------------------------------------|------------------|--------------------------------|
 | Remaining mail-sink gaps (claim-draft / notification-event) | Full claim publish + live notification kind emission | Yes — fixtures; **IPS-31** proved interception (INV-I-019); do not reopen deposits |
 | Live deposits closed (+ deposit+mail) | Funding, release, refund, payout notices; collab discount apply | Yes for subscription Fail; **no** live money reopen; mail portion may be proven via Send-test only |
@@ -626,6 +626,7 @@ See patch **RC-DASHBOARD** (DB1–DB6). Package **R4b**. Deposits stay closed; n
 - **IPS-26** — [coverage-status.md](./coverage-status.md).  
 - **IPS-29** — dashboard consistency contradiction coverage; Fail +5 (INV-DC-001/002/006/012/015) → **RC-DASHBOARD**.  
 - **IPS-30** — Pass acceptance corrections (Ola bbc38ce): demote visibility-only Passes; plan stays **PROVISIONAL**.  
-- **IPS-31** — isolated Mailpit restore; matrix **355 Pass · 95 Blocked** (deposit+mail stay Blocked); plan stays **PROVISIONAL**.  
+- **IPS-31** — isolated Mailpit restore; deposit+mail stay Blocked; plan stays **PROVISIONAL**.
+- **IPS-40** — claim draft + notify kinds + demoted NT cleared on isolated host; matrix **379 Pass · 80 Blocked · 0 NT**; deposit+mail stay Blocked; plan stays **PROVISIONAL**.  
 - **#537** — COR-SEC-01 merged `5a5f4c0`; redeploy + rotation open (S1–S5 all required).  
 - **GitHub evidence package** — Audit package worker must commit **this** revision.

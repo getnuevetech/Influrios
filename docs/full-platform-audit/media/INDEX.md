@@ -22,7 +22,8 @@ Fixture emails matching configured `AUDIT_*_EMAIL` secrets were replaced with `a
 | `nt-chase/` | 84 | 14.6 MiB |
 | `dashboard-consistency/` | 99 | 16.9 MiB |
 | `mail-sink/` | 14 | 0.7 MiB |
-| **All** | **547** | **105.3 MiB** |
+| `audit-continue/` | 35 | ~1.5 MiB |
+| **All** | **582** | **~107 MiB** |
 
 ### By file type
 
@@ -58,6 +59,7 @@ Fixture emails matching configured `AUDIT_*_EMAIL` secrets were replaced with `a
 | ACCEPT-CONDITIONAL INV-C-014 | [nt-chase/inv-c-014-setup-reminders.png](./nt-chase/inv-c-014-setup-reminders.png) |
 | IPS-31 INV-I-019 Mailpit | [mail-sink/inv-i-019-admin-send-test.png](./mail-sink/inv-i-019-admin-send-test.png); [inv-i-019-mailpit.json](./mail-sink/inv-i-019-mailpit.json) |
 | IPS-31 OTP/reset | [mail-sink/inv-a-004-verify-complete.png](./mail-sink/inv-a-004-verify-complete.png); [inv-a-005-reset-complete.png](./mail-sink/inv-a-005-reset-complete.png) |
+| IPS-40 claim publish | [audit-continue/inv-r-019-publish-after.png](./audit-continue/inv-r-019-publish-after.png); [results.json](./audit-continue/results.json) |
 
 ## Slice directories
 
@@ -70,6 +72,7 @@ Fixture emails matching configured `AUDIT_*_EMAIL` secrets were replaced with `a
 | [nt-chase/](./nt-chase/) | IPS-25 Not-tested chase screenshots + JSON (incl. INV-J-020/021 jobs page) |
 | [dashboard-consistency/](./dashboard-consistency/) | **IPS-29 / RC-DASHBOARD** contradiction coverage (INV-DC-*); `results.json` / `reverify.json` |
 | [mail-sink/](./mail-sink/) | **IPS-31** isolated Mailpit restore (INV-I-019 + journey/catalog evidence); `results.json` |
+| [audit-continue/](./audit-continue/) | **IPS-40** claim draft / notify kinds / demoted NT jobs+actions; `results.json` |
 
 ## Text / machine logs (full set committed)
 

@@ -1,6 +1,6 @@
 # Full-platform audit — Influrios
 
-**Phase:** A complete. Phase B + IPS-25 + IPS-29 + IPS-30 + **IPS-31** mail-sink restore. **Not** platform-wide complete (**24 Fail** / **95 Blocked** / **9 Not tested** / **355 Pass**). Phase C remediation plan (IPS-20) remains **PROVISIONAL**.  
+**Phase:** A complete. Phase B + IPS-25 + IPS-29 + IPS-30 + **IPS-31/40** mail-sink restore. **Not** platform-wide complete (**24 Fail** / **95 Blocked** / **0 Not tested** / **355 Pass**). Phase C remediation plan (IPS-20) remains **PROVISIONAL**.  
 **Coverage status (user-facing):** [coverage-status.md](./coverage-status.md) — Fail (24), Blocked (95), Not tested (9), Pass (355); IPS-30 acceptance + IPS-31 Mailpit.  
 **NT chase:** [execution/not-tested-chase-results.md](./execution/not-tested-chase-results.md) (IPS-25).  
 **Dashboard consistency:** [execution/dashboard-consistency-results.md](./execution/dashboard-consistency-results.md) (IPS-29 · INV-DC-* · **RC-DASHBOARD**).  

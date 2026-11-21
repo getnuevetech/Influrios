@@ -1,0 +1,27 @@
+{
+  "save1": {
+    "saved": true
+  },
+  "listed1": [
+    {
+      "id": "cmwpvxyt80011jsk5scpxg3uj",
+      "userId": "cmwpvnlhd005ajs94sm9xcbxn",
+      "kind": "business_request",
+      "listingId": "audit-r4cont01-listing",
+      "createdAt": "2026-11-21T04:05:52.124Z"
+    }
+  ],
+  "listedReload": [
+    {
+      "id": "cmwpvxyt80011jsk5scpxg3uj",
+      "userId": "cmwpvnlhd005ajs94sm9xcbxn",
+      "kind": "business_request",
+      "listingId": "audit-r4cont01-listing",
+      "createdAt": "2026-11-21T04:05:52.124Z"
+    }
+  ],
+  "save2": {
+    "saved": false
+  },
+  "listed2": []
+}
