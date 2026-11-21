@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Design — Contracts viewer</title>
+  <link rel="stylesheet" href="_design-system.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="frame-label">PROPOSED · Contracts list + agreement viewer (read-only executed state shown)</div>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">Influrios</div>
+        <a class="nav-item" href="#">Collaborations</a>
+        <a class="nav-item active" href="#">Contracts</a>
+      </aside>
+      <section class="main">
+        <div class="header">
+          <div>
+            <h1 style="font-size:28px;">Contracts</h1>
+            <p>Agreements · Templates</p>
+          </div>
+        </div>
+        <div class="tabs">
+          <div class="tab active">Agreements</div>
+          <div class="tab">Templates</div>
+        </div>
+        <table>
+          <thead><tr><th>Agreement</th><th>Parties</th><th>Status</th><th>Updated</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Campaign agreement</strong></td>
+              <td>Business · Influencer</td>
+              <td><span class="badge open">Fully signed</span></td>
+              <td>Nov 8</td>
+              <td><a href="#">View</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <div class="scrim" style="position:relative;margin-top:24px;border-radius:28px;">
+      <div class="dialog wide">
+        <div class="dialog-head">
+          <div>
+            <h2 style="font-size:22px;">Agreement</h2>
+            <div class="dialog-meta"><span class="badge open">Fully signed</span> · parties + clauses visible · Sign disabled when executed</div>
+          </div>
+          <button class="btn btn-secondary">Download PDF</button>
+        </div>
+        <div class="dialog-body">
+          <div class="card-row">
+            <strong>Parties</strong>
+            <p style="margin:6px 0 0;">Business account · Influencer account · (labels from staging captures only)</p>
+          </div>
+          <div class="card-row">
+            <strong>Key terms</strong>
+            <p style="margin:6px 0 0;">Deliverables, schedule, and payment terms as in the executed document — no invented prices.</p>
+          </div>
+          <div class="card-row">
+            <strong>Signatures</strong>
+            <p style="margin:6px 0 0;">Both parties signed · viewer is read-only for executed agreements.</p>
+          </div>
+        </div>
+        <div class="dialog-foot">
+          <button class="btn btn-secondary" disabled style="opacity:.5;">Sign agreement</button>
+          <button class="btn btn-secondary">Back to list</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

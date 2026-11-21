@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Design — Active collaborations</title>
+  <link rel="stylesheet" href="_design-system.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="frame-label">PROPOSED · Business / Influencer · Active list + overview popup</div>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="brand">Influrios</div>
+        <a class="nav-item active" href="#">Collaborations</a>
+        <a class="nav-item" href="#">Contracts</a>
+        <a class="nav-item" href="#">Collaboration Payments</a>
+      </aside>
+      <section class="main" style="position:relative;min-height:620px;">
+        <div class="header">
+          <div>
+            <h1 style="font-size:28px;">Active collaborations</h1>
+            <p>Track funded work; open overview before the workroom.</p>
+          </div>
+        </div>
+        <div class="filters">
+          <span class="pill on" style="background:var(--violet);color:#fff;">All (2)</span>
+          <span class="pill">Needs action (1)</span>
+          <span class="pill">In progress (1)</span>
+          <span class="pill">Completed (0)</span>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Campaign</th><th>Counterparty</th><th>Work status</th><th>Next action</th><th>Updated</th><th>Open</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>4th Test Campaign…</strong></td>
+              <td>Influencer label</td>
+              <td><span class="badge" style="background:var(--violet-wash);color:var(--violet);">In progress</span></td>
+              <td>Review deliverable</td>
+              <td>Nov 12</td>
+              <td><a href="#">Open</a></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="scrim">
+          <div class="dialog wide">
+            <div class="dialog-head">
+              <div>
+                <h2 style="font-size:22px;">4th Test Campaign…</h2>
+                <div class="dialog-meta">Overview · next action clear · parties named</div>
+              </div>
+              <button class="btn btn-secondary" style="padding:6px 10px;">✕</button>
+            </div>
+            <div class="dialog-body grid-2">
+              <div>
+                <p><strong>Status</strong><br/><span class="badge warn">Expecting funding / in progress</span></p>
+                <p><strong>Participants</strong><br/>Business · Influencer</p>
+                <p><strong>Milestones</strong><br/>Draft → Submit → Review (labels only; no invented amounts)</p>
+              </div>
+              <div>
+                <p><strong>Next action</strong><br/>Open workroom to continue deliverables</p>
+                <p><strong>Links</strong><br/><a href="#">View agreement</a></p>
+              </div>
+            </div>
+            <div class="dialog-foot">
+              <button class="btn btn-primary">Open workroom</button>
+              <button class="btn btn-secondary">View agreement</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>
