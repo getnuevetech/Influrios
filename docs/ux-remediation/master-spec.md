@@ -80,7 +80,8 @@ Rules: completed steps always render as done. Verification pending never shows �
 | Interested | RESPONDED, turn = business | Business | Ask a follow-up question · Decline | green |
 | Interested · follow-up sent | NEGOTIATING, turn = business, interest recorded, question open | Business | Decline | green |
 | Accepted · agreement not sent | ACCEPTED (set by the **business**), no agreement yet | Business (create + send the agreement) | View invitation | green |
-| Agreement ready to sign | Agreement `sent`, influencer signature pending | Invitee | Review and sign agreement | violet |
+| Agreement ready to sign | Agreement `sent`, influencer signature pending (business may or may not have signed) | Invitee | Review and sign agreement | violet |
+| Waiting for {Business} to sign | Influencer signed, business signature pending | Business | View agreement | gray |
 | Agreement signed | Agreement `signed` by every party | Business (next payment step, when available) | View agreement | green |
 | You declined | DECLINED | — | Close | gray |
 | Expired | EXPIRED | — | Close | gray |
@@ -117,9 +118,12 @@ Only the **business** moves an invitation to Accepted (§2.2b); the invitation d
 | Stage | Influencer sees | Influencer attention / badge | Business sees | Business attention / badge |
 |-------|-----------------|------------------------------|---------------|-----------------------------|
 | Business accepted, no agreement | Hub Active: “Accepted · {Business} is preparing the agreement” | No task | “Create the agreement” on the application | Task: Create the agreement (Collaborations) |
-| Agreement sent | “Review and sign agreement” | Task (Contracts badge) | “Waiting for {Influencer} to sign” | No task |
-| Business must sign | “Waiting for {Business} to sign” | No task | “Sign agreement” | Task (Contracts badge) |
+| Sent · neither signed | “Review and sign agreement” | Task (Contracts badge) | “Sign agreement” | Task (Contracts badge) |
+| Business signed · influencer pending | “Review and sign agreement” | Task (Contracts badge) | “Waiting for {Influencer} to sign” | No task |
+| Influencer signed · business pending | “Waiting for {Business} to sign” | No task | “Sign agreement” | Task (Contracts badge) |
 | Fully signed | “Agreement signed. {Business} handles the next step.” | No task | “Agreement signed”, plus **Fund collaboration** only when funding is available for this collaboration; otherwise “Funding isn't available for this collaboration yet” | Task only when funding is available |
+
+**Signer-specific rule:** every party whose signature is pending has a “sign” task (Contracts badge + attention); every party who has signed sees “Waiting for {other party} to sign” and has no task. Signing order doesn't matter. A party's task clears **only** when that party signs; another party's signature never clears it. Team agreements apply the rule per member.
 
 No copy in these states promises a payment, a funding date, or a notification.
 
@@ -275,7 +279,7 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 | DB4 | Every invitation state in §2.2 shows its actions/label; badge/attention clear on persisted transition only; INV-DC-015, INV-DC-012 |
 | DB4a | Ask a question leaves the invitation open (NEGOTIATING, turn = business); the business's answer then follows §2.2b: case 2 → case 3 (turn = invitee, I'm interested · Ask another question · Decline; needs P1-D1); case 5 → case 6 (turn stays business, message only) |
 | DB4d | Every case in the §2.2b matrix shows exactly its allowed actions, and the server rejects disallowed submissions; a follow-up question after Interested keeps turn = business and never adds to the invitee's counts |
-| DB8 | Next step after acceptance and signature (P1-AUD-11, §2.2c): influencer sees “Accepted · {Business} is preparing the agreement” (no action), then “Review and sign agreement” as an attention item when sent; business sees “Create the agreement” after acceptance and “Agreement signed” with its next payment step only when that step is available, otherwise “Funding isn't available for this collaboration yet”; no state promises a payment |
+| DB8 | Next step after acceptance and signature (P1-AUD-11, §2.2c): influencer sees “Accepted · {Business} is preparing the agreement” (no action), then a “Review and sign agreement” task while **their own** signature is pending and “Waiting for {Business} to sign” once they have signed; the business has a “Sign agreement” task while **its** signature is pending, in either order, and neither task is cleared by the other party's signature; business sees “Create the agreement” after acceptance and “Agreement signed” with its next payment step only when that step is available, otherwise “Funding isn't available for this collaboration yet”; no state promises a payment |
 | DB4c | Reading the answer (invitation, notice or Messages) leaves turn = invitee: banner, attention, badge and task stay until the invitee responds |
 | DB4b | Timeout: “We couldn't confirm your response” → idempotency record lookup → saved / rejected / processing / unable to confirm per §4.1; draft kept and locked until saved or rejected; retry of an unresolved submission reuses its key and is stored once; a new submission after an outcome gets a new key even with identical text; a key reused with another actor, invitation or payload is refused; concurrent withdrawal shows the rejection and counts refresh |
 | DB5 | Open unread decreases bell; action required unchanged by read alone |
@@ -384,12 +388,14 @@ Clicking a contract row **expands its transaction table inline** beneath the row
 | ID | Requirement | Evidence required |
 |----|-------------|-------------------|
 | MS1 | Use the contract's **frozen** fee rules and milestone allocations | For each milestone: business fee, influencer fee, influencer net and platform allocation, taken from the signed agreement version. No recalculation with today's fee settings |
-| MS2 | Release **both** allocated amounts | One release authorization that links the influencer leg and the platform **Operations** leg |
-| MS3 | Handle partial success honestly | If one leg succeeds and the other fails, status shows **Partially completed**; retry acts only on the unfinished leg |
+| MS2 | Release **both** allocated amounts | One release authorization that links **(a) the influencer payment** (influencer net for that milestone) and **(b) the corresponding platform-fee movement** into Operations. Neither leg counts as released without the other being recorded under the same authorization |
+| MS3 | Handle partial success honestly | If the influencer payment succeeds and the platform-fee movement fails (or the reverse), status shows **Partially completed**; retry acts only on the unfinished leg |
 | MS4 | Prevent duplicates | Repeated approval, retries and duplicate provider callbacks cannot duplicate either payment (idempotency per milestone × agreement version × leg) |
 | MS5 | Reconcile every amount | Milestone allocations total the contract amounts, including rounding; taxes and other liabilities stay separately identified |
 | MS6 | Complete admin ledger | Contract → milestone → both movement legs, with accounts, currency, amount, status and provider references (§12.3 expanded row) |
 | MS7 | Operations transfer ≠ bank withdrawal | Moving fees into Operations is a separate movement from sweeping Operations funds to the bank; each has its own record and status (§12.6) |
-| MS8 | Prove actual movement | Sandbox provider evidence (provider object ids, statuses) for each external transfer. **Simulation is labelled “Simulated” everywhere and can never satisfy provider completion** |
+| MS8 | Prove actual movement | Sandbox provider evidence (provider object ids, statuses) for **both** the influencer payment and the platform-fee movement. **Simulation is labelled “Simulated” everywhere and can never satisfy provider completion** |
 
 Release is reachable only after delivery approval (§2.2 P1-AUD-08) and payout readiness (§2.1).
+
+**Status: all eight are OPEN payment acceptance requirements.** They stay open until each has the evidence above for both legs; Package 1 implementation does not touch them.

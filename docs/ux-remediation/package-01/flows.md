@@ -142,9 +142,10 @@ Board: [team-invite-respond](./designs/team-invite-respond.html).
 ```
 [business] accepts ─► influencer: Active “Accepted · {Business} is preparing the agreement” (no task)
                       business: task “Create the agreement”
-[business] creates + sends agreement ─► influencer: task “Review and sign agreement” (Contracts badge +1)
-                                         business: “Waiting for {Influencer} to sign”
-each party signs ─► task moves to whoever still has to sign
+[business] creates + sends agreement ─► BOTH parties pending: influencer task “Review and sign agreement”,
+                                         business task “Sign agreement” (each: Contracts badge +1)
+a party signs ─► that party's task clears → they see “Waiting for {other party} to sign”
+                 the other party's task stays until THEY sign (order doesn't matter; team: per member)
 fully signed ─► influencer: “Agreement signed. {Business} handles the next step.” (no task)
                 business: “Agreement signed” + Fund collaboration ONLY if funding is available;
                           otherwise “Funding isn't available for this collaboration yet” (no task)

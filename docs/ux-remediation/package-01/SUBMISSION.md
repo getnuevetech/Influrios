@@ -21,11 +21,11 @@ Review record: [visual-review.md](./visual-review.md). Rules: [master-spec](../m
 
 ## 2. Focused implementation — proposed slices (after approval)
 
-Each slice ships behind its acceptance anchors and is retested on the isolated host with the #539 harness (`scripts/e2e-audit/r5-iso/`). No slice touches live deposits or the release path.
+**Start condition:** S1 begins only after Ola's visual approval on #540. Each slice ships behind its acceptance anchors and is retested on the isolated host with the #539 harness (`scripts/e2e-audit/r5-iso/`). No slice touches live deposits or the release path; provider blockers stay separate, and MS1–MS8 (influencer payment **and** its platform-fee movement) remain open payment acceptance requirements outside Package 1.
 
 | Slice | Backlog | Acceptance | Retest rows (#539) |
 |-------|---------|------------|--------------------|
-| S1 Invitation projections + turn tracking + action matrix | P1-T1, P1-T4, P1-D1, P1-AUD-10 | DB1, DB4, DB4a–d | INV-DC-001, INV-DC-015, INV-A-045, INV-A-029 |
+| S1 Invitation projections + turn tracking + action matrix | P1-T1, P1-T4, P1-D1, P1-AUD-10 | DB1, DB4, DB4a–d | INV-DC-001, INV-DC-015, INV-A-045, INV-A-029 — **retest both the hub popup and the direct `/collaboration/applications/[id]` route** (same actions per matrix case), persistence after reload, permissions (other influencer, other business, signed-out → refused, server-side), and cross-screen counts (home, hub, badge, inbox, notifications; desktop + mobile) |
 | S2 Invitation lifecycle: deadline expiry, withdrawal/expiry notices, team listing, closed proposals | P1-AUD-01…05 | AUD1, DB1, DB4 | INV-DC-013, INV-DC-014, INV-A-048 |
 | S3 Response reliability (idempotency, timeout outcomes) | P1-T5 | DB4b | new timeout checks |
 | S4 Notices + inbox: in-app notice per action-required event, dedupe, subject names, stale bell | P1-T6, P1-T12, P1-AUD-06/07/12 | DB5, INB1 | INV-N-015T, INV-N-017T, INV-P-019 |
