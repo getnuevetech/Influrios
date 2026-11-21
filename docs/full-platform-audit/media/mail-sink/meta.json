@@ -1,0 +1,32 @@
+{
+  "startedAt": "2026-11-21T01:51:27.576Z",
+  "base": "http://127.0.0.1:3000",
+  "mailpit": "http://127.0.0.1:8025",
+  "mailSettings": {
+    "host": "127.0.0.1",
+    "port": 1025,
+    "enabled": true,
+    "fromAddress": "noreply@audit.local",
+    "ready": true,
+    "readySource": "admin"
+  },
+  "sinkInfo": {
+    "Version": "v1.34.0",
+    "LatestVersion": "v1.34.0",
+    "Database": "/tmp/mailpit-1795225652439526307.db",
+    "DatabaseSize": 94208,
+    "Messages": 1,
+    "Unread": 1,
+    "Tags": {},
+    "RuntimeStats": {
+      "Uptime": 235,
+      "Memory": 17344792,
+      "MessagesDeleted": 0,
+      "SMTPAccepted": 1,
+      "SMTPAcceptedSize": 457,
+      "SMTPRejected": 0,
+      "SMTPIgnored": 0
+    }
+  },
+  "fixturesRun": "r3pr12vx"
+}

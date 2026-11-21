@@ -1,0 +1,27 @@
+{
+  "finishedAt": "2026-11-20T23:51:01.809Z",
+  "matrixDelta": {
+    "rows": 17,
+    "Pass": 9,
+    "Fail": 5,
+    "Blocked": 3
+  },
+  "fails": [
+    "INV-DC-001",
+    "INV-DC-002",
+    "INV-DC-006",
+    "INV-DC-012",
+    "INV-DC-015"
+  ],
+  "reverifyCounts": {
+    "Pass": 8,
+    "Fail": 7,
+    "Blocked": 4
+  },
+  "broadCounts": {
+    "Pass": 22,
+    "Fail": 6,
+    "Blocked": 5
+  },
+  "note": "Authoritative outcomes in docs/full-platform-audit/execution/dashboard-consistency-results.md"
+}

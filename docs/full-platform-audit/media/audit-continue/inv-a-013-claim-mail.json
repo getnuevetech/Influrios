@@ -1,0 +1,30 @@
+{
+  "recipient": "audit.r4cont01.claim-fresh@example.com",
+  "messages": [
+    {
+      "ID": "1uAsIo1s0C6VhtmeIJqaJm",
+      "MessageID": "481X6XYy3iswETEgCIrLaX@mailpit",
+      "Read": false,
+      "From": {
+        "Name": "Influrios Audit",
+        "Address": "noreply@audit.local"
+      },
+      "To": [
+        {
+          "Name": "",
+          "Address": "audit.r4cont01.claim-fresh@example.com"
+        }
+      ],
+      "Cc": null,
+      "Bcc": null,
+      "ReplyTo": [],
+      "Subject": "Verify your email for your Influrios Card",
+      "Created": "2026-11-21T04:05:26.844Z",
+      "Username": "",
+      "Tags": [],
+      "Size": 3980,
+      "Attachments": 0,
+      "Snippet": "One more step to continue claiming your card. ∞ Influrios Your account Continue claiming your card Hello, Enter this code in the card claim screen to confirm access to this email address. This step ..."
+    }
+  ]
+}

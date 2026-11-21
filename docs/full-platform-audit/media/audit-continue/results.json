@@ -1,0 +1,257 @@
+{
+  "summary": {
+    "pass": 23,
+    "fail": 0,
+    "blocked": 0,
+    "notTested": 1,
+    "reconcile": "IPS-42: INV-J-010 demoted NT; INV-D-007 View-only Pass / Export NT; INV-N-010…017+027 Pass narrowed to delivery isolation"
+  },
+  "rows": [
+    {
+      "id": "INV-R-017",
+      "status": "Pass",
+      "actual": "Preview loaded draftId=draft_a237bc9f7b0f",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-017-claim-preview.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-017-preview.json"
+      ]
+    },
+    {
+      "id": "INV-A-013",
+      "status": "Pass",
+      "actual": "claimDraft email queued; mailpit=1; code=yes; subject=Verify your email for your Influrios Card",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-017-claim-preview.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-017-preview.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-018-claim-verify.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-013-claim-mail.json"
+      ]
+    },
+    {
+      "id": "INV-R-018",
+      "status": "Pass",
+      "actual": "Verify route url=http://127.0.0.1:3000/claim/verify/draft_a237bc9f7b0f",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-017-claim-preview.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-017-preview.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-018-claim-verify.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-013-claim-mail.json"
+      ]
+    },
+    {
+      "id": "INV-R-019",
+      "status": "Pass",
+      "actual": "stage=published; publishedAt=2026-11-21T04:05:36.454Z; url=http://127.0.0.1:3000/claim/publish/draft_a237bc9f7b0f?error=card.social_links.max%20limit%201.%20Upgrade%20to%20PLUS.%20This%20plan%20includes%201%20social%20link.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-017-claim-preview.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-017-preview.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-018-claim-verify.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-013-claim-mail.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-013-verify-complete.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-019-publish-before.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-019-publish-filled.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-019-publish-after.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-015-social-attempt.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-015-social.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-claim-draft-final.json"
+      ]
+    },
+    {
+      "id": "INV-A-014",
+      "status": "Pass",
+      "actual": "publish action stage=published",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-017-claim-preview.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-017-preview.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-018-claim-verify.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-013-claim-mail.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-013-verify-complete.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-019-publish-before.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-019-publish-filled.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-019-publish-after.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-015-social-attempt.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-015-social.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-claim-draft-final.json"
+      ]
+    },
+    {
+      "id": "INV-A-015",
+      "status": "Pass",
+      "actual": "socials=[\"INSTAGRAM:@audit_r4cont01_claim\"]; note=http://127.0.0.1:3000/claim/publish/draft_a237bc9f7b0f",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-017-claim-preview.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-017-preview.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-018-claim-verify.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-013-claim-mail.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-013-verify-complete.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-019-publish-before.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-019-publish-filled.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-r-019-publish-after.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-015-social-attempt.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-015-social.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-claim-draft-final.json"
+      ]
+    },
+    {
+      "id": "INV-N-010",
+      "status": "Pass",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=1; mailpit=1; subjects=Funding needed for AUDIT r4cont01 notify fixture; NOT originating business-action emission",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
+      ]
+    },
+    {
+      "id": "INV-N-011",
+      "status": "Pass",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=2; mailpit=2; subjects=You can begin AUDIT r4cont01 notify fixture | Funding confirmed for AUDIT r4cont01 notify fixture; NOT originating business-action emission",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
+      ]
+    },
+    {
+      "id": "INV-N-012",
+      "status": "Pass",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=1; mailpit=1; subjects=Funding did not complete for AUDIT r4cont01 notify fixture; NOT originating business-action emission",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
+      ]
+    },
+    {
+      "id": "INV-N-013",
+      "status": "Pass",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=1; mailpit=1; subjects=Ready for review: AUDIT Kickoff; NOT originating business-action emission",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
+      ]
+    },
+    {
+      "id": "INV-N-014",
+      "status": "Pass",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=1; mailpit=1; subjects=Review due soon: AUDIT Kickoff; NOT originating business-action emission",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
+      ]
+    },
+    {
+      "id": "INV-N-015",
+      "status": "Pass",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=1; mailpit=1; subjects=Revision requested for AUDIT Kickoff; NOT originating business-action emission",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
+      ]
+    },
+    {
+      "id": "INV-N-016",
+      "status": "Pass",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=2; mailpit=2; subjects=Approved: AUDIT Kickoff | Approved: AUDIT Kickoff; NOT originating business-action emission",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
+      ]
+    },
+    {
+      "id": "INV-N-017",
+      "status": "Pass",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=2; mailpit=2; subjects=Review period ended for AUDIT Kickoff | Review period ended for AUDIT Kickoff; NOT originating business-action emission",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
+      ]
+    },
+    {
+      "id": "INV-N-027",
+      "status": "Pass",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=2; mailpit=2; subjects=Collaboration cancelled: AUDIT r4cont01 notify fixture | Collaboration cancelled: AUDIT r4cont01 notify fixture; NOT originating business-action emission",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
+      ]
+    },
+    {
+      "id": "INV-J-006",
+      "status": "Pass",
+      "actual": "collab_notification succeeded=5; sample=cmwpvxpxx000cjsk584x4dmqa",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-j-006-jobs.json"
+      ]
+    },
+    {
+      "id": "INV-J-011",
+      "status": "Pass",
+      "actual": "sweep1 notified=1 scanned=1; sweep2 notified=0; mail=1→1; noDuplicate=true",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-j-011-review-deadline.json"
+      ]
+    },
+    {
+      "id": "INV-J-010",
+      "status": "Not tested",
+      "actual": "IPS-42 demote: before=submitted; after=release_scheduled but auto1/auto2 scanned=0 approved=0 — sweep did not approve; transition provenance unproven",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-j-010-auto-approval.json"
+      ]
+    },
+    {
+      "id": "INV-J-015",
+      "status": "Pass",
+      "actual": "flagged1=1 scanned1=4; flagged2=0; mail=6→6",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-j-015-funding-recon.json"
+      ]
+    },
+    {
+      "id": "INV-J-017",
+      "status": "Pass",
+      "actual": "mode=auto; expired1=1 scanned1=1; expired2=0; status=EXPIRED",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-j-017-app-expire.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-j-017-control-plane.json"
+      ]
+    },
+    {
+      "id": "INV-A-008",
+      "status": "Pass",
+      "actual": "persisted collaborations=true; billing=true; outreach=false; productNews=true",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-008-prefs-before-ui.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-008-prefs-after-reload.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-008-prefs.json"
+      ]
+    },
+    {
+      "id": "INV-A-019",
+      "status": "Pass",
+      "actual": "openToManaged=true; notes=AUDIT r4cont01 opt-in",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-019-managed-intro.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-019-optin.json"
+      ]
+    },
+    {
+      "id": "INV-A-027",
+      "status": "Pass",
+      "actual": "save=true; reloadHas=true; unsave=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-027-saved.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-a-027-saved.json"
+      ]
+    },
+    {
+      "id": "INV-D-007",
+      "status": "Pass",
+      "actual": "View Pass: media-kit page + public card http=200 inspected. Export: Not tested — no downloadable export proven",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-d-007-media-kit.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-d-007-media-kit-card.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-d-007-media-kit.json"
+      ]
+    }
+  ]
+}

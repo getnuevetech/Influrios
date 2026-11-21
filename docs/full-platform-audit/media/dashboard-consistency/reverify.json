@@ -1,0 +1,169 @@
+{
+  "finishedAt": "2026-11-20T23:46:22.681Z",
+  "counts": {
+    "Pass": 8,
+    "Fail": 7,
+    "Blocked": 4
+  },
+  "results": [
+    {
+      "id": "INV-DC-001",
+      "cases": "Invitation counts: dashboard vs Collaborations destination vs sidebar badge",
+      "expected": "Same invitation count on home, hub destination, and Collaborations badge (or badge = invites+work with hub invites matching home)",
+      "actual": "home invitations=1 banner=1 attentionInvite=true; hub invitations=0 noInvites=true; sidebar Collaborations=1",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-inf-home.png; media/full-platform-audit/dashboard-consistency/re-inf-hub.png",
+      "defects": "DC-INVITE-MISMATCH",
+      "status": "Fail"
+    },
+    {
+      "id": "INV-DC-006",
+      "cases": "Active collaboration count: dashboard vs Collaborations hub",
+      "expected": "Active count matches across home and hub for same account",
+      "actual": "home Active collaborations=3; hub Active=2",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-inf-home.png; media/full-platform-audit/dashboard-consistency/re-inf-hub.png",
+      "defects": "DC-ACTIVE-MISMATCH",
+      "status": "Fail"
+    },
+    {
+      "id": "INV-DC-002",
+      "cases": "Payout readiness: home reminder vs hub widget vs earnings page vs sidebar badge",
+      "expected": "All four surfaces agree (Ready⇒no setup banner, hub Ready, badge 0) or (Not ready⇒setup banner, hub Not ready, badge 1 when active)",
+      "actual": "{\"homeSetupReminder\":true,\"hubNotReady\":true,\"hubReady\":false,\"earningsReady\":true,\"earningsNotReady\":false,\"earningsBadge\":1}",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-inf-home.png; media/full-platform-audit/dashboard-consistency/re-inf-hub.png; media/full-platform-audit/dashboard-consistency/re-inf-earnings.png",
+      "defects": "DC-PAYOUT-MISMATCH",
+      "status": "Fail"
+    },
+    {
+      "id": "INV-DC-003",
+      "cases": "Sidebar badges stable across destinations",
+      "expected": "Same badge numbers on home/hub/earnings",
+      "actual": "collab=1; earnings=1",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-inf-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-020",
+      "cases": "Opening notice clears unread",
+      "expected": "Bell unread decreases after opening one item",
+      "actual": "before=2; after=2; via=open-query — unread unchanged",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-inf-notif-before.png; media/full-platform-audit/dashboard-consistency/re-inf-notif-after-open.png",
+      "defects": "DC-UNREAD-STUCK",
+      "status": "Fail"
+    },
+    {
+      "id": "INV-DC-011",
+      "cases": "View invitation (before respond)",
+      "expected": "Opening invitation reachable from attention CTA",
+      "actual": "opened Review invitation; acted=view-only",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-inf-invitation-open.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-012",
+      "cases": "Completing invitation action clears action-required indicator",
+      "expected": "After decline/interest, home invitation count and attention clear; hub agrees",
+      "actual": "Respond controls not available on invitation detail",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-inf-invitation-open.png",
+      "status": "Blocked"
+    },
+    {
+      "id": "INV-DC-030",
+      "cases": "Refresh badge stability",
+      "expected": "Badges unchanged after reload",
+      "actual": "pre={\"collaborations\":1,\"earnings\":1,\"payments\":null,\"unreadBell\":2,\"bellLabel\":\"Notifications, 2 unread\"}; post={\"collaborations\":1,\"earnings\":1,\"payments\":null,\"unreadBell\":2,\"bellLabel\":\"Notifications, 2 unread\"}",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-inf-refresh.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-031",
+      "cases": "Re-login core badge stability (collab/earnings)",
+      "expected": "Collaborations/Earnings badges unchanged after re-login",
+      "actual": "pre={\"collaborations\":1,\"earnings\":1,\"payments\":null,\"unreadBell\":2,\"bellLabel\":\"Notifications, 2 unread\"}; relogin={\"collaborations\":1,\"earnings\":1,\"payments\":null,\"unreadBell\":2,\"bellLabel\":\"Notifications, 2 unread\"}",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-inf-relogin.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-001:mobile",
+      "cases": "Invitation home vs hub (mobile)",
+      "expected": "Agree",
+      "actual": "homeInv=1 banner=1; hubInv=0 noInvites=true",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-inf-mobile-home.png; media/full-platform-audit/dashboard-consistency/re-inf-mobile-hub.png",
+      "defects": "DC-INVITE-MISMATCH",
+      "status": "Fail"
+    },
+    {
+      "id": "INV-DC-002:mobile",
+      "cases": "Payout readiness home/hub/earnings (mobile)",
+      "expected": "Agree",
+      "actual": "earningsReady=true; homeSetup=true; hubNotReady=true",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-inf-mobile-home.png; media/full-platform-audit/dashboard-consistency/re-inf-mobile-hub.png; media/full-platform-audit/dashboard-consistency/re-inf-mobile-earnings.png",
+      "defects": "DC-PAYOUT-MISMATCH",
+      "status": "Fail"
+    },
+    {
+      "id": "INV-DC-006:mobile",
+      "cases": "Active count home vs hub (mobile)",
+      "expected": "Agree",
+      "actual": "home=3; hub=2",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-inf-mobile-home.png; media/full-platform-audit/dashboard-consistency/re-inf-mobile-hub.png",
+      "defects": "DC-ACTIVE-MISMATCH",
+      "status": "Fail"
+    },
+    {
+      "id": "INV-DC-003:business",
+      "cases": "Business sidebar Collaborations badge stable home↔hub",
+      "expected": "Same badge",
+      "actual": "badge=2; attentionReviewClicks≈5; pendingCopy=response to review\n\nInfluencers have responded to your invites.\n\nReview\n\nReview a submission\n\n4",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-biz-home.png; media/full-platform-audit/dashboard-consistency/re-biz-collab.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-001:business",
+      "cases": "Business Collaborations badge vs Needs-your-attention destination signals",
+      "expected": "Badge equals open attention actions driving Collaborations",
+      "actual": "sidebar=2; needs-attention Review CTAs≈5",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-biz-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-013",
+      "cases": "Withdraw pending invitation then recheck badges",
+      "expected": "Withdraw control on pending invite updates counts",
+      "actual": "No Withdraw control on current business collaborations list",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-biz-collab.png",
+      "status": "Blocked"
+    },
+    {
+      "id": "INV-DC-032",
+      "cases": "Business refresh badge stability",
+      "expected": "Unchanged",
+      "actual": "pre={\"collaborations\":2,\"earnings\":null,\"payments\":0,\"unreadBell\":2,\"bellLabel\":\"Notifications, 2 unread\"}; post={\"collaborations\":2,\"earnings\":null,\"payments\":0,\"unreadBell\":2,\"bellLabel\":\"Notifications, 2 unread\"}",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-biz-refresh.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-033",
+      "cases": "Business re-login badge stability",
+      "expected": "Collaborations badge unchanged",
+      "actual": "pre={\"collaborations\":2,\"earnings\":null,\"payments\":0,\"unreadBell\":2,\"bellLabel\":\"Notifications, 2 unread\"}; relogin={\"collaborations\":2,\"earnings\":null,\"payments\":0,\"unreadBell\":2,\"bellLabel\":\"Notifications, 2 unread\"}",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-biz-relogin.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-020:business",
+      "cases": "Opening notice clears unread (business)",
+      "expected": "Bell decreases",
+      "actual": "unread=0; link=1",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-biz-notif-before.png",
+      "status": "Blocked"
+    },
+    {
+      "id": "INV-DC-014",
+      "cases": "Expire invitation via sweep / deadline — counts agree after",
+      "expected": "Can expire a pending invite and see home/hub/badge drop together",
+      "actual": "marketplace_application_expire_sweep listed; appearsNever=false — no live pending invite expired in this pass (deposits closed; no deadline mutation)",
+      "evidence": "media/full-platform-audit/dashboard-consistency/re-admin-jobs-expire.png",
+      "status": "Blocked"
+    }
+  ]
+}

@@ -1,0 +1,123 @@
+{
+  "INV-N-010": {
+    "kind": "funding_required",
+    "result": {
+      "queued": true,
+      "count": 1
+    },
+    "mailpitTotal": 1,
+    "subjects": [
+      "Funding needed for AUDIT r4cont01 notify fixture"
+    ],
+    "beforeJobs": 20,
+    "succeededJobsApprox": 21
+  },
+  "INV-N-011": {
+    "kind": "funding_successful",
+    "result": {
+      "queued": true,
+      "count": 2
+    },
+    "mailpitTotal": 2,
+    "subjects": [
+      "You can begin AUDIT r4cont01 notify fixture",
+      "Funding confirmed for AUDIT r4cont01 notify fixture"
+    ],
+    "beforeJobs": 21,
+    "succeededJobsApprox": 23
+  },
+  "INV-N-012": {
+    "kind": "funding_failed",
+    "result": {
+      "queued": true,
+      "count": 1
+    },
+    "mailpitTotal": 1,
+    "subjects": [
+      "Funding did not complete for AUDIT r4cont01 notify fixture"
+    ],
+    "beforeJobs": 23,
+    "succeededJobsApprox": 24
+  },
+  "INV-N-013": {
+    "kind": "milestone_submitted",
+    "result": {
+      "queued": true,
+      "count": 1
+    },
+    "mailpitTotal": 1,
+    "subjects": [
+      "Ready for review: AUDIT Kickoff"
+    ],
+    "beforeJobs": 24,
+    "succeededJobsApprox": 25
+  },
+  "INV-N-014": {
+    "kind": "review_deadline_approaching",
+    "result": {
+      "queued": true,
+      "count": 1
+    },
+    "mailpitTotal": 1,
+    "subjects": [
+      "Review due soon: AUDIT Kickoff"
+    ],
+    "beforeJobs": 25,
+    "succeededJobsApprox": 26
+  },
+  "INV-N-015": {
+    "kind": "revision_requested",
+    "result": {
+      "queued": true,
+      "count": 1
+    },
+    "mailpitTotal": 1,
+    "subjects": [
+      "Revision requested for AUDIT Kickoff"
+    ],
+    "beforeJobs": 26,
+    "succeededJobsApprox": 27
+  },
+  "INV-N-016": {
+    "kind": "milestone_approved",
+    "result": {
+      "queued": true,
+      "count": 2
+    },
+    "mailpitTotal": 2,
+    "subjects": [
+      "Approved: AUDIT Kickoff",
+      "Approved: AUDIT Kickoff"
+    ],
+    "beforeJobs": 27,
+    "succeededJobsApprox": 29
+  },
+  "INV-N-017": {
+    "kind": "milestone_auto_approved",
+    "result": {
+      "queued": true,
+      "count": 2
+    },
+    "mailpitTotal": 2,
+    "subjects": [
+      "Review period ended for AUDIT Kickoff",
+      "Review period ended for AUDIT Kickoff"
+    ],
+    "beforeJobs": 29,
+    "succeededJobsApprox": 31
+  },
+  "INV-N-027": {
+    "kind": "collaboration_cancelled",
+    "result": {
+      "queued": true,
+      "count": 2
+    },
+    "mailpitTotal": 2,
+    "subjects": [
+      "Collaboration cancelled: AUDIT r4cont01 notify fixture",
+      "Collaboration cancelled: AUDIT r4cont01 notify fixture"
+    ],
+    "beforeJobs": 31,
+    "succeededJobsApprox": 33
+  }
+}

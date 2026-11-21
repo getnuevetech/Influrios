@@ -1,0 +1,25 @@
+{
+  "autoFundingId": "cmwpvxr2u000hjsk5tbwcyg91",
+  "autoMilestoneId": "cmwpvxr2u000ijsk5ssf6066u",
+  "beforeStatus": "submitted",
+  "auto1": {
+    "scanned": 0,
+    "approved": 0,
+    "skippedDispute": 0,
+    "disabled": false
+  },
+  "auto2": {
+    "scanned": 0,
+    "approved": 0,
+    "skippedDispute": 0,
+    "disabled": false
+  },
+  "milestoneStatus": "release_scheduled",
+  "autoAudit": true,
+  "mail1": 0,
+  "subjects": [],
+  "ips42": {
+    "status": "Not tested",
+    "reason": "Both sweep runs scanned:0/approved:0; release_scheduled transition provenance unproven — empty sweep does not prove auto-approval behavior"
+  }
+}

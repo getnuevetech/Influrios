@@ -1,0 +1,1413 @@
+{
+  "meta": {
+    "startedAt": "2026-11-21T01:51:27.576Z",
+    "base": "http://127.0.0.1:3000",
+    "mailpit": "http://127.0.0.1:8025",
+    "mailSettings": {
+      "host": "127.0.0.1",
+      "port": 1025,
+      "enabled": true,
+      "fromAddress": "noreply@audit.local",
+      "ready": true,
+      "readySource": "admin"
+    },
+    "sinkInfo": {
+      "Version": "v1.34.0",
+      "LatestVersion": "v1.34.0",
+      "Database": "/tmp/mailpit-1795225652439526307.db",
+      "DatabaseSize": 94208,
+      "Messages": 1,
+      "Unread": 1,
+      "Tags": {},
+      "RuntimeStats": {
+        "Uptime": 235,
+        "Memory": 17344792,
+        "MessagesDeleted": 0,
+        "SMTPAccepted": 1,
+        "SMTPAcceptedSize": 457,
+        "SMTPRejected": 0,
+        "SMTPIgnored": 0
+      }
+    },
+    "fixturesRun": "r3pr12vx"
+  },
+  "finishedAt": "2026-11-21T01:52:10.204Z",
+  "counts": {
+    "Pass": 71,
+    "Blocked": 29,
+    "total": 100,
+    "MAIL_SINK": 86,
+    "DEPOSITS_CLOSED_AND_MAIL_SINK": 14
+  },
+  "rows": [
+    {
+      "id": "INV-A-004",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "OTP mail in Mailpit + verify complete marks emailVerifiedAt",
+      "actual": "mail=true; completeOk=true; landed=/creator?welcome=1; evidence=inv-a-004-verify-retry.json",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-a-004-verify-mail.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-a-004-verify-complete.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-a-004-verify-complete-retry.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-a-004-verify-retry.json"
+      ],
+      "mailpitIds": [
+        "70T72Wvssp8sfEQefDdfSQ"
+      ]
+    },
+    {
+      "id": "INV-A-005",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Password reset email in Mailpit + token complete sets new password",
+      "actual": "queued=true; mailpitTotal=1; token=true; completeOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-a-005-reset-mail.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-a-005-reset-complete.png"
+      ],
+      "mailpitIds": [
+        "4wPag5prZLTFusK4uX0EfX"
+      ]
+    },
+    {
+      "id": "INV-A-013",
+      "cluster": "MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Claim draft + mail sink verify/publish path",
+      "actual": "Mailpit sink restored and proven (INV-I-019). Claim draft fixture still missing on isolated host.",
+      "blocker": "CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-i-019-mailpit.json"
+      ]
+    },
+    {
+      "id": "INV-A-014",
+      "cluster": "MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Claim draft + mail sink verify/publish path",
+      "actual": "Mailpit sink restored and proven (INV-I-019). Claim draft fixture still missing on isolated host.",
+      "blocker": "CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-i-019-mailpit.json"
+      ]
+    },
+    {
+      "id": "INV-A-015",
+      "cluster": "MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Claim draft + mail sink verify/publish path",
+      "actual": "Mailpit sink restored and proven (INV-I-019). Claim draft fixture still missing on isolated host.",
+      "blocker": "CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-i-019-mailpit.json"
+      ]
+    },
+    {
+      "id": "INV-E-001",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for account.verify",
+      "actual": "Mailpit captured catalog test send subject=[Test] Your Influrios verification code; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "7QytcQ1QeEewoWPssyG1qo"
+      ]
+    },
+    {
+      "id": "INV-E-002",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for account.card_verify",
+      "actual": "Mailpit captured catalog test send subject=[Test] Verify your email for your Influrios Card; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "523dqrO2oG9ocrhYCvix0b"
+      ]
+    },
+    {
+      "id": "INV-E-003",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for account.reset",
+      "actual": "Mailpit captured catalog test send subject=[Test] Reset your Influrios password; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "6uoLdQlrPvFGHiPJutbfce"
+      ]
+    },
+    {
+      "id": "INV-E-004",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for account.admin_setup",
+      "actual": "Mailpit captured catalog test send subject=[Test] Set up your Influrios admin account; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "2dyceNbcwnDeGkuJM4f9lS"
+      ]
+    },
+    {
+      "id": "INV-E-005",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for account.claim",
+      "actual": "Mailpit captured catalog test send subject=[Test] Alex, create your Influrios Card; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "4rVQ3GRXlJR0NMnEvGblbp"
+      ]
+    },
+    {
+      "id": "INV-E-006",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for account.claim_followup",
+      "actual": "Mailpit captured catalog test send subject=[Test] Your Influrios Card invitation is still open; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "7QJfdXrHwKLFW3sMWXTE7b"
+      ]
+    },
+    {
+      "id": "INV-E-007",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for account.welcome_influencer",
+      "actual": "Mailpit captured catalog test send subject=[Test] Welcome to Influrios, Alex; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "1c2JXqm4VvQ8BXeO20JG9V"
+      ]
+    },
+    {
+      "id": "INV-E-008",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for account.welcome_business",
+      "actual": "Mailpit captured catalog test send subject=[Test] Welcome to Influrios, Alex; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "3oAeD6ORulQbcuHum4Dzba"
+      ]
+    },
+    {
+      "id": "INV-E-009",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for account.password_changed",
+      "actual": "Mailpit captured catalog test send subject=[Test] Your Influrios password was changed; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "5VsdBAq7QCFu6GY01XFj9P"
+      ]
+    },
+    {
+      "id": "INV-E-010",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for account.smtp_test",
+      "actual": "Mailpit captured catalog test send subject=[Test] [TEST] Influrios email delivery check; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "49H3rfa92Sg3kHHHyCqPdk"
+      ]
+    },
+    {
+      "id": "INV-E-011",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for invite.collaboration",
+      "actual": "Mailpit captured catalog test send subject=[Test] Northwind Studio invited you to collaborate; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "2amNfFikYQPlyK8TKVEZcc"
+      ]
+    },
+    {
+      "id": "INV-E-012",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for invite.private_campaign",
+      "actual": "Mailpit captured catalog test send subject=[Test] Private invitation from Northwind Studio; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "6KroTqCXbr6m2ZEmaVpUNu"
+      ]
+    },
+    {
+      "id": "INV-E-013",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for invite.accepted",
+      "actual": "Mailpit captured catalog test send subject=[Test] Alex Rivera accepted your invitation; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "7T3YouIOFDFTVlFxKY0CpJ"
+      ]
+    },
+    {
+      "id": "INV-E-014",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for invite.declined",
+      "actual": "Mailpit captured catalog test send subject=[Test] Invitation update for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "0Xt8zUg0eqCkj8DZusq67X"
+      ]
+    },
+    {
+      "id": "INV-E-015",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for invite.team_sent",
+      "actual": "Mailpit captured catalog test send subject=[Test] sender name invited you to a team proposal; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "1I79nBDbIRbuAMKALX6Hx5"
+      ]
+    },
+    {
+      "id": "INV-E-016",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for invite.team_accepted",
+      "actual": "Mailpit captured catalog test send subject=[Test] recipient name accepted the team proposal; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "5bdTYaLpLexIBJljMf2XtN"
+      ]
+    },
+    {
+      "id": "INV-E-017",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for invite.team_declined",
+      "actual": "Mailpit captured catalog test send subject=[Test] Team proposal declined by recipient name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "2al1OPp6agbZdzpOJxoX7K"
+      ]
+    },
+    {
+      "id": "INV-E-018",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for invite.team_expired",
+      "actual": "Mailpit captured catalog test send subject=[Test] Team proposal expired for team name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "4F01iaov96mRce8nkHoFS1"
+      ]
+    },
+    {
+      "id": "INV-E-019",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for contract.sign",
+      "actual": "Mailpit captured catalog test send subject=[Test] Action needed: sign contract name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "1jUsamyQpqxyBhJZUjoGOu"
+      ]
+    },
+    {
+      "id": "INV-E-020",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for contract.progress",
+      "actual": "Mailpit captured catalog test send subject=[Test] Signature update for contract name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "46X8fc5JzRiyaI17kMpVtW"
+      ]
+    },
+    {
+      "id": "INV-E-021",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for contract.reminder",
+      "actual": "Mailpit captured catalog test send subject=[Test] Reminder: your signature is needed; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "6LoLOa5ghFcKgA4hGPGs4i"
+      ]
+    },
+    {
+      "id": "INV-E-022",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for contract.signed_business",
+      "actual": "Mailpit captured catalog test send subject=[Test] Fully signed: contract name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "4y3M5j4weZ7pHErnNiMAiR"
+      ]
+    },
+    {
+      "id": "INV-E-023",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for contract.signed_influencer",
+      "actual": "Mailpit captured catalog test send subject=[Test] Fully signed: contract name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "0wSlN338CTZwBQwZUMDvn1"
+      ]
+    },
+    {
+      "id": "INV-E-024",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for contract.declined",
+      "actual": "Mailpit captured catalog test send subject=[Test] Agreement declined: contract name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "3slH6conpRnv5oj2xyR0Bp"
+      ]
+    },
+    {
+      "id": "INV-E-025",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for contract.voided",
+      "actual": "Mailpit captured catalog test send subject=[Test] Agreement voided: contract name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "6aWVUAnGcxKpXXnuevVIU4"
+      ]
+    },
+    {
+      "id": "INV-E-026",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for contract.message",
+      "actual": "Mailpit captured catalog test send subject=[Test] New message about contract name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "0ZiEPQbLKu1wA94qYjhDlQ"
+      ]
+    },
+    {
+      "id": "INV-E-027",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for contract.quote_expiring",
+      "actual": "Mailpit captured catalog test send subject=[Test] Quote expiring for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "3WXg2R0dfOaB29oMz0Gg3U"
+      ]
+    },
+    {
+      "id": "INV-E-028",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for contract.change_requested",
+      "actual": "Mailpit captured catalog test send subject=[Test] Review a change to collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "5Og6DXx88oaVydkPDw06yp"
+      ]
+    },
+    {
+      "id": "INV-E-029",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for contract.change_accepted",
+      "actual": "Mailpit captured catalog test send subject=[Test] Change confirmed for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "7jkwClaV6AwppsWAh5f2L3"
+      ]
+    },
+    {
+      "id": "INV-E-030",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for funding.required",
+      "actual": "Mailpit captured catalog test send subject=[Test] Funding needed for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "6Ai0i2fOix6tkQyd88NnRS"
+      ]
+    },
+    {
+      "id": "INV-E-031",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for funding.open",
+      "actual": "Mailpit captured catalog test send subject=[Test] Complete funding for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "6zQm1ZitdBRsDXAtUkKRcj"
+      ]
+    },
+    {
+      "id": "INV-E-032",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for funding.processing",
+      "actual": "Mailpit captured catalog test send subject=[Test] Payment processing for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "3JeRHovJrAewYYKcYHbXlF"
+      ]
+    },
+    {
+      "id": "INV-E-033",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for funding.confirmed_business",
+      "actual": "Mailpit captured catalog test send subject=[Test] Funding confirmed for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "3dLZ3Xi2dvXYz0gKc2d3sx"
+      ]
+    },
+    {
+      "id": "INV-E-034",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for funding.confirmed_influencer",
+      "actual": "Mailpit captured catalog test send subject=[Test] You can begin collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "0IjFNoOhnbWe0OLExcOnoO"
+      ]
+    },
+    {
+      "id": "INV-E-035",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for funding.failed",
+      "actual": "Mailpit captured catalog test send subject=[Test] Funding did not complete for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "68kUlULTGRPjsRchiAqjTY"
+      ]
+    },
+    {
+      "id": "INV-E-036",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for funding.expired",
+      "actual": "Mailpit captured catalog test send subject=[Test] Funding link expired for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "2KvuvuVPBc45tOrHpU8v3V"
+      ]
+    },
+    {
+      "id": "INV-E-037",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for milestone.submitted",
+      "actual": "Mailpit captured catalog test send subject=[Test] Ready for review: milestone name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "4mFTzrjvWAaZKYdgFN0fvO"
+      ]
+    },
+    {
+      "id": "INV-E-038",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for milestone.review_reminder",
+      "actual": "Mailpit captured catalog test send subject=[Test] Review due soon: milestone name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "5iUQ8x2XCVCxjqPteijuIk"
+      ]
+    },
+    {
+      "id": "INV-E-039",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for milestone.revision",
+      "actual": "Mailpit captured catalog test send subject=[Test] Revision requested for milestone name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "1soxsrGnOsUM4fceI2Ut6f"
+      ]
+    },
+    {
+      "id": "INV-E-040",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for milestone.approved",
+      "actual": "Mailpit captured catalog test send subject=[Test] Approved: milestone name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "1NK1ysI3P2RlsSLa7zn7CP"
+      ]
+    },
+    {
+      "id": "INV-E-041",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for milestone.auto_approved",
+      "actual": "Mailpit captured catalog test send subject=[Test] Review period ended for milestone name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "52oveTsfTuA59QGuvODxF6"
+      ]
+    },
+    {
+      "id": "INV-E-042",
+      "cluster": "DEPOSITS_CLOSED_AND_MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Sandbox money event + Mailpit message for payout/refund template",
+      "actual": "Mail portion: catalog Send-test intercepted in Mailpit (subject=[Test] Payout processing for milestone name). Deposit/money event not fired (journey_funding closed / no live deposits).",
+      "blocker": "DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored \u2014 catalog test send PROVEN; payout/refund journey remains Blocked.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "0ZutKzfDwwRGHv0EVhDpL3"
+      ]
+    },
+    {
+      "id": "INV-E-043",
+      "cluster": "DEPOSITS_CLOSED_AND_MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Sandbox money event + Mailpit message for payout/refund template",
+      "actual": "Mail portion: catalog Send-test intercepted in Mailpit (subject=[Test] Payout processing for collaboration name). Deposit/money event not fired (journey_funding closed / no live deposits).",
+      "blocker": "DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored \u2014 catalog test send PROVEN; payout/refund journey remains Blocked.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "4emTLV2VtiUaoRt9YprApw"
+      ]
+    },
+    {
+      "id": "INV-E-044",
+      "cluster": "DEPOSITS_CLOSED_AND_MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Sandbox money event + Mailpit message for payout/refund template",
+      "actual": "Mail portion: catalog Send-test intercepted in Mailpit (subject=[Test] Payout confirmed for milestone name). Deposit/money event not fired (journey_funding closed / no live deposits).",
+      "blocker": "DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored \u2014 catalog test send PROVEN; payout/refund journey remains Blocked.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "5XT9tbuCtoTeBqsP63FcbJ"
+      ]
+    },
+    {
+      "id": "INV-E-045",
+      "cluster": "DEPOSITS_CLOSED_AND_MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Sandbox money event + Mailpit message for payout/refund template",
+      "actual": "Mail portion: catalog Send-test intercepted in Mailpit (subject=[Test] Milestone payout completed for collaboration name). Deposit/money event not fired (journey_funding closed / no live deposits).",
+      "blocker": "DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored \u2014 catalog test send PROVEN; payout/refund journey remains Blocked.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "4QRJT78PfrehHiPg2jOrNa"
+      ]
+    },
+    {
+      "id": "INV-E-046",
+      "cluster": "DEPOSITS_CLOSED_AND_MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Sandbox money event + Mailpit message for payout/refund template",
+      "actual": "Mail portion: catalog Send-test intercepted in Mailpit (subject=[Test] Your payout needs attention). Deposit/money event not fired (journey_funding closed / no live deposits).",
+      "blocker": "DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored \u2014 catalog test send PROVEN; payout/refund journey remains Blocked.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "7KgMAU3kpxe0gW4wLif9qw"
+      ]
+    },
+    {
+      "id": "INV-E-047",
+      "cluster": "DEPOSITS_CLOSED_AND_MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Sandbox money event + Mailpit message for payout/refund template",
+      "actual": "Mail portion: catalog Send-test intercepted in Mailpit (subject=[Test] [Finance] Payout failed: public reference). Deposit/money event not fired (journey_funding closed / no live deposits).",
+      "blocker": "DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored \u2014 catalog test send PROVEN; payout/refund journey remains Blocked.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "4Ohbz1jJ48ZE15KBDWczVC"
+      ]
+    },
+    {
+      "id": "INV-E-048",
+      "cluster": "DEPOSITS_CLOSED_AND_MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Sandbox money event + Mailpit message for payout/refund template",
+      "actual": "Mail portion: catalog Send-test intercepted in Mailpit (subject=[Test] Payout retry started for milestone name). Deposit/money event not fired (journey_funding closed / no live deposits).",
+      "blocker": "DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored \u2014 catalog test send PROVEN; payout/refund journey remains Blocked.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "5mAjGcWHswjPN2kaV9IXbX"
+      ]
+    },
+    {
+      "id": "INV-E-049",
+      "cluster": "DEPOSITS_CLOSED_AND_MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Sandbox money event + Mailpit message for payout/refund template",
+      "actual": "Mail portion: catalog Send-test intercepted in Mailpit (subject=[Test] Payout returned for milestone name). Deposit/money event not fired (journey_funding closed / no live deposits).",
+      "blocker": "DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored \u2014 catalog test send PROVEN; payout/refund journey remains Blocked.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "2aSMavItKtshXc4ZYT3ZZ1"
+      ]
+    },
+    {
+      "id": "INV-E-050",
+      "cluster": "DEPOSITS_CLOSED_AND_MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Sandbox money event + Mailpit message for payout/refund template",
+      "actual": "Mail portion: catalog Send-test intercepted in Mailpit (subject=[Test] Payment update for collaboration name). Deposit/money event not fired (journey_funding closed / no live deposits).",
+      "blocker": "DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored \u2014 catalog test send PROVEN; payout/refund journey remains Blocked.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "2psWcMaYJ3HyRia1UFlSa9"
+      ]
+    },
+    {
+      "id": "INV-E-051",
+      "cluster": "DEPOSITS_CLOSED_AND_MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Sandbox money event + Mailpit message for payout/refund template",
+      "actual": "Mail portion: catalog Send-test intercepted in Mailpit (subject=[Test] [Finance] Payout returned: public reference). Deposit/money event not fired (journey_funding closed / no live deposits).",
+      "blocker": "DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored \u2014 catalog test send PROVEN; payout/refund journey remains Blocked.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "6ciPt1nZAkQs1PdB4kZ1I5"
+      ]
+    },
+    {
+      "id": "INV-E-052",
+      "cluster": "DEPOSITS_CLOSED_AND_MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Sandbox money event + Mailpit message for payout/refund template",
+      "actual": "Mail portion: catalog Send-test intercepted in Mailpit (subject=[Test] Your payout setup is ready). Deposit/money event not fired (journey_funding closed / no live deposits).",
+      "blocker": "DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored \u2014 catalog test send PROVEN; payout/refund journey remains Blocked.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "0nmWzzgAtRuu2PUV8yiQjx"
+      ]
+    },
+    {
+      "id": "INV-E-053",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for dispute.opened",
+      "actual": "Mailpit captured catalog test send subject=[Test] Dispute opened for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "74VftyxbYMNsMEEMXUwDYx"
+      ]
+    },
+    {
+      "id": "INV-E-054",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for dispute.opened_admin",
+      "actual": "Mailpit captured catalog test send subject=[Test] [Action needed] New dispute: CASE-20418; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "5gyTqmRTcyDUR2jSG96RVL"
+      ]
+    },
+    {
+      "id": "INV-E-055",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for dispute.resolved",
+      "actual": "Mailpit captured catalog test send subject=[Test] Dispute outcome for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "6wFeHMZIEUdO8liMDU0kKn"
+      ]
+    },
+    {
+      "id": "INV-E-056",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for dispute.response_reminder",
+      "actual": "Mailpit captured catalog test send subject=[Test] Response overdue for dispute CASE-20418; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "7hpyxYiuAQBozdWbfXoO0O"
+      ]
+    },
+    {
+      "id": "INV-E-057",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for dispute.overdue_admin",
+      "actual": "Mailpit captured catalog test send subject=[Test] [Action needed] Dispute overdue: CASE-20418; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "0oyc0NHz6vjf7ylcKm44M0"
+      ]
+    },
+    {
+      "id": "INV-E-058",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for cancellation.review",
+      "actual": "Mailpit captured catalog test send subject=[Test] Review cancellation for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "2ZnjQLpbzmY5WHGQa62iQP"
+      ]
+    },
+    {
+      "id": "INV-E-059",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for cancellation.request_received",
+      "actual": "Mailpit captured catalog test send subject=[Test] Cancellation requested for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "6ddFsHObg5WIvkwoQc6ZJN"
+      ]
+    },
+    {
+      "id": "INV-E-060",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for cancellation.review_admin",
+      "actual": "Mailpit captured catalog test send subject=[Test] [Finance] Review cancellation: collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "4LuBUKb4hJWmbs72HzVG8Y"
+      ]
+    },
+    {
+      "id": "INV-E-061",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for cancellation.waiting_payout",
+      "actual": "Mailpit captured catalog test send subject=[Test] Cancellation update for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "1YvgqHpdhLXfaCYvvpiv9p"
+      ]
+    },
+    {
+      "id": "INV-E-062",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for cancellation.completed",
+      "actual": "Mailpit captured catalog test send subject=[Test] Collaboration cancelled: collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "3mGjnjnF7j45S9LMmfS78h"
+      ]
+    },
+    {
+      "id": "INV-E-063",
+      "cluster": "DEPOSITS_CLOSED_AND_MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Sandbox money event + Mailpit message for payout/refund template",
+      "actual": "Mail portion: catalog Send-test intercepted in Mailpit (subject=[Test] Refund processing for collaboration name). Deposit/money event not fired (journey_funding closed / no live deposits).",
+      "blocker": "DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored \u2014 catalog test send PROVEN; payout/refund journey remains Blocked.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "7ctQFt5bmTLHO3FOvEW7Y0"
+      ]
+    },
+    {
+      "id": "INV-E-064",
+      "cluster": "DEPOSITS_CLOSED_AND_MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Sandbox money event + Mailpit message for payout/refund template",
+      "actual": "Mail portion: catalog Send-test intercepted in Mailpit (subject=[Test] Refund confirmed for collaboration name). Deposit/money event not fired (journey_funding closed / no live deposits).",
+      "blocker": "DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored \u2014 catalog test send PROVEN; payout/refund journey remains Blocked.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "5u45pn2iSwNPtAXG0O4dpj"
+      ]
+    },
+    {
+      "id": "INV-E-065",
+      "cluster": "DEPOSITS_CLOSED_AND_MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Sandbox money event + Mailpit message for payout/refund template",
+      "actual": "Mail portion: catalog Send-test intercepted in Mailpit (subject=[Test] Settlement update for collaboration name). Deposit/money event not fired (journey_funding closed / no live deposits).",
+      "blocker": "DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored \u2014 catalog test send PROVEN; payout/refund journey remains Blocked.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "0Ib7v2OzxuEKqyO1jUdV0o"
+      ]
+    },
+    {
+      "id": "INV-E-066",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for payment.risk",
+      "actual": "Mailpit captured catalog test send subject=[Test] Payment review for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "1uyLo2oTuxuiEvgqlpyEue"
+      ]
+    },
+    {
+      "id": "INV-E-067",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for payment.activation_receipt",
+      "actual": "Mailpit captured catalog test send subject=[Test] Activation fee update for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "1survjHtgzqFphNMqwfVux"
+      ]
+    },
+    {
+      "id": "INV-E-068",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for ops.relationship_claim",
+      "actual": "Mailpit captured catalog test send subject=[Test] [Review needed] Relationship claim for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "2UcvzsYsdp9uzCs9irq0ev"
+      ]
+    },
+    {
+      "id": "INV-E-069",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for ops.route_blocked",
+      "actual": "Mailpit captured catalog test send subject=[Test] Funding unavailable for collaboration name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "0C3eoxuDuCRFFZqxcgRclT"
+      ]
+    },
+    {
+      "id": "INV-E-070",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for ops.route_blocked_admin",
+      "actual": "Mailpit captured catalog test send subject=[Test] [Finance] Route blocked for country name; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "0wJvi3WGY3EyPKpUIAsEha"
+      ]
+    },
+    {
+      "id": "INV-E-071",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for ops.stale_funding",
+      "actual": "Mailpit captured catalog test send subject=[Test] [Finance] Unpaid funding needs review; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "5FGt7mjXd5ZA0qJy9PRmFq"
+      ]
+    },
+    {
+      "id": "INV-E-072",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for ops.ledger_mismatch",
+      "actual": "Mailpit captured catalog test send subject=[Test] [Urgent finance review] Payment balance mismatch; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "7TbnrbVWHm8Yl6hWSL0giD"
+      ]
+    },
+    {
+      "id": "INV-E-073",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for ops.hold_warning",
+      "actual": "Mailpit captured catalog test send subject=[Test] [Finance] Held funds need review; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "2pG5aO7amKsvzNc92upJwq"
+      ]
+    },
+    {
+      "id": "INV-E-074",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for billing.paid",
+      "actual": "Mailpit captured catalog test send subject=[Test] Receipt for your Influrios Creator Pro plan; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "51wrwOfgs8mR3g1sKLfRuI"
+      ]
+    },
+    {
+      "id": "INV-E-075",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for billing.failed",
+      "actual": "Mailpit captured catalog test send subject=[Test] Action needed for your Influrios subscription; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "62mEgKiNCACDHFPM64HEIz"
+      ]
+    },
+    {
+      "id": "INV-E-076",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for billing.renewal",
+      "actual": "Mailpit captured catalog test send subject=[Test] Your Influrios plan renews on December 12, 2026; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "3QYeWR6HGPz6fse3NOTDA6"
+      ]
+    },
+    {
+      "id": "INV-E-077",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for billing.cancel_scheduled",
+      "actual": "Mailpit captured catalog test send subject=[Test] Your Influrios subscription cancellation is scheduled; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "4B8KQhJjzsdpJUxhoImjLq"
+      ]
+    },
+    {
+      "id": "INV-E-078",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for billing.ended",
+      "actual": "Mailpit captured catalog test send subject=[Test] Your Influrios subscription has ended; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "1m8MUBdg7oVcljUW3gxEIf"
+      ]
+    },
+    {
+      "id": "INV-E-079",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Sink-confirmed catalog delivery for marketing.broadcast",
+      "actual": "Mailpit captured catalog test send subject=[Test] Bring your influencer profile together with Influrios; smtpOk=true",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json"
+      ],
+      "mailpitIds": [
+        "5N84CZq0OKUVHzKNz7gmZ5"
+      ]
+    },
+    {
+      "id": "INV-I-019",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "Mailpit intercepts admin SMTP Send test",
+      "actual": "login=http://127.0.0.1:3000/admin; before=0; after=1; gained=1; sample=[{\"id\":\"7aPdGG0hDQ9t1RAmqJgYHr\",\"subject\":\"Preview recipient, your Influrios profile is ready\",\"to\":[{\"Name\":\"\",\"Address\":\"audit.r3pr12vx.influencer-a@example.com\"}]}]",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-i-019-admin-send-test.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-i-019-mailpit.json"
+      ],
+      "mailpitIds": [
+        "7aPdGG0hDQ9t1RAmqJgYHr"
+      ]
+    },
+    {
+      "id": "INV-J-002",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "verification_email job delivered to Mailpit",
+      "actual": "resent=true; fallbackQueued=false; mailpitTotal=1; subject=Your Influrios verification code; resendError=",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-a-004-verify-mail.json"
+      ],
+      "mailpitIds": [
+        "70T72Wvssp8sfEQefDdfSQ"
+      ]
+    },
+    {
+      "id": "INV-J-003",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "claim_verification_email job delivered to Mailpit",
+      "actual": "queued=true; mailpitTotal=1; subject=Verify your email for your Influrios Card",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-j-003-claim-mail.json"
+      ],
+      "mailpitIds": [
+        "2BIT5OCzc2JfWNvjqhZ5Cv"
+      ]
+    },
+    {
+      "id": "INV-J-004",
+      "cluster": "MAIL_SINK",
+      "status": "Pass",
+      "expected": "password_reset_email job delivered to Mailpit",
+      "actual": "queued=true; mailpitTotal=1; subject=Reset your Influrios password",
+      "blocker": null,
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-a-005-reset-mail.json"
+      ],
+      "mailpitIds": [
+        "4wPag5prZLTFusK4uX0EfX"
+      ]
+    },
+    {
+      "id": "INV-N-010",
+      "cluster": "MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Collab notification email kind sink-confirmed on state change",
+      "actual": "Mailpit sink restored. Matching catalog funding/milestone/cancellation templates Pass via Send-test. Live notification emission event not fired this run (avoid deposit reopen).",
+      "blocker": "EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-i-019-mailpit.json"
+      ]
+    },
+    {
+      "id": "INV-N-011",
+      "cluster": "MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Collab notification email kind sink-confirmed on state change",
+      "actual": "Mailpit sink restored. Matching catalog funding/milestone/cancellation templates Pass via Send-test. Live notification emission event not fired this run (avoid deposit reopen).",
+      "blocker": "EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-i-019-mailpit.json"
+      ]
+    },
+    {
+      "id": "INV-N-012",
+      "cluster": "MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Collab notification email kind sink-confirmed on state change",
+      "actual": "Mailpit sink restored. Matching catalog funding/milestone/cancellation templates Pass via Send-test. Live notification emission event not fired this run (avoid deposit reopen).",
+      "blocker": "EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-i-019-mailpit.json"
+      ]
+    },
+    {
+      "id": "INV-N-013",
+      "cluster": "MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Collab notification email kind sink-confirmed on state change",
+      "actual": "Mailpit sink restored. Matching catalog funding/milestone/cancellation templates Pass via Send-test. Live notification emission event not fired this run (avoid deposit reopen).",
+      "blocker": "EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-i-019-mailpit.json"
+      ]
+    },
+    {
+      "id": "INV-N-014",
+      "cluster": "MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Collab notification email kind sink-confirmed on state change",
+      "actual": "Mailpit sink restored. Matching catalog funding/milestone/cancellation templates Pass via Send-test. Live notification emission event not fired this run (avoid deposit reopen).",
+      "blocker": "EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-i-019-mailpit.json"
+      ]
+    },
+    {
+      "id": "INV-N-015",
+      "cluster": "MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Collab notification email kind sink-confirmed on state change",
+      "actual": "Mailpit sink restored. Matching catalog funding/milestone/cancellation templates Pass via Send-test. Live notification emission event not fired this run (avoid deposit reopen).",
+      "blocker": "EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-i-019-mailpit.json"
+      ]
+    },
+    {
+      "id": "INV-N-016",
+      "cluster": "MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Collab notification email kind sink-confirmed on state change",
+      "actual": "Mailpit sink restored. Matching catalog funding/milestone/cancellation templates Pass via Send-test. Live notification emission event not fired this run (avoid deposit reopen).",
+      "blocker": "EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-i-019-mailpit.json"
+      ]
+    },
+    {
+      "id": "INV-N-017",
+      "cluster": "MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Collab notification email kind sink-confirmed on state change",
+      "actual": "Mailpit sink restored. Matching catalog funding/milestone/cancellation templates Pass via Send-test. Live notification emission event not fired this run (avoid deposit reopen).",
+      "blocker": "EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-i-019-mailpit.json"
+      ]
+    },
+    {
+      "id": "INV-N-027",
+      "cluster": "MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Collab notification email kind sink-confirmed on state change",
+      "actual": "Mailpit sink restored. Matching catalog funding/milestone/cancellation templates Pass via Send-test. Live notification emission event not fired this run (avoid deposit reopen).",
+      "blocker": "EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/catalog-sends.json",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-i-019-mailpit.json"
+      ]
+    },
+    {
+      "id": "INV-R-017",
+      "cluster": "MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Claim draft + mail sink verify/publish path",
+      "actual": "Mailpit sink restored and proven (INV-I-019). Claim draft fixture still missing on isolated host.",
+      "blocker": "CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-i-019-mailpit.json"
+      ]
+    },
+    {
+      "id": "INV-R-018",
+      "cluster": "MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Claim draft + mail sink verify/publish path",
+      "actual": "Mailpit sink restored and proven (INV-I-019). Claim draft fixture still missing on isolated host.",
+      "blocker": "CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-i-019-mailpit.json"
+      ]
+    },
+    {
+      "id": "INV-R-019",
+      "cluster": "MAIL_SINK",
+      "status": "Blocked",
+      "expected": "Claim draft + mail sink verify/publish path",
+      "actual": "Mailpit sink restored and proven (INV-I-019). Claim draft fixture still missing on isolated host.",
+      "blocker": "CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/mail-sink/inv-i-019-mailpit.json"
+      ]
+    }
+  ]
+}

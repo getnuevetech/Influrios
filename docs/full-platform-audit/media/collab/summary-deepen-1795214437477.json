@@ -1,0 +1,59 @@
+{
+  "generatedAt": "2026-11-20T22:40:37.477Z",
+  "phase": "deepen",
+  "counts": {
+    "Blocked": 2,
+    "Pass": 4
+  },
+  "total": 6,
+  "results": [
+    {
+      "status": "Blocked",
+      "id": "INV-A-052/056/057:desktop:business:recheck",
+      "case": "Fund CTA after click (live deposits closed)",
+      "expected": "Refuse charge / no live Stripe deposit",
+      "actual": "clicked=true; stripeRedirect=false; url=https://influrios.com/collaboration/contract; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2 A Agboola Olomola A",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/business-fund-cta-result.png"
+    },
+    {
+      "status": "Blocked",
+      "id": "INV-R-030:desktop",
+      "case": "Funding checkout route under closed deposits",
+      "expected": "No live Stripe charge session",
+      "actual": "http=404; url=https://influrios.com/payments/checkout/ips19-closed-probe; sample=404 This page could not be found.",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/business-checkout-probe.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-059/060:desktop:deep",
+      "case": "Milestone review controls",
+      "expected": "Review actions or terminal milestone state",
+      "actual": "requestChanges=false; approve=true; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Collaborations / Workspace 4",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/business-milestone-open.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-059/060:desktop",
+      "case": "Request detail route",
+      "expected": "Detail loads",
+      "actual": "http=200; url=https://influrios.com/collaboration/business/request/new?step=0; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/business-request-detail.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-P-009:desktop",
+      "case": "Active collaboration overview",
+      "expected": "Overview/workroom entry",
+      "actual": "∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2 A Agboola Olomola A",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/desktop/business-overview-popup.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-D-001-signed-out",
+      "case": "Signed-out deny #536",
+      "expected": "401/403",
+      "actual": "status=401; body=Sign in to open this file.",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/signed-out-deny.txt"
+    }
+  ]
+}

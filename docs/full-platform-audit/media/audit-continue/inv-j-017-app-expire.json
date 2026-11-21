@@ -1,0 +1,14 @@
+{
+  "oldAppId": "cmwpvxs2a000xjsk5rforzpn6",
+  "exp1": {
+    "mode": "auto",
+    "scanned": 1,
+    "expired": 1
+  },
+  "exp2": {
+    "mode": "auto",
+    "scanned": 0,
+    "expired": 0
+  },
+  "statusAfter": "EXPIRED"
+}

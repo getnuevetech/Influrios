@@ -1,0 +1,1108 @@
+{
+  "INV-E-001": {
+    "templateId": "account.verify",
+    "subject": "[Test] Your Influrios verification code",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 1,
+    "afterTotal": 2,
+    "newest": [
+      {
+        "id": "7QytcQ1QeEewoWPssyG1qo",
+        "subject": "[Test] Your Influrios verification code"
+      }
+    ]
+  },
+  "INV-E-002": {
+    "templateId": "account.card_verify",
+    "subject": "[Test] Verify your email for your Influrios Card",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 2,
+    "afterTotal": 3,
+    "newest": [
+      {
+        "id": "523dqrO2oG9ocrhYCvix0b",
+        "subject": "[Test] Verify your email for your Influrios Card"
+      }
+    ]
+  },
+  "INV-E-003": {
+    "templateId": "account.reset",
+    "subject": "[Test] Reset your Influrios password",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 3,
+    "afterTotal": 4,
+    "newest": [
+      {
+        "id": "6uoLdQlrPvFGHiPJutbfce",
+        "subject": "[Test] Reset your Influrios password"
+      }
+    ]
+  },
+  "INV-E-004": {
+    "templateId": "account.admin_setup",
+    "subject": "[Test] Set up your Influrios admin account",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 4,
+    "afterTotal": 5,
+    "newest": [
+      {
+        "id": "2dyceNbcwnDeGkuJM4f9lS",
+        "subject": "[Test] Set up your Influrios admin account"
+      }
+    ]
+  },
+  "INV-E-005": {
+    "templateId": "account.claim",
+    "subject": "[Test] Alex, create your Influrios Card",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 5,
+    "afterTotal": 6,
+    "newest": [
+      {
+        "id": "4rVQ3GRXlJR0NMnEvGblbp",
+        "subject": "[Test] Alex, create your Influrios Card"
+      }
+    ]
+  },
+  "INV-E-006": {
+    "templateId": "account.claim_followup",
+    "subject": "[Test] Your Influrios Card invitation is still open",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 6,
+    "afterTotal": 7,
+    "newest": [
+      {
+        "id": "7QJfdXrHwKLFW3sMWXTE7b",
+        "subject": "[Test] Your Influrios Card invitation is still open"
+      }
+    ]
+  },
+  "INV-E-007": {
+    "templateId": "account.welcome_influencer",
+    "subject": "[Test] Welcome to Influrios, Alex",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 7,
+    "afterTotal": 8,
+    "newest": [
+      {
+        "id": "1c2JXqm4VvQ8BXeO20JG9V",
+        "subject": "[Test] Welcome to Influrios, Alex"
+      }
+    ]
+  },
+  "INV-E-008": {
+    "templateId": "account.welcome_business",
+    "subject": "[Test] Welcome to Influrios, Alex",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 8,
+    "afterTotal": 9,
+    "newest": [
+      {
+        "id": "3oAeD6ORulQbcuHum4Dzba",
+        "subject": "[Test] Welcome to Influrios, Alex"
+      }
+    ]
+  },
+  "INV-E-009": {
+    "templateId": "account.password_changed",
+    "subject": "[Test] Your Influrios password was changed",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 9,
+    "afterTotal": 10,
+    "newest": [
+      {
+        "id": "5VsdBAq7QCFu6GY01XFj9P",
+        "subject": "[Test] Your Influrios password was changed"
+      }
+    ]
+  },
+  "INV-E-010": {
+    "templateId": "account.smtp_test",
+    "subject": "[Test] [TEST] Influrios email delivery check",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 10,
+    "afterTotal": 11,
+    "newest": [
+      {
+        "id": "49H3rfa92Sg3kHHHyCqPdk",
+        "subject": "[Test] [TEST] Influrios email delivery check"
+      }
+    ]
+  },
+  "INV-E-011": {
+    "templateId": "invite.collaboration",
+    "subject": "[Test] Northwind Studio invited you to collaborate",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 11,
+    "afterTotal": 12,
+    "newest": [
+      {
+        "id": "2amNfFikYQPlyK8TKVEZcc",
+        "subject": "[Test] Northwind Studio invited you to collaborate"
+      }
+    ]
+  },
+  "INV-E-012": {
+    "templateId": "invite.private_campaign",
+    "subject": "[Test] Private invitation from Northwind Studio",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 12,
+    "afterTotal": 13,
+    "newest": [
+      {
+        "id": "6KroTqCXbr6m2ZEmaVpUNu",
+        "subject": "[Test] Private invitation from Northwind Studio"
+      }
+    ]
+  },
+  "INV-E-013": {
+    "templateId": "invite.accepted",
+    "subject": "[Test] Alex Rivera accepted your invitation",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 13,
+    "afterTotal": 14,
+    "newest": [
+      {
+        "id": "7T3YouIOFDFTVlFxKY0CpJ",
+        "subject": "[Test] Alex Rivera accepted your invitation"
+      }
+    ]
+  },
+  "INV-E-014": {
+    "templateId": "invite.declined",
+    "subject": "[Test] Invitation update for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 14,
+    "afterTotal": 15,
+    "newest": [
+      {
+        "id": "0Xt8zUg0eqCkj8DZusq67X",
+        "subject": "[Test] Invitation update for collaboration name"
+      }
+    ]
+  },
+  "INV-E-015": {
+    "templateId": "invite.team_sent",
+    "subject": "[Test] sender name invited you to a team proposal",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 15,
+    "afterTotal": 16,
+    "newest": [
+      {
+        "id": "1I79nBDbIRbuAMKALX6Hx5",
+        "subject": "[Test] sender name invited you to a team proposal"
+      }
+    ]
+  },
+  "INV-E-016": {
+    "templateId": "invite.team_accepted",
+    "subject": "[Test] recipient name accepted the team proposal",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 16,
+    "afterTotal": 17,
+    "newest": [
+      {
+        "id": "5bdTYaLpLexIBJljMf2XtN",
+        "subject": "[Test] recipient name accepted the team proposal"
+      }
+    ]
+  },
+  "INV-E-017": {
+    "templateId": "invite.team_declined",
+    "subject": "[Test] Team proposal declined by recipient name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 17,
+    "afterTotal": 18,
+    "newest": [
+      {
+        "id": "2al1OPp6agbZdzpOJxoX7K",
+        "subject": "[Test] Team proposal declined by recipient name"
+      }
+    ]
+  },
+  "INV-E-018": {
+    "templateId": "invite.team_expired",
+    "subject": "[Test] Team proposal expired for team name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 18,
+    "afterTotal": 19,
+    "newest": [
+      {
+        "id": "4F01iaov96mRce8nkHoFS1",
+        "subject": "[Test] Team proposal expired for team name"
+      }
+    ]
+  },
+  "INV-E-019": {
+    "templateId": "contract.sign",
+    "subject": "[Test] Action needed: sign contract name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 19,
+    "afterTotal": 20,
+    "newest": [
+      {
+        "id": "1jUsamyQpqxyBhJZUjoGOu",
+        "subject": "[Test] Action needed: sign contract name"
+      }
+    ]
+  },
+  "INV-E-020": {
+    "templateId": "contract.progress",
+    "subject": "[Test] Signature update for contract name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 20,
+    "afterTotal": 21,
+    "newest": [
+      {
+        "id": "46X8fc5JzRiyaI17kMpVtW",
+        "subject": "[Test] Signature update for contract name"
+      }
+    ]
+  },
+  "INV-E-021": {
+    "templateId": "contract.reminder",
+    "subject": "[Test] Reminder: your signature is needed",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 21,
+    "afterTotal": 22,
+    "newest": [
+      {
+        "id": "6LoLOa5ghFcKgA4hGPGs4i",
+        "subject": "[Test] Reminder: your signature is needed"
+      }
+    ]
+  },
+  "INV-E-022": {
+    "templateId": "contract.signed_business",
+    "subject": "[Test] Fully signed: contract name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 22,
+    "afterTotal": 23,
+    "newest": [
+      {
+        "id": "4y3M5j4weZ7pHErnNiMAiR",
+        "subject": "[Test] Fully signed: contract name"
+      }
+    ]
+  },
+  "INV-E-023": {
+    "templateId": "contract.signed_influencer",
+    "subject": "[Test] Fully signed: contract name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 23,
+    "afterTotal": 24,
+    "newest": [
+      {
+        "id": "0wSlN338CTZwBQwZUMDvn1",
+        "subject": "[Test] Fully signed: contract name"
+      }
+    ]
+  },
+  "INV-E-024": {
+    "templateId": "contract.declined",
+    "subject": "[Test] Agreement declined: contract name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 24,
+    "afterTotal": 25,
+    "newest": [
+      {
+        "id": "3slH6conpRnv5oj2xyR0Bp",
+        "subject": "[Test] Agreement declined: contract name"
+      }
+    ]
+  },
+  "INV-E-025": {
+    "templateId": "contract.voided",
+    "subject": "[Test] Agreement voided: contract name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 25,
+    "afterTotal": 26,
+    "newest": [
+      {
+        "id": "6aWVUAnGcxKpXXnuevVIU4",
+        "subject": "[Test] Agreement voided: contract name"
+      }
+    ]
+  },
+  "INV-E-026": {
+    "templateId": "contract.message",
+    "subject": "[Test] New message about contract name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 26,
+    "afterTotal": 27,
+    "newest": [
+      {
+        "id": "0ZiEPQbLKu1wA94qYjhDlQ",
+        "subject": "[Test] New message about contract name"
+      }
+    ]
+  },
+  "INV-E-027": {
+    "templateId": "contract.quote_expiring",
+    "subject": "[Test] Quote expiring for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 27,
+    "afterTotal": 28,
+    "newest": [
+      {
+        "id": "3WXg2R0dfOaB29oMz0Gg3U",
+        "subject": "[Test] Quote expiring for collaboration name"
+      }
+    ]
+  },
+  "INV-E-028": {
+    "templateId": "contract.change_requested",
+    "subject": "[Test] Review a change to collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 28,
+    "afterTotal": 29,
+    "newest": [
+      {
+        "id": "5Og6DXx88oaVydkPDw06yp",
+        "subject": "[Test] Review a change to collaboration name"
+      }
+    ]
+  },
+  "INV-E-029": {
+    "templateId": "contract.change_accepted",
+    "subject": "[Test] Change confirmed for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 29,
+    "afterTotal": 30,
+    "newest": [
+      {
+        "id": "7jkwClaV6AwppsWAh5f2L3",
+        "subject": "[Test] Change confirmed for collaboration name"
+      }
+    ]
+  },
+  "INV-E-030": {
+    "templateId": "funding.required",
+    "subject": "[Test] Funding needed for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 30,
+    "afterTotal": 31,
+    "newest": [
+      {
+        "id": "6Ai0i2fOix6tkQyd88NnRS",
+        "subject": "[Test] Funding needed for collaboration name"
+      }
+    ]
+  },
+  "INV-E-031": {
+    "templateId": "funding.open",
+    "subject": "[Test] Complete funding for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 31,
+    "afterTotal": 32,
+    "newest": [
+      {
+        "id": "6zQm1ZitdBRsDXAtUkKRcj",
+        "subject": "[Test] Complete funding for collaboration name"
+      }
+    ]
+  },
+  "INV-E-032": {
+    "templateId": "funding.processing",
+    "subject": "[Test] Payment processing for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 32,
+    "afterTotal": 33,
+    "newest": [
+      {
+        "id": "3JeRHovJrAewYYKcYHbXlF",
+        "subject": "[Test] Payment processing for collaboration name"
+      }
+    ]
+  },
+  "INV-E-033": {
+    "templateId": "funding.confirmed_business",
+    "subject": "[Test] Funding confirmed for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 33,
+    "afterTotal": 34,
+    "newest": [
+      {
+        "id": "3dLZ3Xi2dvXYz0gKc2d3sx",
+        "subject": "[Test] Funding confirmed for collaboration name"
+      }
+    ]
+  },
+  "INV-E-034": {
+    "templateId": "funding.confirmed_influencer",
+    "subject": "[Test] You can begin collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 34,
+    "afterTotal": 35,
+    "newest": [
+      {
+        "id": "0IjFNoOhnbWe0OLExcOnoO",
+        "subject": "[Test] You can begin collaboration name"
+      }
+    ]
+  },
+  "INV-E-035": {
+    "templateId": "funding.failed",
+    "subject": "[Test] Funding did not complete for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 35,
+    "afterTotal": 36,
+    "newest": [
+      {
+        "id": "68kUlULTGRPjsRchiAqjTY",
+        "subject": "[Test] Funding did not complete for collaboration name"
+      }
+    ]
+  },
+  "INV-E-036": {
+    "templateId": "funding.expired",
+    "subject": "[Test] Funding link expired for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 36,
+    "afterTotal": 37,
+    "newest": [
+      {
+        "id": "2KvuvuVPBc45tOrHpU8v3V",
+        "subject": "[Test] Funding link expired for collaboration name"
+      }
+    ]
+  },
+  "INV-E-037": {
+    "templateId": "milestone.submitted",
+    "subject": "[Test] Ready for review: milestone name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 37,
+    "afterTotal": 38,
+    "newest": [
+      {
+        "id": "4mFTzrjvWAaZKYdgFN0fvO",
+        "subject": "[Test] Ready for review: milestone name"
+      }
+    ]
+  },
+  "INV-E-038": {
+    "templateId": "milestone.review_reminder",
+    "subject": "[Test] Review due soon: milestone name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 38,
+    "afterTotal": 39,
+    "newest": [
+      {
+        "id": "5iUQ8x2XCVCxjqPteijuIk",
+        "subject": "[Test] Review due soon: milestone name"
+      }
+    ]
+  },
+  "INV-E-039": {
+    "templateId": "milestone.revision",
+    "subject": "[Test] Revision requested for milestone name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 39,
+    "afterTotal": 40,
+    "newest": [
+      {
+        "id": "1soxsrGnOsUM4fceI2Ut6f",
+        "subject": "[Test] Revision requested for milestone name"
+      }
+    ]
+  },
+  "INV-E-040": {
+    "templateId": "milestone.approved",
+    "subject": "[Test] Approved: milestone name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 40,
+    "afterTotal": 41,
+    "newest": [
+      {
+        "id": "1NK1ysI3P2RlsSLa7zn7CP",
+        "subject": "[Test] Approved: milestone name"
+      }
+    ]
+  },
+  "INV-E-041": {
+    "templateId": "milestone.auto_approved",
+    "subject": "[Test] Review period ended for milestone name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 41,
+    "afterTotal": 42,
+    "newest": [
+      {
+        "id": "52oveTsfTuA59QGuvODxF6",
+        "subject": "[Test] Review period ended for milestone name"
+      }
+    ]
+  },
+  "INV-E-042": {
+    "templateId": "payout.requested",
+    "subject": "[Test] Payout processing for milestone name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 42,
+    "afterTotal": 43,
+    "newest": [
+      {
+        "id": "0ZutKzfDwwRGHv0EVhDpL3",
+        "subject": "[Test] Payout processing for milestone name"
+      }
+    ]
+  },
+  "INV-E-043": {
+    "templateId": "payout.requested_business",
+    "subject": "[Test] Payout processing for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 43,
+    "afterTotal": 44,
+    "newest": [
+      {
+        "id": "4emTLV2VtiUaoRt9YprApw",
+        "subject": "[Test] Payout processing for collaboration name"
+      }
+    ]
+  },
+  "INV-E-044": {
+    "templateId": "payout.confirmed",
+    "subject": "[Test] Payout confirmed for milestone name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 44,
+    "afterTotal": 45,
+    "newest": [
+      {
+        "id": "5XT9tbuCtoTeBqsP63FcbJ",
+        "subject": "[Test] Payout confirmed for milestone name"
+      }
+    ]
+  },
+  "INV-E-045": {
+    "templateId": "payout.confirmed_business",
+    "subject": "[Test] Milestone payout completed for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 45,
+    "afterTotal": 46,
+    "newest": [
+      {
+        "id": "4QRJT78PfrehHiPg2jOrNa",
+        "subject": "[Test] Milestone payout completed for collaboration name"
+      }
+    ]
+  },
+  "INV-E-046": {
+    "templateId": "payout.failed",
+    "subject": "[Test] Your payout needs attention",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 46,
+    "afterTotal": 47,
+    "newest": [
+      {
+        "id": "7KgMAU3kpxe0gW4wLif9qw",
+        "subject": "[Test] Your payout needs attention"
+      }
+    ]
+  },
+  "INV-E-047": {
+    "templateId": "payout.failed_admin",
+    "subject": "[Test] [Finance] Payout failed: public reference",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 47,
+    "afterTotal": 48,
+    "newest": [
+      {
+        "id": "4Ohbz1jJ48ZE15KBDWczVC",
+        "subject": "[Test] [Finance] Payout failed: public reference"
+      }
+    ]
+  },
+  "INV-E-048": {
+    "templateId": "payout.retry",
+    "subject": "[Test] Payout retry started for milestone name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 48,
+    "afterTotal": 49,
+    "newest": [
+      {
+        "id": "5mAjGcWHswjPN2kaV9IXbX",
+        "subject": "[Test] Payout retry started for milestone name"
+      }
+    ]
+  },
+  "INV-E-049": {
+    "templateId": "payout.returned",
+    "subject": "[Test] Payout returned for milestone name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 49,
+    "afterTotal": 50,
+    "newest": [
+      {
+        "id": "2aSMavItKtshXc4ZYT3ZZ1",
+        "subject": "[Test] Payout returned for milestone name"
+      }
+    ]
+  },
+  "INV-E-050": {
+    "templateId": "payout.returned_business",
+    "subject": "[Test] Payment update for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 50,
+    "afterTotal": 51,
+    "newest": [
+      {
+        "id": "2psWcMaYJ3HyRia1UFlSa9",
+        "subject": "[Test] Payment update for collaboration name"
+      }
+    ]
+  },
+  "INV-E-051": {
+    "templateId": "payout.returned_admin",
+    "subject": "[Test] [Finance] Payout returned: public reference",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 51,
+    "afterTotal": 52,
+    "newest": [
+      {
+        "id": "6ciPt1nZAkQs1PdB4kZ1I5",
+        "subject": "[Test] [Finance] Payout returned: public reference"
+      }
+    ]
+  },
+  "INV-E-052": {
+    "templateId": "payout.ready",
+    "subject": "[Test] Your payout setup is ready",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 52,
+    "afterTotal": 53,
+    "newest": [
+      {
+        "id": "0nmWzzgAtRuu2PUV8yiQjx",
+        "subject": "[Test] Your payout setup is ready"
+      }
+    ]
+  },
+  "INV-E-053": {
+    "templateId": "dispute.opened",
+    "subject": "[Test] Dispute opened for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 53,
+    "afterTotal": 54,
+    "newest": [
+      {
+        "id": "74VftyxbYMNsMEEMXUwDYx",
+        "subject": "[Test] Dispute opened for collaboration name"
+      }
+    ]
+  },
+  "INV-E-054": {
+    "templateId": "dispute.opened_admin",
+    "subject": "[Test] [Action needed] New dispute: CASE-20418",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 54,
+    "afterTotal": 55,
+    "newest": [
+      {
+        "id": "5gyTqmRTcyDUR2jSG96RVL",
+        "subject": "[Test] [Action needed] New dispute: CASE-20418"
+      }
+    ]
+  },
+  "INV-E-055": {
+    "templateId": "dispute.resolved",
+    "subject": "[Test] Dispute outcome for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 55,
+    "afterTotal": 56,
+    "newest": [
+      {
+        "id": "6wFeHMZIEUdO8liMDU0kKn",
+        "subject": "[Test] Dispute outcome for collaboration name"
+      }
+    ]
+  },
+  "INV-E-056": {
+    "templateId": "dispute.response_reminder",
+    "subject": "[Test] Response overdue for dispute CASE-20418",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 56,
+    "afterTotal": 57,
+    "newest": [
+      {
+        "id": "7hpyxYiuAQBozdWbfXoO0O",
+        "subject": "[Test] Response overdue for dispute CASE-20418"
+      }
+    ]
+  },
+  "INV-E-057": {
+    "templateId": "dispute.overdue_admin",
+    "subject": "[Test] [Action needed] Dispute overdue: CASE-20418",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 57,
+    "afterTotal": 58,
+    "newest": [
+      {
+        "id": "0oyc0NHz6vjf7ylcKm44M0",
+        "subject": "[Test] [Action needed] Dispute overdue: CASE-20418"
+      }
+    ]
+  },
+  "INV-E-058": {
+    "templateId": "cancellation.review",
+    "subject": "[Test] Review cancellation for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 58,
+    "afterTotal": 59,
+    "newest": [
+      {
+        "id": "2ZnjQLpbzmY5WHGQa62iQP",
+        "subject": "[Test] Review cancellation for collaboration name"
+      }
+    ]
+  },
+  "INV-E-059": {
+    "templateId": "cancellation.request_received",
+    "subject": "[Test] Cancellation requested for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 59,
+    "afterTotal": 60,
+    "newest": [
+      {
+        "id": "6ddFsHObg5WIvkwoQc6ZJN",
+        "subject": "[Test] Cancellation requested for collaboration name"
+      }
+    ]
+  },
+  "INV-E-060": {
+    "templateId": "cancellation.review_admin",
+    "subject": "[Test] [Finance] Review cancellation: collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 60,
+    "afterTotal": 61,
+    "newest": [
+      {
+        "id": "4LuBUKb4hJWmbs72HzVG8Y",
+        "subject": "[Test] [Finance] Review cancellation: collaboration name"
+      }
+    ]
+  },
+  "INV-E-061": {
+    "templateId": "cancellation.waiting_payout",
+    "subject": "[Test] Cancellation update for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 61,
+    "afterTotal": 62,
+    "newest": [
+      {
+        "id": "1YvgqHpdhLXfaCYvvpiv9p",
+        "subject": "[Test] Cancellation update for collaboration name"
+      }
+    ]
+  },
+  "INV-E-062": {
+    "templateId": "cancellation.completed",
+    "subject": "[Test] Collaboration cancelled: collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 62,
+    "afterTotal": 63,
+    "newest": [
+      {
+        "id": "3mGjnjnF7j45S9LMmfS78h",
+        "subject": "[Test] Collaboration cancelled: collaboration name"
+      }
+    ]
+  },
+  "INV-E-063": {
+    "templateId": "refund.processing",
+    "subject": "[Test] Refund processing for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 63,
+    "afterTotal": 64,
+    "newest": [
+      {
+        "id": "7ctQFt5bmTLHO3FOvEW7Y0",
+        "subject": "[Test] Refund processing for collaboration name"
+      }
+    ]
+  },
+  "INV-E-064": {
+    "templateId": "refund.completed_business",
+    "subject": "[Test] Refund confirmed for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 64,
+    "afterTotal": 65,
+    "newest": [
+      {
+        "id": "5u45pn2iSwNPtAXG0O4dpj",
+        "subject": "[Test] Refund confirmed for collaboration name"
+      }
+    ]
+  },
+  "INV-E-065": {
+    "templateId": "refund.completed_influencer",
+    "subject": "[Test] Settlement update for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 65,
+    "afterTotal": 66,
+    "newest": [
+      {
+        "id": "0Ib7v2OzxuEKqyO1jUdV0o",
+        "subject": "[Test] Settlement update for collaboration name"
+      }
+    ]
+  },
+  "INV-E-066": {
+    "templateId": "payment.risk",
+    "subject": "[Test] Payment review for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 66,
+    "afterTotal": 67,
+    "newest": [
+      {
+        "id": "1uyLo2oTuxuiEvgqlpyEue",
+        "subject": "[Test] Payment review for collaboration name"
+      }
+    ]
+  },
+  "INV-E-067": {
+    "templateId": "payment.activation_receipt",
+    "subject": "[Test] Activation fee update for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 67,
+    "afterTotal": 68,
+    "newest": [
+      {
+        "id": "1survjHtgzqFphNMqwfVux",
+        "subject": "[Test] Activation fee update for collaboration name"
+      }
+    ]
+  },
+  "INV-E-068": {
+    "templateId": "ops.relationship_claim",
+    "subject": "[Test] [Review needed] Relationship claim for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 68,
+    "afterTotal": 69,
+    "newest": [
+      {
+        "id": "2UcvzsYsdp9uzCs9irq0ev",
+        "subject": "[Test] [Review needed] Relationship claim for collaboration name"
+      }
+    ]
+  },
+  "INV-E-069": {
+    "templateId": "ops.route_blocked",
+    "subject": "[Test] Funding unavailable for collaboration name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 69,
+    "afterTotal": 70,
+    "newest": [
+      {
+        "id": "0C3eoxuDuCRFFZqxcgRclT",
+        "subject": "[Test] Funding unavailable for collaboration name"
+      }
+    ]
+  },
+  "INV-E-070": {
+    "templateId": "ops.route_blocked_admin",
+    "subject": "[Test] [Finance] Route blocked for country name",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 70,
+    "afterTotal": 71,
+    "newest": [
+      {
+        "id": "0wJvi3WGY3EyPKpUIAsEha",
+        "subject": "[Test] [Finance] Route blocked for country name"
+      }
+    ]
+  },
+  "INV-E-071": {
+    "templateId": "ops.stale_funding",
+    "subject": "[Test] [Finance] Unpaid funding needs review",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 71,
+    "afterTotal": 72,
+    "newest": [
+      {
+        "id": "5FGt7mjXd5ZA0qJy9PRmFq",
+        "subject": "[Test] [Finance] Unpaid funding needs review"
+      }
+    ]
+  },
+  "INV-E-072": {
+    "templateId": "ops.ledger_mismatch",
+    "subject": "[Test] [Urgent finance review] Payment balance mismatch",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 72,
+    "afterTotal": 73,
+    "newest": [
+      {
+        "id": "7TbnrbVWHm8Yl6hWSL0giD",
+        "subject": "[Test] [Urgent finance review] Payment balance mismatch"
+      }
+    ]
+  },
+  "INV-E-073": {
+    "templateId": "ops.hold_warning",
+    "subject": "[Test] [Finance] Held funds need review",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 73,
+    "afterTotal": 74,
+    "newest": [
+      {
+        "id": "2pG5aO7amKsvzNc92upJwq",
+        "subject": "[Test] [Finance] Held funds need review"
+      }
+    ]
+  },
+  "INV-E-074": {
+    "templateId": "billing.paid",
+    "subject": "[Test] Receipt for your Influrios Creator Pro plan",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 74,
+    "afterTotal": 75,
+    "newest": [
+      {
+        "id": "51wrwOfgs8mR3g1sKLfRuI",
+        "subject": "[Test] Receipt for your Influrios Creator Pro plan"
+      }
+    ]
+  },
+  "INV-E-075": {
+    "templateId": "billing.failed",
+    "subject": "[Test] Action needed for your Influrios subscription",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 75,
+    "afterTotal": 76,
+    "newest": [
+      {
+        "id": "62mEgKiNCACDHFPM64HEIz",
+        "subject": "[Test] Action needed for your Influrios subscription"
+      }
+    ]
+  },
+  "INV-E-076": {
+    "templateId": "billing.renewal",
+    "subject": "[Test] Your Influrios plan renews on December 12, 2026",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 76,
+    "afterTotal": 77,
+    "newest": [
+      {
+        "id": "3QYeWR6HGPz6fse3NOTDA6",
+        "subject": "[Test] Your Influrios plan renews on December 12, 2026"
+      }
+    ]
+  },
+  "INV-E-077": {
+    "templateId": "billing.cancel_scheduled",
+    "subject": "[Test] Your Influrios subscription cancellation is scheduled",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 77,
+    "afterTotal": 78,
+    "newest": [
+      {
+        "id": "4B8KQhJjzsdpJUxhoImjLq",
+        "subject": "[Test] Your Influrios subscription cancellation is scheduled"
+      }
+    ]
+  },
+  "INV-E-078": {
+    "templateId": "billing.ended",
+    "subject": "[Test] Your Influrios subscription has ended",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 78,
+    "afterTotal": 79,
+    "newest": [
+      {
+        "id": "1m8MUBdg7oVcljUW3gxEIf",
+        "subject": "[Test] Your Influrios subscription has ended"
+      }
+    ]
+  },
+  "INV-E-079": {
+    "templateId": "marketing.broadcast",
+    "subject": "[Test] Bring your influencer profile together with Influrios",
+    "sentOk": true,
+    "error": null,
+    "beforeTotal": 79,
+    "afterTotal": 80,
+    "newest": [
+      {
+        "id": "5N84CZq0OKUVHzKNz7gmZ5",
+        "subject": "[Test] Bring your influencer profile together with Influrios"
+      }
+    ]
+  }
+}

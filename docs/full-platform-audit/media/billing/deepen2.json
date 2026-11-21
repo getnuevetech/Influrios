@@ -1,0 +1,98 @@
+[
+  {
+    "id": "pricing-annual",
+    "text": "∞ Influrios Discover Influencer Plans Business Plans Resources Login Get Started Influencer plans Monthly Annual Starter Free ✓ 1 social link ✓ 1 specialty ✓ Contact: Limited Start free Most popular Plus $300/year $25 monthly ✓ 4 social links ✓ 3 specialties ✓ 6 portfolio items The yearly Stripe price id is missing. Pro $348/year $29 monthly ✓ 8 social links ✓ 8 specialties ✓ 24 portfolio items Th",
+    "amounts": [
+      "$300/year",
+      "$25",
+      "$348/year",
+      "$29"
+    ]
+  },
+  {
+    "id": "guest-choose-plus-annual",
+    "url": "https://influrios.com/pricing?interval=year",
+    "text": "∞ Influrios Discover Influencer Plans Business Plans Resources Login Get Started Influencer plans Monthly Annual Starter Free ✓ 1 social link ✓ 1 specialty ✓ Contact: Limited Start free Most popular Plus $300/year $25 monthly ✓ 4 social links ✓ 3 specialties ✓ 6 portfolio items The yearly Stripe price id is missing. Pro $348/year $29 monthly ✓ 8 so"
+  },
+  {
+    "id": "member-annual",
+    "amounts": [
+      "$25/month",
+      "$300/year",
+      "$25",
+      "$30.00",
+      "$330.00",
+      "$348/year",
+      "$29",
+      "$34.80",
+      "$382.80"
+    ],
+    "switchToAnnual": false,
+    "unavailable": false,
+    "text": "∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer INFLUENCER Billing & plan Manage your Influrios plan, billing, and payment details. Plus · Monthly $25/month Active Change plan Choose a plan and billing cadence that works for you. Monthly Annual Starter Free ✓ 1 social link ✓ 1 specialty ✓ Contact: Limited Manage downgrade Cancelling a paid subscription stays in billing and is separate from "
+  },
+  {
+    "id": "annual-ctas",
+    "count": 0,
+    "labels": []
+  },
+  {
+    "id": "history-links",
+    "count": 0,
+    "hrefs": []
+  },
+  {
+    "id": "payment-method",
+    "url": "https://influrios.com/billing",
+    "text": "∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer INFLUENCER Billing & plan Manage your Influrios plan, billing, and payment details. Plus · Monthly $25/month Active Change plan Choose a plan and"
+  },
+  {
+    "id": "upgrade-review",
+    "text": "∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer INFLUENCER Billing & plan Manage your Influrios plan, billing, and payment details. Plus · Monthly $25/month Active Change plan Choose a plan and billing cadence that works for you. Monthly Annual Starter Free ✓ 1 social link ✓ 1 specialty ✓ Contact: Limited Manage downgrade Cancelling a paid subscription stays in billing and is separate from this plan. Current plan (monthly) Plus $25/month T",
+    "discountInputs": [],
+    "hasDiscountWord": false
+  },
+  {
+    "id": "apply-btn",
+    "count": 0
+  },
+  {
+    "id": "account-billing",
+    "autoRenew": true,
+    "text": "∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Account settings Manage your account and preferences. Account Security Notifications Verification Connections Billing & Plan Billing & Plan Current plan: Plus Plan Plus Interval Monthly Price $19 per month Started Not recorded Next renewal Not recorded Auto-renewal On This subscription renews. "
+  },
+  {
+    "id": "biz-annual",
+    "amounts": [
+      "$99/month",
+      "$99/month",
+      "$349/month"
+    ],
+    "text": "∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings BUSINESS WORKSPACE Business billing & plans Manage your Influrios plan, billing, and payment details. Business Pro $99/month Change plan Choose a plan and billing cadence that works for you. Monthly"
+  },
+  {
+    "id": "agency-cta",
+    "count": 0
+  },
+  {
+    "id": "discount-create",
+    "text": "∞ Influrios Home Discover Categories Collaboration For Businesses Pricing SA Super Admin [REDACTED] ▾ Create Signed in as Super Admin ([REDACTED]) Influrios Admin Super Admin · Platform Control MAIN MENU Dashboard Banners Example portraits Value proposition Homepage Collaboration landing Business landing FAQ Site stats Influencer cards MEMBERS & ACCESS Influencer accounts Business accounts All accounts Admin users Access levels Invitations Agency Guest gates SUBSCRIPTIONS Plans"
+  },
+  {
+    "id": "plan-pricing",
+    "text": "∞ Influrios Home Discover Categories Collaboration For Businesses Pricing SA Super Admin [REDACTED] ▾ Create Signed in as Super Admin ([REDACTED]) Influrios Admin Super Admin · Platform Control MAIN MENU Dashboard Banners Example portraits Value proposition Homepage Collaboration landing Business landing FAQ Site stats Influencer cards MEMBERS & ACCESS Influencer accounts Business accounts All accounts Admin users Access levels Invitations Agency Guest gates SUBSCRIPTIONS Plans & features Billing activity COLLABORATIONS Deals Collaborations Marketplace listings Marketplace ledger Managed Matching Intelligence Collaboration ops Trust & Disputes PAYMENTS & FINANCE Payment set"
+  },
+  {
+    "id": "billing-settings",
+    "text": "∞ Influrios Home Discover Categories Collaboration For Businesses Pricing SA Super Admin [REDACTED] ▾ Create Signed in as Super Admin ([REDACTED]) Influrios Admin Super Admin · Platform Control MAIN MENU Dashboard Banners Example portraits Value proposition Homepage Collaboration landing Business landing FAQ Site stats Influencer cards MEMBERS & ACCESS Influencer accounts Business accounts All accounts Admin users Access levels Invitations Agency Guest gates SUBSCRIPTIONS Plans"
+  },
+  {
+    "id": "marketplace",
+    "simulation": false,
+    "text": "∞ Influrios Home Discover Categories Collaboration For Businesses Pricing SA Super Admin [REDACTED] ▾ Create Signed in as Super Admin ([REDACTED]) Influrios Admin Super Admin · Platform Control MAIN MENU Dashboard Banners Example portraits Value proposition Homepage Collaboration landing Business landing FAQ Site stats Influencer cards MEMBERS & ACCESS Influencer accounts Business accounts All accounts Admin users Access levels Invitations Agency Guest gates SUBSCRIPTIONS Plans"
+  },
+  {
+    "id": "payout-processing-detail",
+    "text": "∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Earnings Your net collaboration payouts. Platform fees stay on the business deposit and are not shown in these totals. Plan billing is separate under Billing & plan. Receive payments Billing & plan RELEASED THIS MONTH $0 Ledger releases this month. A bank payout is separate. UPCOMING NET $5,892 $1,178 also processing to your bank. PAID TO BANK $0 Confirmed bank payout PAYOUT SETUP Ready You’r"
+  }
+]

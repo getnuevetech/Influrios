@@ -1,0 +1,1437 @@
+{
+  "stamp": "2026-11-20T22:36:56.901Z",
+  "base": "https://influrios.com",
+  "slice": "auth",
+  "processes": [
+    "P-01",
+    "P-02",
+    "P-03",
+    "P-04",
+    "P-05",
+    "P-06",
+    "P-07"
+  ],
+  "counts": {
+    "total": 84,
+    "Pass": 73,
+    "Fail": 6,
+    "Blocked": 5,
+    "Not tested": 0
+  },
+  "results": [
+    {
+      "caseId": "INV-R-013-route-desktop",
+      "invIds": [
+        "INV-R-013"
+      ],
+      "process": "P-01/P-02/P-07",
+      "viewport": "desktop",
+      "expected": "Guest can open /login (desktop)",
+      "actual": "status=200; title=Log in \u00b7 Influrios; url=https://influrios.com/login",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-013-route-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:36:58.580Z"
+    },
+    {
+      "caseId": "INV-R-014-route-desktop",
+      "invIds": [
+        "INV-R-014"
+      ],
+      "process": "P-01/P-02/P-07",
+      "viewport": "desktop",
+      "expected": "Guest can open /signup (desktop)",
+      "actual": "status=200; title=Create account \u00b7 Influrios; url=https://influrios.com/signup",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-014-route-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:36:59.624Z"
+    },
+    {
+      "caseId": "INV-R-015-route-desktop",
+      "invIds": [
+        "INV-R-015"
+      ],
+      "process": "P-01/P-02/P-07",
+      "viewport": "desktop",
+      "expected": "Guest can open /register (desktop)",
+      "actual": "status=200; title=Create account \u00b7 Influrios; url=https://influrios.com/signup",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-015-route-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:00.738Z"
+    },
+    {
+      "caseId": "INV-R-016-route-desktop",
+      "invIds": [
+        "INV-R-016"
+      ],
+      "process": "P-01/P-02/P-07",
+      "viewport": "desktop",
+      "expected": "Guest can open /claim (desktop)",
+      "actual": "status=200; title=Create your Influrios account \u00b7 Influrios; url=https://influrios.com/claim",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-016-route-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:02.671Z"
+    },
+    {
+      "caseId": "INV-R-034-route-desktop",
+      "invIds": [
+        "INV-R-034"
+      ],
+      "process": "P-01/P-02/P-07",
+      "viewport": "desktop",
+      "expected": "Guest can open /account/reset (desktop)",
+      "actual": "status=200; title=Reset password \u00b7 Influrios; url=https://influrios.com/account/reset",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-034-route-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:04.408Z"
+    },
+    {
+      "caseId": "INV-R-002-route-desktop",
+      "invIds": [
+        "INV-R-002"
+      ],
+      "process": "P-01/P-02/P-07",
+      "viewport": "desktop",
+      "expected": "Guest can open /discover (desktop)",
+      "actual": "status=200; title=Discover Influencers \u00b7 Influrios; url=https://influrios.com/discover",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-002-route-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:05.569Z"
+    },
+    {
+      "caseId": "INV-R-003-route-desktop",
+      "invIds": [
+        "INV-R-003"
+      ],
+      "process": "P-01/P-02/P-07",
+      "viewport": "desktop",
+      "expected": "Guest can open /categories (desktop)",
+      "actual": "status=200; title=Categories \u00b7 Influrios \u00b7 Influrios; url=https://influrios.com/categories",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-003-route-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:07.149Z"
+    },
+    {
+      "caseId": "INV-R-005-route-desktop",
+      "invIds": [
+        "INV-R-005"
+      ],
+      "process": "P-01/P-02/P-07",
+      "viewport": "desktop",
+      "expected": "Guest can open /business (desktop)",
+      "actual": "status=200; title=For Businesses \u00b7 Influrios \u00b7 Influrios; url=https://influrios.com/business",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-005-route-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:09.117Z"
+    },
+    {
+      "caseId": "INV-M-002-ctas-desktop",
+      "invIds": [
+        "INV-M-002"
+      ],
+      "process": "P-01",
+      "viewport": "desktop",
+      "expected": "Header exposes Log in + Join\u2192claim/signup",
+      "actual": "loginLink=true; joinLink=true",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-m-002-header-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:11.197Z"
+    },
+    {
+      "caseId": "INV-A-001-validation-empty-desktop",
+      "invIds": [
+        "INV-A-001",
+        "INV-R-014"
+      ],
+      "process": "P-01",
+      "viewport": "desktop",
+      "expected": "Empty signup blocked by HTML required fields",
+      "actual": "url=https://influrios.com/signup; stayedOnSignup=true",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-001-validation-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:12.554Z"
+    },
+    {
+      "caseId": "INV-A-002-bad-password-desktop",
+      "invIds": [
+        "INV-A-002",
+        "INV-R-013"
+      ],
+      "process": "P-02",
+      "viewport": "desktop",
+      "expected": "Bad password rejected; remain on login with error",
+      "actual": "url=https://influrios.com/login?error=Email+or+password+is+incorrect.&next=%2Fcreator; errorHint=true",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-002-bad-password-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:13.960Z"
+    },
+    {
+      "caseId": "INV-A-005-reset-request-desktop",
+      "invIds": [
+        "INV-A-005",
+        "INV-R-034",
+        "INV-E-003",
+        "INV-J-004"
+      ],
+      "process": "P-02",
+      "viewport": "desktop",
+      "expected": "Reset request form accepts email; completion needs mailbox",
+      "actual": "url=https://influrios.com/; uiOk=true; mailCompletion=Blocked(no sink)",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-005-reset-request-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "notes": "Token/email completion Blocked \u2014 no live mail sink (INV-E-003/INV-J-004)",
+      "recordedAt": "2026-11-20T22:37:16.697Z"
+    },
+    {
+      "caseId": "INV-P-002-card-preview-desktop",
+      "invIds": [
+        "INV-P-002"
+      ],
+      "process": "P-01",
+      "viewport": "desktop",
+      "expected": "Card preview dialog available on signup",
+      "actual": "previewBtn=1; opened=true",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-p-002-card-preview-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:19.503Z"
+    },
+    {
+      "caseId": "INV-R-013-route-mobile",
+      "invIds": [
+        "INV-R-013"
+      ],
+      "process": "P-01/P-02/P-07",
+      "viewport": "mobile",
+      "expected": "Guest can open /login (mobile)",
+      "actual": "status=200; title=Log in \u00b7 Influrios; url=https://influrios.com/login",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-013-route-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:20.806Z"
+    },
+    {
+      "caseId": "INV-R-014-route-mobile",
+      "invIds": [
+        "INV-R-014"
+      ],
+      "process": "P-01/P-02/P-07",
+      "viewport": "mobile",
+      "expected": "Guest can open /signup (mobile)",
+      "actual": "status=200; title=Create account \u00b7 Influrios; url=https://influrios.com/signup",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-014-route-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:21.835Z"
+    },
+    {
+      "caseId": "INV-R-015-route-mobile",
+      "invIds": [
+        "INV-R-015"
+      ],
+      "process": "P-01/P-02/P-07",
+      "viewport": "mobile",
+      "expected": "Guest can open /register (mobile)",
+      "actual": "status=200; title=Create account \u00b7 Influrios; url=https://influrios.com/signup",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-015-route-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:22.928Z"
+    },
+    {
+      "caseId": "INV-R-016-route-mobile",
+      "invIds": [
+        "INV-R-016"
+      ],
+      "process": "P-01/P-02/P-07",
+      "viewport": "mobile",
+      "expected": "Guest can open /claim (mobile)",
+      "actual": "status=200; title=Create your Influrios account \u00b7 Influrios; url=https://influrios.com/claim",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-016-route-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:23.960Z"
+    },
+    {
+      "caseId": "INV-R-034-route-mobile",
+      "invIds": [
+        "INV-R-034"
+      ],
+      "process": "P-01/P-02/P-07",
+      "viewport": "mobile",
+      "expected": "Guest can open /account/reset (mobile)",
+      "actual": "status=200; title=Reset password \u00b7 Influrios; url=https://influrios.com/account/reset",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-034-route-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:25.982Z"
+    },
+    {
+      "caseId": "INV-R-002-route-mobile",
+      "invIds": [
+        "INV-R-002"
+      ],
+      "process": "P-01/P-02/P-07",
+      "viewport": "mobile",
+      "expected": "Guest can open /discover (mobile)",
+      "actual": "status=200; title=Discover Influencers \u00b7 Influrios; url=https://influrios.com/discover",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-002-route-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:27.618Z"
+    },
+    {
+      "caseId": "INV-R-003-route-mobile",
+      "invIds": [
+        "INV-R-003"
+      ],
+      "process": "P-01/P-02/P-07",
+      "viewport": "mobile",
+      "expected": "Guest can open /categories (mobile)",
+      "actual": "status=200; title=Categories \u00b7 Influrios \u00b7 Influrios; url=https://influrios.com/categories",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-003-route-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:29.011Z"
+    },
+    {
+      "caseId": "INV-R-005-route-mobile",
+      "invIds": [
+        "INV-R-005"
+      ],
+      "process": "P-01/P-02/P-07",
+      "viewport": "mobile",
+      "expected": "Guest can open /business (mobile)",
+      "actual": "status=200; title=For Businesses \u00b7 Influrios \u00b7 Influrios; url=https://influrios.com/business",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-005-route-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:30.351Z"
+    },
+    {
+      "caseId": "INV-M-002-ctas-mobile",
+      "invIds": [
+        "INV-M-002"
+      ],
+      "process": "P-01",
+      "viewport": "mobile",
+      "expected": "Header exposes Log in + Join\u2192claim/signup",
+      "actual": "loginLink=true; joinLink=true",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-m-002-header-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:31.879Z"
+    },
+    {
+      "caseId": "INV-A-001-validation-empty-mobile",
+      "invIds": [
+        "INV-A-001",
+        "INV-R-014"
+      ],
+      "process": "P-01",
+      "viewport": "mobile",
+      "expected": "Empty signup blocked by HTML required fields",
+      "actual": "url=https://influrios.com/signup; stayedOnSignup=true",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-001-validation-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:33.685Z"
+    },
+    {
+      "caseId": "INV-A-002-bad-password-mobile",
+      "invIds": [
+        "INV-A-002",
+        "INV-R-013"
+      ],
+      "process": "P-02",
+      "viewport": "mobile",
+      "expected": "Bad password rejected; remain on login with error",
+      "actual": "url=https://influrios.com/login?error=Email+or+password+is+incorrect.&next=%2Fcreator; errorHint=true",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-002-bad-password-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:37:35.069Z"
+    },
+    {
+      "caseId": "INV-A-005-reset-request-mobile",
+      "invIds": [
+        "INV-A-005"
+      ],
+      "process": "P-02",
+      "expected": "Reset request",
+      "actual": "page.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('button[type=\"submit\"]')\n    - locator resolved to 3 elements. Proceeding with the first one: <button type=\"submit\" class=\"flex items-center gap-2 font-semibold text-[#4E5872] hover:text-violet hover:underline\">\u2026</button>\n  - attempting click action\n    2 \u00d7 waiting for element to be visible, enabled and stable\n      - element is not visible\n    - retrying click action\n    - waiting 20ms\n    2 \u00d7 waiting for element to be visible, enabled and stable\n      - element is not visible\n    - retrying click action\n      - waiting 100ms\n    58 \u00d7 waiting for element to be visible, enabled and stable\n       - element is not visible\n     - retrying click action\n       - waiting 500ms\n",
+      "evidence": [],
+      "status": "Fail",
+      "defects": [
+        "page.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('button[type=\"submit\"]')\n    - locator resolved to 3 elements. Proceeding with the first one: <button type=\"submit\" class=\"flex items-center gap-2 font-semibold text-[#4E5872] hover:text-violet hover:underline\">\u2026</button>\n  - attempting click action\n    2 \u00d7 waiting for element to be visible, enabled and stable\n      - element is not visible\n    - retrying click action\n    - waiting 20ms\n    2 \u00d7 waiting for element to be visible, enabled and stable\n      - element is not visible\n    - retrying click action\n      - waiting 100ms\n    58 \u00d7 waiting for element to be visible, enabled and stable\n       - element is not visible\n     - retrying click action\n       - waiting 500ms\n"
+      ],
+      "recordedAt": "2026-11-20T22:38:05.645Z"
+    },
+    {
+      "caseId": "INV-P-002-card-preview-mobile",
+      "invIds": [
+        "INV-P-002"
+      ],
+      "process": "P-01",
+      "viewport": "mobile",
+      "expected": "Card preview dialog available on signup",
+      "actual": "previewBtn=1; opened=true",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-p-002-card-preview-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:07.467Z"
+    },
+    {
+      "caseId": "INV-A-001-signup-submit",
+      "invIds": [
+        "INV-A-001",
+        "INV-R-014",
+        "INV-E-001",
+        "INV-J-002"
+      ],
+      "process": "P-01",
+      "viewport": "desktop",
+      "expected": "Creator signup creates account and routes to verify/welcome",
+      "actual": "email=auth.ips19.signup.1795214287490@example.com; url=https://influrios.com/account/verify?email=auth.ips19.signup.1795214287490%40example.com&next=%2Fcreator%3Fwelcome%3D1; createdHint=true; bodySnippet=\u221e Influrios Dashboard Action inbox My Profile Collaborations Contracts Earnings & Payouts Messages Settings Starter Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. A Account Influenc",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-001-signup-submit.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "notes": "Email verification completion Blocked without mail sink (INV-E-001)",
+      "recordedAt": "2026-11-20T22:38:11.903Z"
+    },
+    {
+      "caseId": "INV-A-004-verify-ui",
+      "invIds": [
+        "INV-A-004",
+        "INV-R-036",
+        "INV-R-035"
+      ],
+      "process": "P-02",
+      "viewport": "desktop",
+      "expected": "Verify UI reachable; code entry present; completion needs mailbox",
+      "actual": "url=https://influrios.com/account/verify?email=auth.ips19.signup.1795214287490%40example.com; hasCodeInput=true; resend=1; snippet=\u221e Influrios Dashboard Action inbox My Profile Collaborations Contracts Earnings & Payouts Messages Settings Starter Billing & Plan Log out \u00a9 2026 Influrios. Al",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-004-verify-page.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "notes": "OTP completion Blocked \u2014 no mail sink",
+      "recordedAt": "2026-11-20T22:38:13.487Z"
+    },
+    {
+      "caseId": "INV-A-010-business-signup-form",
+      "invIds": [
+        "INV-A-010",
+        "INV-A-011",
+        "INV-R-005"
+      ],
+      "process": "P-03",
+      "viewport": "desktop",
+      "expected": "Business marketing exposes signup form + terms consent",
+      "actual": "hasForm=true; checkboxes=2; url=https://influrios.com/business",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-010-business-signup-form.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:15.277Z"
+    },
+    {
+      "caseId": "INV-A-010-signup-role-business",
+      "invIds": [
+        "INV-A-010",
+        "INV-R-014"
+      ],
+      "process": "P-03",
+      "viewport": "desktop",
+      "expected": "Generic signup offers BUSINESS role",
+      "actual": "bizRadio=1",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-010-signup-role-business.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:15.615Z"
+    },
+    {
+      "caseId": "INV-A-002-login-influencer-desktop",
+      "invIds": [
+        "INV-A-002",
+        "INV-R-013",
+        "INV-R-037"
+      ],
+      "process": "P-02/P-04",
+      "viewport": "desktop",
+      "expected": "Influencer login \u2192 creator/dashboard home",
+      "actual": "url=https://influrios.com/creator",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-002-login-influencer-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:18.278Z"
+    },
+    {
+      "caseId": "INV-R-031-authed-desktop",
+      "invIds": [
+        "INV-R-031"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "desktop",
+      "expected": "Authenticated influencer reaches /account",
+      "actual": "status=200; url=https://influrios.com/account; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-031-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:21.165Z"
+    },
+    {
+      "caseId": "INV-R-033-authed-desktop",
+      "invIds": [
+        "INV-R-033"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "desktop",
+      "expected": "Authenticated influencer reaches /account/password",
+      "actual": "status=200; url=https://influrios.com/creator; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-033-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:23.044Z"
+    },
+    {
+      "caseId": "INV-R-035-authed-desktop",
+      "invIds": [
+        "INV-R-035"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "desktop",
+      "expected": "Authenticated influencer reaches /account/verification",
+      "actual": "status=200; url=https://influrios.com/account/verification; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-035-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:24.812Z"
+    },
+    {
+      "caseId": "INV-R-036-authed-desktop",
+      "invIds": [
+        "INV-R-036"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "desktop",
+      "expected": "Authenticated influencer reaches /account/verify",
+      "actual": "status=200; url=https://influrios.com/account/verify; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-036-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:26.221Z"
+    },
+    {
+      "caseId": "INV-R-043-authed-desktop",
+      "invIds": [
+        "INV-R-043"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "desktop",
+      "expected": "Authenticated influencer reaches /dashboard",
+      "actual": "status=200; url=https://influrios.com/dashboard; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-043-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:28.224Z"
+    },
+    {
+      "caseId": "INV-R-044-authed-desktop",
+      "invIds": [
+        "INV-R-044"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "desktop",
+      "expected": "Authenticated influencer reaches /dashboard/details",
+      "actual": "status=200; url=https://influrios.com/dashboard/details; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-044-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:30.172Z"
+    },
+    {
+      "caseId": "INV-R-045-authed-desktop",
+      "invIds": [
+        "INV-R-045"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "desktop",
+      "expected": "Authenticated influencer reaches /dashboard/preferences",
+      "actual": "status=200; url=https://influrios.com/dashboard/details; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-045-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:32.338Z"
+    },
+    {
+      "caseId": "INV-R-046-authed-desktop",
+      "invIds": [
+        "INV-R-046"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "desktop",
+      "expected": "Authenticated influencer reaches /dashboard/social",
+      "actual": "status=200; url=https://influrios.com/dashboard/social; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-046-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:34.063Z"
+    },
+    {
+      "caseId": "INV-R-047-authed-desktop",
+      "invIds": [
+        "INV-R-047"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "desktop",
+      "expected": "Authenticated influencer reaches /dashboard/links",
+      "actual": "status=200; url=https://influrios.com/dashboard/links; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-047-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:35.532Z"
+    },
+    {
+      "caseId": "INV-R-028-authed-desktop",
+      "invIds": [
+        "INV-R-028"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "desktop",
+      "expected": "Authenticated influencer reaches /settings/connections",
+      "actual": "status=200; url=https://influrios.com/dashboard/social; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-028-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:37.188Z"
+    },
+    {
+      "caseId": "INV-R-037-authed-desktop",
+      "invIds": [
+        "INV-R-037"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "desktop",
+      "expected": "Authenticated influencer reaches /creator",
+      "actual": "status=200; url=https://influrios.com/creator; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-037-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:39.103Z"
+    },
+    {
+      "caseId": "INV-T-001-account-tabs-desktop",
+      "invIds": [
+        "INV-T-001",
+        "INV-R-031"
+      ],
+      "process": "P-05",
+      "viewport": "desktop",
+      "expected": "Influencer account tabs present (account/security/notifications/verification/connections/billing)",
+      "actual": "matched=account,security,notification,verification,connection,billing",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-t-001-account-tabs-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:40.318Z"
+    },
+    {
+      "caseId": "INV-T-003-profile-tabs-desktop",
+      "invIds": [
+        "INV-T-003",
+        "INV-R-043"
+      ],
+      "process": "P-05",
+      "viewport": "desktop",
+      "expected": "Profile shell tabs (overview/details/social/links/media/analytics)",
+      "actual": "matched=overview,details,social,link,media,analytic",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-t-003-profile-tabs-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:41.863Z"
+    },
+    {
+      "caseId": "INV-M-018-reminders-desktop",
+      "invIds": [
+        "INV-M-018"
+      ],
+      "process": "P-04",
+      "viewport": "desktop",
+      "expected": "Creator home loads; setup reminders appear when incomplete (conditional)",
+      "actual": "hintTokens=payout,setup,complete; url=https://influrios.com/creator",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-m-018-reminders-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "notes": "Reminder cards are conditional on profile completeness",
+      "recordedAt": "2026-11-20T22:38:43.604Z"
+    },
+    {
+      "caseId": "INV-A-017-details-save",
+      "invIds": [
+        "INV-A-017",
+        "INV-A-018",
+        "INV-R-044"
+      ],
+      "process": "P-05",
+      "viewport": "desktop",
+      "expected": "Details & preferences page editable / saveable",
+      "actual": "saveBtn=1; saved=true; note=re-saved existing bio/textarea value; successHint=true",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-017-details-before.png",
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-017-details-after.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:47.303Z"
+    },
+    {
+      "caseId": "INV-A-023-publish-controls",
+      "invIds": [
+        "INV-A-023",
+        "INV-A-016",
+        "INV-R-043"
+      ],
+      "process": "P-05",
+      "viewport": "desktop",
+      "expected": "Profile overview exposes publish/unpublish or status",
+      "actual": "publishControls=0; mentionsPublish=true",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-023-publish-controls.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "notes": "Did not toggle publish state on live AUDIT fixture",
+      "recordedAt": "2026-11-20T22:38:50.632Z"
+    },
+    {
+      "caseId": "INV-A-020-social-panel",
+      "invIds": [
+        "INV-A-020",
+        "INV-R-046",
+        "INV-R-028",
+        "INV-I-005"
+      ],
+      "process": "P-06",
+      "viewport": "desktop",
+      "expected": "Social panel lists networks + connect/refresh/disconnect actions",
+      "actual": "actionCount=7; hasUi=true; snippet=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. ",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-020-social-panel.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "notes": "Full OAuth provider round-trip not completed in headless (may need real provider consent) \u2014 treat provider-confirmed connect as separate if Connect starts OAuth",
+      "recordedAt": "2026-11-20T22:38:52.388Z"
+    },
+    {
+      "caseId": "INV-I-005-oauth-launch-href",
+      "invIds": [
+        "INV-I-005"
+      ],
+      "process": "P-06",
+      "expected": "OAuth launch",
+      "actual": "No /api/social/launch link visible \u2014 providers may be unconfigured or already connected via buttons",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-020-social-panel.png"
+      ],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Cannot confirm OAuth without provider credentials/consent",
+      "recordedAt": "2026-11-20T22:38:52.390Z"
+    },
+    {
+      "caseId": "INV-A-006-password-form",
+      "invIds": [
+        "INV-A-006",
+        "INV-R-033",
+        "INV-E-009"
+      ],
+      "process": "P-02",
+      "viewport": "desktop",
+      "expected": "Logged-in password change form present",
+      "actual": "passwordFields=0; url=https://influrios.com/creator",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-006-password-form.png"
+      ],
+      "status": "Fail",
+      "defects": [],
+      "notes": "Did not mutate AUDIT fixture password",
+      "recordedAt": "2026-11-20T22:38:54.557Z"
+    },
+    {
+      "caseId": "P-07-discover-influencer-desktop",
+      "invIds": [
+        "INV-R-002",
+        "INV-P-001"
+      ],
+      "process": "P-07",
+      "viewport": "desktop",
+      "expected": "Signed-in influencer can open Discover directory",
+      "actual": "url=https://influrios.com/discover; cardish=6; demoHint=true",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-002-discover-influencer-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:38:56.417Z"
+    },
+    {
+      "caseId": "INV-A-003-logout-desktop",
+      "invIds": [
+        "INV-A-003"
+      ],
+      "process": "P-02",
+      "viewport": "desktop",
+      "expected": "Logout ends session; protected routes require login",
+      "actual": "before=https://influrios.com/discover; afterLogoutNav=https://influrios.com/; protected=https://influrios.com/login?next=%2Fdashboard; loggedOut=true",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-003-logout-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:39:00.766Z"
+    },
+    {
+      "caseId": "INV-A-002-login-influencer-mobile",
+      "invIds": [
+        "INV-A-002",
+        "INV-R-013",
+        "INV-R-037"
+      ],
+      "process": "P-02/P-04",
+      "viewport": "mobile",
+      "expected": "Influencer login \u2192 creator/dashboard home",
+      "actual": "url=https://influrios.com/creator",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-002-login-influencer-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:39:02.970Z"
+    },
+    {
+      "caseId": "INV-R-031-authed-mobile",
+      "invIds": [
+        "INV-R-031"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "mobile",
+      "expected": "Authenticated influencer reaches /account",
+      "actual": "status=200; url=https://influrios.com/account; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-031-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:39:04.671Z"
+    },
+    {
+      "caseId": "INV-R-033-authed-mobile",
+      "invIds": [
+        "INV-R-033"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "mobile",
+      "expected": "Authenticated influencer reaches /account/password",
+      "actual": "status=200; url=https://influrios.com/creator; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-033-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:39:06.703Z"
+    },
+    {
+      "caseId": "INV-R-035-authed-mobile",
+      "invIds": [
+        "INV-R-035"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "mobile",
+      "expected": "Authenticated influencer reaches /account/verification",
+      "actual": "status=200; url=https://influrios.com/account/verification; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-035-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:39:07.959Z"
+    },
+    {
+      "caseId": "INV-R-036-authed-mobile",
+      "invIds": [
+        "INV-R-036"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "mobile",
+      "expected": "Authenticated influencer reaches /account/verify",
+      "actual": "status=200; url=https://influrios.com/account/verify; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-036-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:39:09.589Z"
+    },
+    {
+      "caseId": "INV-R-043-authed-mobile",
+      "invIds": [
+        "INV-R-043"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "mobile",
+      "expected": "Authenticated influencer reaches /dashboard",
+      "actual": "status=200; url=https://influrios.com/dashboard; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-043-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:39:11.098Z"
+    },
+    {
+      "caseId": "INV-R-044-authed-mobile",
+      "invIds": [
+        "INV-R-044"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "mobile",
+      "expected": "Authenticated influencer reaches /dashboard/details",
+      "actual": "status=200; url=https://influrios.com/dashboard/details; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-044-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:39:12.666Z"
+    },
+    {
+      "caseId": "INV-R-045-authed-mobile",
+      "invIds": [
+        "INV-R-045"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "mobile",
+      "expected": "Authenticated influencer reaches /dashboard/preferences",
+      "actual": "status=200; url=https://influrios.com/dashboard/details; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-045-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:39:14.258Z"
+    },
+    {
+      "caseId": "INV-R-046-authed-mobile",
+      "invIds": [
+        "INV-R-046"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "mobile",
+      "expected": "Authenticated influencer reaches /dashboard/social",
+      "actual": "status=200; url=https://influrios.com/dashboard/social; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-046-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:39:15.794Z"
+    },
+    {
+      "caseId": "INV-R-047-authed-mobile",
+      "invIds": [
+        "INV-R-047"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "mobile",
+      "expected": "Authenticated influencer reaches /dashboard/links",
+      "actual": "status=200; url=https://influrios.com/dashboard/links; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-047-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:39:17.262Z"
+    },
+    {
+      "caseId": "INV-R-028-authed-mobile",
+      "invIds": [
+        "INV-R-028"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "mobile",
+      "expected": "Authenticated influencer reaches /settings/connections",
+      "actual": "status=200; url=https://influrios.com/dashboard/social; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-028-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:39:18.908Z"
+    },
+    {
+      "caseId": "INV-R-037-authed-mobile",
+      "invIds": [
+        "INV-R-037"
+      ],
+      "process": "P-04/P-05/P-06",
+      "viewport": "mobile",
+      "expected": "Authenticated influencer reaches /creator",
+      "actual": "status=200; url=https://influrios.com/creator; bounced=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-037-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:39:20.514Z"
+    },
+    {
+      "caseId": "INV-T-001-account-tabs-mobile",
+      "invIds": [
+        "INV-T-001",
+        "INV-R-031"
+      ],
+      "process": "P-05",
+      "viewport": "mobile",
+      "expected": "Influencer account tabs present (account/security/notifications/verification/connections/billing)",
+      "actual": "matched=account,security,notification,verification,connection,billing",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-t-001-account-tabs-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:39:21.826Z"
+    },
+    {
+      "caseId": "INV-T-003-profile-tabs-mobile",
+      "invIds": [
+        "INV-T-003",
+        "INV-R-043"
+      ],
+      "process": "P-05",
+      "viewport": "mobile",
+      "expected": "Profile shell tabs (overview/details/social/links/media/analytics)",
+      "actual": "matched=overview,details,social,link,media,analytic",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-t-003-profile-tabs-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:39:23.286Z"
+    },
+    {
+      "caseId": "INV-M-018-reminders-mobile",
+      "invIds": [
+        "INV-M-018"
+      ],
+      "process": "P-04",
+      "viewport": "mobile",
+      "expected": "Creator home loads; setup reminders appear when incomplete (conditional)",
+      "actual": "hintTokens=payout,setup,complete; url=https://influrios.com/creator",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-m-018-reminders-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "notes": "Reminder cards are conditional on profile completeness",
+      "recordedAt": "2026-11-20T22:39:25.473Z"
+    },
+    {
+      "caseId": "P-07-discover-influencer-mobile",
+      "invIds": [
+        "INV-R-002",
+        "INV-P-001"
+      ],
+      "process": "P-07",
+      "viewport": "mobile",
+      "expected": "Signed-in influencer can open Discover directory",
+      "actual": "url=https://influrios.com/discover; cardish=6; demoHint=true",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-r-002-discover-influencer-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:39:27.359Z"
+    },
+    {
+      "caseId": "INV-A-003-logout-mobile",
+      "invIds": [
+        "INV-A-003"
+      ],
+      "process": "P-02",
+      "expected": "Logout",
+      "actual": "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('a[href*=\"logout\"], button:has-text(\"Log out\"), a:has-text(\"Log out\")').first()\n    - locator resolved to <button type=\"submit\" class=\"flex items-center gap-2 font-semibold text-[#4E5872] hover:text-violet hover:underline\">\u2026</button>\n  - attempting click action\n    2 \u00d7 waiting for element to be visible, enabled and stable\n      - element is not visible\n    - retrying click action\n    - waiting 20ms\n    2 \u00d7 waiting for element to be visible, enabled and stable\n      - element is not visible\n    - retrying click action\n      - waiting 100ms\n    58 \u00d7 waiting for element to be visible, enabled and stable\n       - element is not visible\n     - retrying click action\n       - waiting 500ms\n",
+      "evidence": [],
+      "status": "Fail",
+      "defects": [
+        "locator.click: Timeout 30000ms exceeded.\nCall log:\n  - waiting for locator('a[href*=\"logout\"], button:has-text(\"Log out\"), a:has-text(\"Log out\")').first()\n    - locator resolved to <button type=\"submit\" class=\"flex items-center gap-2 font-semibold text-[#4E5872] hover:text-violet hover:underline\">\u2026</button>\n  - attempting click action\n    2 \u00d7 waiting for element to be visible, enabled and stable\n      - element is not visible\n    - retrying click action\n    - waiting 20ms\n    2 \u00d7 waiting for element to be visible, enabled and stable\n      - element is not visible\n    - retrying click action\n      - waiting 100ms\n    58 \u00d7 waiting for element to be visible, enabled and stable\n       - element is not visible\n     - retrying click action\n       - waiting 500ms\n"
+      ],
+      "recordedAt": "2026-11-20T22:39:58.629Z"
+    },
+    {
+      "caseId": "INV-A-002-login-business-desktop",
+      "invIds": [
+        "INV-A-002",
+        "INV-R-049"
+      ],
+      "process": "P-03/P-04",
+      "viewport": "desktop",
+      "expected": "Business login \u2192 /business/home (or business shell)",
+      "actual": "url=https://influrios.com/business/home",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-002-login-business-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:40:00.855Z"
+    },
+    {
+      "caseId": "INV-R-050-business-profile-desktop",
+      "invIds": [
+        "INV-R-050",
+        "INV-A-024"
+      ],
+      "process": "P-05",
+      "viewport": "desktop",
+      "expected": "Business profile page reachable and editable",
+      "actual": "url=https://influrios.com/business/profile; bounced=false; saveBtn=1",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-024-business-profile-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:40:03.047Z"
+    },
+    {
+      "caseId": "INV-A-024-business-profile-save",
+      "invIds": [
+        "INV-A-024",
+        "INV-R-050"
+      ],
+      "process": "P-05",
+      "viewport": "desktop",
+      "expected": "Business profile Save persists / acknowledges",
+      "actual": "url=https://influrios.com/; successHint=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-024-business-profile-save.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:40:05.196Z"
+    },
+    {
+      "caseId": "INV-T-002-business-account-desktop",
+      "invIds": [
+        "INV-T-002",
+        "INV-R-031"
+      ],
+      "process": "P-05",
+      "viewport": "desktop",
+      "expected": "Business account settings tabs",
+      "actual": "url=https://influrios.com/login?next=/account; hasSecurity=false; hasBilling=false",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-t-002-business-account-desktop.png"
+      ],
+      "status": "Fail",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:40:06.426Z"
+    },
+    {
+      "caseId": "P-07-discover-shortlist-business-desktop",
+      "invIds": [
+        "INV-R-002",
+        "INV-A-035",
+        "INV-P-001",
+        "INV-C-008"
+      ],
+      "process": "P-07",
+      "viewport": "desktop",
+      "expected": "Business Discover shows live profiles + Shortlist CTA (INV-A-035)",
+      "actual": "demoHint=true; shortlist=false; modalOrCard=false; snippet=\u221e Influrios Home Discover Categories Collaboration For Businesses Pricing Log in Join Influrios \u2192 Sample directory. These profiles are presentation demos, not live partners, and cannot be booked from",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/p-07-discover-business-desktop.png"
+      ],
+      "status": "Fail",
+      "defects": [
+        "COR-13: demo directory and/or missing Shortlist CTA still observed"
+      ],
+      "notes": "Retest of prior COR-13",
+      "recordedAt": "2026-11-20T22:40:08.408Z"
+    },
+    {
+      "caseId": "INV-A-002-login-business-mobile",
+      "invIds": [
+        "INV-A-002",
+        "INV-R-049"
+      ],
+      "process": "P-03/P-04",
+      "viewport": "mobile",
+      "expected": "Business login \u2192 /business/home (or business shell)",
+      "actual": "url=https://influrios.com/business/home",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-002-login-business-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:40:10.402Z"
+    },
+    {
+      "caseId": "INV-R-050-business-profile-mobile",
+      "invIds": [
+        "INV-R-050",
+        "INV-A-024"
+      ],
+      "process": "P-05",
+      "viewport": "mobile",
+      "expected": "Business profile page reachable and editable",
+      "actual": "url=https://influrios.com/business/profile; bounced=false; saveBtn=1",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-024-business-profile-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:40:12.801Z"
+    },
+    {
+      "caseId": "INV-T-002-business-account-mobile",
+      "invIds": [
+        "INV-T-002",
+        "INV-R-031"
+      ],
+      "process": "P-05",
+      "viewport": "mobile",
+      "expected": "Business account settings tabs",
+      "actual": "url=https://influrios.com/account?audience=business; hasSecurity=true; hasBilling=true",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-t-002-business-account-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:40:13.886Z"
+    },
+    {
+      "caseId": "P-07-discover-shortlist-business-mobile",
+      "invIds": [
+        "INV-R-002",
+        "INV-A-035",
+        "INV-P-001",
+        "INV-C-008"
+      ],
+      "process": "P-07",
+      "viewport": "mobile",
+      "expected": "Business Discover shows live profiles + Shortlist CTA (INV-A-035)",
+      "actual": "demoHint=true; shortlist=false; modalOrCard=false; snippet=2 A Dashboard Action inbox Company Profile Discover Creators Collaborations2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Sample directory. These profiles are",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/p-07-discover-business-mobile.png"
+      ],
+      "status": "Fail",
+      "defects": [
+        "COR-13: demo directory and/or missing Shortlist CTA still observed"
+      ],
+      "notes": "Retest of prior COR-13",
+      "recordedAt": "2026-11-20T22:40:15.822Z"
+    },
+    {
+      "caseId": "INV-A-012-claim-start",
+      "invIds": [
+        "INV-A-012",
+        "INV-R-016",
+        "INV-E-005"
+      ],
+      "process": "P-01",
+      "viewport": "desktop",
+      "expected": "Claim/join flow starts with form",
+      "actual": "url=https://influrios.com/claim; hasForm=true; snippet=\u221e Influrios Features Creators Brands Help Log in Example card Male Portrait INFLR.me/yourname Example Influencer Card. The portrait changes on each refresh.",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/inv-a-012-claim-start.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "notes": "Draft verify/publish (INV-A-013/014) need draftId + mail \u2014 Blocked without sink",
+      "recordedAt": "2026-11-20T22:40:17.287Z"
+    },
+    {
+      "caseId": "INV-A-013-claim-verify-mail",
+      "invIds": [
+        "INV-A-013",
+        "INV-R-018",
+        "INV-J-003",
+        "INV-E-002"
+      ],
+      "process": "P-01/P-02",
+      "expected": "Claim draft email verification",
+      "actual": "Not executed \u2014 requires claim draft + mailbox interception",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Mail sink unavailable on live sandbox",
+      "recordedAt": "2026-11-20T22:40:17.287Z"
+    },
+    {
+      "caseId": "INV-A-014-claim-publish",
+      "invIds": [
+        "INV-A-014",
+        "INV-R-019"
+      ],
+      "process": "P-01",
+      "expected": "Claim draft publish",
+      "actual": "Not executed \u2014 depends on verified draft",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:40:17.287Z"
+    },
+    {
+      "caseId": "INV-E-001-verify-email-delivery",
+      "invIds": [
+        "INV-E-001",
+        "INV-E-003",
+        "INV-E-005",
+        "INV-E-007",
+        "INV-E-008",
+        "INV-E-009"
+      ],
+      "process": "P-01/P-02",
+      "expected": "Auth-related emails delivered to test mailbox",
+      "actual": "Blocked \u2014 no Mailpit/MAIL_SINK on live https://influrios.com",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:40:17.287Z"
+    },
+    {
+      "caseId": "INV-I-004-meta-webhook",
+      "invIds": [
+        "INV-I-004"
+      ],
+      "process": "P-06",
+      "expected": "Meta social webhook accepts provider events",
+      "actual": "Not executed \u2014 no Meta test event injection in this slice",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Requires provider webhook credentials / signed payload",
+      "recordedAt": "2026-11-20T22:40:17.287Z"
+    },
+    {
+      "caseId": "P-28-consistency-relogin-dashboard",
+      "invIds": [
+        "INV-R-043",
+        "INV-A-002"
+      ],
+      "process": "P-28",
+      "viewport": "desktop",
+      "expected": "After re-login, dashboard loads consistently",
+      "actual": "loginLanded=https://influrios.com/creator; dashboard=https://influrios.com/dashboard",
+      "evidence": [
+        "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/auth/p-28-consistency-relogin-dashboard.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "recordedAt": "2026-11-20T22:40:20.688Z"
+    }
+  ],
+  "finalSliceCounts": {
+    "Pass": 40,
+    "Fail": 3,
+    "Blocked": 21,
+    "rowsTouched": 64
+  },
+  "note": "Harness case statuses superseded by retests documented in docs/full-platform-audit/execution/auth-results.md"
+}

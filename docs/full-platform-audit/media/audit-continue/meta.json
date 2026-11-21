@@ -1,0 +1,26 @@
+{
+  "startedAt": "2026-11-21T04:05:17.417Z",
+  "base": "http://127.0.0.1:3000",
+  "mailpit": "http://127.0.0.1:8025",
+  "sink": {
+    "Version": "v1.34.0",
+    "LatestVersion": "v1.34.0",
+    "Database": "/tmp/mailpit-1795233323482456932.db",
+    "DatabaseSize": 114688,
+    "Messages": 6,
+    "Unread": 6,
+    "Tags": {},
+    "RuntimeStats": {
+      "Uptime": 593,
+      "Memory": 16902424,
+      "MessagesDeleted": 15,
+      "SMTPAccepted": 21,
+      "SMTPAcceptedSize": 90075,
+      "SMTPRejected": 0,
+      "SMTPIgnored": 0
+    }
+  },
+  "fixturesRun": "r4cont01",
+  "deposits": "closed",
+  "agency": "deferred"
+}

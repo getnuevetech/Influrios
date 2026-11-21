@@ -1,0 +1,141 @@
+{
+  "rows": [
+    {
+      "status": "Pass",
+      "id": "INV-P-008:desktop:deep",
+      "case": "New request composer via /request/new",
+      "expected": "Composer with create/publish path",
+      "actual": "∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Close Create request One brief. Private invitations or a public oppo",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/manual/biz-request-new.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-032/033:desktop:deep",
+      "case": "Save/publish on composer",
+      "expected": "Save and/or publish",
+      "actual": "invite=false; publish=false; save=true",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/manual/biz-request-new.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-P-009:desktop:deep",
+      "case": "Active collab → workroom/overview",
+      "expected": "Reach workroom from business hub",
+      "actual": "url=https://influrios.com/collaboration/business?tab=requests&filter=all&q=; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2 A Agboola Olomola A",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/manual/biz-active-entry.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-P-003:desktop:deep",
+      "case": "Contract agreement surface",
+      "expected": "Agreement detail/dialog",
+      "actual": "url=https://influrios.com/collaboration/contracts; dialogs=0; sign=0; fund=0; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Contracts Agreements tied to",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/manual/biz-contract-open.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-059/060:desktop:focus",
+      "case": "COR-23 review hub via focus deep-link #536 revalidate",
+      "expected": "Separated Request changes + Approve OR terminal approved state",
+      "actual": "rc=true; approve=true; separated=true; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Collaborations / Workspace 4th Test Campaign After Pay Engine Rebuilt Ag Olomola · Funds held Gross compensa",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/manual/biz-review-hub-focus.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-059:desktop:focus-step",
+      "case": "Request changes step",
+      "expected": "Feedback UI; no approve on same step",
+      "actual": "∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Collaborations / Workspace 4th Test Campaign Aft",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/manual/biz-request-changes-focus.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-060:desktop:focus-step",
+      "case": "Approve confirm step",
+      "expected": "Confirm chrome",
+      "actual": "∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Collaborations / Workspace 4th Test Campaign Aft",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/manual/biz-approve-confirm-focus.png"
+    },
+    {
+      "status": "Blocked",
+      "id": "INV-A-066/067:desktop:payments",
+      "case": "Cancellation/settlement from payments",
+      "expected": "Cancellation entry when jurisdiction allows",
+      "actual": "cancelCtrl=0; url=https://influrios.com/payments?currency=USD&status=needs_funding; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Start funding from a signed collaboration contra",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/manual/biz-payments-detail.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-066:desktop:workroom-tabs",
+      "case": "Workroom settlement/cancel surfaces",
+      "expected": "Settlement/cancel related UI or clear absence",
+      "actual": "∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Collaborations / Workspace 4th Test Campaign Aft",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/manual/biz-payments-detail.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-040/041:desktop:deep",
+      "case": "Withdraw / close request",
+      "expected": "Controls present when applicable",
+      "actual": "withdraw=0; close=1; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2 A Agboola Olomola A",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/manual/biz-withdraw-menu.png"
+    },
+    {
+      "status": "Blocked",
+      "id": "INV-C-001/INV-A-056:desktop:start-funding",
+      "case": "Start funding path under closed live deposits",
+      "expected": "No live Stripe charge; gate/blocked or contract-picker only",
+      "actual": "nav=link; stripe=false; closedHint=true; url=https://influrios.com/payments?currency=USD&status=needs_funding; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Start funding from a signed ",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/manual/biz-funding-start-result.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-N-002:desktop:influencer:deep",
+      "case": "Inbox task kinds visible",
+      "expected": "Action inbox with task list/empty",
+      "actual": "tasks={\"review_contract\":true,\"review_delivery\":true,\"submit_delivery\":false,\"review_invitation\":true,\"review_funding\":true}; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Ag Log out ∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Needs your attention Opening a",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/manual/inf-inbox-tasks.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-N-002:desktop:influencer:open-task",
+      "case": "Open inbox task destination",
+      "expected": "Navigates to actionable surface",
+      "actual": "url=https://influrios.com/collaboration/inbox; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Ag Log out ∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrio",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/manual/inf-inbox-task-open.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-056:desktop:influencer:hub-content",
+      "case": "Hub collaborations content",
+      "expected": "Invitations/active management",
+      "actual": "∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations Manage invitations, deliverables, and ongoing work. Find opportunities Active 2 ",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/manual/inf-hub-collabs.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-026/028/030:desktop:deep",
+      "case": "Apply/accept/decline on opportunities",
+      "expected": "Controls or empty states",
+      "actual": "apply=0; accept=0; decline=0; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Invited Discover Applications Opportunities Discover ca",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/manual/inf-opportunities-final.png"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-058:desktop:focus-state",
+      "case": "Influencer milestone focus state",
+      "expected": "Influencer sees submit/waiting/approved state for milestone",
+      "actual": "∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations / Workspace 4th Test Campaign After Pay Engine Rebuilt ABC Holdings · Funds held Gross influencer compensation $4,200.00",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/manual/inf-review-focus.png"
+    },
+    {
+      "status": "Pass",
+      "id": "COR-22:desktop:revalidate",
+      "case": "Normalized Saved as https://… (#536 COR-22)",
+      "expected": "Persisted normalized link copy when links submitted",
+      "actual": "savedAs=true; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations / Workspace 4th Test Campaign After Pay Engine Rebuilt ABC H",
+      "evidence": "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/collab/manual/inf-review-focus.png"
+    }
+  ],
+  "at": "2026-11-20T22:47:03.090Z"
+}

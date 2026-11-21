@@ -1,0 +1,4 @@
+{
+  "status": 200,
+  "body": "{\"results\":[{\"name\":\"Lagos\",\"country\":\"Nigeria\",\"state\":\"Lagos\"},{\"name\":\"Lagos\",\"country\":\"Portugal\",\"state\":\"Faro\"},{\"name\":\"Lagosanto\",\"country\":\"Italy\",\"state\":\"Emilia-Romagna\"},{\"name\":\"Lagos de Moreno\",\"country\":\"Mexico\",\"state\":\"Jalisco\"},{\"name\":\"Malagos\",\"country\":\"Philippines\",\"state\":\"Davao Region\"},{\"name\":\"Los Lagos\",\"country\":\"Chile\",\"state\":\"Los Ríos\"},{\"name\":\"Llagostera\",\"country\":\"Spain\",\"state\":\"Catalonia\"},{\"name\":\"La Llagosta\",\"country\":\"Spain\",\"state\":\"Catalonia\"}]}"
+}

@@ -1,0 +1,431 @@
+∞
+Influrios
+Home
+Discover
+Categories
+Collaboration
+For Businesses
+Pricing
+SA
+
+Super Admin
+
+audit-admin@example.invalid
+
+▾
+Create
+
+Signed in as Super Admin (audit-admin@example.invalid)
+
+Influrios Admin
+
+Super Admin · Platform Control
+
+MAIN MENU
+
+Dashboard
+Banners
+Example portraits
+Value proposition
+Homepage
+Collaboration landing
+Business landing
+FAQ
+Site stats
+Influencer cards
+
+MEMBERS & ACCESS
+
+Influencer accounts
+Business accounts
+All accounts
+Admin users
+Access levels
+Invitations
+Agency
+Guest gates
+
+SUBSCRIPTIONS
+
+Plans & features
+Billing activity
+
+COLLABORATIONS
+
+Deals
+Collaborations
+Marketplace listings
+Marketplace ledger
+Managed Matching
+Intelligence
+Collaboration ops
+Trust & Disputes
+
+PAYMENTS & FINANCE
+
+Payment settings
+Discount codes
+Meilisearch
+KYC
+Finance
+
+INTEGRATIONS & OPS
+
+AI pipelines
+Document signing
+Contracts
+Social networks
+Legal documents
+Short links
+Referrals
+Email
+Email templates
+Email health
+Jobs
+Taxonomy
+← View site
+Sign out
+← Admin
+Jobs
+
+Mail, verification, milestone auto-approval, and provider records. A failed mail job can be queued again. Invitation mail is marked delivered only after SMTP accepts it. The sweep clock enqueues each money sweep from POST /api/cron/sweeps. Auto-approval sweeps skip disputed milestones.
+
+milestone_auto_approval
+latest: succeeded · 2026-10-13T15:36:12.760Z
+succeeded id cmv6ufj5m000dut01g2jvu0xh · 2026-10-13T15:36:12.760Z
+review_deadline_sweep
+latest: succeeded · 2026-10-13T15:36:12.768Z
+succeeded id cmv6ufj5p000eut01t3p0flqz · 2026-10-13T15:36:12.768Z
+dispute_sla_sweep
+latest: succeeded · 2026-10-13T15:36:12.776Z
+succeeded id cmv6ufj5r000fut013dywan8h · 2026-10-13T15:36:12.776Z
+provider_hold_warn_sweep
+latest: succeeded · 2026-10-13T15:36:12.786Z
+succeeded id cmv6ufj5s000gut01c90ko4yp · 2026-10-13T15:36:12.786Z
+failed_payout_retry_sweep
+latest: succeeded · 2026-10-13T15:36:12.794Z
+succeeded id cmv6ufj5u000hut01lz4pa77u · 2026-10-13T15:36:12.794Z
+funding_recon_sweep
+latest: succeeded · 2026-10-13T15:36:12.803Z
+succeeded id cmv6ufj5w000iut01kxpy8rk4 · 2026-10-13T15:36:12.803Z
+scheduled_release_sweep
+latest: succeeded · 2026-11-13T22:54:49.252Z
+succeeded id cmwfkqzrb000sry01je9ormgg · 2026-11-13T22:54:49.252Z
+marketplace_application_expire_sweep
+latest: succeeded · 2026-10-13T15:36:12.818Z
+succeeded id cmv6ufj5z000kut016jsvrpko · 2026-10-13T15:36:12.818Z
+recurring_cycle_sweep
+latest: succeeded · 2026-10-13T15:36:12.839Z
+succeeded id cmv6ufj61000lut013qd0vrgz · 2026-10-13T15:36:12.839Z
+short_link_schedule_sweep
+latest: succeeded · 2026-10-13T15:36:12.849Z
+succeeded id cmv6ufj63000mut012o0ufq60 · 2026-10-13T15:36:12.849Z
+invitation_followup_sweep
+latest: never
+No succeeded row yet — confirm crontab + CRON_SECRET.
+quote_expiry_sweep
+latest: never
+No succeeded row yet — confirm crontab + CRON_SECRET.
+subscription_renewal_sweep
+latest: never
+No succeeded row yet — confirm crontab + CRON_SECRET.
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-20T22:42:16.598Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-20T22:42:00.968Z
+
+verification_email
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-20T22:38:07.854Z
+
+mail_test
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-20T22:37:08.101Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-20T05:08:28.594Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-20T05:07:51.389Z
+
+mail_test
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-18T19:16:47.436Z
+
+scheduled_release_sweep
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-13T22:54:49.224Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-11T23:53:33.458Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-11T23:53:33.455Z
+
+provider_instruction
+
+RECORDED · 0 ATTEMPTS
+
+2026-11-11T23:53:33.421Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-11T23:31:44.748Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-11T23:31:44.735Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-10T03:34:46.629Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-10T03:34:46.616Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-10T03:34:38.152Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-10T03:33:08.055Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-10T03:32:42.834Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-10T03:30:04.280Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-10T03:30:04.272Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-10T00:27:56.258Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-10T00:27:44.344Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-10T00:27:44.342Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-10T00:27:27.363Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-10T00:27:26.584Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-10T00:25:20.116Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-10T00:25:20.109Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T08:55:30.817Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:59:19.648Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:59:19.641Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:59:19.632Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:59:19.613Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:59:10.707Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:59:10.704Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:59:10.701Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:59:10.698Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:57:15.536Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:57:15.534Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:57:15.529Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:57:15.525Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:57:10.840Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:57:10.838Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:57:01.406Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:57:00.843Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:56:31.165Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T07:56:31.156Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T03:36:15.196Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T03:36:15.192Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T03:33:30.887Z
+
+collab_notification
+
+SUCCEEDED · 1 ATTEMPTS
+
+2026-11-09T03:33:30.269Z

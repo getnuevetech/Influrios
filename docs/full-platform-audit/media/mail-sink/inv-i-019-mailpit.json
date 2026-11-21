@@ -1,0 +1,27 @@
+{
+  "before": {
+    "total": 0,
+    "unread": 0,
+    "count": 0,
+    "messages_count": 0,
+    "messages_unread": 0,
+    "start": 0,
+    "tags": [],
+    "messages": []
+  },
+  "after": {
+    "total": 1,
+    "sample": [
+      {
+        "id": "7aPdGG0hDQ9t1RAmqJgYHr",
+        "subject": "Preview recipient, your Influrios profile is ready",
+        "to": [
+          {
+            "Name": "",
+            "Address": "audit.r3pr12vx.influencer-a@example.com"
+          }
+        ]
+      }
+    ]
+  }
+}

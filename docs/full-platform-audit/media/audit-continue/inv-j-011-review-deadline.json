@@ -1,0 +1,26 @@
+{
+  "review1": {
+    "scanned": 1,
+    "notified": 1
+  },
+  "review2": {
+    "scanned": 1,
+    "notified": 0
+  },
+  "mail1": 1,
+  "mail2": 1,
+  "duplicateMail": false,
+  "job": {
+    "id": "cmwpvxqoh000djsk5ds3z908o",
+    "kind": "review_deadline_sweep",
+    "status": "succeeded",
+    "payload": {
+      "audit": "r4cont01"
+    },
+    "attempts": 1,
+    "lastError": null,
+    "runAfter": "2026-11-21T04:05:41.585Z",
+    "createdAt": "2026-11-21T04:05:41.585Z",
+    "updatedAt": "2026-11-21T04:05:41.605Z"
+  }
+}

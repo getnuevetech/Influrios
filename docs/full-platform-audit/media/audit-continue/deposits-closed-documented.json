@@ -1,0 +1,29 @@
+{
+  "policy": "Live deposits remain closed. Do not reopen journey_funding for audit counts. Rows stay Blocked.",
+  "ids": [
+    "INV-R-030",
+    "INV-A-052",
+    "INV-A-055",
+    "INV-A-056",
+    "INV-A-057",
+    "INV-A-058",
+    "INV-A-059",
+    "INV-A-060",
+    "INV-A-061",
+    "INV-C-001",
+    "INV-E-042",
+    "INV-E-043",
+    "INV-E-044",
+    "INV-E-045",
+    "INV-E-046",
+    "INV-E-047",
+    "INV-E-048",
+    "INV-E-049",
+    "INV-E-050",
+    "INV-E-051",
+    "INV-E-052",
+    "INV-E-063",
+    "INV-E-064",
+    "INV-E-065"
+  ]
+}
