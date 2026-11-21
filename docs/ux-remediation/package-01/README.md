@@ -95,6 +95,23 @@ PNG names: `media/ux-remediation/package-01/{board}.png` (full board), `{board}-
 
 ---
 
+## Open audit checks attached to Package 1 acceptance
+
+Package 1 can't be accepted as implemented until these #539 checks pass on the isolated host (runner and next action: [check-handoff.md](https://github.com/getnuevetech/Influrios/blob/cursor/full-platform-audit-package-b6cf/docs/full-platform-audit/check-handoff.md)). Unrelated provider/deposit blockers (payout notices and emails, R6) stay tracked separately in #539.
+
+| Check | What it proves for Package 1 | Acceptance anchor | Runner status |
+|-------|------------------------------|-------------------|---------------|
+| INV-DC-010 | Business creates an invitation → influencer counts agree | DB1, DB6 | Ready to run |
+| INV-DC-013 | Business withdraws a pending invite → counts/badges agree | DB1, DB4, DB4b (rejected outcome) | Ready to run |
+| INV-DC-014 | Invitation expires → counts agree | DB1, DB4 | Ready to run |
+| INV-A-031 | Decline on token page persists; counts drop | DB4 | Ready to run |
+| INV-A-048 | Team proposal send/respond | DB4 (team), DB4d | Ready to run |
+| INV-N-013T · INV-N-015T · INV-N-016T | Collaboration actions emit their notices (action-required source) | DB5, INB1 | Ready to run |
+| INV-J-010 → INV-N-017T | Auto-approval sweep and its notices | DB5 | Ready to run → then gated on INV-J-010 |
+| INV-DC-001/002/006/012/015 · INV-C-014 · INV-N-004 (Fail) | The RC-DASHBOARD defects Package 1 fixes | DB1–DB4, DB2 | Retest after implementation |
+
+---
+
 ## Out of scope for Package 1
 
 Implementation · live deposits · Agency · Package 2 popup field schemas (design prep only) · billing (Pkg 3) · contract viewer / messages (Pkg 4) · admin depth, ledger, reconciliation (Pkg 5, master-spec §12).
