@@ -13,7 +13,7 @@ Constraints: live deposits closed · Agency deferred · centered popups · origi
 ## Status (2026-11-21)
 
 - **Visual review:** [visual-review.md](./visual-review.md). Decision: ready for Ola's final sign-off after four fixes.
-- **Test results:** 10 Package 1 gating checks run on an isolated host (#539 IPS-44): 4 Pass · 5 Fail · 1 Blocked. Defects P1-AUD-01…09 added to [backlog](./backlog.md) and the master spec. Acceptance AUD1 = the 5 Fails retest Pass.
+- **Test results:** 10 Package 1 gating checks run on an isolated host (#539 IPS-44): 4 Pass · 5 Fail · 1 Blocked. Defects P1-AUD-01…09 added to [backlog](./backlog.md) and the master spec. Acceptance AUD1 = the 5 Fails retest Pass; AUD2 = approval separated from release (P1-AUD-08, decided).
 
 ## Finding-to-file checklist
 

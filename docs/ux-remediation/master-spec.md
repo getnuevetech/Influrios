@@ -101,7 +101,12 @@ Semantics follow `APPLICATION_TRANSITIONS` and `inviteeResponsePlan`: “I'm int
 - **Reading never changes turn.** Opening the invitation, the reply notice, or the Messages thread marks those items read but leaves the response task, banner, attention row and badge in place until the invitee responds.
 - Every projection, badge and action-enablement rule uses the §2.2b matrix, never unread state.
 
-**Approval vs payout readiness — decision needed (P1-AUD-08):** today approving a delivery is refused while the influencer's payout setup is incomplete, because approval and release run as one action. Proposed rule: approving the delivery is always possible and records the approval; release waits for payout readiness (§2.1), and the business sees “Approved · release waits for the influencer's payout setup”. Needs Ola's decision before implementation because it touches the payment flow.
+**Delivery approval is separate from financial release (P1-AUD-08, decided by Ola 2026-11-21):**
+- An **authorized** business member can approve a **valid submitted** delivery version even while the influencer's payout setup is incomplete. Authorization, the submitted version under review, and a valid workflow state are still checked; approval is refused otherwise (§4.1 outcomes).
+- Approval clears the review task and persists **independently** of release.
+- Release waits for payout readiness (§2.1) **and** every other payment control (frozen allocations, holds, disputes, provider state; §13).
+- UI after approval while not ready: **“Approved · payout setup required”**. Never “Paid” or “Released” until the provider confirms (§12 REC4).
+- **Automatic approval follows the same separation:** the sweep approves the delivery and schedules release; release still waits for readiness and controls.
 
 #### 2.2b Action matrix (single rule for spec, boards and server)
 
@@ -260,6 +265,7 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 | DB5 | Open unread decreases bell; action required unchanged by read alone |
 | DB6 | Refresh + re-login + desktop↔mobile keep agreed counts |
 | DB7 | Business dashboard: attention = Collaborations badge + Contracts badge; every attention row opens a working popup/sheet; empty/loading/error per board |
+| AUD2 | Approval with incomplete payout setup: delivery shows “Approved · payout setup required”, review task clears, no release or payout movement occurs; same for auto-approval; unauthorized actor, non-current version or invalid state is still refused |
 | AUD1 | IPS-44 failures retest Pass: INV-DC-013, INV-DC-014, INV-A-048, INV-N-015T, INV-N-017T (rules §2.2 expiry/team, §5.6–5.7, §7) |
 | INB1 | ≤1 open inbox row per task identity; distinct milestones never merge (A-INBOX-01); completing a task keeps its notices in history and leaves read state unchanged |
 | TERM1 | No customer-facing “Creator(s)” in member navigation or CTAs |
@@ -350,3 +356,24 @@ Clicking a contract row **expands its transaction table inline** beneath the row
 | REC2 | Settlement without a bank feed/statement line stays **unproven** |
 | REC3 | Internal allocations are never flagged as missing a gateway event |
 | REC4 | “Paid out” never appears without the provider state |
+| MS1–MS8 | Milestone release with frozen allocations — §13. Package 5 ledger acceptance requires all eight |
+
+
+---
+
+## 13. Milestone release with frozen fee allocations (payment remediation + Package 5 ledger acceptance)
+
+**Added:** 2026-11-21 per Ola. Applies to the payment remediation (R6 gate) and to Package 5 ledger acceptance. **Not complete on the basis of existing helper code** (e.g. `readMilestoneAllocation`, `settlementCommandKey`, `partialLegRecovery`) **or simulated releases.** Each row needs the evidence listed.
+
+| ID | Requirement | Evidence required |
+|----|-------------|-------------------|
+| MS1 | Use the contract's **frozen** fee rules and milestone allocations | For each milestone: business fee, influencer fee, influencer net and platform allocation, taken from the signed agreement version. No recalculation with today's fee settings |
+| MS2 | Release **both** allocated amounts | One release authorization that links the influencer leg and the platform **Operations** leg |
+| MS3 | Handle partial success honestly | If one leg succeeds and the other fails, status shows **Partially completed**; retry acts only on the unfinished leg |
+| MS4 | Prevent duplicates | Repeated approval, retries and duplicate provider callbacks cannot duplicate either payment (idempotency per milestone × agreement version × leg) |
+| MS5 | Reconcile every amount | Milestone allocations total the contract amounts, including rounding; taxes and other liabilities stay separately identified |
+| MS6 | Complete admin ledger | Contract → milestone → both movement legs, with accounts, currency, amount, status and provider references (§12.3 expanded row) |
+| MS7 | Operations transfer ≠ bank withdrawal | Moving fees into Operations is a separate movement from sweeping Operations funds to the bank; each has its own record and status (§12.6) |
+| MS8 | Prove actual movement | Sandbox provider evidence (provider object ids, statuses) for each external transfer. **Simulation is labelled “Simulated” everywhere and can never satisfy provider completion** |
+
+Release is reachable only after delivery approval (§2.2 P1-AUD-08) and payout readiness (§2.1).

@@ -5,7 +5,7 @@
 
 ## Decision
 
-**Ready for Ola's final visual sign-off.** After the four fixes below, the review found no remaining blocking visual issue. Once Ola signs off, implementation can start (backlog P1-T1…T15 + P1-AUD-01…09). One product decision is open (P1-AUD-08) and doesn't block the visual sign-off.
+**Ready for Ola's final visual sign-off.** After the four fixes below, the review found no remaining blocking visual issue. Once Ola signs off, implementation can start (backlog P1-T1…T15 + P1-AUD-01…09). P1-AUD-08 is now decided (delivery approval separate from release; master-spec §2.2, acceptance AUD2).
 
 ## Per-board result
 
@@ -36,4 +36,4 @@ Visual system across all frames: Plus Jakarta Sans + Sora only, live tokens, `ic
 
 ## Spec additions from the IPS-44 test results
 
-Added to [master-spec](../master-spec.md): expiry at the Respond-by deadline (§2.2); team proposal closed for every member (§2.2); in-app notice for every action-required event (§5.6); withdrawal/expiry notices with the right template (§5.7); inbox rows name their subject, tasks clear on any state change, team invites included (§7); acceptance AUD1. P1-AUD-08 (approval vs payout readiness) is written as a **proposed** rule pending Ola's decision.
+Added to [master-spec](../master-spec.md): expiry at the Respond-by deadline (§2.2); team proposal closed for every member (§2.2); in-app notice for every action-required event (§5.6); withdrawal/expiry notices with the right template (§5.7); inbox rows name their subject, tasks clear on any state change, team invites included (§7); acceptance AUD1. P1-AUD-08 decided 2026-11-21: approval separate from release, “Approved · payout setup required”, same for auto-approval (AUD2).

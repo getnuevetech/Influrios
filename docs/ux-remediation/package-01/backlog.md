@@ -21,6 +21,8 @@ No code in this design phase. Tasks for after Ola accepts Package 1.
 | P1-T14 | Home card uses live `InfluencerCardView`, proportional scaling, full content on mobile | `/creator` card column | — | CARD1 |
 | P1-T15 | Visual parity check: no serif, tokens/icons per master-spec §0 | shared components | — | VIS1 |
 
+Release itself (frozen allocations, two legs, partial success, idempotency, ledger) is **not** Package 1: see master-spec §13 (payment remediation / Package 5).
+
 ### From the IPS-44 isolated test run (#539 `execution/r5-isolated-package1-results.md`)
 
 | ID | Task | Touchpoints | Acceptance |
@@ -32,7 +34,7 @@ No code in this design phase. Tasks for after Ola accepts Package 1.
 | P1-AUD-05 | Closed team proposal: all members see “This invitation is closed” | `/collaboration/team/[id]` | DB4 |
 | P1-AUD-06 | In-app notice for revision requested / approved / auto-approved; influencer attention + badge include revision tasks | `notifyCollabFundingEvent`, sidebar badges | DB5, AUD1 |
 | P1-AUD-07 | Inbox rows name collaboration + milestone; clear on auto-approval | `action-inbox-load` | INB1 |
-| P1-AUD-08 | **Decision needed:** approval vs payout readiness (approve coupled to release) | `payments/standard-actions.ts` | after decision |
+| P1-AUD-08 | **Decided:** separate delivery approval from release (master-spec §2.2). Approve persists and clears the review task when authorized + valid version + valid state, even with payout setup incomplete; release waits for readiness + payment controls; UI “Approved · payout setup required”; same for auto-approval | `payments/standard-actions.ts`, auto-approval sweep, workroom copy | AUD2 |
 | P1-AUD-09 | Business Collaborations badge counts review tasks, not collaborations | `sidebar-badges` | §3 |
 
 Not in this backlog: live deposit/withdraw/fund paths · Agency · Package 2 field schemas · admin ledger/reconciliation (Package 5) · card redesign.
