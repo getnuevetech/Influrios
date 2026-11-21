@@ -12,6 +12,8 @@ This package turns the staging visual audit into a coordinated redesign brief: e
 
 ---
 
+> **Supersession:** parts of this package are now governed by the remediation train ([#540](https://github.com/getnuevetech/Influrios/pull/540)). Check [supersession-index.md](./supersession-index.md) before using any item.
+
 ## Start here
 
 | # | Deliverable | Link |
