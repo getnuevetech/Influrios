@@ -90,7 +90,7 @@ Same membership filter → home Active = hub Active card = Active tab.
 |------------|-----------------|--------------------------------|----------------------|--------------------------------|
 | Pending → Interested | Stays, label “Waiting for {business}” | −1 | −1 | Clears |
 | Pending → Question sent | Stays, label “Waiting for {business}” | −1 | −1 | Clears |
-| Business answers question (turn → invitee) | Label “Waiting for your reply” | +1 | +1 | Action required again |
+| Business answers a question asked **before** interest (case 2 → 3, turn → invitee) | Label “Waiting for your reply” | +1 | +1 | Action required again |
 | Interested → follow-up question (case 4/6 → 5) | Label “Interested · question sent” | Unchanged (turn stays business) | Unchanged | — |
 | Business answers a follow-up (5 → 6) | Label “Interested” | Unchanged | Unchanged | Message notice (read state only) |
 | Invitee reads the answer (invitation, notice or Messages) | Unchanged | **Unchanged** | **Unchanged** | Notice → read; action required stays |

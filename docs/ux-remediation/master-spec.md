@@ -37,7 +37,7 @@ For a given account and session, these surfaces read the **same** derived values
 
 | Projection | Definition | Surfaces that must agree |
 |------------|-----------|--------------------------|
-| **Invitations waiting for your reply** | Open, not expired, and **turn = invitee** (§2.2a): marketplace REQUESTED/VIEWED · marketplace NEGOTIATING after the business answered (“{Business} replied”) · team member `invited` on a `sent`/`partial` proposal | Home banner · Home Invitations stat · Needs your attention · Hub Invitations card subset · Hub Invitations tab badge · Collaborations badge (invite portion) |
+| **Invitations waiting for your reply** | Open, not expired, and **turn = invitee** (§2.2a): marketplace REQUESTED/VIEWED · marketplace NEGOTIATING after the business answered a question asked **before** interest was recorded (§2.2b case 3, “{Business} replied”) · team member `invited` on a `sent`/`partial` proposal | Home banner · Home Invitations stat · Needs your attention · Hub Invitations card subset · Hub Invitations tab badge · Collaborations badge (invite portion) |
 | **Open invitations** | Above + invitations with **turn = business** (RESPONDED, NEGOTIATING awaiting the business's answer) + team member `accepted` awaiting teammates | Hub Invitations card value · Invitations tab list |
 | **Active collaborations** | Same membership filter on both surfaces | Home Active · Hub Active card + tab |
 | **Payout readiness** | One of six states (§2.1) | Earnings Receive payments · Home payout message · Hub Payment readiness · Earnings badge |
@@ -88,12 +88,12 @@ Rules: completed steps always render as done. Verification pending never shows �
 
 Semantics follow `APPLICATION_TRANSITIONS` and `inviteeResponsePlan`: “I'm interested” records interest (RESPONDED) and never accepts work. Asking a question (NEGOTIATING) does **not** complete the invitation. Only the business moves an invitation to ACCEPTED.
 
-**Continuation after a question:** when the business answers, the invitation returns to the invitee's turn (“{Business} replied”) and counts again in the banner, attention and badge until the invitee responds. “I'm interested” is available there.
+**Continuation after a question:** what a business answer does to the turn is defined only by the §2.2b action matrix. Before interest is recorded, the answer returns the turn to the invitee (case 3, “{Business} replied”: counts again until they respond; “I'm interested” available). After interest is recorded, answering a follow-up keeps the business's turn (case 6): the invitee gets a message and no new action-required task.
 
 #### 2.2a Turn tracking (independent of read state)
 
 - Each open invitation carries **turn** = `invitee` | `business` | `none`, persisted server-side.
-- Turn changes **only** on a persisted action: business sends/answers → `invitee`; invitee says interested or asks a question → `business`; accept/decline/withdraw/expire → `none`.
+- Turn changes **only** on a persisted action, exactly as listed in the §2.2b turn-transition table (e.g. a business answer gives the turn to the invitee only when interest isn't yet recorded). Accept/decline/withdraw/expire → `none`.
 - **Reading never changes turn.** Opening the invitation, the reply notice, or the Messages thread marks those items read but leaves the response task, banner, attention row and badge in place until the invitee responds.
 - Every projection, badge and action-enablement rule uses the §2.2b matrix, never unread state.
 
@@ -243,7 +243,7 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 | DB2e | Ready account with no transactions shows “No earnings yet” and the Ready card; empty earnings never shows Setup required |
 | DB3 | Home Active = hub Active |
 | DB4 | Every invitation state in §2.2 shows its actions/label; badge/attention clear on persisted transition only; INV-DC-015, INV-DC-012 |
-| DB4a | Ask a question leaves the invitation open (NEGOTIATING, turn = business); the business's answer sets turn = invitee with I'm interested · Ask another question · Decline (needs P1-D1) |
+| DB4a | Ask a question leaves the invitation open (NEGOTIATING, turn = business); the business's answer then follows §2.2b: case 2 → case 3 (turn = invitee, I'm interested · Ask another question · Decline; needs P1-D1); case 5 → case 6 (turn stays business, message only) |
 | DB4d | Every case in the §2.2b matrix shows exactly its allowed actions, and the server rejects disallowed submissions; a follow-up question after Interested keeps turn = business and never adds to the invitee's counts |
 | DB4c | Reading the answer (invitation, notice or Messages) leaves turn = invitee: banner, attention, badge and task stay until the invitee responds |
 | DB4b | Timeout: “We couldn't confirm your response” → idempotency record lookup → saved / rejected / processing / unable to confirm per §4.1; draft kept and locked until saved or rejected; retry of an unresolved submission reuses its key and is stored once; a new submission after an outcome gets a new key even with identical text; a key reused with another actor, invitation or payload is refused; concurrent withdrawal shows the rejection and counts refresh |
