@@ -145,7 +145,8 @@ Board: [team-invite-respond](./designs/team-invite-respond.html).
 
 ```
 [business] accepts ─► influencer: Active “Accepted · {Business} is preparing the agreement” (no task)
-                      business: “Accepted” → task “Prepare agreement”
+                      business: “Accepted” → the response-review task BECOMES “Prepare agreement”
+                      (Collaborations badge + attention unchanged until the agreement is sent)
                       (Accept is saved FIRST; preparation opens only after `saved`.
                        preparation fails → “Accepted · agreement not sent” + Prepare agreement; never Accept again)
 [business] creates + sends agreement ─► BOTH parties pending: influencer task “Review and sign agreement”,
@@ -172,6 +173,7 @@ Task completes → Action required clears (centre + attention + badge)
 Historical notice (e.g. “Holiday Gift Guide agreement was ready”, since signed by you)
   → opens the CURRENT state: “Waiting for Northwind Studio to sign” · View agreement · not Action required
 ```
+Action required counts notices whose task is still open; it isn't the task count (4 tasks, 2 with notices).
 Example: bell 2 / Unread 2 / Action required 2 → open invitation notice → 1 / 1 / 2 → reply → 1 / 1 / 1 → sign Studio Tour Shorts → 1 / 1 / 0.
 Notifications is reached from the bell: no sidebar item or mobile tab is highlighted.
 

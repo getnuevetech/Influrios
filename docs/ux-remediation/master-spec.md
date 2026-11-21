@@ -178,7 +178,7 @@ Funded / Expecting funding / Payment pending / Agreement ready / Content in revi
 |-------|--------|-------------|------------------------------|
 | Collaborations (influencer) | Invitations waiting for your reply + collaboration tasks on your turn | Persisted status leaves your turn (reply, accept/decline, task done), withdrawn, expired | Hub Invitations tab + Needs your attention |
 | Earnings & Payouts | 1 for Setup required / Action required (with active work or unpaid earnings) | State changes to Verification pending, Ready or Not available. Temporarily unavailable keeps the **last known** value; no confirmed history = 0 | Receive payments card |
-| Collaborations (business) | Responses to review + content to review | Business decides | Dashboard Needs your attention |
+| Collaborations (business) | Responses to review + content to review + **agreements to prepare** (accepted, agreement not sent) | A review task clears when the business replies, declines, approves or requests revision. **Accept doesn't clear it: the review task becomes a Prepare agreement task** (count unchanged), which clears only when the agreement is sent | Dashboard Needs your attention |
 | Contracts (influencer) | Agreements awaiting **your** signature (§2.2c) | You sign, or the agreement is cancelled; the other party signing never clears it | Contracts › To sign + Needs your attention |
 | Contracts (business) | Agreements awaiting your signature | Signed or cancelled | Contracts › To sign |
 | Bell | Unread notices | Opening an unread notice (bell, Unread filter and row dot update together) | Notifications › Unread |
@@ -186,7 +186,10 @@ Funded / Expecting funding / Payment pending / Agreement ready / Content in revi
 
 Badges keep their last known value while loading. Counts never decrement optimistically before the server confirms.
 
-**Influencer home “Needs your attention” = Collaborations badge + Contracts badge = Action inbox rows = live Action required notices (deduplicated).** Hub tab badges: Invitations (waiting for your reply) + Active (content tasks on your turn) = Collaborations badge.
+**Tasks and notices are counted separately.**
+- **Task counts** (one per open task identity, §7): influencer home Needs your attention = Collaborations badge + Contracts badge = Action inbox rows. Hub tab badges: Invitations (waiting for your reply) + Active (content tasks on your turn) = Collaborations badge. Business: Needs your attention = Collaborations badge + Contracts badge.
+- **Notice counts** reflect the notices that actually exist. Action required = notices present that reference a **currently open** task. A task need not have a notice (e.g. a milestone due date that produced no event), so Action required ≤ open tasks; it is never required to equal the task count.
+- Every Action required notice must point to an open task; when that task closes, the flag clears (§5.3). A notice never creates a task, and no task is counted twice because several notices reference it.
 
 ### 3.1 Shared example records (boards and tests)
 
@@ -202,7 +205,7 @@ Every Package 1 board uses one set of records, so counts must agree across home,
 | Autumn Glow Series (Lumen) | Question sent, turn = business | None | — |
 | Winter Unboxing · Team (Northwind) | Amara accepted, 1 teammate pending | None | None |
 
-Influencer totals: Collaborations 3, Contracts 1, More (mobile) 1, Needs your attention 4, Action inbox 4, Action required 2 (invitation + agreement notice), bell 2 before the invitation notice is opened and 1 after. Business totals: Collaborations 2, Contracts 1, Needs your attention 3.
+Influencer totals: Collaborations 3, Contracts 1, More (mobile) 1, Needs your attention 4, Action inbox 4, Action required 2 (invitation + agreement notice), bell 2 before the invitation notice is opened and 1 after. Business totals: Collaborations 2, Contracts 1, Needs your attention 3. **After accepting Priya Nair:** the response-review task becomes “Prepare agreement · Free Tech Support”, so Collaborations stays 2 and Needs your attention stays 3 until the agreement is sent (then 1 and 2).
 
 ---
 
@@ -244,7 +247,7 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 3. Action required clears only when the underlying task completes, or the invitation is withdrawn or expires.
 3a. Clearing action-required **never deletes a notice and never changes read state**. Notices stay in history (All); an unopened notice stays Unread. Unrelated notices and messages are untouched.
 4. Notice detail opens as a centered popup (desktop) or sheet (mobile). The primary CTA goes to the task.
-5. The Action required filter counts deduplicated live tasks only.
+5. The Action required filter counts the notices present whose referenced task is still open (one notice per task identity after dedupe). It is a notice count, not a task count (§3): in the shared example it is 2 while there are 4 open tasks, because the two milestone tasks have no notice.
 6. **Every action-required event creates an in-app notice as well as its email (P1-AUD-06):** invitation sent, question answered, content submitted, changes requested, approved / auto-approved, agreement ready. Email alone is not enough.
 7. **Withdrawal and expiry notify the invitee (P1-AUD-01/02):** an in-app notice + the withdrawal/expiry email template (never the invitation template). The original invitation notice stays in history and drops out of Action required at the same moment the invitation leaves the invitee's turn.
 
@@ -311,7 +314,7 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 | DB4 | Every invitation state in §2.2 shows its actions/label; badge/attention clear on persisted transition only; INV-DC-015, INV-DC-012 |
 | DB4a | Ask a question leaves the invitation open (NEGOTIATING, turn = business); the business's answer then follows §2.2b: case 2 → case 3 (turn = invitee, I'm interested · Ask another question · Decline; needs P1-D1); case 5 → case 6 (turn stays business, message only) |
 | DB4d | Every case in the §2.2b matrix shows exactly its allowed actions, and the server rejects disallowed submissions; a follow-up question after Interested keeps turn = business and never adds to the invitee's counts |
-| DB8 | Next step after acceptance and signature (P1-AUD-11, §2.2c): influencer sees “Accepted · {Business} is preparing the agreement” (no action), then a “Review and sign agreement” task while **their own** signature is pending and “Waiting for {Business} to sign” once they have signed; the business has a “Sign agreement” task while **its** signature is pending, in either order, and neither task is cleared by the other party's signature; business sees “Create the agreement” after acceptance and “Agreement signed” with its next payment step only when that step is available, otherwise “Funding isn't available for this collaboration yet”; no state promises a payment |
+| DB8 | Next step after acceptance and signature (P1-AUD-11, §2.2c): influencer sees “Accepted · {Business} is preparing the agreement” (no action), then a “Review and sign agreement” task while **their own** signature is pending and “Waiting for {Business} to sign” once they have signed; the business has a “Sign agreement” task while **its** signature is pending, in either order, and neither task is cleared by the other party's signature; business sees a “Prepare agreement” task after acceptance (it replaces the response-review task, so the Collaborations count is unchanged) and “Agreement signed” with its next payment step only when that step is available, otherwise “Funding isn't available for this collaboration yet”; no state promises a payment |
 | DB4c | Reading the answer (invitation, notice or Messages) leaves turn = invitee: banner, attention, badge and task stay until the invitee responds |
 | DB4b | Timeout: “We couldn't confirm your response” → idempotency record lookup → saved / rejected / processing / unable to confirm per §4.1; draft kept and locked until saved or rejected; retry of an unresolved submission reuses its key and is stored once; a new submission after an outcome gets a new key even with identical text; a key reused with another actor, invitation or payload is refused; concurrent withdrawal shows the rejection and counts refresh |
 | DB5 | Opening an unread notice updates bell, Unread filter and row dot together without reload; action required unchanged by read alone; a historical notice opens the item's current state |

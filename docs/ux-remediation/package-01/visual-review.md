@@ -59,6 +59,18 @@ Visual direction kept. Affected boards re-rendered together.
 
 Self-check: every frame re-read after rendering; no “In escrow”, “Accept and draft”, “Accepting drafts”, “About 5 minutes” or “Released this month” in any app frame. Ola's sign-off is still required.
 
+## Rule corrections (round 8, Ola's review of 8a0cb0a)
+
+Layouts retained; three rule fixes only.
+
+| # | Item | Change | Boards re-rendered |
+|---|------|--------|--------------------|
+| 1 | Task and notice counts had one blanket equality | master-spec §3 / §5.5: task counts (attention = badges = inbox) and notice counts (Action required = notices present that reference an open task) defined separately; 4 tasks / 2 actionable notices is consistent | notifications |
+| 2 | Business badge cleared on Accept | Business Collaborations counts agreements to prepare; Accept turns the review task into Prepare agreement (count unchanged) until the agreement is sent. Before / after Accept / after sent example (2·3 → 2·3 → 1·2); “Create the agreement” renamed Prepare agreement in DB8 and backlog | sidebar badges, business dashboard |
+| 3 | Hub kept the old blanket reply rule | Hub note now follows §2.2b: an answer before interest returns the task; a follow-up answer after interest stays a message, no task | collaborations hub |
+
+These boards show design only. Keyboard/focus, responsive scrolling, permissions, persistence and live count updates remain implementation tests.
+
 ## Spec additions from the IPS-44 test results
 
 Added to [master-spec](../master-spec.md): expiry at the Respond-by deadline (§2.2); team proposal closed for every member (§2.2); in-app notice for every action-required event (§5.6); withdrawal/expiry notices with the right template (§5.7); inbox rows name their subject, tasks clear on any state change, team invites included (§7); acceptance AUD1. P1-AUD-08 decided 2026-11-21: approval separate from release, “Approved · payout setup required”, same for auto-approval (AUD2).

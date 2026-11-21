@@ -125,7 +125,8 @@ def build_hub():
  "Tab badges: Invitations 1 (waiting for your reply) + Active 2 (Spring Launch Reel Milestones 1 and 2). The Collaborations sidebar badge is their sum, <b>3</b>, so it counts the invitation <b>and</b> the content tasks.",
  "Studio Tour Shorts' signature task is counted on <b>Contracts</b> (1), not here; the Active stat names it (“1 to sign”) so the row is explained.",
  "Mobile keeps all five tabs (Overview · Invitations · Applications · Active · Completed), wrapping instead of dropping any, and every row keeps its Open / Review button.",
- "Question sent and Interested rows stay listed with a status naming who acts next. They drop out of the badge until the business replies.",
+ "Question sent and Interested rows stay listed with a status naming who acts next, and are not in the badge while it is the business's turn.",
+ "<b>When the business answers</b> (master-spec §2.2b): <b>before</b> interest is recorded (Autumn Glow Series), the answer returns the turn to the influencer: the row shows “Lumen Skincare replied”, and the badge, attention and inbox gain a task. <b>After</b> interest is recorded, a follow-up answer arrives as a message only; the business still owes its decision, so no influencer task returns.",
  "Empty copy “No invitations are waiting” appears only when open invitations = 0.",
 ])}
 {notes("Payment readiness (finding 3)",[

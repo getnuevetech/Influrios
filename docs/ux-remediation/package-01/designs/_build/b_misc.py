@@ -12,7 +12,7 @@ def build_badges():
         ("Collaborations (influencer)", "Invitations waiting for your reply + collaboration tasks on your turn (submit content, revise). Example: 1 + 2 = 3", "You reply (Interested / question / decline / accept), the task completes, or the invitation is withdrawn or expires", "Hub tab badges (Invitations 1 + Active 2) + Needs your attention"),
         ("Contracts (influencer)", "Agreements waiting for <b>your</b> signature. Example: Studio Tour Shorts = 1. An agreement you already signed is not counted", "You sign, or the agreement is cancelled. The other party signing doesn't clear it", "Contracts › To sign + Needs your attention"),
         ("Earnings &amp; Payouts", "1 when payout state is Setup required or Action required AND you have active collaborations or unpaid earnings", "State becomes Verification pending, Ready or Not available. Temporarily unavailable keeps the <b>last known</b> value (0 when last confirmed Ready); no history = 0", "Receive payments card shows the state and the one CTA"),
-        ("Collaborations (business)", "Responses to review + content to review", "Business accepts, replies, declines, approves or requests revision", "Dashboard Needs your attention + Collaborations › Requests"),
+        ("Collaborations (business)", "Responses to review + content to review + agreements to prepare. Example: 1 + 1 + 0 = 2", "Reply, decline, approve or request revision clears a review task. <b>Accept turns the review task into Prepare agreement</b> (count unchanged); that task clears when the agreement is sent", "Dashboard Needs your attention + Collaborations › Requests"),
         ("Contracts (business)", "Agreements waiting for your signature (example: Holiday Gift Guide)", "You sign, or the agreement is cancelled", "Contracts › To sign"),
         ("Bell", "Unread notices (example: 2)", "Opening an unread notice; the Unread filter and the row dot update in the same render", "Notifications › Unread"),
         ("Action inbox", "None (destination only)", "—", "Each row = one task; duplicates merged (see action-inbox board)"),
@@ -24,6 +24,13 @@ def build_badges():
 {side_only("inf","dash",dict(INF_BADGES, earn=1),"Influencer · same records, payout Action required")}
 {side_only("inf","dash",{},"Scenario: all tasks done, payout Verification pending")}
 {side_only("biz","dash",{"collab":2,"contracts":1},"Business · 1 response + 1 content review, 1 signature")}
+{side_only("biz","dash",{"collab":2,"contracts":1},"Business · after accepting Priya: 1 prepare agreement + 1 content review, 1 signature")}
+</div>
+<div class="section-title">Business · after accepting Priya Nair (count unchanged until the agreement is sent)</div>
+<div class="grid-3">
+<div class="mini"><div class="mini-cap">Before Accept · Collaborations 2 · attention 3</div>{b_business.attention()}</div>
+<div class="mini"><div class="mini-cap">After Accept · Collaborations 2 · attention 3</div>{b_business.attention(rows=b_business.ATTN_AFTER_ACCEPT)}</div>
+<div class="mini"><div class="mini-cap">After the agreement is sent · Collaborations 1 · attention 2</div>{b_business.attention(rows=b_business.ATTN_AFTER_ACCEPT[1:])}</div>
 </div>
 <div class="section-title">Badge contract (master-spec §3)</div>
 <table class="spec-table"><thead><tr><th>Badge</th><th>Counts</th><th>Clears when</th><th>Destination that explains it</th></tr></thead><tbody>{table}</tbody></table>"""

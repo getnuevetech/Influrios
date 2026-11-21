@@ -229,7 +229,7 @@ def build_notifications():
 {notes("Rules (DB5 · correction 2)",[
  "Opening an <b>unread</b> notice updates three things together, in the same render: the bell (2 → 1), the Unread filter (2 → 1) and that row's dot. No page reload needed (P1-AUD-12).",
  "<b>Action required</b> follows the live task, not read state. The invitation notice keeps Action required until Amara responds; opening it doesn't clear it.",
- "Action required 2 = Free Tech Support reply + Studio Tour Shorts signature: the same tasks as the inbox and the badges (Collaborations 3 includes the invitation; Contracts 1 is the signature).",
+ "Action required counts <b>notices</b>, not tasks. Here it is 2: the Free Tech Support invitation notice and the Studio Tour Shorts agreement notice, each pointing to a task that is still open. The inbox has 4 tasks because the two milestone tasks have no notice. Task counts (attention 4, badges 3 + 1, inbox 4) are defined separately (master-spec §3).",
  "<b>Historical notices open the current state.</b> “Holiday Gift Guide agreement was ready” is from 18 Nov; Amara signed on 20 Nov, so opening it shows “Waiting for Northwind Studio to sign” with View agreement, never a Sign button.",
  "Clearing action-required never deletes a notice and never changes read state. Unrelated notices are untouched.",
  "Funding examples say “(simulation)”: live deposits are closed and nothing here claims money is held in escrow.",

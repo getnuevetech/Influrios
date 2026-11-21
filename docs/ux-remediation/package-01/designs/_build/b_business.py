@@ -7,6 +7,9 @@ ATTN = [
     ("J", "Content submitted for review", "Desk Setup Reel · Milestone 1 · Jordan Lee", "Review content", "pri"),
     ("A", "Sign agreement", "Holiday Gift Guide · Amara Cole signed 20 Nov", "Sign agreement", "sec"),
 ]
+ATTN_AFTER_ACCEPT = [
+    ("P", "Prepare agreement", "Free Tech Support · You accepted Priya Nair · agreement not sent", "Prepare agreement", "pri"),
+] + ATTN[1:]
 COLLABS = [
     ("Desk Setup Reel", "Jordan Lee · Instagram", ("violet", "Content in review"), "You", "2h ago"),
     ("Holiday Gift Guide", "Amara Cole · YouTube", ("amber", "Your signature needed"), "You", "1d ago"),
@@ -17,13 +20,14 @@ COLLABS = [
 ]
 
 
-def attention(mobile=False):
+def attention(mobile=False, rows=None):
+    src = rows or ATTN
     rows = "".join(
         f'<div class="list-row"><span class="mono-ava">{a}</span><div class="t"><b>{t}</b><span>{s}</span></div>'
         + ("" if mobile else f'<span class="btn {k} sm">{c}</span>') + "</div>"
         + (f'<div class="list-row" style="border-top:0;padding-top:0"><span class="btn {k} sm" style="width:100%">{c}</span></div>' if mobile else "")
-        for a, t, s, c, k in ATTN)
-    return f'<div class="card"><div class="card-head"><h2>Needs your attention</h2><span class="nb" style="margin:0">3</span></div>{rows}</div>'
+        for a, t, s, c, k in src)
+    return f'<div class="card"><div class="card-head"><h2>Needs your attention</h2><span class="nb" style="margin:0">{len(src)}</span></div>{rows}</div>'
 
 
 def stats(mobile=False):
@@ -85,7 +89,7 @@ def outcome(cap, pk, ptxt, msg, acts):
 
 
 OUTCOMES = [
-    outcome("1 · Accept saved, then preparation opens", "green", "Accepted",
+    outcome("1 · Accept saved, then preparation opens · task becomes Prepare agreement, badge stays 2", "green", "Accepted",
             "You accepted Priya Nair. Next, prepare the agreement.",
             '<span class="btn sec sm">Later</span><span class="btn pri sm">Prepare agreement</span>'),
     outcome("2 · Accept saved, preparation failed to open", "amber", "Accepted · agreement not sent",
@@ -131,7 +135,7 @@ def build():
 {notes("Complete business dashboard (finding 5)",[
  "Order: Needs your attention → summaries → recent collaborations → start a request. Right column: billing, saved influencers, recent activity. Every card links to its destination page.",
  "Every attention row opens its item in a centered popup (desktop) or sheet (mobile), with the real decision buttons. It doesn't just link out.",
- "Collaborations badge 2 = response to review + content to review. Contracts badge 1 = agreement waiting for your signature. Attention shows 3 = 2 + 1, so each count sits on the item that opens it.",
+ "Collaborations badge 2 = response to review + content to review (+ agreements to prepare; after Accept the response task becomes Prepare agreement, so it stays 2). Contracts badge 1 = agreement waiting for your signature. Attention shows 3 = 2 + 1, so each count sits on the item that opens it.",
  "Stats use the same projections as the destinations: Active requests = Collaborations › Requests; Agreements to sign = Contracts filter.",
  "“Discover Influencers” replaces “Discover Creators” in the sidebar and CTAs (Package 1 terminology).",
  "Funding/deposit actions stay out: live deposits closed. A fully signed agreement shows “Agreement signed · funding isn't available yet” with no task; Fund collaboration appears only when funding is available (master-spec §2.2c, DB8). No money stat on the dashboard.",
