@@ -36,10 +36,21 @@ Review record: [visual-review.md](./visual-review.md). Rules: [master-spec](../m
 | S9 Shell: mobile nav, terminology, card, visual parity, signed-out return | P1-T8, P1-T13–T15, P1-T18, P1-T19 | MOB1 (incl. runtime keyboard/focus across 320–430), TERM1, CARD1, VIS1 | INV-DC-030–033 |
 | S10 Active count + stability regression on the shared example records | P1-T3, P1-T7, P1-T10, P1-T16 | DB3, DB6, DB9 | INV-DC-006 |
 
+### Implementation status
+
+Visual approval: **given by Ola** (boards at `b1f3d64`).
+
+| Slice | Status | Code | Retest |
+|-------|--------|------|--------|
+| S1 | **Done** — turn tracking, §2.2b matrix (server-enforced), P1-D1 transition, popup = detail route, one waiting projection on home / inbox / hub / badges | `claude/vigilant-darwin-h4tha4` @ `bd65bb9` (migration `20261121120000_invitation_turn`) | #539 IPS-47: 36/36 S1 checks + team 6/6; INV-DC-001, INV-DC-015 Fail → Pass; INV-A-045 observation closed; INV-A-029 re-run Pass |
+| S2–S10 | Not started | — | — |
+
+Logged for later slices from the S1 run: `/creator` horizontal scroll at 390 px (S9); derived invitation notices in the inbox (S4); idempotency outcomes on retry (S3).
+
 ## 3. Not in Package 1 (owners in #539 remediation plan, defect register)
 
 Request wizard (AUD-WIZ-01) → Pkg 2 · fee-label mismatch and discount rejection (AUD-FEE-01/02) → Pkg 3 + Pkg 4 · unreachable actions and missing entry points (AUD-R2-01a–d, AUD-R2-03) → Pkg 2 / Pkg 5 · media kit export, opening redirect (AUD-R2-04, AUD-R2-08) → Pkg 4 · admin invitation/opening forms (AUD-INV-01, AUD-ADM-01) → Pkg 5 · release, ledger, reconciliation (MS1–MS8) → R6 / Pkg 5.
 
 ## 4. Audit position (unchanged by this submission)
 
-#539 matrix: **502 rows · 398 Pass · 40 Fail · 54 Blocked · 0 Not tested · 10 deferred**. Every remaining Blocked row names its gate (deposits closed, R6, Stripe test subscription, AI provider). This is not a completed platform audit.
+#539 matrix: **502 rows · 400 Pass · 38 Fail · 54 Blocked · 0 Not tested · 10 deferred** (after IPS-47). Every remaining Blocked row names its gate (deposits closed, R6, Stripe test subscription, AI provider). This is not a completed platform audit.
