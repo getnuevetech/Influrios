@@ -1,7 +1,7 @@
 # Coverage & blocker report — latest position
 
 **Status:** **PROVISIONAL** — not platform-wide completion. No audit restart.
-**As of:** 2026-11-21 · matrix revision IPS-43 (hidden gaps split into tracked rows)
+**As of:** 2026-11-21 · matrix revision IPS-44 (10 Package 1 checks executed on the isolated r5 host)
 **Host:** https://influrios.com · live collaboration deposits **closed** · Agency **Explicitly deferred**
 **Authoritative sources:** [coverage-matrix.md](./coverage-matrix.md) · [blocked-register.md](./blocked-register.md) · [coverage-status.md](./coverage-status.md) · [remediation-plan.md](./remediation-plan.md)
 
@@ -13,14 +13,14 @@ This page is the single summary of what is still open. It does not change any ma
 
 | Status | Rows | Recomputed from matrix | Matches header |
 |--------|-----:|------------------------|:--------------:|
-| Pass | 378 | yes | ✅ |
-| **Fail** | **24** | 24 rows with Status `Fail` | ✅ |
-| **Blocked** | **84** | 84 rows with Status `Blocked` (+4 IPS-43) | ✅ |
-| **Not tested** | **6** | INV-J-010, INV-D-007E, INV-N-013T/015T/016T/017T | ✅ |
+| Pass | 382 | yes | ✅ |
+| **Fail** | **29** | 29 rows with Status `Fail` (+5 IPS-44) | ✅ |
+| **Blocked** | **80** | 80 rows with Status `Blocked` (IPS-44: −5 executed, +1 INV-N-016T) | ✅ |
+| **Not tested** | **1** | INV-D-007E | ✅ |
 | Explicitly deferred | 10 | Agency only | ✅ |
 | **Total** | **502** | | ✅ |
 
-**Open = 114 rows** (24 Fail + 84 Blocked + 6 Not tested). The former hidden partials (§4) are now counted rows.
+**Open = 110 rows** (29 Fail + 80 Blocked + 1 Not tested). IPS-44 results: [execution/r5-isolated-package1-results.md](./execution/r5-isolated-package1-results.md).
 
 ---
 
@@ -36,13 +36,13 @@ This page is the single summary of what is still open. It does not change any ma
 | RC-MAIL | INV-R-119 | R5 · UX Package 5 | Mail failure triage surface |
 | RC-JOBS | INV-J-020, INV-J-021 | R5 · UX Package 5 | Isolated cron host; scheduler **and** behaviour proven separately |
 | RC-EXPORT | INV-D-003, INV-I-014, INV-A-102 | R5 · UX Package 5 | Download + file inspection |
-| RC-DASHBOARD | INV-DC-001, INV-DC-002, INV-DC-006, INV-DC-012, INV-DC-015, INV-C-014, INV-N-004 | R4b · **UX Package 1 ([#540](https://github.com/getnuevetech/Influrios/pull/540))** | Package 1 design corrections accepted → implementation → retest DB1–DB6 / MOB1 |
+| RC-DASHBOARD | INV-DC-001, INV-DC-002, INV-DC-006, INV-DC-012, INV-DC-015, INV-C-014, INV-N-004, **IPS-44:** INV-DC-013, INV-DC-014, INV-A-048, INV-N-015T, INV-N-017T | R4b · **UX Package 1 ([#540](https://github.com/getnuevetech/Influrios/pull/540))** | Package 1 design corrections accepted → implementation → retest DB1–DB6 / MOB1 |
 
-None of the 24 is closed. Package 1 design acceptance does **not** close RC-DASHBOARD rows; only post-implementation retest does.
+None of the 29 is closed. Package 1 design acceptance does **not** close RC-DASHBOARD rows; only post-implementation retest does.
 
 ---
 
-## 3. Not tested (6)
+## 3. Not tested (1) — IPS-44 executed the other five (see results)
 
 | Row | Why | What closes it |
 |-----|-----|----------------|

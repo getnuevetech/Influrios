@@ -1,10 +1,11 @@
 # Full-platform audit — Influrios
 
-**Phase:** A complete. Phase B + IPS-25 + IPS-29 + IPS-30 + IPS-31/40 + **IPS-42 evidence reconcile** + **IPS-43 hidden-gap split**. **Not** platform-wide complete (**24 Fail** / **84 Blocked** / **6 Not tested** / **378 Pass**). Phase C remediation plan (IPS-20) remains **PROVISIONAL**.  
+**Phase:** A complete. Phase B + IPS-25 + IPS-29 + IPS-30 + IPS-31/40 + **IPS-42 evidence reconcile** + **IPS-43 hidden-gap split**. **Not** platform-wide complete (**29 Fail** / **80 Blocked** / **1 Not tested** / **382 Pass** (IPS-44)). Phase C remediation plan (IPS-20) remains **PROVISIONAL**.  
 **Coverage status (user-facing):** [coverage-status.md](./coverage-status.md) — Fail (24), Blocked (80), Not tested (1), Pass (378); IPS-30 acceptance + IPS-31/40 Mailpit + IPS-42 reconcile.  
 **NT chase:** [execution/not-tested-chase-results.md](./execution/not-tested-chase-results.md) (IPS-25).  
 **Dashboard consistency:** [execution/dashboard-consistency-results.md](./execution/dashboard-consistency-results.md) (IPS-29 · INV-DC-* · **RC-DASHBOARD**).  
 **Mail-sink restore:** [execution/mail-sink-restore-results.md](./execution/mail-sink-restore-results.md) (IPS-31 · isolated Mailpit; deposit+mail rows stay Blocked).  
+**IPS-44 results (10 Package 1 checks, isolated host):** [execution/r5-isolated-package1-results.md](./execution/r5-isolated-package1-results.md)  
 **Runner handoff (every open check → runner + next action):** [check-handoff.md](./check-handoff.md)  
 **Latest open-items summary:** [coverage-blocker-report.md](./coverage-blocker-report.md) (Fail / Blocked / Not tested / hidden partials).  
 **Audit-continue + reconcile:** [execution/audit-continue-alongside-design-results.md](./execution/audit-continue-alongside-design-results.md) (IPS-40/42).  
@@ -26,15 +27,15 @@
 | [execution/](./execution/) | Slice results: auth, collab, billing, admin, nt-chase, dashboard-consistency, [mail-sink-restore-results.md](./execution/mail-sink-restore-results.md), [audit-continue-alongside-design-results.md](./execution/audit-continue-alongside-design-results.md) |
 | [media/INDEX.md](./media/INDEX.md) | Evidence catalog (incl. `dashboard-consistency/`, `mail-sink/`, `audit-continue/`) |
 
-## Counts (matrix post IPS-43 split)
+## Counts (matrix post IPS-44 isolated run)
 
 | Metric | Count |
 |--------|------:|
 | Matrix rows | 502 |
-| Pass | **378** |
-| Fail | **24** *(17 prior + 5 INV-DC-* + INV-C-014 + INV-N-004)* |
-| Blocked | **84** *(+4 IPS-43 notification triggers)* |
-| Not tested | **6** *(INV-J-010; INV-D-007E export; INV-N-013T/015T/016T/017T triggers — IPS-43)* |
+| Pass | **382** |
+| Fail | **29** *(24 + IPS-44: INV-DC-013, INV-DC-014, INV-A-048, INV-N-015T, INV-N-017T)* |
+| Blocked | **80** |
+| Not tested | **1** *(INV-D-007E export)* |
 | Explicitly deferred (Agency) | 10 |
 | Page routes (`src/app/**/page.tsx`) | 128 |
 | Mapped processes (P-01…P-28) | 28 |

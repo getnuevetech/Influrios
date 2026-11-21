@@ -1,0 +1,24 @@
+{
+  "check": "INV-J-010",
+  "host": "http://127.0.0.1:3000",
+  "startedAt": "2026-11-21T17:06:31.700Z",
+  "steps": [
+    "admin enabled Automatic milestone approval (UI) with reason",
+    "TIME-TRAVEL fixture: M2 autoApproveAt = now()-1h"
+  ],
+  "gateBefore": true,
+  "gateDb": "t",
+  "sweep1": "{\"ok\":true,\"enqueued\":{\"queued\":13},\"processed\":{\"processed\":5}}",
+  "afterSweep1": {
+    "m2": "release_scheduled approvedAt=2026-11-21 17:06:34.376",
+    "autoApprovedLogs": "1"
+  },
+  "sweep2": "{\"ok\":true,\"enqueued\":{\"queued\":13},\"processed\":{\"processed\":17}}",
+  "afterSweep2": {
+    "m2": "release_scheduled",
+    "autoApprovedLogs": "1"
+  },
+  "logsBefore": "0",
+  "error": "Error: Command failed: psql -h 127.0.0.1 -p 5433 -U postgres influrios_audit -Atc select kind||':'||status||':'||coalesce(left(error,80),'') from \"Job\" where kind='milestone_auto_approval' order by \"createdAt\" desc limit 3\nERROR:  column \"error\" does not exist\nLINE 1: select kind||':'||status||':'||coalesce(left(error,80),'') f...\n                                                     ^\n\n    at genericNodeError (node:internal/errors:983:15)\n    at wrappedFn (node:internal/errors:537:14)\n    at checkExecSyncError (node:child_process:916:11)\n    at execFileSync (node:child_process:952:15)\n    at module.exports (/tmp/claude-0/-home-user-Influrios/887caec7-95f2-55b2-aeae-033df38ced6b/scratchpad/run/db.js:2:23)\n    at /tmp/claude-0/-home-user-Influrios/887caec7-95f2-55b2-aeae-033df38ced6b/scratchpad/run/j010.js:25:17\n    at async Object.run (/tmp/claude-0/-home-user-Influrios/887caec7-95f2-55b2-aeae-033df38ced6b/scratchpad/run/runner.js:6:9)",
+  "finishedAt": "2026-11-21T17:06:39.840Z"
+}

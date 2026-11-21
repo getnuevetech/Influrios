@@ -1,0 +1,27 @@
+{
+  "check": "INV-A-031",
+  "host": "http://127.0.0.1:3000",
+  "startedAt": "2026-11-21T16:56:19.029Z",
+  "steps": [
+    "admin queued invitation via UI; landed http://127.0.0.1:3000/admin/invitations",
+    "admin clicked Send email",
+    "processed due jobs via /api/cron/sweeps"
+  ],
+  "adminBefore": {
+    "funnel": []
+  },
+  "dbBefore": "queued|1",
+  "unclaimedInPicker": true,
+  "reusedFromAttempt1": true,
+  "statusCreated": "queued",
+  "sendEnabled": true,
+  "cron": "{\"ok\":true,\"enqueued\":{\"queued\":13},\"processed\":{\"processed\":13}}",
+  "statusAfterJob": "queued",
+  "mail": [
+    "AUDIT, create your Influrios Card",
+    "AUDIT, create your Influrios Card"
+  ],
+  "statusAfterOpen": "opened",
+  "error": "page.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button:has-text(\"Decline\")')\u001b[22m\n\n    at /tmp/claude-0/-home-user-Influrios/887caec7-95f2-55b2-aeae-033df38ced6b/scratchpad/run/a031.js:29:63\n    at async Object.run (/tmp/claude-0/-home-user-Influrios/887caec7-95f2-55b2-aeae-033df38ced6b/scratchpad/run/runner.js:6:9)",
+  "finishedAt": "2026-11-21T16:56:54.119Z"
+}

@@ -1,0 +1,150 @@
+{
+  "check": "INV-DC-013",
+  "host": "http://127.0.0.1:3000",
+  "startedAt": "2026-11-21T16:48:25.815Z",
+  "steps": [
+    "re-using invitation already sent via wizard in previous attempt (same run)",
+    "business withdrew via dialog; landed http://127.0.0.1:3000/collaboration/business?tab=requests&request=cmwqn69vg00ud7do51g99d9aj&saved=withdrawn"
+  ],
+  "before": {
+    "homeBanner": 1,
+    "homeStat": 1,
+    "homeAttention": 1,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 1,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 1,
+    "hubInvitationsCard": 1,
+    "hubNoInvitesCopy": false,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 1
+  },
+  "application": {
+    "id": "cmwqn69vy00ue7do5rjr46hvc",
+    "briefId": "cmwqn69vg00ud7do51g99d9aj",
+    "statusBefore": "REQUESTED"
+  },
+  "invited": {
+    "homeBanner": 1,
+    "homeStat": 1,
+    "homeAttention": 1,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 1,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 1,
+    "hubInvitationsCard": 1,
+    "hubNoInvitesCopy": false,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 1
+  },
+  "statusAfter": "WITHDRAWN",
+  "after": {
+    "homeBanner": null,
+    "homeStat": 0,
+    "homeAttention": null,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 0,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 1,
+    "hubInvitationsCard": 0,
+    "hubNoInvitesCopy": true,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 0
+  },
+  "afterReload": {
+    "homeBanner": null,
+    "homeStat": 0,
+    "homeAttention": null,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 0,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 1,
+    "hubInvitationsCard": 0,
+    "hubNoInvitesCopy": true,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 0
+  },
+  "afterMobile": {
+    "homeBanner": null,
+    "homeStat": 0,
+    "homeAttention": null,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 0,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 1,
+    "hubInvitationsCard": 0,
+    "hubNoInvitesCopy": true,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 0
+  },
+  "withdrawNoticeVisible": false,
+  "bizAfter": {
+    "attentionText": "Nothing is waiting on you. New responses, signatures, and funding tasks appear here. /  / A / AUDIT r5iso01 Co A",
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "Company Profile": 0,
+      "Discover Creators": 0,
+      "Collaborations": 0,
+      "Contracts": 0,
+      "Analytics": 0,
+      "Team": 0,
+      "Billing & Plans": 0,
+      "Collaboration Payments": 0,
+      "Verification": 0,
+      "Settings": 0
+    },
+    "bell": 0
+  },
+  "finishedAt": "2026-11-21T16:48:41.732Z"
+}

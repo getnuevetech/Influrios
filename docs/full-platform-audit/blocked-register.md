@@ -1,7 +1,7 @@
 # Blocked-check register (IPS-28)
 
 **Purpose:** Account for every **Blocked** row in the full-platform coverage matrix so env/fixture gates cannot vanish into Pass.
-**Source matrix:** [coverage-matrix.md](./coverage-matrix.md) (Blocked = **84**; IPS-43 added 4 notification-trigger rows INV-N-010T/011T/012T/027T linked to their action checks).
+**Source matrix:** [coverage-matrix.md](./coverage-matrix.md) (Blocked = **80** after IPS-44: INV-DC-010/013/014, INV-A-031, INV-A-048 executed on the isolated r5 host; INV-N-016T added as Blocked).
 **Execution narratives:** [execution/](./execution/) (`auth|collab|billing|admin|not-tested-chase|mail-sink-restore|audit-continue-alongside-design`-results.md).
 **Policy:** Do **not** enable live collaboration deposits (`journey_funding`) merely to clear audit counts. Prefer isolated staging + Mailpit / `MAIL_SINK_TO`.
 **Baseline:** Phase B live host; deposits closed; Agency Explicitly deferred.
@@ -10,8 +10,8 @@
 
 | Metric | Value |
 |--------|------:|
-| Blocked rows accounted for | **84** |
-| Matrix Blocked (authoritative) | 84 |
+| Blocked rows accounted for | **80** |
+| Matrix Blocked (authoritative) | 80 |
 | Match | YES |
 
 ### By blocker cluster
@@ -19,10 +19,10 @@
 | Cluster | Count | Owner (default) |
 |---------|------:|-----------------|
 | `MAIL_SINK` | 0 | — cleared IPS-40 (claim draft + notify kinds Pass on isolated host) |
-| `UI_FIXTURE_GAP` | 20 | Collaboration / product surface owner (fixture state) |
-| `DASHBOARD_CONSISTENCY_FIXTURE` | 3 | Collaboration QA (IPS-29 INV-DC-010/013/014) |
+| `UI_FIXTURE_GAP` | 19 | Collaboration / product surface owner (fixture state) |
+| `DASHBOARD_CONSISTENCY_FIXTURE` | 0 | Collaboration QA (IPS-29 INV-DC-010/013/014) |
 | `DEPOSITS_CLOSED_AND_MAIL_SINK` | 14 | Payments (event) + Platform Ops (sink) |
-| `DEPOSITS_CLOSED` | 15 | Payments / Collaboration (R6) — ops gate only; do not reopen for audit counts |
+| `DEPOSITS_CLOSED` | 16 | Payments / Collaboration (R6) — ops gate only; do not reopen for audit counts |
 | `EVENT_NOT_FIREABLE` | 10 | Collaboration / Trust & disputes + Payments ops |
 | `DEEP_LINK_FIXTURE` | 5 | Collaboration QA / fixture owner |
 | `FEATURE_GATE` | 2 | Platform Admin (product switches) + Collaboration |
@@ -36,19 +36,19 @@
 | `PAYOUT_RISK` | 1 | Payments / Collaboration (isolated release fixture) |
 | `SHARED_HOST_ISOLATION` | 1 | Platform Ops (cron isolation) |
 | `SMS_PROVIDER` | 1 | Integrations / Platform Ops (SMS) |
-| `TOKEN_FIXTURE` | 1 | Collaboration invite fixture owner |
+| `TOKEN_FIXTURE` | 0 | Collaboration invite fixture owner |
 
 ### By inventory prefix
 
 | Prefix | Count |
 |--------|------:|
-| INV-A-* | 28 |
+| INV-A-* | 26 |
 | INV-C-* | 2 |
-| INV-DC-* | 3 |
+| INV-DC-* | 0 |
 | INV-E-* | 14 |
 | INV-I-* | 2 |
 | INV-J-* | 3 |
-| INV-N-* | 21 |
+| INV-N-* | 22 |
 | INV-P-* | 4 |
 | INV-R-* | 5 |
 | INV-T-* | 2 |
@@ -107,7 +107,7 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 - **IPS-42 note:** `INV-N-010…017` / `INV-N-027` remain Pass **narrowed** to delivery isolation via direct `notifyCollabFundingEvent` — not originating business-action emission. Not re-Blocked.
 - Deposit+mail combo remains under `DEPOSITS_CLOSED_AND_MAIL_SINK` (14).
 
-### `UI_FIXTURE_GAP` (20)
+### `UI_FIXTURE_GAP` (19)
 
 - **Default owner:** Collaboration / product surface owner (fixture state)
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
@@ -125,7 +125,6 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 | INV-A-040 | P-09 Withdraw participation | Dialog/mutation path incomplete on fixture — entry partial or CTA absent | Withdraw menuitem not visible; close/archive controls present on requests |
 | INV-A-042 | P-07 Request managed match | Required control/CTA not exposed on audit fixture state (or state-gated) | controls=0; text=false |
 | INV-A-047 | P-10 Advance collab / queue signature | Dialog/mutation path incomplete on fixture — entry partial or CTA absent | Records page reached; advance not mutated |
-| INV-A-048 | P-12 Team proposal send/respond | Dialog/mutation path incomplete on fixture — entry partial or CTA absent | Team page loads; send/respond not mutated |
 | INV-A-053 | P-11 Apply collab discount | Required control/CTA not exposed on audit fixture state (or state-gated) | discountSignals=false |
 | INV-A-062 | P-15 Request change order | Required control/CTA not exposed on audit fixture state (or state-gated) | controls=0 |
 | INV-A-063 | P-15 Cancel prefund | Dialog/mutation path incomplete on fixture — entry partial or CTA absent | Payments needs_funding surface; explicit cancel-prefund CTA not found on held funding |
@@ -161,7 +160,7 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 | INV-E-064 | P-16/P-17 Email `refund.completed_business` · `refund.completed_business` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
 | INV-E-065 | P-16/P-17 Email `refund.completed_influencer` · `refund.completed_influencer` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
 
-### `DEPOSITS_CLOSED` (15)
+### `DEPOSITS_CLOSED` (16)
 
 - **Default owner:** Payments / Collaboration (R6) — ops gate only; do not reopen for audit counts
 - **Prerequisite:** Isolated sandbox with journey_funding enabled for AUDIT tenants only — never reopen live production deposits solely to clear matrix rows
@@ -174,6 +173,7 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 | INV-A-052 | P-15 Fund signed agreement | Live new deposits closed (INV-C-001 / journey_funding) — checkout must not open Stripe charge | Fund/start-funding navigates to needs_funding picker; no Stripe charge |
 | INV-A-055 | P-15 Create deal | Live collaboration deposits closed (journey_funding) — must not open Stripe charge to clear audit | createish=0; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Anal |
 | INV-A-056 | P-15 Open funding checkout | Live new deposits closed (INV-C-001 / journey_funding) — checkout must not open Stripe charge | No live Stripe Checkout; checkout probe 404; start-funding stays on payments |
+| INV-N-016T | P-14 Notification trigger: milestone approved | Approval coupled to release (payout setup → signed total → frozen allocation → provider release); R6 money path | IPS-44 isolated r5 attempts in `media/full-platform-audit/r5-iso/_attempts/` |
 | INV-A-057 | P-15 Start funding deposit | Live new deposits closed (INV-C-001 / journey_funding) — checkout must not open Stripe charge | Same as INV-A-056 |
 | INV-N-011T | P-15 Notification trigger: funding confirmed | Deposit event closed (linked INV-A-057) | IPS-43 split; delivery proven separately (INV-N-011) |
 | INV-N-012T | P-15 Notification trigger: funding did not complete | Deposit event closed (linked INV-A-057) | IPS-43 split; delivery proven separately (INV-N-012) |
@@ -347,7 +347,7 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 |----|-------------------|--------------------------|-------------------|
 | INV-N-103 | P-27 SMS preferred path · `SMS preferred path` | SMS provider / preferred path not exercised (Twilio not configured for audit send) | Jobs UI mentions SMS queue; no SMS send exercised |
 
-### `TOKEN_FIXTURE` (1)
+### `TOKEN_FIXTURE` (0)
 
 - **Default owner:** Collaboration invite fixture owner
 - **Prerequisite:** Fresh invite token emailed to AUDIT sink mailbox (requires mail sink)
@@ -356,7 +356,6 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 
 | ID | Journey / surface | Exact blocker (this row) | Notes from matrix |
 |----|-------------------|--------------------------|-------------------|
-| INV-A-031 | P-08 Decline invite (token page) | No valid live invite token for audit mailbox this run | No valid live invite token for audit mailbox this run |
 
 ## Per-row checklist (owner · prereq · safe · acceptance)
 
@@ -555,7 +554,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** HTTP 200 detail page for seeded id; screenshot; no console/auth error.
 - **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-a-029-transition.png`
 
-### INV-A-031
+### INV-A-031 — resolved IPS-44 (Pass); kept for history
 
 - **Exact blocker:** No valid live invite token for audit mailbox this run
 - **Affected journey:** P-08 Decline invite (token page)
@@ -644,7 +643,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
 - **Existing evidence (partial):** `media/full-platform-audit/collab/desktop/business-records.png`
 
-### INV-A-048
+### INV-A-048 — resolved IPS-44 (Fail); kept for history
 
 - **Exact blocker:** Dialog/mutation path incomplete on fixture — entry partial or CTA absent
 - **Affected journey:** P-12 Team proposal send/respond

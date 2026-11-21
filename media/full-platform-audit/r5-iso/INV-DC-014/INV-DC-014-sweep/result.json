@@ -1,0 +1,90 @@
+{
+  "check": "INV-DC-014-sweep",
+  "host": "http://127.0.0.1:3000",
+  "startedAt": "2026-11-21T16:52:47.393Z",
+  "steps": [
+    "admin set application expiry: Auto after 1 day (UI, password step-up)",
+    "TIME-TRAVEL fixture: createdAt set to now()-2d",
+    "POST /api/cron/sweeps"
+  ],
+  "plane": "{\"version\": 2, \"updatedAt\": \"2026-11-21T16:52:49.231Z\", \"mentorship\": {\"notes\": \"Mentors must meet admin eligibility before appearing in Find a Mentor.\", \"enabled\": true, \"minFollowers\": 1000, \"requireIdentityVerified\": true, \"requireGlobalPayoutReady\": false}, \"guestCollab\": {\"applyHard\": 3, \"applySoft\": 2, \"proposeHard\": 2, \"proposeSoft\": 1}, \"applicationExpire\": {\"mode\": \"auto\", \"afterDays\": 1}",
+  "sweep": "{\"ok\":true,\"enqueued\":{\"queued\":13},\"processed\":{\"processed\":13}}",
+  "status": "EXPIRED",
+  "sweepRerun": "{\"ok\":true,\"enqueued\":{\"queued\":13},\"processed\":{\"processed\":13}}",
+  "events": ">REQUESTED\nREQUESTED>EXPIRED",
+  "after": {
+    "homeBanner": null,
+    "homeStat": 0,
+    "homeAttention": null,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 0,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 2,
+    "hubInvitationsCard": 0,
+    "hubNoInvitesCopy": true,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 0
+  },
+  "afterReload": {
+    "homeBanner": null,
+    "homeStat": 0,
+    "homeAttention": null,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 0,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 2,
+    "hubInvitationsCard": 0,
+    "hubNoInvitesCopy": true,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 0
+  },
+  "afterMobile": {
+    "homeBanner": null,
+    "homeStat": 0,
+    "homeAttention": null,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 0,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 2,
+    "hubInvitationsCard": 0,
+    "hubNoInvitesCopy": true,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 0
+  },
+  "notificationCentre": "All (2) | Action required (2) | Invitations (2)",
+  "mail": [
+    "16:48:32 AUDIT r5iso01 Co A invited you to collaborate",
+    "16:49:35 Private invitation from AUDIT r5iso01 Co A"
+  ],
+  "finishedAt": "2026-11-21T16:52:58.294Z"
+}

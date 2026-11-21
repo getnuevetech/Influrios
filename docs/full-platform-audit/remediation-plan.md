@@ -10,7 +10,7 @@
 | **Status** | Provisional design / planning artifact |
 | **Audit execution baseline** | Live host probed @ `40b6288` (#536); matrix post IPS-25 |
 | **Code note** | #537 COR-SEC-01 **merged** → `5a5f4c0` on `main`; live redeploy + credential rotation **not** confirmed |
-| **Matrix** | **378 Pass · 24 Fail · 84 Blocked · 6 Not tested · 10 Explicitly deferred** (502 rows, IPS-43) — +IPS-29/30/31 + IPS-40 + **IPS-42** reconcile (−1 Pass / +1 NT; View/Export + notify isolation narrowed) |
+| **Matrix** | **382 Pass · 29 Fail · 80 Blocked · 1 Not tested · 10 Explicitly deferred** (502 rows, IPS-44) — +IPS-29/30/31 + IPS-40 + **IPS-42** reconcile (−1 Pass / +1 NT; View/Export + notify isolation narrowed) |
 | **Authoritative matrix** | [coverage-matrix.md](./coverage-matrix.md) |
 | **Coverage narrative** | [coverage-status.md](./coverage-status.md) |
 | **Execution** | [execution/](./execution/) (auth, collab, billing, admin, [not-tested-chase-results.md](./execution/not-tested-chase-results.md), [dashboard-consistency-results.md](./execution/dashboard-consistency-results.md), [mail-sink-restore-results.md](./execution/mail-sink-restore-results.md)) |
@@ -71,7 +71,7 @@ Until that PR exists and is reviewable on GitHub, treat every remediation item b
 | **RC-MAIL** | ADMIN-MAIL-FAILED | INV-R-119 | P1 |
 | **RC-JOBS** | INV-J-020 / INV-J-021 | INV-J-020, INV-J-021 | P2 |
 | **RC-EXPORT** | INV-D-003 | INV-D-003, INV-I-014, INV-A-102 | P2 |
-| **RC-DASHBOARD** | DC-INVITE-MISMATCH, DC-PAYOUT-MISMATCH, DC-ACTIVE-MISMATCH, DC-TEAM-INVITE-DEADEND, DC-ACTION-STUCK, ACCEPT-CONDITIONAL (IPS-29/30) | INV-DC-001, INV-DC-002, INV-DC-006, INV-DC-015, INV-DC-012, INV-C-014, INV-N-004 | High |
+| **RC-DASHBOARD** | DC-INVITE-MISMATCH, DC-PAYOUT-MISMATCH, DC-ACTIVE-MISMATCH, DC-TEAM-INVITE-DEADEND, DC-ACTION-STUCK, ACCEPT-CONDITIONAL (IPS-29/30); P1-AUD-01…09 (IPS-44) | INV-DC-001, INV-DC-002, INV-DC-006, INV-DC-015, INV-DC-012, INV-C-014, INV-N-004, INV-DC-013, INV-DC-014, INV-A-048, INV-N-015T, INV-N-017T | High |
 
 **Non-Fail follow-ups (do not inflate Fail count):** COR-09a dual chrome; BILL-06 Manage downgrade → `/claim`; MSG-NAV; INV-J-022 `subscription_renewal_sweep` **Blocked** (adjacent cron); COR-20 soft-error path not re-mutated on waiting-review fixture.
 
@@ -629,6 +629,7 @@ See patch **RC-DASHBOARD** (DB1–DB6). Package **R4b**. Deposits stay closed; n
 - **IPS-31** — isolated Mailpit restore; deposit+mail stay Blocked; plan stays **PROVISIONAL**.
 - **IPS-40** — claim draft + notify isolation + demoted NT actions/jobs on isolated host; deposit+mail stay Blocked; plan stays **PROVISIONAL**.  
 - **IPS-42** — evidence reconcile: INV-J-010 → NT; INV-D-007 View Pass / Export NT; INV-N-010…017/027 Pass = delivery isolation only; matrix **378 Pass · 80 Blocked · 1 NT**; design PR not held.  
+- **IPS-44** — 10 Package 1 gating checks executed on a local isolated host (`main` @ `5a5f4c0`): 4 Pass · 5 Fail · 1 Blocked; new defects P1-AUD-01…10. Matrix **502 · 382 Pass · 29 Fail · 80 Blocked · 1 NT**.
 - **IPS-43** — hidden gaps made countable: INV-D-007E media-kit export (NT); notification triggers INV-N-010T…017T/027T (4 Blocked · 4 NT) linked to existing action/job checks; INV-N-014 trigger covered by INV-J-011. Matrix **502 rows · 378 Pass · 24 Fail · 84 Blocked · 6 NT**.
 - **#537** — COR-SEC-01 merged `5a5f4c0`; redeploy + rotation open (S1–S5 all required).  
 - **GitHub evidence package** — Audit package worker must commit **this** revision.

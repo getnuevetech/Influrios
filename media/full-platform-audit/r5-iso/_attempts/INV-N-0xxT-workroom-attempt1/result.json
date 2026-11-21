@@ -1,0 +1,63 @@
+{
+  "check": "INV-N-0xxT-workroom",
+  "host": "http://127.0.0.1:3000",
+  "startedAt": "2026-11-21T16:59:58.706Z",
+  "steps": [
+    "influencer submitted m1 v1 via workroom dialog; url http://127.0.0.1:3000/collaboration/work/cmwqnkk1f00037dc25lwesptv?tab=milestones&submitted=1&savedAs=https%3A%2F%2Fexample.com%2Faudit-r5-m1-v1",
+    "influencer submitted m2 v1 via workroom dialog; url http://127.0.0.1:3000/collaboration/work/cmwqnkk1f00037dc25lwesptv?tab=milestones&submitted=1&savedAs=https%3A%2F%2Fexample.com%2Faudit-r5-m2-v1"
+  ],
+  "bizBefore": {
+    "attentionText": "Nothing is waiting on you. New responses, signatures, and funding tasks appear here. /  / A / AUDIT r5iso01 Co A",
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "Company Profile": 0,
+      "Discover Creators": 0,
+      "Collaborations": 0,
+      "Contracts": 0,
+      "Analytics": 0,
+      "Team": 0,
+      "Billing & Plans": 0,
+      "Collaboration Payments": 0,
+      "Verification": 0,
+      "Settings": 0
+    },
+    "bell": 0
+  },
+  "dbAfterSubmit": "AUDIT r5 Milestone 1:submitted\nAUDIT r5 Milestone 2:submitted",
+  "n013": {
+    "bizNotices": [],
+    "mail": [
+      "<audit.r5iso01.business-a@example.com> :: Ready for review: AUDIT r5 Milestone 1",
+      "<audit.r5iso01.business-a@example.com> :: Ready for review: AUDIT r5 Milestone 2"
+    ]
+  },
+  "bizAfterSubmit": {
+    "attentionText": "Review a submission /  / AUDIT r5 Workroom notices · audit-r5iso01-b / ",
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "Company Profile": 0,
+      "Discover Creators": 0,
+      "Collaborations": 1,
+      "Contracts": 0,
+      "Analytics": 0,
+      "Team": 0,
+      "Billing & Plans": 0,
+      "Collaboration Payments": 0,
+      "Verification": 0,
+      "Settings": 0
+    },
+    "bell": 0
+  },
+  "bizInbox": {
+    "openTasks": "2",
+    "m1Rows": 0,
+    "m2Rows": 0
+  },
+  "reviewButtons": [],
+  "reviseFields": [],
+  "reviseSubmitText": null,
+  "error": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-account-dialog-root] button[type=submit]').filter({ hasText: /request|send|changes/i }).first()\u001b[22m\n\n    at /tmp/claude-0/-home-user-Influrios/887caec7-95f2-55b2-aeae-033df38ced6b/scratchpad/run/ntrig.js:31:78\n    at async Object.run (/tmp/claude-0/-home-user-Influrios/887caec7-95f2-55b2-aeae-033df38ced6b/scratchpad/run/runner.js:6:9)",
+  "finishedAt": "2026-11-21T17:01:05.174Z"
+}

@@ -1,0 +1,21 @@
+const { execSync } = require('child_process');
+const F = 'cmwqnkk1f00037dc25lwesptv', M1 = 'cmwqnkk1f00047dc2ivtdetzo';
+const mails = () => JSON.parse(execSync('curl -s 127.0.0.1:8025/api/v1/messages').toString()).messages;
+require('./runner').run('INV-N-016T-approve', async ({ b, dir, res, BASE, U, session, C, db, step }) => {
+  const inf = await session(b, U.infB); const biz = await session(b, U.bizA);
+  res.infBefore = await C.influencer(inf.p, dir, '1-inf-before');
+  const m0 = mails().length;
+  await biz.p.goto(`${BASE}/collaboration/work/${F}?tab=milestones&focus=${M1}&release=${M1}&version=2`); await biz.p.waitForLoadState('networkidle');
+  await biz.p.getByLabel(/I approve version v2/).check(); await C.shot(biz.p, dir, '2-biz-approve-checked');
+  await Promise.all([biz.p.waitForNavigation().catch(() => {}), biz.p.locator('button[type=submit]:visible', { hasText: 'Approve version 2' }).click()]);
+  await biz.p.waitForLoadState('networkidle'); await C.shot(biz.p, dir, '3-biz-after-approve'); step('business ticked confirmation and approved M1 v2; url ' + biz.p.url());
+  res.milestones = db(`select title||':'||status from "FundingMilestone" where "fundingId"='${F}' order by "sortOrder"`);
+  res.mail = mails().slice(m0).map(x => x.to.join() + ' :: ' + x.subject);
+  res.infAfter = await C.influencer(inf.p, dir, '4-inf-after');
+  await inf.p.goto(BASE + '/creator/notifications'); await inf.p.waitForLoadState('networkidle'); const t = await C.shot(inf.p, dir, '5-inf-notifications');
+  res.infNotificationCentre = (t.match(/All \(\d+\)[^\n]*\n[^\n]*\n[^\n]*\n[^\n]*\n[^\n]*/) || [''])[0].replace(/\n/g, ' | ');
+  res.approvedNoticeInCentre = /approved/i.test(t);
+  res.biz = await C.business(biz.p, dir, '6-biz-after');
+  await biz.p.goto(BASE + '/collaboration/inbox'); await biz.p.waitForLoadState('networkidle'); const ti = await C.shot(biz.p, dir, '7-biz-inbox');
+  res.bizInbox = (ti.match(/(\d+) open tasks?/i) || [])[1];
+});
