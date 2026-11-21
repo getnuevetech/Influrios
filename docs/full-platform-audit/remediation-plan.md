@@ -25,7 +25,7 @@
 | Claims | Does **not** claim |
 |--------|---------------------|
 | 24 Fail rows are reproduced with evidence paths (incl. IPS-29 INV-DC-* + IPS-30 INV-C-014/INV-N-004) | Platform is fully audited or remediated |
-| Blocked rows are dependencies / retest gates (95 after IPS-31) | Blocked = Pass, or deposit+mail marked Pass without money event |
+| Blocked rows are dependencies / retest gates (80 after IPS-40/42; was 95 after IPS-31) | Blocked = Pass, or deposit+mail marked Pass without money event |
 | Corrected flows + acceptance for each Fail | Product PRs are approved to start (except #537 already merged) |
 | Plan is the revision for the GitHub evidence PR | Evidence pack is already on GitHub |
 
@@ -92,7 +92,7 @@ Until that PR exists and is reviewable on GitHub, treat every remediation item b
 
 Blocked rows are **not** Fail. They **block proof** of related remediations and must be called out on each correction.
 
-| Blocker theme (**80 Blocked** post IPS-40; NT cleared) | Blocks proof of… | Remediations still designable? |
+| Blocker theme (**80 Blocked** post IPS-40/42; NT = 1 — INV-J-010) | Blocks proof of… | Remediations still designable? |
 |------------------------------------------|------------------|--------------------------------|
 | Remaining mail-sink gaps (claim-draft / notification-event) | Full claim publish + live notification kind emission | Yes — fixtures; **IPS-31** proved interception (INV-I-019); do not reopen deposits |
 | Live deposits closed (+ deposit+mail) | Funding, release, refund, payout notices; collab discount apply | Yes for subscription Fail; **no** live money reopen; mail portion may be proven via Send-test only |
