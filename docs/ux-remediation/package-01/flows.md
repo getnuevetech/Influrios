@@ -20,6 +20,8 @@ turn is persisted and changes only on actions; reading never changes it (master-
 Sidebar Collaborations badge = W + collaboration tasks on your turn
 ```
 
+Shared example records (master-spec §3.1): W = 1, O = 3, content tasks 2 → Collaborations badge 3 (hub tab badges Invitations 1 + Active 2); Contracts badge 1 (Studio Tour Shorts); Needs your attention 4 = action inbox 4.
+
 *Rule:* “No invitations are waiting” appears only when O = 0. Board: [influencer-home](./designs/influencer-home.html) · [collaborations-hub](./designs/collaborations-hub.html).
 
 ---
@@ -111,6 +113,8 @@ Waiting for your reply (member invited; proposal sent/partial)
  ├─ Accept invitation ─► You accepted ─ waiting for teammates ─► (all accepted) agreement opens
  └─ Decline ─► You declined
 Business closes proposal ─► “This invitation is closed”
+                             (member who already accepted: “Team invitation · Closed — {Business} closed this
+                              team proposal after you accepted. Nothing was signed or funded.” · no task)
 ```
 
 The invitation stops counting as waiting on Accept or Decline. “No further action needed” is never shown while the member is `invited`.
@@ -141,7 +145,9 @@ Board: [team-invite-respond](./designs/team-invite-respond.html).
 
 ```
 [business] accepts ─► influencer: Active “Accepted · {Business} is preparing the agreement” (no task)
-                      business: task “Create the agreement”
+                      business: “Accepted” → task “Prepare agreement”
+                      (Accept is saved FIRST; preparation opens only after `saved`.
+                       preparation fails → “Accepted · agreement not sent” + Prepare agreement; never Accept again)
 [business] creates + sends agreement ─► BOTH parties pending: influencer task “Review and sign agreement”,
                                          business task “Sign agreement” (each: Contracts badge +1)
 a party signs ─► that party's task clears → they see “Waiting for {other party} to sign”
@@ -159,11 +165,15 @@ fully signed ─► influencer: “Agreement signed. {Business} handles the next
 
 ```
 Bell U unread → Notifications → open unread notice (centered popup / sheet)
-  → marked read, bell U−1
+  → marked read: bell U−1, Unread filter U−1, row dot removed — same render, no reload
   → Action required unchanged (copy: “Your reply is still needed.”)
   → Review invitation → invitation popup (flow D)
 Task completes → Action required clears (centre + attention + badge)
+Historical notice (e.g. “Holiday Gift Guide agreement was ready”, since signed by you)
+  → opens the CURRENT state: “Waiting for Northwind Studio to sign” · View agreement · not Action required
 ```
+Example: bell 2 / Unread 2 / Action required 2 → open invitation notice → 1 / 1 / 2 → reply → 1 / 1 / 1 → sign Studio Tour Shorts → 1 / 1 / 0.
+Notifications is reached from the bell: no sidebar item or mobile tab is highlighted.
 
 Board: [notifications](./designs/notifications.html).
 
@@ -171,7 +181,7 @@ Board: [notifications](./designs/notifications.html).
 
 ## F. Mobile authenticated chrome (MOB1)
 
-Fixed four-slot nav bar (3 destinations + More, equal widths, no horizontal scroll; More always fully visible at 320–430 px) → drawer with every sidebar destination, same order, labels, icons and badges. More shows the badge sum for items not in the bar. Board: [mobile-auth-nav](./designs/mobile-auth-nav.html).
+Fixed four-slot nav bar (3 destinations + More, equal widths, no horizontal scroll; More always fully visible at 320–430 px) → drawer with every sidebar destination, same order, labels, icons and badges. More shows the badge sum for items not in the bar. A drawer destination (Action inbox, Contracts, Messages) highlights More; Notifications highlights nothing; Dashboard only on Dashboard. Mobile keeps every desktop route (hub: Overview · Invitations · Applications · Active · Completed) and an Open / Review button on every row. Frames at 320 / 390 / 430 px show layout only; the continuous range, keyboard and focus behaviour are runtime acceptance (MOB1). Board: [mobile-auth-nav](./designs/mobile-auth-nav.html).
 
 ---
 
@@ -180,10 +190,12 @@ Fixed four-slot nav bar (3 destinations + More, equal widths, no horizontal scro
 ```
 /business/home
  ├─ Needs your attention (A rows = Collaborations badge + Contracts badge)
- │    ├─ “{Influencer} is interested” → popup: Accept and draft agreement · Reply · Not a fit
+ │    ├─ “{Influencer} is interested” → popup: Accept · Reply · Not a fit
+ │    │      Accept → saved → “Accepted” + Prepare agreement
+ │    │      preparation failed → “Accepted · agreement not sent” + Prepare agreement (no second Accept)
  │    ├─ “Content submitted for review” → popup: Approve · Request revision
- │    └─ “Agreement ready to sign” → Contracts › agreement viewer
- ├─ Summaries: Active requests · Active collaborations · Agreements to sign · Funded this month (each links to its filtered destination)
+ │    └─ “Sign agreement” (influencer signed first) → Contracts › agreement viewer
+ ├─ Summaries: Active requests · Active collaborations · Agreements to sign · Waiting on influencers (each links to its filtered destination; no money stat while deposits are closed)
  ├─ Recent collaborations (status + who acts next) → collaboration overview popup
  ├─ Start a new request → request wizard · Discover influencers
  └─ Right column: Billing & Subscription → billing · Saved influencers → Discover · Recent activity → activity

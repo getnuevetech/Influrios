@@ -14,7 +14,7 @@
 | [Notifications](./designs/notifications.html) | [PNG](../../../media/ux-remediation/package-01/notifications-desktop.png) | [PNG](../../../media/ux-remediation/package-01/notifications-mobile.png) | |
 | [Business dashboard](./designs/business-dashboard.html) | [PNG](../../../media/ux-remediation/package-01/business-dashboard-desktop.png) · [popup](../../../media/ux-remediation/package-01/business-dashboard-desktop-popup.png) | [PNG](../../../media/ux-remediation/package-01/business-dashboard-mobile.png) · [sheet](../../../media/ux-remediation/package-01/business-dashboard-mobile-popup.png) | |
 | [Action inbox](./designs/action-inbox.html) | [PNG](../../../media/ux-remediation/package-01/action-inbox-desktop.png) | [PNG](../../../media/ux-remediation/package-01/action-inbox-mobile.png) | |
-| [Mobile navigation](./designs/mobile-auth-nav.html) | — | [influencer](../../../media/ux-remediation/package-01/mobile-auth-nav-mobile.png) · [business](../../../media/ux-remediation/package-01/mobile-auth-nav-mobile-business.png) | |
+| [Mobile navigation](./designs/mobile-auth-nav.html) | — | [influencer](../../../media/ux-remediation/package-01/mobile-auth-nav-mobile.png) · [business](../../../media/ux-remediation/package-01/mobile-auth-nav-mobile-business.png) · [320](../../../media/ux-remediation/package-01/mobile-auth-nav-mobile-320.png) · [430](../../../media/ux-remediation/package-01/mobile-auth-nav-mobile-430.png) | Static widths only; keyboard/focus are runtime |
 | [Sidebar badges](./designs/sidebar-badges.html) · [States](./designs/states.html) · [Admin note](./designs/admin-shared-note.html) | full boards | [states](../../../media/ux-remediation/package-01/states-mobile.png) | |
 
 Review record: [visual-review.md](./visual-review.md). Rules: [master-spec](../master-spec.md) §0–§9 (+ §12–§13 for Package 5 / R6 boundaries). Flows: [flows.md](./flows.md).
@@ -32,9 +32,9 @@ Review record: [visual-review.md](./visual-review.md). Rules: [master-spec](../m
 | S5 Payout readiness six states | P1-T2, P1-T11 | DB2, DB2a–e | INV-DC-002, INV-C-014, INV-N-004 |
 | S6 Approval separate from release | P1-AUD-08 | AUD2 | INV-N-016T (approval half) |
 | S7 Next steps after acceptance/signature | P1-AUD-11 | DB8 | INV-A-045, INV-N-010T (next-step half) |
-| S8 Business dashboard + badges | P1-T9, P1-AUD-09 | DB7 | INV-N-013T badge |
-| S9 Shell: mobile nav, terminology, card, visual parity | P1-T8, P1-T13–T15 | MOB1, TERM1, CARD1, VIS1 | INV-DC-030–033 |
-| S10 Active count + stability regression | P1-T3, P1-T7, P1-T10 | DB3, DB6 | INV-DC-006 |
+| S8 Business dashboard + badges + accept-then-prepare | P1-T9, P1-AUD-09, P1-T17 | DB7, DB10 | INV-N-013T badge |
+| S9 Shell: mobile nav, terminology, card, visual parity, signed-out return | P1-T8, P1-T13–T15, P1-T18, P1-T19 | MOB1 (incl. runtime keyboard/focus across 320–430), TERM1, CARD1, VIS1 | INV-DC-030–033 |
+| S10 Active count + stability regression on the shared example records | P1-T3, P1-T7, P1-T10, P1-T16 | DB3, DB6, DB9 | INV-DC-006 |
 
 ## 3. Not in Package 1 (owners in #539 remediation plan, defect register)
 

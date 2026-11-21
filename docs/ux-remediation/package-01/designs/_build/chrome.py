@@ -102,16 +102,19 @@ def m_nav(role, active, badges, more_open=False):
     keys = {k for k, _, _ in M_CHIPS[role]}
     hidden = sum(v for k, v in badges.items() if k not in keys)
     nb = f'<span class="nb">{hidden}</span>' if hidden else ""
-    on = " on" if more_open else ""
+    # A destination that lives in the drawer (e.g. Action inbox) highlights More.
+    # active=None (Notifications, reached from the bell) highlights nothing.
+    on = " on" if more_open or (active and active not in keys) else ""
     cells.append(f'<span class="m-tab{on}" aria-expanded="{str(more_open).lower()}"><span class="m-ic">{i("menu")}{nb}</span>More</span>')
     return f'<nav class="m-nav" aria-label="Main">{"".join(cells)}</nav>'
 
 
-def phone(role, active, badges, bell, content, overlay="", tall=False, fid="mobile", more_open=False):
+def phone(role, active, badges, bell, content, overlay="", tall=False, fid="mobile", more_open=False, width=None):
     cnt = f'<span class="cnt">{bell}</span>' if bell else ""
     cls = "phone tall" if tall else "phone"
+    sty = f' style="width:{width}px"' if width else ""
     return (
-        f'<div class="{cls}" id="{fid}"><div class="m-top"><div class="wordmark"><span class="mark">∞</span>Influrios</div>'
+        f'<div class="{cls}" id="{fid}"{sty}><div class="m-top"><div class="wordmark"><span class="mark">∞</span>Influrios</div>'
         f'<div class="grow"></div><span class="iconbtn" aria-label="Notifications, {bell or 0} unread">{i("bell")}{cnt}</span>'
         f'<span class="ava" style="width:36px;height:36px">{WHO[role][2]}</span></div>'
         f'{m_nav(role, active, badges, more_open)}<div class="m-content">{content}</div>{overlay}</div>'
@@ -139,6 +142,23 @@ def page(fname, title, eyebrow, h1, lead, findings, body):
 """
     with open(os.path.join(HERE, "..", fname), "w") as fh:
         fh.write(doc)
+
+
+# ---------- shared example records (one set for every influencer board) ----------
+# Influencer Amara Cole. Tasks on her turn:
+#   1 Reply to invitation · Free Tech Support (Northwind Studio)      -> Collaborations
+#   2 Submit content · Spring Launch Reel · Milestone 1 (Lumen)        -> Collaborations
+#   3 Submit content · Spring Launch Reel · Milestone 2 (Lumen)        -> Collaborations
+#   4 Sign agreement · Studio Tour Shorts (Northwind signed first)     -> Contracts
+# Not tasks: Holiday Gift Guide (Amara signed, waiting for Northwind), Autumn Glow
+# Series (question sent), Winter Unboxing · Team (accepted, waiting for teammates).
+INF_BADGES = {"collab": 3, "contracts": 1}
+INF_BELL = 2          # unread notices before the invitation notice is opened
+INF_BELL_AFTER = 1    # after opening it
+
+
+def m_btn(kind, label):
+    return f'<span class="btn {kind} sm" style="flex:0 0 auto">{label}</span>'
 
 
 # ---------- reusable customer UI fragments ----------

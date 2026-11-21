@@ -9,20 +9,21 @@ def side_only(role, active, badges, cap):
 
 def build_badges():
     rows = [
-        ("Collaborations (influencer)", "Invitations waiting for your reply + collaboration tasks on your turn (submit content, revise)", "You reply (Interested / question / decline / accept), the task completes, or the invitation is withdrawn or expires", "Hub Invitations tab badge + Needs your attention"),
-        ("Earnings &amp; Payouts", "1 when payout state is Setup required or Action required AND you have active collaborations or unpaid earnings", "State becomes Verification pending, Ready, Not available, or Temporarily unavailable (badge holds last known)", "Receive payments card shows the state and the one CTA"),
+        ("Collaborations (influencer)", "Invitations waiting for your reply + collaboration tasks on your turn (submit content, revise). Example: 1 + 2 = 3", "You reply (Interested / question / decline / accept), the task completes, or the invitation is withdrawn or expires", "Hub tab badges (Invitations 1 + Active 2) + Needs your attention"),
+        ("Contracts (influencer)", "Agreements waiting for <b>your</b> signature. Example: Studio Tour Shorts = 1. An agreement you already signed is not counted", "You sign, or the agreement is cancelled. The other party signing doesn't clear it", "Contracts › To sign + Needs your attention"),
+        ("Earnings &amp; Payouts", "1 when payout state is Setup required or Action required AND you have active collaborations or unpaid earnings", "State becomes Verification pending, Ready or Not available. Temporarily unavailable keeps the <b>last known</b> value (0 when last confirmed Ready); no history = 0", "Receive payments card shows the state and the one CTA"),
         ("Collaborations (business)", "Responses to review + content to review", "Business accepts, replies, declines, approves or requests revision", "Dashboard Needs your attention + Collaborations › Requests"),
-        ("Contracts (business)", "Agreements waiting for your signature", "You sign, or the agreement is cancelled", "Contracts › To sign"),
-        ("Bell", "Unread notices", "Opening an unread notice", "Notifications › Unread"),
+        ("Contracts (business)", "Agreements waiting for your signature (example: Holiday Gift Guide)", "You sign, or the agreement is cancelled", "Contracts › To sign"),
+        ("Bell", "Unread notices (example: 2)", "Opening an unread notice; the Unread filter and the row dot update in the same render", "Notifications › Unread"),
         ("Action inbox", "None (destination only)", "—", "Each row = one task; duplicates merged (see action-inbox board)"),
         ("Messages", "None (home shows Unread messages stat)", "—", "Messages"),
     ]
     table = "".join(f"<tr>{''.join(f'<td>{c}</td>' for c in r)}</tr>" for r in rows)
     body = f"""<div class="row">
-{side_only("inf","dash",{"collab":1},"Influencer · Ready, 1 invitation waiting")}
-{side_only("inf","dash",{"collab":1,"earn":1},"Influencer · Action required on payouts")}
-{side_only("inf","dash",{},"Influencer · Verification pending, invite answered")}
-{side_only("biz","dash",{"collab":2,"contracts":1},"Business · 2 collaboration + 1 signature")}
+{side_only("inf","dash",INF_BADGES,"Influencer · shared example: 1 invitation + 2 content tasks, 1 signature, payout Ready")}
+{side_only("inf","dash",dict(INF_BADGES, earn=1),"Influencer · same records, payout Action required")}
+{side_only("inf","dash",{},"Scenario: all tasks done, payout Verification pending")}
+{side_only("biz","dash",{"collab":2,"contracts":1},"Business · 1 response + 1 content review, 1 signature")}
 </div>
 <div class="section-title">Badge contract (master-spec §3)</div>
 <table class="spec-table"><thead><tr><th>Badge</th><th>Counts</th><th>Clears when</th><th>Destination that explains it</th></tr></thead><tbody>{table}</tbody></table>"""
@@ -37,20 +38,25 @@ def drawer(role, active, badges):
 
 
 def build_mobile_nav():
-    inf = phone("inf", "dash", {"collab": 1, "earn": 1}, 3, b_home_hub.attention_card(), overlay=drawer("inf", "dash", {"collab": 1, "earn": 1}), more_open=True)
+    inf = phone("inf", "dash", INF_BADGES, INF_BELL, b_home_hub.attention_card(True), overlay=drawer("inf", "dash", INF_BADGES), more_open=True)
     biz = phone("biz", "dash", {"collab": 2, "contracts": 1}, 2, b_business.attention(True), overlay=drawer("biz", "dash", {"collab": 2, "contracts": 1}), fid="mobile-business", more_open=True)
+    w320 = phone("inf", "inbox", INF_BADGES, INF_BELL, b_home_hub.attention_card(True), fid="mobile-320", width=320)
+    w430 = phone("inf", "collab", INF_BADGES, INF_BELL, b_home_hub.hub_content(True), fid="mobile-430", width=430)
     body = f"""<div class="row">
 {frame("Influencer · More drawer open", inf)}
 {frame("Business · More drawer open", biz)}
+{frame("320 · Action inbox (More highlighted)", w320)}
+{frame("430 · Collaborations", w430)}
 <div>{notes("MOB1",[
- "Fixed nav bar: 3 most used destinations + <b>More</b> in four equal slots. It never scrolls horizontally, and More is always fully visible at 320–430 px.",
- "More carries the sum of badges for destinations not in the bar (influencer: Earnings is in the bar; business: Contracts is in the bar).",
+ "Fixed nav bar: 3 most used destinations + <b>More</b> in four equal slots. It never scrolls horizontally.",
+ "More carries the sum of badges for destinations not in the bar. Influencer example: Contracts 1 → More 1 (Earnings is in the bar). Business: Contracts is in the bar.",
+ "<b>Highlight rule:</b> a destination in the bar highlights its tab. A destination that lives in the drawer (Action inbox, Contracts, Messages…) highlights <b>More</b>. Notifications is reached from the bell and highlights nothing. Dashboard is highlighted only on Dashboard.",
  "Drawer lists every sidebar destination in the same order, labels, icons and badges as desktop, including Billing &amp; Plans and Collaboration Payments.",
  "Business label is “Discover Influencers”.",
- "Focus trap, Esc closes, <code>aria-expanded</code> on More. The bell stays in the top bar.",
+ "<b>What these frames don't prove:</b> static 320, 390 and 430 px frames show layout at three widths only. The full 320–430 px range, keyboard behaviour (Tab order, Esc closes the drawer, focus trapped while open and returned to More on close), <code>aria-expanded</code>, screen-reader names and zoom are <b>runtime acceptance</b> for MOB1 in S-slice testing, not settled by these images.",
 ])}</div></div>"""
     page("mobile-auth-nav.html", "Mobile navigation", "Package 1 · Shared", "Signed-in mobile navigation",
-         "Chips + More drawer for both roles. Same destinations and badges as desktop.",
+         "Four-slot bar + More drawer for both roles, at 320, 390 and 430 px. Same destinations and badges as desktop; drawer destinations highlight More.",
          ["MOB1", "F5 business mobile", "F6 icons + type", "Terminology: Influencer"], body)
 
 
@@ -65,10 +71,12 @@ def build_states():
         m("Empty · earnings on a Ready account", '<div class="card"><h3>Earnings</h3><p style="color:var(--muted);font-size:13px;margin:6px 0 0">No earnings yet. Payments from your collaborations will appear here.</p></div><div class="card" style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px;font-weight:600">Receive payments</span>' + pill("green", "Ready") + '</div>'),
         m("Success · reply sent", '<div class="card"><div class="dlg-head"><h3>Free Tech Support</h3>' + pill("green", "Interested") + '</div><p style="font-size:13px;margin-top:8px;color:#344054">We let Northwind Studio know you\'re interested.</p></div><div class="toast" style="position:static">' + i("check", "sm") + 'Reply sent</div>'),
         m("Retry · still failing", banner("amber", "refresh", "Still having trouble", "We'll keep your page as it was. Try again in a minute.", '<span class="btn sec sm">Try again</span>')),
-        m("Permission · wrong role or signed out", '<div class="card" style="text-align:center"><span class="mono-ava" style="margin:0 auto 10px">' + i("lock", "sm") + '</span><h3>This page is for business accounts</h3><p style="color:var(--muted);font-size:13px;margin:6px 0 12px">You\'re signed in as an influencer.</p><span class="btn pri sm">Go to your dashboard</span></div>'),
+        m("Permission · wrong role", '<div class="card" style="text-align:center"><span class="mono-ava" style="margin:0 auto 10px">' + i("lock", "sm") + '</span><h3>This page is for business accounts</h3><p style="color:var(--muted);font-size:13px;margin:6px 0 12px">You\'re signed in as an influencer.</p><span class="btn pri sm">Go to your dashboard</span></div>'),
+        m("Signed out · link to an item (returns to it after sign-in)", '<div class="card" style="text-align:center"><span class="mono-ava" style="margin:0 auto 10px">' + i("lock", "sm") + '</span><h3>Sign in to see this invitation</h3><p style="color:var(--muted);font-size:13px;margin:6px 0 12px">After you sign in, we\'ll take you straight back to <b>Free Tech Support</b>.</p><div style="display:flex;gap:8px;justify-content:center"><span class="btn pri sm">Sign in</span><span class="btn sec sm">Create account</span></div></div>'),
     ]
-    mob = phone("inf", "dash", {"collab": 1}, 3, '<div class="ph"><h1>Welcome back, Amara</h1></div>' + banner("rose", "alert", "We couldn't load your dashboard", "Check your connection.", '<span class="btn sec sm">' + i("refresh", "sm") + 'Try again</span>') + sk)
+    mob = phone("inf", "dash", INF_BADGES, INF_BELL, '<div class="ph"><h1>Welcome back, Amara</h1></div>' + banner("rose", "alert", "We couldn't load your dashboard", "Check your connection.", '<span class="btn sec sm">' + i("refresh", "sm") + 'Try again</span>') + sk)
     body = f"""<div class="row">{frame("Mobile · error with retry", mob)}<div class="grid-3" style="grid-template-columns:repeat(3,400px)">{''.join(minis)}</div></div>
+<p style="font-size:12px;color:var(--muted);margin-top:10px">Signed out: the item link is kept as the return target (same-origin path only), so Sign in or Create account lands on that item, which then applies its own permission check. Wrong role is a separate state and never asks the user to sign in again.</p>
 <div class="section-title">Per-surface state matrix: flows.md §J · business states: business-dashboard.html · payout states: earnings-payout.html · invitation failure/concurrency: team-invite-respond.html</div>"""
     page("states.html", "Shared states", "Package 1 · Shared", "Loading · empty · error · success · retry · permission",
          "Customer-facing copy for every shared state, with no internal wording. Errors keep the last known counts.",
@@ -80,18 +88,18 @@ def build_inbox():
         ("Submit content", "Spring Launch Reel · Milestone 1 · due 25 Nov", "Lumen Skincare", "3 updates", "pri", "Submit"),
         ("Submit content", "Spring Launch Reel · Milestone 2 · due 9 Dec", "Lumen Skincare", "", "sec", "Open"),
         ("Reply to invitation", "Free Tech Support · reply by 28 Nov", "Northwind Studio", "2 updates", "pri", "Review"),
-        ("Sign agreement", "Holiday Gift Guide", "Northwind Studio", "", "sec", "Review"),
+        ("Sign agreement", "Studio Tour Shorts · Northwind Studio signed 21 Nov", "Northwind Studio", "", "pri", "Review"),
     ]
     def lst(mobile=False):
         out = []
         for t, s, b, upd, k, c in rows:
             u = f' · <span style="color:var(--violet);font-weight:600">{upd}</span>' if upd else ""
-            btn = "" if mobile else f'<span class="btn {k} sm">{c}</span>'
+            btn = m_btn(k, "Open" if k == "sec" else "Review") if mobile else f'<span class="btn {k} sm">{c}</span>'
             out.append(f'<div class="list-row"><span class="mono-ava">{b[0]}</span><div class="t"><b>{t}</b><span>{s} · {b}{u}</span></div>{btn}</div>')
         return "".join(out)
     content = f'<div class="ph"><h1>Action inbox</h1><p>One row for each thing you need to do.</p></div><div class="card"><div class="card-head"><h2>To do</h2>{pill("violet","4 tasks")}</div>{lst()}</div>'
-    desk = app("inf", "inbox", {"collab": 1}, 3, '<div class="stack">' + content + '</div>')
-    mob = phone("inf", "dash", {"collab": 1}, 3, f'<div class="ph"><h1>Action inbox</h1></div><div class="card">{lst(True)}</div>')
+    desk = app("inf", "inbox", INF_BADGES, INF_BELL, '<div class="stack">' + content + '</div>')
+    mob = phone("inf", "inbox", INF_BADGES, INF_BELL, f'<div class="ph"><h1>Action inbox</h1></div><div class="card">{lst(True)}</div>')
     body = f"""<div class="row">
 {frame("Desktop · 1280", desk)}
 {frame("Mobile · 390", mob)}
@@ -102,6 +110,8 @@ def build_inbox():
  "When the task completes, the row leaves To do and the <b>action-required</b> flag clears on that task's notices. The notices <b>stay in Notifications history</b>, keeping their own read/unread state. Nothing is deleted, and unrelated unread messages or notices are not marked read.",
  "Counts: Collaborations badge and Needs your attention count deduplicated tasks, never raw notices.",
  "Acceptance A-INBOX-01: ≤ 1 open row per task identity; two distinct milestones never collapse.",
+ "<b>Shared example records:</b> 4 rows = Collaborations badge 3 (invitation + 2 milestones) + Contracts badge 1 (Studio Tour Shorts) = home Needs your attention 4. Holiday Gift Guide isn't here: Amara already signed it.",
+ "Mobile: Action inbox lives in the More drawer, so <b>More</b> is highlighted, not Dashboard. Every row keeps its Open / Review button.",
 ])}</div></div>"""
     page("action-inbox.html", "Action inbox", "Package 1 · Influencer", "Action inbox — deduplicated tasks",
          "Duplicate representations of the same task merge into one row. Distinct tasks stay separate.",

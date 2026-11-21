@@ -11,7 +11,7 @@
 
 | Board | Desktop | Mobile | Notes |
 |-------|:------:|:------:|-------|
-| Influencer home | ✅ | ✅ | Original card proportional, uncropped; counts 1/2/2/$0; no internal copy |
+| Influencer home | ✅ | ✅ | Original card proportional, uncropped; counts per shared example records (1 invitation · 3 active · 1 unread message · $0 paid out this month); no internal copy |
 | Collaborations hub | ✅ (fixed) | ✅ (fixed) | Fix 1 + Fix 3 |
 | Payout readiness (6 + no-history) | ✅ | ✅ | No timing/email promises |
 | Invitations — transitions | ✅ | ✅ | Matrix cases 1–6, team, timeout outcomes |
@@ -43,6 +43,21 @@ Only the affected boards changed:
 | Invitation transitions | “Accepted” split into “Accepted · agreement not sent” (no influencer action) and “Agreement ready to sign” (task); table updated |
 | Influencer home (desktop + mobile) | Holiday Gift Guide now “Waiting for Northwind Studio to sign” with View agreement (no task), matching the business dashboard; mobile list pills moved under titles |
 | Business dashboard (desktop + mobile + popups) | Recent collaborations shows a fully signed agreement as “Agreement signed · funding isn't available yet” (no task); mobile list pills under titles |
+
+## Correction pass (round 7, Ola's review of 2771b85)
+
+Visual direction kept. Affected boards re-rendered together.
+
+| # | Ola's item | Change | Boards |
+|---|-----------|--------|--------|
+| 1 | Counts disagree across boards | One set of example records (master-spec §3.1): Collaborations 3 (invitation + 2 milestones), Contracts 1, attention 4, inbox 4; hub tab badges Invitations 1 + Active 2; scenario labels moved to captions | home, hub, inbox, notifications, badges, mobile nav, invite, payout, states |
+| 2 | Notification read state; Holiday Gift Guide contradiction | After-open frame: bell 1, Unread 1, dot removed, Action required 2. Holiday Gift Guide is “you signed, waiting for Northwind” everywhere; its historical notice opens the current state. Inbox sign task is now Studio Tour Shorts | notifications, inbox, home |
+| 3 | Accept implied drafting | Popup: Accept · Reply · Not a fit; hint no longer says Accept drafts; outcome panels incl. “Accepted · agreement not sent” + Prepare agreement | business dashboard |
+| 4 | Mobile | Inbox highlights More, Notifications highlights nothing; hub keeps Overview and Completed; Open/Review on hub, inbox, attention and recent-collaboration rows; full card kept; 320 and 430 frames added with a note that keyboard/focus and the continuous range are runtime acceptance | hub, inbox, notifications, business, mobile nav, home |
+| 5 | Payment wording | “In escrow” removed (Held for milestones · Simulation; funding notice “(simulation)”); “Paid out this month”; “About 5 minutes” removed; unavailable badge = last known everywhere (0 when last confirmed Ready) | payout, home, notifications, badges |
+| 6 | Missing panels | Team closed after you accepted · both signatures pending · business signed/you pending · you signed/business pending · all signed, funding unavailable · signed-out with sign-in and return to item · withdrawal with recorded reason | invite, states |
+
+Self-check: every frame re-read after rendering; no “In escrow”, “Accept and draft”, “Accepting drafts”, “About 5 minutes” or “Released this month” in any app frame. Ola's sign-off is still required.
 
 ## Spec additions from the IPS-44 test results
 

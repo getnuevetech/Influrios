@@ -8,7 +8,7 @@ def txt(h):
 STATES = [
     dict(key="setup", label="Setup required", pill="violet",
          msg="Add your identity and payout account to receive collaboration payouts.",
-         steps=[("todo", "Verify your identity", "About 5 minutes"), ("todo", "Add where you get paid", "Bank account in your name")],
+         steps=[("todo", "Verify your identity", "Government ID and a photo of you"), ("todo", "Add where you get paid", "Bank account in your name")],
          cta='<span class="btn pri">Set up payouts</span>',
          home=("lav", "wallet", "Set up payouts to get paid", "Add your identity and payout account before your first payout.", '<span class="btn pri">Set up payouts</span>'),
          hub="Set up payouts", badge=1),
@@ -39,12 +39,12 @@ STATES = [
          msg="We can't check your payout status right now. Last confirmed: Ready, 20 Nov 14:02.",
          steps=[("done", "Identity verified", "Last confirmed 20 Nov"), ("done", "Payout account verified", "Last confirmed 20 Nov")],
          cta=f'<span class="btn sec">{i("refresh","sm")}Try again</span>',
-         home=None, hub="Ready (last checked 20 Nov)", badge=0),
+         home=None, hub="Ready (last checked 20 Nov)", badge=0, badge_note="Last known (0: last confirmed Ready)"),
     dict(key="unavailable-none", label="Status unavailable", pill="gray",
          msg="We can't check your payout status right now. Please try again in a moment.",
          steps=[("off", "Payout status unavailable", "No confirmed status to show yet")],
          cta=f'<span class="btn sec">{i("refresh","sm")}Try again</span>',
-         home=None, hub="Status unavailable", badge=0),
+         home=None, hub="Status unavailable", badge=0, badge_note="0 (no last known state)"),
 ]
 ICON = {"done": "check", "wait": "clock", "todo": "plus", "bad": "alert", "off": "globe-off"}
 
@@ -59,7 +59,7 @@ def receive_card(s):
 
 
 def earnings_page(s, mobile=False):
-    summary = f"""<div class="{'m-stats' if mobile else 'stats'}">{stat("wallet","Available","$0")}{stat("clock","In escrow","$1,200","Spring Launch Reel")}{stat("check","Paid out","$2,450","All time")}{stat("file-text","This month","$0")}</div>"""
+    summary = f"""<div class="{'m-stats' if mobile else 'stats'}">{stat("wallet","Available","$0")}{stat("clock","Held for milestones","$1,200","Simulation · Spring Launch Reel")}{stat("check","Paid out","$2,450","All time")}{stat("file-text","Paid out this month","$0")}</div>"""
     return f"""<div class="ph"><h1>Earnings &amp; Payouts</h1><p>What you've earned and where it's paid.</p></div>
 {summary}{receive_card(s)}"""
 
@@ -71,7 +71,7 @@ def mini(s):
     return f"""<div class="mini"><div class="mini-cap">{s["label"]}</div>
 {receive_card(s)}
 <div class="mini-cap">Home</div>{home}
-<div class="mini-cap">Hub · sidebar</div>
+<div class="mini-cap">Hub · sidebar{(" · badge " + s["badge_note"]) if s.get("badge_note") else ""}</div>
 <div class="card" style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:13px;font-weight:600">Payment readiness</span>{pill(s["pill"], s["hub"])}</div>
 <nav class="nav" style="padding:0;background:#fff;border:1px solid var(--line);border-radius:14px"><a style="margin:4px">{i("wallet")}<span>Earnings &amp; Payouts</span>{nb}</a></nav></div>"""
 
@@ -80,19 +80,20 @@ def build():
     by = {s["key"]: s for s in STATES}
     rows = "".join(
         f'<tr><td><b>{s["label"]}</b></td><td>{s["msg"]}</td><td>{txt(s["cta"])}</td>'
-        f'<td>{"“"+s["home"][2]+"”" if s["home"] else "None"}</td><td>{s["hub"]}</td><td>{s["badge"] or "0"}</td></tr>' for s in STATES)
+        f'<td>{"“"+s["home"][2]+"”" if s["home"] else "None"}</td><td>{s["hub"]}</td><td>{s.get("badge_note") or s["badge"] or "0"}</td></tr>' for s in STATES)
     body = f"""<div class="row">
-{frame("Desktop · 1280 · Verification pending", app("inf","earn",{"collab":1},3,'<div class="stack">'+earnings_page(by["pending"])+'</div>'))}
-{frame("Mobile · 390 · Action required", phone("inf","earn",{"collab":1,"earn":1},3,earnings_page(by["restricted"],True),tall=True))}
+{frame("Desktop · 1280 · Verification pending", app("inf","earn",INF_BADGES,INF_BELL,'<div class="stack">'+earnings_page(by["pending"])+'</div>'))}
+{frame("Mobile · 390 · Action required", phone("inf","earn",dict(INF_BADGES, earn=1),INF_BELL,earnings_page(by["restricted"],True),tall=True))}
 <div>
 {notes("Readiness rules (finding 3)",[
  "<b>Ready</b> requires identity verified <b>and</b> the payout provider confirming payouts are enabled for the account. A saved bank account alone (<code>accountOnFile</code>) is not Ready.",
  "<b>Verification pending</b>: everything the user can do is done. Completed steps show as done. No “Complete setup” or “Continue” asks. Home shows a calm notice with no CTA, and the Earnings badge is 0.",
  "<b>Action required</b> names the one outstanding item and links straight to it. Steps already done stay done.",
  "<b>Unsupported</b>: no setup CTA, because there is nothing the user can do. Badge 0.",
- "<b>Temporarily unavailable</b> (provider unreachable): show the last confirmed state with its timestamp and Try again. Never fall back to Setup required, and never raise the badge.",
+ "<b>Temporarily unavailable</b> (provider unreachable): show the last confirmed state with its timestamp and Try again. Never fall back to Setup required. The Earnings badge keeps its <b>last known</b> value; in this example the last confirmed state is Ready, so last known = 0. One rule, stated the same in the table, the sidebar and master-spec §3.",
  "<b>No confirmed history</b> + unreachable: show “Status unavailable”. Never infer Ready or Setup required. No home message, badge 0.",
- "Copy makes no timing or email promises. Add them only when the provider gives a timing and a notification flow is implemented.",
+ "Copy makes no timing or email promises (no “About 5 minutes”). Add them only when the provider gives a timing and a notification flow is implemented.",
+ "Summary labels: Available · Held for milestones (labelled <b>Simulation</b> while live deposits are closed; never “In escrow”) · Paid out (all time) · <b>Paid out this month</b>.",
  "Earnings badge = 1 only for Setup required and Action required, and only while the user has active collaborations or unpaid earnings.",
 ])}
 </div></div>

@@ -61,14 +61,16 @@ A saved bank account alone never makes the state Ready. Ready requires identity 
 | **Ready** | Identity verified + provider payouts enabled | You can receive payouts to {method ••last4}. | Update payout account (secondary) | **None** | Ready | 0 |
 | **Action required** (restricted) | Provider/KYC requests a specific item, or payouts paused | Names the **one** outstanding item | Item-specific (e.g. Upload ID photo) | Rose banner + same CTA | Action required | 1* |
 | **Not available in your country** | Corridor has no payout route | Collaboration payouts aren't available in {country} yet. | See supported countries | Gray notice, no setup CTA | Not available | 0 |
-| **Temporarily unavailable** (last confirmed state exists) | Provider/status service unreachable | We can't check your payout status right now. Last confirmed: {state}, {timestamp}. | Try again | Unchanged from last known | Last known + “(last checked …)” | Last known (never raised) |
+| **Temporarily unavailable** (last confirmed state exists) | Provider/status service unreachable | We can't check your payout status right now. Last confirmed: {state}, {timestamp}. | Try again | Unchanged from last known | Last known + “(last checked …)” | Last known value, never raised (e.g. 0 when the last confirmed state was Ready) |
 | **Status unavailable** (no confirmed history) | Unreachable **and** no previously confirmed state | We can't check your payout status right now. Please try again in a moment. | Try again | **None** | Status unavailable | 0 |
 
 \* Only while the influencer has active collaborations or unpaid earnings.
 
 Rules: completed steps always render as done. Verification pending never shows “Complete setup” or “Continue”. Unavailable never infers a state: with history it shows the last confirmed one; without history it shows “Status unavailable”, never Ready or Setup required.
 
-**Copy promises:** no fixed review time (e.g. “1–2 business days”) and no “we'll email/notify you” unless (a) the provider supplies the timing for that account and (b) a notification flow for that event is implemented and tested. Until then, point to where status appears (“Check Earnings & Payouts for the latest status”).
+**Earnings summary labels:** Available · Held for milestones · Paid out (all time) · **Paid out this month**. Never “In escrow” or bare “This month”. While live deposits are closed, any held amount in examples or test data is labelled **Simulation** (“Funded · simulation”, “Simulated funding · no money moved”).
+
+**Copy promises:** no fixed review time or effort estimate (e.g. “1–2 business days”, “About 5 minutes”) (e.g. “1–2 business days”) and no “we'll email/notify you” unless (a) the provider supplies the timing for that account and (b) a notification flow for that event is implemented and tested. Until then, point to where status appears (“Check Earnings & Payouts for the latest status”).
 
 ### 2.2 Invitation states (finding 4)
 
@@ -117,11 +119,18 @@ Only the **business** moves an invitation to Accepted (§2.2b); the invitation d
 
 | Stage | Influencer sees | Influencer attention / badge | Business sees | Business attention / badge |
 |-------|-----------------|------------------------------|---------------|-----------------------------|
-| Business accepted, no agreement | Hub Active: “Accepted · {Business} is preparing the agreement” | No task | “Create the agreement” on the application | Task: Create the agreement (Collaborations) |
+| Business accepted, no agreement | Hub Active: “Accepted · {Business} is preparing the agreement” | No task | “Accepted” → **Prepare agreement** | Task: Prepare agreement (Collaborations) |
+| Accepted, preparation failed to open | Same as above (no task) | No task | “Accepted · agreement not sent” + **Prepare agreement** (retry). Never Accept again | Task stays until the agreement is sent |
 | Sent · neither signed | “Review and sign agreement” | Task (Contracts badge) | “Sign agreement” | Task (Contracts badge) |
 | Business signed · influencer pending | “Review and sign agreement” | Task (Contracts badge) | “Waiting for {Influencer} to sign” | No task |
 | Influencer signed · business pending | “Waiting for {Business} to sign” | No task | “Sign agreement” | Task (Contracts badge) |
 | Fully signed | “Agreement signed. {Business} handles the next step.” | No task | “Agreement signed”, plus **Fund collaboration** only when funding is available for this collaboration; otherwise “Funding isn't available for this collaboration yet” | Task only when funding is available |
+
+**Accept, then prepare (business popup and detail route):** the response popup offers **Accept · Reply · Not a fit**. No button or copy says Accept drafts or sends the agreement. Accept persists the acceptance first (its own idempotent submission, §4.1); only after `saved` does agreement preparation open. If preparation fails, the acceptance remains, the item reads “Accepted · agreement not sent” with Prepare agreement, and a retry never creates a second acceptance.
+
+**Withdrawal:** the withdrawn panel shows the date and the business's **recorded reason** when one was given (“Reason given: …”), then “Nothing was signed or funded.” No reason recorded → the line is omitted, never invented.
+
+**Team proposal closed after a member accepted:** that member sees “Team invitation · Closed — {Business} closed this team proposal after you accepted. Nothing was signed or funded.” No task; leaves the open list.
 
 **Signer-specific rule:** every party whose signature is pending has a “sign” task (Contracts badge + attention); every party who has signed sees “Waiting for {other party} to sign” and has no task. Signing order doesn't matter. A party's task clears **only** when that party signs; another party's signature never clears it. Team agreements apply the rule per member.
 
@@ -168,13 +177,32 @@ Funded / Expecting funding / Payment pending / Agreement ready / Content in revi
 | Badge | Counts | Clears when | Destination that explains it |
 |-------|--------|-------------|------------------------------|
 | Collaborations (influencer) | Invitations waiting for your reply + collaboration tasks on your turn | Persisted status leaves your turn (reply, accept/decline, task done), withdrawn, expired | Hub Invitations tab + Needs your attention |
-| Earnings & Payouts | 1 for Setup required / Action required (with active work or unpaid earnings) | State changes to any other state | Receive payments card |
+| Earnings & Payouts | 1 for Setup required / Action required (with active work or unpaid earnings) | State changes to Verification pending, Ready or Not available. Temporarily unavailable keeps the **last known** value; no confirmed history = 0 | Receive payments card |
 | Collaborations (business) | Responses to review + content to review | Business decides | Dashboard Needs your attention |
+| Contracts (influencer) | Agreements awaiting **your** signature (§2.2c) | You sign, or the agreement is cancelled; the other party signing never clears it | Contracts › To sign + Needs your attention |
 | Contracts (business) | Agreements awaiting your signature | Signed or cancelled | Contracts › To sign |
-| Bell | Unread notices | Opening an unread notice | Notifications › Unread |
+| Bell | Unread notices | Opening an unread notice (bell, Unread filter and row dot update together) | Notifications › Unread |
 | Action inbox · Messages | No badge | — | — |
 
 Badges keep their last known value while loading. Counts never decrement optimistically before the server confirms.
+
+**Influencer home “Needs your attention” = Collaborations badge + Contracts badge = Action inbox rows = live Action required notices (deduplicated).** Hub tab badges: Invitations (waiting for your reply) + Active (content tasks on your turn) = Collaborations badge.
+
+### 3.1 Shared example records (boards and tests)
+
+Every Package 1 board uses one set of records, so counts must agree across home, hub, inbox, notifications and badges. Scenario labels live outside the UI (frame captions, notes).
+
+| Record | State | Task for Amara (influencer) | Task for Northwind (business) |
+|--------|-------|-----------------------------|-------------------------------|
+| Free Tech Support (Northwind) | Invitation, turn = Amara | Reply (Collaborations) | — (Priya Nair's response is the business's review task) |
+| Spring Launch Reel (Lumen) · Milestone 1 | Funded · simulation | Submit content (Collaborations) | — |
+| Spring Launch Reel · Milestone 2 | Funded · simulation | Submit content (Collaborations) | — |
+| Studio Tour Shorts (Northwind) | Northwind signed, Amara pending | Sign (Contracts) | None: “Waiting for Amara Cole to sign” |
+| Holiday Gift Guide (Northwind) | Amara signed, Northwind pending | None: “Waiting for Northwind Studio to sign” | Sign (Contracts) |
+| Autumn Glow Series (Lumen) | Question sent, turn = business | None | — |
+| Winter Unboxing · Team (Northwind) | Amara accepted, 1 teammate pending | None | None |
+
+Influencer totals: Collaborations 3, Contracts 1, More (mobile) 1, Needs your attention 4, Action inbox 4, Action required 2 (invitation + agreement notice), bell 2 before the invitation notice is opened and 1 after. Business totals: Collaborations 2, Contracts 1, Needs your attention 3.
 
 ---
 
@@ -211,7 +239,8 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 ## 5. Notifications rules
 
 1. Unread ≠ action required. These stay as separate filters.
-2. Opening an **unread** notice marks it read and decreases the bell by 1. Opening a read notice changes nothing.
+2. Opening an **unread** notice marks it read and, in the same render, decreases the bell by 1, decreases the Unread filter count by 1 and removes that row's unread dot (P1-AUD-12). Opening a read notice changes nothing.
+2a. **A notice opens the item's current state, not the state at the time of the notice.** A historical “agreement ready” notice for an agreement the user has since signed opens “Waiting for {other party} to sign” with View agreement, never a Sign button; it is not Action required.
 3. Action required clears only when the underlying task completes, or the invitation is withdrawn or expires.
 3a. Clearing action-required **never deletes a notice and never changes read state**. Notices stay in history (All); an unopened notice stays Unread. Unrelated notices and messages are untouched.
 4. Notice detail opens as a centered popup (desktop) or sheet (mobile). The primary CTA goes to the task.
@@ -226,6 +255,8 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 - Desktop: left sidebar exactly as `account-shell.tsx` (labels, order, icons).
 - **Terminology (Package 1, from #533 TERM-CREATOR-001):** customer-facing navigation and CTAs say **Influencer**, never “Creator”. Business sidebar: **Discover Influencers**. Search placeholder: “Search influencers, campaigns, or anything...”. Internal identifiers (`creatorSlug`, routes) are unchanged.
 - Mobile (signed-in): a **fixed four-slot nav bar** (3 primary destinations + **More**, equal widths, icon + label). It never scrolls horizontally; More is always fully visible and reachable at 320–430 px. More opens a drawer listing every sidebar destination with the same badges, and shows the sum of badges for destinations not in the bar. Bell in the top bar. Focus trap, Esc, `aria-expanded`.
+- **Active-item rule (desktop and mobile):** a page highlights its own destination only. A drawer destination (Action inbox, Contracts, Messages, …) highlights **More** on mobile. Notifications is reached from the bell and highlights no sidebar item or tab. Dashboard is highlighted only on Dashboard.
+- Mobile pages keep every route the desktop page has (e.g. the hub's Overview · Invitations · Applications · Active · Completed tabs wrap; none is dropped), and every mobile list row keeps a visible Open / Review affordance. The full influencer card is kept on mobile.
 - Public mobile: #533 mobile-public-nav remains valid.
 - Agency deferred.
 
@@ -260,7 +291,8 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 | Error | Inline banner: what failed to load or send + Try again; other sections stay usable. Never assert “nothing changed” after a write; use §4.1 |
 | Success | Toast + status change in place; lists refresh from server |
 | Retry | Repeated failure keeps the page as it was, with a calm message |
-| Permission | Signed out → login; wrong role → message + “Go to your dashboard” |
+| Permission · signed out | “Sign in to see this {item}” + Sign in · Create account; the item link is kept as a same-origin return target, so after sign-in the user lands on that item, which then runs its own permission check |
+| Permission · wrong role | Message + “Go to your dashboard”; never asks to sign in again |
 
 ---
 
@@ -282,7 +314,9 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 | DB8 | Next step after acceptance and signature (P1-AUD-11, §2.2c): influencer sees “Accepted · {Business} is preparing the agreement” (no action), then a “Review and sign agreement” task while **their own** signature is pending and “Waiting for {Business} to sign” once they have signed; the business has a “Sign agreement” task while **its** signature is pending, in either order, and neither task is cleared by the other party's signature; business sees “Create the agreement” after acceptance and “Agreement signed” with its next payment step only when that step is available, otherwise “Funding isn't available for this collaboration yet”; no state promises a payment |
 | DB4c | Reading the answer (invitation, notice or Messages) leaves turn = invitee: banner, attention, badge and task stay until the invitee responds |
 | DB4b | Timeout: “We couldn't confirm your response” → idempotency record lookup → saved / rejected / processing / unable to confirm per §4.1; draft kept and locked until saved or rejected; retry of an unresolved submission reuses its key and is stored once; a new submission after an outcome gets a new key even with identical text; a key reused with another actor, invitation or payload is refused; concurrent withdrawal shows the rejection and counts refresh |
-| DB5 | Open unread decreases bell; action required unchanged by read alone |
+| DB5 | Opening an unread notice updates bell, Unread filter and row dot together without reload; action required unchanged by read alone; a historical notice opens the item's current state |
+| DB9 | Shared example records (§3.1) give the same task counts on home, hub (tab badges + sidebar), action inbox, notifications and both roles' dashboards |
+| DB10 | Business Accept persists before preparation opens; a preparation failure shows “Accepted · agreement not sent” + Prepare agreement and never re-offers Accept; popup and direct detail route behave the same |
 | DB6 | Refresh + re-login + desktop↔mobile keep agreed counts |
 | DB7 | Business dashboard: attention = Collaborations badge + Contracts badge; every attention row opens a working popup/sheet; empty/loading/error per board |
 | AUD2 | Approval with incomplete payout setup: delivery shows “Approved · payout setup required”, review task clears, no release or payout movement occurs; same for auto-approval; unauthorized actor, non-current version or invalid state is still refused |
@@ -291,7 +325,7 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 | TERM1 | No customer-facing “Creator(s)” in member navigation or CTAs |
 | CARD1 | Home card is the live component, fully visible, proportional at desktop and 390 px |
 | VIS1 | No serif text; fonts, icons, colors per §0; no internal notes in UI |
-| MOB1 | Mobile nav bar shows More fully at 320–430 px with no horizontal scroll; drawer exposes all destinations + badges matching desktop |
+| MOB1 | Mobile nav bar shows More fully at 320–430 px with no horizontal scroll; drawer exposes all destinations + badges matching desktop; active-item rule per §6; no route dropped on mobile; every row has Open / Review. **Runtime acceptance** (not provable by static 320/390/430 frames): the continuous 320–430 range, keyboard order, focus trap and return, Esc, `aria-expanded`, zoom |
 
 ---
 

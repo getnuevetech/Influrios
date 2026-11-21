@@ -14,7 +14,7 @@ Constraints: live deposits closed · Agency deferred · centered popups · origi
 
 - **Submitted for final visual approval and focused implementation:** [SUBMISSION.md](./SUBMISSION.md).
 
-- **Visual review:** [visual-review.md](./visual-review.md). Decision: ready for Ola's final sign-off after four fixes.
+- **Visual review:** [visual-review.md](./visual-review.md). Round 7 correction pass (Ola's review of 2771b85): shared example records, notification read state, accept-then-prepare, mobile active items and affordances, payment wording, six added panels. Visual direction kept; final sign-off still pending.
 - **Test results:** 10 Package 1 gating checks run on an isolated host (#539 IPS-44): 4 Pass · 5 Fail · 1 Blocked. Defects P1-AUD-01…09 added to [backlog](./backlog.md) and the master spec. Acceptance AUD1 = the 5 Fails retest Pass; AUD2 = approval separated from release (P1-AUD-08, decided).
 
 ## Finding-to-file checklist
@@ -92,7 +92,7 @@ Search check: “unread business answer”, “Setup required card” and in-UI 
 | Business dashboard | [business-dashboard.html](./designs/business-dashboard.html) | full · desktop · mobile · desktop-popup · mobile-popup |
 | Action inbox | [action-inbox.html](./designs/action-inbox.html) | full · desktop · mobile |
 | Sidebar badges | [sidebar-badges.html](./designs/sidebar-badges.html) | full |
-| Mobile navigation | [mobile-auth-nav.html](./designs/mobile-auth-nav.html) | full · mobile · mobile-business |
+| Mobile navigation | [mobile-auth-nav.html](./designs/mobile-auth-nav.html) | full · mobile · mobile-business · mobile-320 · mobile-430 |
 | Shared states | [states.html](./designs/states.html) | full · mobile |
 | Admin shared note | [admin-shared-note.html](./designs/admin-shared-note.html) | full · desktop |
 
