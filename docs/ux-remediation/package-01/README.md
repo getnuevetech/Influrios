@@ -1,6 +1,6 @@
 # Package 1 — Shared navigation, dashboards, payout readiness, invitations, notifications
 
-**Status:** Corrected after Ola review and round-2 targeted review (2026-11-21). Design only, not implemented. Not approved as a whole; re-submitted for review.
+**Status:** Corrected after Ola review, round-2 targeted review and round-3 consistency fixes (2026-11-21). Design only, not implemented. Not approved as a whole; re-submitted for review.
 **Root cause:** RC-DASHBOARD · **Tracker:** IPS-35 (parent IPS-34)
 **Master rules:** [../master-spec.md](../master-spec.md) · **Flows:** [flows.md](./flows.md) · **Backlog:** [backlog.md](./backlog.md)
 **Boards:** [designs/](./designs/) · **PNGs:** [`media/ux-remediation/package-01/`](../../../media/ux-remediation/package-01/)
@@ -34,6 +34,20 @@ Constraints: live deposits closed · Agency deferred · centered popups · origi
 | R2-5 | Unsupported payout promises | Removed “1–2 business days” and “We'll email you” (payout) and “We'll notify you” (invitation) | [earnings-payout](../../../media/ux-remediation/package-01/earnings-payout.png) | master-spec §2.1 copy rule · DB2b |
 | R2-6 | No payout history undefined | “Status unavailable”, never infer Ready/Setup required; no home message; badge 0 | [earnings-payout](../../../media/ux-remediation/package-01/earnings-payout.png) (7th panel) | master-spec §2.1 · flows §B · DB2d |
 | — | Ledger reference | Approved mockup committed; figures illustrative only | [package-05/reference](../package-05/reference/README.md) | master-spec §12 |
+
+### Round 3 consistency checklist (Ola, 2026-11-21)
+
+Each rule is defined once and every place that applies it was checked against that definition.
+
+| # | Rule | Defined in | Applied in (checked) | Acceptance |
+|---|------|-----------|----------------------|------------|
+| C1 | *Waiting for your reply* = open, not expired, **turn = invitee** (new, business replied, team invited) | master-spec §1 | master-spec §2.2, §3, §4 · flows §A, §D1 · boards: influencer-home notes, collaborations-hub, team-invite-respond, sidebar-badges · backlog P1-T1 | DB1 |
+| C2 | Turn is persisted and changes only on actions; **reading never changes it** | master-spec §2.2a | master-spec §1, §2.2, §4 · flows §A, §D1 (reads row) · team-invite-respond notes · backlog P1-D1 | DB4a, DB4c |
+| C3 | No blanket “nothing changed” after a write | master-spec §4.1, §9 | flows §D3, §K · team-invite-respond · states (earnings error copy now “Try again to see your latest balances”) | DB4b |
+| C4 | Timeout recovery via **idempotency record**: saved / rejected / processing / unable to confirm; draft kept; same key | master-spec §4.1 | flows §D3 · team-invite-respond (4 outcome panels) · backlog P1-T5 | DB4b |
+| C5 | Empty earnings ≠ setup incomplete; readiness shown independently | master-spec §9 (Empty) | flows §K · states (new “Empty · earnings on a Ready account” panel) · backlog P1-T2 | DB2e |
+
+Search check: “unread business answer”, “Setup required card” and in-UI “Nothing changed” / “wasn't saved” no longer appear. Remaining mentions of “nothing changed” are the prohibitions themselves.
 
 ---
 

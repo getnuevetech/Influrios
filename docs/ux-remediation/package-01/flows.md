@@ -9,8 +9,11 @@ In-app copy below is customer copy. Engineering notes are marked *Rule*.
 ## A. Influencer — invitation counts (INV-DC-001 · DB1)
 
 ```
-Invitations waiting for your reply = W   (REQUESTED/VIEWED + team member invited)
-Open invitations                   = O   (W + RESPONDED + NEGOTIATING + team accepted-awaiting-teammates)
+Invitations waiting for your reply = W   (open, not expired, turn = invitee:
+                                          REQUESTED/VIEWED + NEGOTIATING after business answered + team member invited)
+Open invitations                   = O   (W + turn = business [RESPONDED, NEGOTIATING awaiting answer]
+                                          + team accepted-awaiting-teammates)
+turn is persisted and changes only on actions; reading never changes it (master-spec §2.2a)
 
 /creator  banner “W new invitation(s)” · Invitations stat W “Waiting for your reply” · Needs your attention W rows
 /collaboration/hub  Invitations card O, sub-line “W waiting for your reply” · tab badge W · list shows O rows with status
@@ -61,13 +64,14 @@ Same membership filter → home Active = hub Active card = Active tab.
 ### D1. Marketplace invitation
 
 ```
-Waiting for your reply (REQUESTED/VIEWED)
+Waiting for your reply (REQUESTED/VIEWED · turn = invitee)
  ├─ I'm interested ─► Interested (RESPONDED) ───── business to act
  │                     ├─ Ask a question ─► Question sent
  │                     └─ Decline ─► You declined
- ├─ Ask a question (note ≥ 8 chars) ─► Question sent (NEGOTIATING) ─ business to act
+ ├─ Ask a question (note ≥ 8 chars) ─► Question sent (NEGOTIATING · turn = business)
  │                     ├─ Decline ─► You declined
- │                     └─ [business answers] ─► {Business} replied ─ YOUR turn again
+ │                     └─ [business answers] ─► {Business} replied (NEGOTIATING · turn = invitee)
+ │                             (reading the answer does NOT change turn)
  │                             ├─ I'm interested ─► Interested (RESPONDED)   ← needs defect P1-D1 fixed
  │                             ├─ Ask another question ─► Question sent
  │                             └─ Decline ─► You declined
@@ -81,7 +85,8 @@ Waiting for your reply (REQUESTED/VIEWED)
 |------------|-----------------|--------------------------------|----------------------|--------------------------------|
 | Pending → Interested | Stays, label “Waiting for {business}” | −1 | −1 | Clears |
 | Pending → Question sent | Stays, label “Waiting for {business}” | −1 | −1 | Clears |
-| Business answers question | Label “Waiting for your reply” | +1 (your turn again) | +1 | Action required again |
+| Business answers question (turn → invitee) | Label “Waiting for your reply” | +1 | +1 | Action required again |
+| Invitee reads the answer (invitation, notice or Messages) | Unchanged | **Unchanged** | **Unchanged** | Notice → read; action required stays |
 | Replied → Interested / another question / Decline | As above | −1 | −1 | Clears |
 | Any → Accepted | Leaves Invitations → Active (agreement ready) | Agreement item added | Agreement task +1 | Agreement notice |
 | Any → Declined / Expired / Withdrawn | Leaves open list → Closed | −1 if it was pending | −1 if it was pending | Clears |
@@ -106,16 +111,17 @@ The invitation stops counting as waiting on Accept or Decline. “No further act
 ### D3. Failure, retry, concurrency
 
 ```
-Submit reply (with idempotency key K) → buttons disabled (sending)
-  ├─ success → toast “Reply sent” · status updates in place · counts refresh from server
-  ├─ timeout / network error (server may have saved it)
-  │     → “We couldn't confirm your response. Checking whether it was saved…”
-  │     → re-read invitation status
-  │          ├─ saved → show saved state as success (no second submit)
-  │          └─ still pending → “Your response wasn't saved.” · Try again (same K → stored once)
-  └─ server: no longer open (withdrawn/expired meanwhile)
-        → popup content swaps to “This invitation was withdrawn … Nothing was signed or funded.”
-        → list, badge, attention refetch; nothing optimistic to undo
+Submit reply → create idempotency key K (once per answer) · keep draft · buttons disabled
+  ├─ success → toast “Reply sent” · status updates in place · counts refresh from server · draft cleared
+  ├─ timeout / network error → “We couldn't confirm your response”
+  │     → look up idempotency record K (not the invitation status alone)
+  │          ├─ saved       → show saved state as success · draft cleared
+  │          ├─ rejected    → show reason (withdrawn/expired/not your turn) · draft cleared
+  │          ├─ processing  → “Your response is still being processed.” · Check again · draft kept
+  │          └─ no record / lookup failed → “We couldn't confirm your response. Your answer is still here.”
+  │                                         Try again (same K → stored at most once) · draft kept
+  └─ server rejects (withdrawn/expired meanwhile)
+        → popup shows the rejection · list, badge, attention refetch; nothing optimistic to undo
 ```
 
 Board: [team-invite-respond](./designs/team-invite-respond.html).
@@ -192,8 +198,8 @@ Soft refresh, sign out/in, and desktop ↔ mobile all show the same counts and s
 | State | Home | Hub | Earnings | Notifications | Invitation popup | Business dashboard |
 |-------|------|-----|----------|---------------|------------------|--------------------|
 | Loading | Skeleton; badges last known | Skeleton | Skeleton | Skeleton | Skeleton | Skeleton |
-| Empty | Copy only if projection 0 | “No invitations are waiting” only if O = 0 | Setup required card | “You're all caught up” | — | New-workspace CTA |
-| Error | Banner + Try again | Same | “We couldn't load your earnings” | Same | Inline, nothing changed | Failed section only |
+| Empty | Copy only if projection 0 | “No invitations are waiting” only if O = 0 | “No earnings yet”; readiness card shows its own state (§B) | “You're all caught up” | — | New-workspace CTA |
+| Error | Banner + Try again | Same | “We couldn't load your earnings” + Try again | Same | Per §D3 (no “nothing changed”) | Failed section only |
 | Success | Counts refresh | Same | State updates | Bell updates | Toast + status | Toast + row leaves attention |
 | Permission | Login / role home | Same | Same | Same | Not on invitation → hub | Wrong role message |
 

@@ -62,8 +62,8 @@ def build_home():
  "Board image is a capture of the live demo card (Amara Cole). Implementation renders <code>InfluencerCardView</code> itself, not an image.",
 ])}
 {notes("Counts on this screen (finding 4 · DB1/DB3)",[
- "Banner, Invitations stat, and Needs your attention all show invitations <b>waiting for your reply</b> (pending only).",
- "Invitations where you asked a question or said you are interested are waiting on the business. They appear in the Collaborations hub, not here.",
+ "Banner, Invitations stat, and Needs your attention all show invitations <b>waiting for your reply</b> = turn is yours: new invitations and ones where the business answered your question (master-spec §1, §2.2a). Reading doesn't change it.",
+ "Invitations where it is the business's turn (you said you're interested, or your question is unanswered) appear in the Collaborations hub, not here.",
  "Active collaborations = the same membership filter as the hub Active tab (2).",
  "Collaborations sidebar badge 1 = the one invitation waiting for your reply.",
 ])}

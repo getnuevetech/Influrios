@@ -12,11 +12,11 @@ STATES = [
     ("question", "Question sent", "blue",
      "You asked: “Can the video go live in December?” Northwind Studio's reply will appear here and in Messages.",
      '<span class="btn danger sm">Decline</span><span class="btn sec sm">View conversation</span>',
-     "NEGOTIATING · business to act"),
+     "NEGOTIATING · turn = business"),
     ("replied", "Northwind Studio replied", "violet",
      "“Yes, December works. Final cut by 15 Dec.” Let Northwind Studio know how you'd like to continue.",
      '<span class="btn danger sm">Decline</span><span class="btn sec sm">Ask another question</span><span class="btn pri sm">I\'m interested</span>',
-     "NEGOTIATING + business reply · your turn (needs P1-D1)"),
+     "NEGOTIATING · turn = invitee (needs P1-D1)"),
     ("interested", "Interested", "green",
      "You told Northwind Studio you're interested. This isn't an agreement yet. They'll send one if they choose you.",
      '<span class="btn danger sm">Decline</span><span class="btn sec sm">Ask a question</span>',
@@ -47,15 +47,18 @@ TEAM = [
      '<span class="btn sec sm">Close</span>', "member accepted · proposal partial"),
 ]
 EDGE = [
-    ("unconfirmed", "Checking your response", "amber",
-     "We couldn't confirm your response. Checking whether it was saved…",
-     '<span class="btn sec sm dis">Close</span><span class="btn pri sm dis">Checking…</span>', "timeout / network: re-read status"),
-    ("not-saved", "Response not saved", "rose",
-     "Your response wasn't saved. You can try again; it won't be sent twice.",
-     '<span class="btn sec sm">Close</span><span class="btn pri sm">' + i("refresh", "sm") + 'Try again</span>', "re-read: still pending → safe retry (same key)"),
+    ("saved", "Interested", "green",
+     "We confirmed your response was saved. Northwind Studio can see you're interested.",
+     '<span class="btn pri sm">Close</span>', "timeout → record lookup: saved"),
+    ("processing", "Still processing", "amber",
+     "Your response is still being processed.<span style='display:block;margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;color:var(--indigo)'>Your question: “Can the final cut move to 20 Dec?”</span>",
+     '<span class="btn sec sm">Close</span><span class="btn pri sm">' + i("refresh", "sm") + 'Check again</span>', "timeout → record lookup: processing · draft kept"),
+    ("unconfirmed", "Couldn't confirm", "rose",
+     "We couldn't confirm your response. Your answer is still here.<span style='display:block;margin-top:10px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:12px;color:var(--indigo)'>Your question: “Can the final cut move to 20 Dec?”</span>",
+     '<span class="btn sec sm">Close</span><span class="btn pri sm">' + i("refresh", "sm") + 'Try again</span>', "no record / lookup failed · same key · draft kept"),
     ("concurrent", "This invitation was withdrawn", "gray",
      "Northwind Studio withdrew it before your reply arrived. Nothing was signed or funded.",
-     '<span class="btn pri sm">Back to invitations</span>', "reply rejected: WITHDRAWN"),
+     '<span class="btn pri sm">Back to invitations</span>', "record lookup or reply: rejected (WITHDRAWN)"),
 ]
 
 
@@ -97,21 +100,23 @@ def build_invite():
 {notes("Transitions (finding 4) · product semantics",[
  "Marketplace invitations follow <code>APPLICATION_TRANSITIONS</code>: “I'm interested” → RESPONDED, Ask a question → NEGOTIATING, Decline → DECLINED. None of these accepts work or drafts a contract. Only the business moves it to ACCEPTED.",
  "Asking a question <b>does not complete</b> the invitation. It stays open, with the business to act next. Decline is still available.",
- "After the business answers, the invitation returns to your turn (“Northwind Studio replied”) with <b>I'm interested · Ask another question · Decline</b>. It counts again in the banner, attention and badge until you respond.",
+ "Whose turn it is (<code>turn</code> = invitee / business / none) is persisted and changes only on actions. The business's answer sets turn = invitee (“Northwind Studio replied”) with <b>I'm interested · Ask another question · Decline</b>.",
+ "<b>Reading never changes turn.</b> Opening the invitation, the reply notice or the Messages thread marks them read, but the banner, attention row, badge and task stay until you respond.",
  "<b>Defect P1-D1 (code):</b> today there's no NEGOTIATING → RESPONDED transition, so interest can't be recorded after a question. The design is the target; the code must add that transition. The limitation is not adopted as UX.",
  "Team invitations only offer Accept / Decline (team-proposal member status). No Interested or question.",
- "Badge, banner and attention clear <b>when the persisted status leaves the invitee's turn</b>. Opening or reading the invitation alone doesn't clear them.",
+ "Badge, banner and attention clear <b>only when turn leaves the invitee</b> (a persisted response, or withdrawn / expired).",
 ])}
 {notes("Failure, retry, concurrency",[
- "Timeout or network error: don't claim nothing changed (the server may have saved it). Show “We couldn't confirm your response”, re-read the invitation status, then show either the saved state (success) or “Your response wasn't saved” with Try again.",
- "Retries are duplicate-safe: each reply carries an idempotency key, and the server treats a repeat of the same intent on the same invitation as a no-op returning the saved state.",
+ "Each answer gets one idempotency key. The server keeps a record per key: processing → saved | rejected. A repeat with the same key never applies twice.",
+ "Timeout: show “We couldn't confirm your response” and look up the <b>idempotency record</b>, not the invitation status (which can look unchanged while the write is still processing). Outcomes: <b>saved</b> → success · <b>rejected</b> → reason · <b>processing</b> → Check again · <b>no record / lookup failed</b> → Try again with the same key.",
+ "The draft (answer + question text) is kept until saved or rejected, including after Close.",
  "Buttons disable while sending, to prevent a double submit.",
  "Concurrent withdrawal or expiry: the server rejects the reply (“no longer open”). The popup swaps to the withdrawn message, and the list, badge and attention refresh from the server. No optimistic decrement before success.",
 ])}
 </div></div>
 <div class="section-title">Marketplace invitation states (popup status area)</div>
 <div class="grid-3">{"".join(mini(s) for s in STATES)}</div>
-<div class="section-title">Team invitation · unconfirmed response · safe retry · concurrent withdrawal</div>
+<div class="section-title">Team invitation · timeout outcomes (saved / processing / couldn't confirm / rejected)</div>
 <div class="grid-3">{"".join(mini(s) for s in TEAM + EDGE)}</div>
 <div class="section-title">Who acts next, and what clears (also in flows.md §D)</div>
 <table class="spec-table"><thead><tr><th>State</th><th>Next to act</th><th>Invitee actions</th><th>Hub Invitations tab</th><th>Counts toward home banner / attention / Collaborations badge</th></tr></thead><tbody>{table}</tbody></table>"""

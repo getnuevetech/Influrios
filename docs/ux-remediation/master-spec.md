@@ -1,7 +1,7 @@
 # Master remediation specification
 
 **Scope today:** Package 1 rules (nav · dashboards · payout readiness · invitations · notifications · inbox dedupe · terminology), plus the master finance scope (§12). Expand when Packages 2–5 land.
-**Revision:** 2026-11-21 (round 2). Corrects the six Ola review findings and the six round-2 follow-ups on Package 1 (see [package-01/README.md § Finding checklist](./package-01/README.md#finding-to-file-checklist)).
+**Revision:** 2026-11-21 (round 3). Corrects the six Ola review findings, the six round-2 follow-ups and the five round-3 consistency rules on Package 1 (see [package-01/README.md § Finding checklist](./package-01/README.md#finding-to-file-checklist)).
 **Builds on:** [#533 shared-ui-spec](https://github.com/getnuevetech/Influrios/blob/cursor/ux-design-package-e893/docs/ux-design-package/shared-ui-spec.md) and [navigation-map](https://github.com/getnuevetech/Influrios/blob/cursor/ux-design-package-e893/docs/ux-design-package/navigation-map.md). For what #533 still governs, see its [supersession index](https://github.com/getnuevetech/Influrios/blob/cursor/ux-design-package-e893/docs/ux-design-package/supersession-index.md).
 **Audit feed:** RC-DASHBOARD · INV-DC-* · INV-C-014 · INV-N-004 ([#539](https://github.com/getnuevetech/Influrios/pull/539))
 **Constraints:** Live deposits closed · Agency deferred · Centered popups for list detail (one explicit exception: §12 ledger rows) · Original influencer card unchanged · No implementation until the package is accepted
@@ -37,8 +37,8 @@ For a given account and session, these surfaces read the **same** derived values
 
 | Projection | Definition | Surfaces that must agree |
 |------------|-----------|--------------------------|
-| **Invitations waiting for your reply** | Marketplace REQUESTED/VIEWED + team member `invited` on a `sent`/`partial` proposal, not expired | Home banner · Home Invitations stat · Needs your attention · Hub Invitations card subset · Hub Invitations tab badge · Collaborations badge (invite portion) |
-| **Open invitations** | Above + RESPONDED + NEGOTIATING + team member `accepted` awaiting teammates | Hub Invitations card value · Invitations tab list |
+| **Invitations waiting for your reply** | Open, not expired, and **turn = invitee** (§2.2a): marketplace REQUESTED/VIEWED · marketplace NEGOTIATING after the business answered (“{Business} replied”) · team member `invited` on a `sent`/`partial` proposal | Home banner · Home Invitations stat · Needs your attention · Hub Invitations card subset · Hub Invitations tab badge · Collaborations badge (invite portion) |
+| **Open invitations** | Above + invitations with **turn = business** (RESPONDED, NEGOTIATING awaiting the business's answer) + team member `accepted` awaiting teammates | Hub Invitations card value · Invitations tab list |
 | **Active collaborations** | Same membership filter on both surfaces | Home Active · Hub Active card + tab |
 | **Payout readiness** | One of six states (§2.1) | Earnings Receive payments · Home payout message · Hub Payment readiness · Earnings badge |
 | **Bell unread** | Unread notices | Bell `aria-label` · Notifications › Unread |
@@ -74,9 +74,9 @@ Rules: completed steps always render as done. Verification pending never shows �
 
 | State | Product status | Next to act | Invitee actions | Label |
 |-------|----------------|-------------|-----------------|-------|
-| Waiting for your reply | REQUESTED / VIEWED | Invitee | I'm interested · Ask a question · Decline | violet |
-| Question sent | NEGOTIATING | Business | Decline · View conversation | blue |
-| {Business} replied | NEGOTIATING + unread business answer | **Invitee** | I'm interested · Ask another question · Decline | violet |
+| Waiting for your reply | REQUESTED / VIEWED (turn = invitee) | Invitee | I'm interested · Ask a question · Decline | violet |
+| Question sent | NEGOTIATING, turn = business | Business | Decline · View conversation | blue |
+| {Business} replied | NEGOTIATING, **turn = invitee** (set by the business's answer) | **Invitee** | I'm interested · Ask another question · Decline | violet |
 | Interested | RESPONDED | Business | Ask a question · Decline | green |
 | Accepted | ACCEPTED → COLLABORATION_DRAFTED | Invitee (agreement) | Review agreement | green |
 | You declined | DECLINED | — | Close | gray |
@@ -88,6 +88,13 @@ Rules: completed steps always render as done. Verification pending never shows �
 Semantics follow `APPLICATION_TRANSITIONS` and `inviteeResponsePlan`: “I'm interested” records interest (RESPONDED) and never accepts work. Asking a question (NEGOTIATING) does **not** complete the invitation. Only the business moves an invitation to ACCEPTED.
 
 **Continuation after a question:** when the business answers, the invitation returns to the invitee's turn (“{Business} replied”) and counts again in the banner, attention and badge until the invitee responds. “I'm interested” is available there.
+
+#### 2.2a Turn tracking (independent of read state)
+
+- Each open invitation carries **turn** = `invitee` | `business` | `none`, persisted server-side.
+- Turn changes **only** on a persisted action: business sends/answers → `invitee`; invitee says interested or asks a question → `business`; accept/decline/withdraw/expire → `none`.
+- **Reading never changes turn.** Opening the invitation, the reply notice, or the Messages thread marks those items read but leaves the response task, banner, attention row and badge in place until the invitee responds.
+- Every projection, badge and action-enablement rule uses turn + status, never unread state.
 
 **Defect P1-D1 (code, not UX):** `APPLICATION_TRANSITIONS` has no NEGOTIATING → RESPONDED transition, so today interest can't be recorded after a question. The code must add the transition (still never accepting work). Code limitations are logged as defects, not adopted as the desired UX. **Forbidden pairing:** a pending label alongside “No further action needed”.
 
@@ -117,8 +124,8 @@ Badges keep their last known value while loading. Counts never decrement optimis
 | Context | Enabled when | Otherwise |
 |---------|--------------|-----------|
 | Home “Review invitation” | ≥1 invitation waiting for your reply | Hidden |
-| I'm interested | REQUESTED / VIEWED, or NEGOTIATING after the business replied (needs P1-D1) | Hidden |
-| Ask a question | REQUESTED / VIEWED / RESPONDED / NEGOTIATING after the business replied | Hidden |
+| I'm interested | Turn = invitee and status REQUESTED / VIEWED / NEGOTIATING (NEGOTIATING needs P1-D1) | Hidden |
+| Ask a question | Status REQUESTED / VIEWED / RESPONDED, or NEGOTIATING with turn = invitee | Hidden |
 | Decline (marketplace) | REQUESTED / VIEWED / RESPONDED / NEGOTIATING | Hidden |
 | Accept invitation / Decline (team) | Member `invited` and proposal `sent`/`partial` | Hidden; status text shown |
 | Reply buttons while sending | — | Disabled (prevents double submit) |
@@ -128,9 +135,17 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 
 ### 4.1 Submitting a response (reliability)
 
-- Every response carries an **idempotency key**. The server treats a repeat of the same intent on the same invitation as a no-op and returns the saved state, so retries are duplicate-safe.
-- **Timeout or network error:** never say “Nothing changed”; the server may have saved it. Show “We couldn't confirm your response” and re-read the invitation status. If saved, show the saved state as success. If not saved, show “Your response wasn't saved” + Try again (same key).
-- **Explicit server rejection** (withdrawn/expired): show the rejection state. Only here may the copy say nothing was signed or funded.
+- Every response attempt gets an **idempotency key** when the user first submits it. The server stores an **idempotency record** per key: `processing` → `saved` | `rejected` (with reason). A repeat with the same key never applies twice; it returns the record's current outcome.
+- The draft (intent + question text) is **kept client-side** until the outcome is `saved` or `rejected`. Retrying reuses the **same key** and the same draft. A new key is created only if the user changes their answer.
+- **Timeout or network error:** never say “Nothing changed” or “wasn't saved”. Show “We couldn't confirm your response”, then look up the **idempotency record** for that key (not the invitation status alone, which can be unchanged while the write is still processing):
+
+| Record lookup | Show | Actions | Draft |
+|---------------|------|---------|-------|
+| `saved` | The saved state as success (e.g. Interested) | Close | Cleared |
+| `rejected` | The reason (withdrawn / expired / no longer your turn). Only here may copy say nothing was signed or funded | Back to invitations | Cleared |
+| `processing` | “Your response is still being processed.” | Check again (re-reads the record); reply buttons disabled | Kept |
+| No record, or lookup fails | “We couldn't confirm your response. Your answer is still here.” | Try again (same key, so it can't be stored twice) · Close (draft kept for this invitation) | Kept |
+
 - Counts change only from server-confirmed state.
 
 ---
@@ -179,8 +194,8 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 | State | Spec |
 |-------|------|
 | Loading | Skeletons; `aria-busy`; badges keep last known value |
-| Empty | Honest copy only when the projection is 0; one CTA |
-| Error | Inline banner: what failed, that nothing changed, Try again; other sections stay usable |
+| Empty | Honest copy only when the projection is 0; one CTA. Emptiness is about the data only: e.g. no earnings yet ≠ payout setup incomplete (readiness card shows its own state) |
+| Error | Inline banner: what failed to load or send + Try again; other sections stay usable. Never assert “nothing changed” after a write; use §4.1 |
 | Success | Toast + status change in place; lists refresh from server |
 | Retry | Repeated failure keeps the page as it was, with a calm message |
 | Permission | Signed out → login; wrong role → message + “Go to your dashboard” |
@@ -191,16 +206,18 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 
 | ID | Pass when |
 |----|-----------|
-| DB1 | Home waiting-for-reply count = hub waiting subset = Collaborations badge invite portion; hub open count includes question-sent/interested |
+| DB1 | Home waiting-for-reply count = hub waiting subset = Collaborations badge invite portion, all using §1 (incl. “{Business} replied”); hub open count also includes turn = business invitations |
 | DB2 | Earnings, home, hub and badge show the same one of six payout states with the §2.1 copy/CTA; INV-DC-002, INV-C-014, INV-N-004 |
 | DB2a | Saved account without provider verification is **not** Ready |
 | DB2b | Verification pending shows no setup/continue CTA anywhere, and no unsupported timing/email promise |
 | DB2c | Provider unreachable shows last known state + timestamp; badge not raised |
 | DB2d | Provider unreachable with no confirmed history shows “Status unavailable”; never Ready or Setup required |
+| DB2e | Ready account with no transactions shows “No earnings yet” and the Ready card; empty earnings never shows Setup required |
 | DB3 | Home Active = hub Active |
 | DB4 | Every invitation state in §2.2 shows its actions/label; badge/attention clear on persisted transition only; INV-DC-015, INV-DC-012 |
-| DB4a | Ask a question leaves the invitation open (NEGOTIATING), waiting for the business; after the business answers it returns to the invitee's turn with I'm interested · Ask another question · Decline (needs P1-D1) |
-| DB4b | Timeout: “We couldn't confirm your response” → status re-read → saved state or safe retry; a retried response is stored once; concurrent withdrawal shows withdrawn copy and counts refresh |
+| DB4a | Ask a question leaves the invitation open (NEGOTIATING, turn = business); the business's answer sets turn = invitee with I'm interested · Ask another question · Decline (needs P1-D1) |
+| DB4c | Reading the answer (invitation, notice or Messages) leaves turn = invitee: banner, attention, badge and task stay until the invitee responds |
+| DB4b | Timeout: “We couldn't confirm your response” → idempotency record lookup → saved / rejected / processing / unable to confirm per §4.1; draft kept until saved or rejected; retry reuses the key and is stored once; concurrent withdrawal shows the rejection and counts refresh |
 | DB5 | Open unread decreases bell; action required unchanged by read alone |
 | DB6 | Refresh + re-login + desktop↔mobile keep agreed counts |
 | DB7 | Business dashboard: attention = Collaborations badge + Contracts badge; every attention row opens a working popup/sheet; empty/loading/error per board |
