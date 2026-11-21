@@ -1,0 +1,35 @@
+{
+  "id": "cmwr265k700027dl3zwxt7qcg",
+  "res": [
+    {
+      "id": "T1 desktop pending: respond controls, no dead end",
+      "ok": true,
+      "d": "Log out ·  · Accept invitation · Decline"
+    },
+    {
+      "id": "T2 desktop home attention lists the pending team invite",
+      "ok": true,
+      "d": "home"
+    },
+    {
+      "id": "T1 mobile pending: respond controls, no dead end",
+      "ok": true,
+      "d": "Log out ·  · Accept invitation · Decline"
+    },
+    {
+      "id": "T2 mobile home attention lists the pending team invite",
+      "ok": true,
+      "d": "home"
+    },
+    {
+      "id": "T3 accept persists; page shows accepted, no respond controls, no contradiction",
+      "ok": true,
+      "d": "member=accepted"
+    },
+    {
+      "id": "T4 attention clears after accept",
+      "ok": true,
+      "d": "home"
+    }
+  ]
+}

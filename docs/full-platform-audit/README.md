@@ -1,6 +1,6 @@
 # Full-platform audit — Influrios
 
-**Phase:** A complete. Phase B + IPS-25 + IPS-29 + IPS-30 + IPS-31/40 + **IPS-42 evidence reconcile** + **IPS-43 hidden-gap split**. **Not** platform-wide complete (**40 Fail** / **54 Blocked** / **0 Not tested** / **398 Pass** (IPS-46)). Phase C remediation plan (IPS-20) remains **PROVISIONAL**.  
+**Phase:** A complete. Phase B + IPS-25 + IPS-29 + IPS-30 + IPS-31/40 + **IPS-42 evidence reconcile** + **IPS-43 hidden-gap split**. **Not** platform-wide complete (**38 Fail** / **54 Blocked** / **0 Not tested** / **400 Pass** (IPS-47)). Phase C remediation plan (IPS-20) remains **PROVISIONAL**.  
 **Coverage status (user-facing):** [coverage-status.md](./coverage-status.md) — Fail (24), Blocked (80), Not tested (1), Pass (378); IPS-30 acceptance + IPS-31/40 Mailpit + IPS-42 reconcile.  
 **NT chase:** [execution/not-tested-chase-results.md](./execution/not-tested-chase-results.md) (IPS-25).  
 **Dashboard consistency:** [execution/dashboard-consistency-results.md](./execution/dashboard-consistency-results.md) (IPS-29 · INV-DC-* · **RC-DASHBOARD**).  
@@ -34,8 +34,8 @@
 | Metric | Count |
 |--------|------:|
 | Matrix rows | 502 |
-| Pass | **398** |
-| Fail | **40** *(24 + IPS-44: 5 + IPS-45: 10 + IPS-46: 1)* |
+| Pass | **400** |
+| Fail | **38** *(24 + IPS-44: 5 + IPS-45: 10 + IPS-46: 1 − IPS-47: 2)* |
 | Blocked | **54** |
 | Not tested | **0** |
 | Explicitly deferred (Agency) | 10 |
