@@ -22,7 +22,7 @@ This folder holds the **visual remediation design train**: boards + complete flo
 | 2 | Collaborations lists + centered detail/edit popups (invite / withdraw / delete / deliverable / review) | IPS-36 | Queued after pkg1 review | — |
 | 3 | Pricing, billing, checkout (monthly/annual, discounts, tax, plan changes, invoices) | IPS-37 | Queued | — |
 | 4 | Contracts, messages, profiles (contract presentation, conversations, original influencer card, collab entry) | IPS-38 | Queued | — |
-| 5 | Admin workflows (lists, forms, permissions, config, job failures & recovery) | IPS-39 | Queued | — |
+| 5 | Admin workflows (lists, forms, permissions, config, job failures & recovery, **contract ledger + gateway/bank reconciliation** — [master-spec §10](./master-spec.md#10-admin-contract-ledger--gatewaybank-reconciliation-master-scope-requirement)) | IPS-39 | Queued | — |
 
 Implement only after the package under review is accepted. Do not wait for every audit Blocked row to design proven dashboard/nav defects.
 

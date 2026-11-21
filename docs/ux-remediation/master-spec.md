@@ -137,11 +137,71 @@ Destructive (Decline): rose outline + confirm dialog (centered, stack confirm-on
 
 ---
 
-## 10. Expansion hooks (later packages)
+## 10. Admin contract ledger + gateway/bank reconciliation (master scope requirement)
+
+**Recorded:** 2026-11-21 per Ola direction. **Status:** scope requirement only. Design is due in **Package 5 (admin)**. Provider and bank evidence is due under the separately approved **R6** gate ([Dev_AI_Instructions §R6](../remediation-pack/Dev_AI_Instructions.md)). No implementation. Live deposits stay closed.
+
+### 10.1 Why
+
+Today's admin surfaces split this view three ways, and none of them reconciles against the gateway or the bank:
+
+| Surface today | Shows | Missing |
+|---------------|-------|---------|
+| `/admin/contracts` | Signature status · templates | Any money position for the contract |
+| `/admin/marketplace` (Marketplace ledger) | Per-funding hold / release / refund / fee; payout release "recorded for external handling" | Contract linkage; provider/bank confirmation of each movement |
+| `/admin/finance` | Payout failed/returned · accepted refunds | Expected vs confirmed totals; open mismatch cases |
+| `ReconciliationCaseV4` (data model) | Mismatch cases by kind/status | No admin surface |
+
+Related audit rows on [#539](https://github.com/getnuevetech/Influrios/pull/539): INV-R-098 (release→bank blocked), INV-N-024 / INV-E-072 `ledger_mismatch` (Blocked: EVENT_NOT_FIREABLE).
+
+### 10.2 Requirement A: admin contract ledger
+
+One admin view per contract (agreement ↔ collaboration funding ↔ milestones). It reads Influrios' own ledger (`LedgerEntry`, fee snapshots); it does not compute new numbers.
+
+| Must show | Rule |
+|-----------|------|
+| Contract identity | Contract / agreement id, parties (business, influencer), signature status, currency |
+| Agreed value | Contract amount and milestone split, with change orders shown as versioned deltas |
+| Fee and tax lines | From existing fee snapshots and ledger definitions only. Business fee and influencer fee stay separate, with no double deduction (Dev_AI_Instructions Payments tab rule) |
+| Money position per milestone | Funded / held · released · refunded · fee · payout submitted · paid out · failed/returned |
+| Each movement | Ledger kind, amount, party, provider, provider event id, timestamp |
+| Running balance | Held balance = holds − releases − refunds. It must never go negative; a negative balance shows as a mismatch, not a clamped value |
+| Entry from | `/admin/contracts/[id]` and `/admin/marketplace/[fundingId]`. Both open the same ledger |
+
+### 10.3 Requirement B: gateway and bank reconciliation
+
+| Level | Compare | Pass when | On mismatch |
+|-------|---------|-----------|-------------|
+| Ledger ↔ gateway | Each `LedgerEntry` (provider + eventId) ↔ provider record (charge/hold, transfer, refund, payout) | Amount, currency, state and ids agree | Open a `ReconciliationCaseV4` (kind, reason); emit `ledger_mismatch` to ops; keep provider facts and never overwrite them |
+| Gateway ↔ bank settlement | Provider payout / settlement batch ↔ bank deposit or statement line | Batch total = sum of included movements, net of provider fees | Open a case; label the settlement **unproven** until the bank line exists |
+| Status labels | "Transfer submitted" / "Paid out" | Shown **only** from the matching provider state (R6 rule) | Show "Unconfirmed", never "Paid out" |
+| Failure | Payout failed/returned | The earned amount and approved delivery stay in place | Case + `/admin/finance` row |
+
+Admin UI (Package 5 design): a reconciliation queue (open/resolved cases, filter by kind/provider/currency), case detail in a **centered popup** (§7), and a resolution with a required reason. An ops alert count follows §3: the count sits on the item that opens it.
+
+### 10.4 Acceptance anchors (design-level; retest after R6 approval)
+
+| ID | Pass when |
+|----|-----------|
+| LED1 | Each contract's ledger totals equal the sum of its `LedgerEntry` rows, and fee lines equal the fee snapshot |
+| LED2 | The contract and marketplace entry points show the same ledger |
+| REC1 | A sandbox gateway event with a deliberate amount mismatch opens a case and fires `ledger_mismatch` (unblocks INV-N-024 / INV-E-072 on an isolated fixture) |
+| REC2 | Settlement without a bank line stays labelled **unproven** |
+| REC3 | "Paid out" never appears without the matching provider state |
+
+### 10.5 Open points for Ola
+
+1. Should the contract ledger also cover subscription billing (Stripe invoices), or only collaboration funding?
+2. What is the bank-side source: provider settlement reports only, or imported bank statements?
+3. Who can resolve reconciliation cases (Payments Admin only?), and must resolutions be dual-approved?
+
+---
+
+## 11. Expansion hooks (later packages)
 
 - **Pkg2:** Request/active overview popup field schemas, withdraw/delete gates  
 - **Pkg3:** Money/tax/discount line rules, annual unavailable gate  
 - **Pkg4:** Contract viewer, message reply a11y, card public presentation  
-- **Pkg5:** Admin permissions, job failure recovery UI
+- **Pkg5:** Admin permissions, job failure recovery UI, **admin contract ledger + reconciliation queue (§10)**
 
 Do not invent commercial prices in designs. Do not reopen live deposits in design or acceptance.
