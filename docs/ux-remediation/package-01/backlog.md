@@ -36,5 +36,7 @@ Release itself (frozen allocations, two legs, partial success, idempotency, ledg
 | P1-AUD-07 | Inbox rows name collaboration + milestone; clear on auto-approval | `action-inbox-load` | INB1 |
 | P1-AUD-08 | **Decided:** separate delivery approval from release (master-spec §2.2). Approve persists and clears the review task when authorized + valid version + valid state, even with payout setup incomplete; release waits for readiness + payment controls; UI “Approved · payout setup required”; same for auto-approval | `payments/standard-actions.ts`, auto-approval sweep, workroom copy | AUD2 |
 | P1-AUD-09 | Business Collaborations badge counts review tasks, not collaborations | `sidebar-badges` | §3 |
+| P1-AUD-10 | Invitation **detail page** offers Accept · Decline · Withdraw to the invitee; must follow the same §2.2b matrix as the popup (one rule set per invitation, server-enforced) — IPS-45 INV-A-045 | `/collaboration/applications/[id]` | DB4d |
+| P1-AUD-11 | Show the next step after the influencer accepts (“Waiting for {Business} to send the agreement”) and after full signature (business: next payment step; influencer: “Waiting for funding”) on home attention / hub — IPS-45 INV-A-045, INV-N-010T | home, hub, contracts | DB1, DB7 |
 
 Not in this backlog: live deposit/withdraw/fund paths · Agency · Package 2 field schemas · admin ledger/reconciliation (Package 5) · card redesign.
