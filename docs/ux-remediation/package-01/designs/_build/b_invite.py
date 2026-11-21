@@ -8,19 +8,23 @@ STATES = [
     ("pending", "Waiting for your reply", "violet",
      "Northwind Studio invited you. Tell them if you're interested, ask a question, or decline.",
      '<span class="btn danger sm">Decline</span><span class="btn sec sm">Ask a question</span><span class="btn pri sm">I\'m interested</span>',
-     "REQUESTED / VIEWED"),
+     "case 1 · REQUESTED / VIEWED"),
     ("question", "Question sent", "blue",
      "You asked: “Can the video go live in December?” Northwind Studio's reply will appear here and in Messages.",
      '<span class="btn danger sm">Decline</span><span class="btn sec sm">View conversation</span>',
-     "NEGOTIATING · turn = business"),
+     "case 2 · NEGOTIATING · turn = business"),
     ("replied", "Northwind Studio replied", "violet",
      "“Yes, December works. Final cut by 15 Dec.” Let Northwind Studio know how you'd like to continue.",
      '<span class="btn danger sm">Decline</span><span class="btn sec sm">Ask another question</span><span class="btn pri sm">I\'m interested</span>',
-     "NEGOTIATING · turn = invitee (needs P1-D1)"),
+     "case 3 · NEGOTIATING · turn = invitee (needs P1-D1)"),
     ("interested", "Interested", "green",
      "You told Northwind Studio you're interested. This isn't an agreement yet. They'll send one if they choose you.",
-     '<span class="btn danger sm">Decline</span><span class="btn sec sm">Ask a question</span>',
-     "RESPONDED"),
+     '<span class="btn danger sm">Decline</span><span class="btn sec sm">Ask a follow-up question</span>',
+     "case 4 · RESPONDED · turn = business"),
+    ("interested-followup", "Interested · question sent", "green",
+     "You asked: “Can I use my own music?” Northwind Studio still decides on the invitation; their answer will appear here and in Messages.",
+     '<span class="btn danger sm">Decline</span>',
+     "case 5 · NEGOTIATING · turn stays business"),
     ("accepted", "Accepted", "green",
      "Northwind Studio chose you. Review and sign the agreement to start.",
      '<span class="btn pri sm">Review agreement</span>',
@@ -65,7 +69,7 @@ EDGE = [
 def mini(s):
     key, title, pk, msg, acts, status = s
     return f"""<div class="mini"><div class="mini-cap">{title} · <span style="text-transform:none;font-weight:600">{status}</span></div>
-<div class="card"><div class="dlg-head"><div><h3>Free Tech Support</h3><p style="color:var(--muted);font-size:12px">Northwind Studio</p></div>{pill(pk, title.split(" · ")[-1])}</div>
+<div class="card"><div class="dlg-head"><div><h3>Free Tech Support</h3><p style="color:var(--muted);font-size:12px">Northwind Studio</p></div>{pill(pk, title.split(" · ")[-1] if title.startswith("Team invitation") else title)}</div>
 <p style="margin:12px 0;font-size:13px;color:#344054">{msg}</p>
 <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;border-top:1px solid var(--line-soft);padding-top:12px">{acts}</div></div></div>"""
 
@@ -86,7 +90,8 @@ def build_invite():
         ("Waiting for your reply", "Invitee", "Interested · Ask a question · Decline", "Listed", "Yes: banner, stat, attention, badge"),
         ("Question sent", "Business", "Decline · View conversation", "Listed: “Waiting for Northwind Studio”", "No"),
         ("Business replied (to your question)", "Invitee", "I'm interested · Ask another question · Decline", "Listed: “Waiting for your reply”", "Yes, again, until you respond"),
-        ("Interested", "Business", "Ask a question · Decline", "Listed: “Waiting for Northwind Studio”", "No"),
+        ("Interested", "Business", "Ask a follow-up question · Decline", "Listed: “Waiting for Northwind Studio”", "No"),
+        ("Interested · follow-up sent / answered", "Business (turn stays)", "Decline (+ follow-up again once answered)", "Listed: “Waiting for Northwind Studio”", "No: the business still decides"),
         ("Accepted", "Invitee (agreement)", "Review agreement", "Leaves Invitations → Active (agreement ready)", "Agreement item on home + Contracts"),
         ("Declined / Expired / Withdrawn", "Nobody", "None (Close)", "Leaves open list → Closed filter", "No; related notice action-required clears"),
         ("Team · invited", "Invitee", "Accept invitation · Decline", "Listed", "Yes"),
@@ -103,13 +108,14 @@ def build_invite():
  "Whose turn it is (<code>turn</code> = invitee / business / none) is persisted and changes only on actions. The business's answer sets turn = invitee (“Northwind Studio replied”) with <b>I'm interested · Ask another question · Decline</b>.",
  "<b>Reading never changes turn.</b> Opening the invitation, the reply notice or the Messages thread marks them read, but the banner, attention row, badge and task stay until you respond.",
  "<b>Defect P1-D1 (code):</b> today there's no NEGOTIATING → RESPONDED transition, so interest can't be recorded after a question. The design is the target; the code must add that transition. The limitation is not adopted as UX.",
+ "Actions follow one matrix (master-spec §2.2b) on status + turn + interest recorded + open question; the server enforces the same matrix. Follow-up questions after Interested are an explicit exception: turn stays with the business and nothing is added to your counts.",
  "Team invitations only offer Accept / Decline (team-proposal member status). No Interested or question.",
  "Badge, banner and attention clear <b>only when turn leaves the invitee</b> (a persisted response, or withdrawn / expired).",
 ])}
 {notes("Failure, retry, concurrency",[
- "Each answer gets one idempotency key. The server keeps a record per key: processing → saved | rejected. A repeat with the same key never applies twice.",
+ "One idempotency key per <b>logical submission</b>, bound to the signed-in actor + invitation + payload. Retries of an unresolved submission reuse it; after an outcome, the next submission gets a new key even with identical text. The same key with a different binding is refused.",
  "Timeout: show “We couldn't confirm your response” and look up the <b>idempotency record</b>, not the invitation status (which can look unchanged while the write is still processing). Outcomes: <b>saved</b> → success · <b>rejected</b> → reason · <b>processing</b> → Check again · <b>no record / lookup failed</b> → Try again with the same key.",
- "The draft (answer + question text) is kept until saved or rejected, including after Close.",
+ "The draft is kept and <b>locked</b> while its submission is unresolved, including after Close. It can be edited only after the outcome is saved or rejected.",
  "Buttons disable while sending, to prevent a double submit.",
  "Concurrent withdrawal or expiry: the server rejects the reply (“no longer open”). The popup swaps to the withdrawn message, and the list, badge and attention refresh from the server. No optimistic decrement before success.",
 ])}

@@ -64,15 +64,18 @@ Same membership filter → home Active = hub Active card = Active tab.
 ### D1. Marketplace invitation
 
 ```
-Waiting for your reply (REQUESTED/VIEWED · turn = invitee)
- ├─ I'm interested ─► Interested (RESPONDED) ───── business to act
- │                     ├─ Ask a question ─► Question sent
+[1] Waiting for your reply (REQUESTED/VIEWED · turn = invitee)
+ ├─ I'm interested ─► [4] Interested (RESPONDED · turn = business · interest recorded)
+ │                     ├─ Ask a follow-up question (exception) ─► [5] Interested · question sent
+ │                     │        (NEGOTIATING · turn STAYS business · not in your waiting count)
+ │                     │        └─ [business answers] ─► [6] Interested (turn stays business;
+ │                     │                                  answer arrives as a message; no task)
  │                     └─ Decline ─► You declined
- ├─ Ask a question (note ≥ 8 chars) ─► Question sent (NEGOTIATING · turn = business)
+ ├─ Ask a question (note ≥ 8 chars) ─► [2] Question sent (NEGOTIATING · turn = business)
  │                     ├─ Decline ─► You declined
- │                     └─ [business answers] ─► {Business} replied (NEGOTIATING · turn = invitee)
+ │                     └─ [business answers] ─► [3] {Business} replied (NEGOTIATING · turn = invitee)
  │                             (reading the answer does NOT change turn)
- │                             ├─ I'm interested ─► Interested (RESPONDED)   ← needs defect P1-D1 fixed
+ │                             ├─ I'm interested ─► [4] Interested   ← needs defect P1-D1 fixed
  │                             ├─ Ask another question ─► Question sent
  │                             └─ Decline ─► You declined
  ├─ Decline (confirm) ─► You declined (DECLINED)
@@ -81,11 +84,15 @@ Waiting for your reply (REQUESTED/VIEWED · turn = invitee)
  └─ [deadline passes] ─► Expired
 ```
 
+[n] = case in master-spec §2.2b. The action matrix there is the single rule for UI and server; a disallowed submission is rejected and the popup refreshes to the current case.
+
 | Transition | Invitation list | Home banner / stat / attention | Collaborations badge | Notification “Action required” |
 |------------|-----------------|--------------------------------|----------------------|--------------------------------|
 | Pending → Interested | Stays, label “Waiting for {business}” | −1 | −1 | Clears |
 | Pending → Question sent | Stays, label “Waiting for {business}” | −1 | −1 | Clears |
 | Business answers question (turn → invitee) | Label “Waiting for your reply” | +1 | +1 | Action required again |
+| Interested → follow-up question (case 4/6 → 5) | Label “Interested · question sent” | Unchanged (turn stays business) | Unchanged | — |
+| Business answers a follow-up (5 → 6) | Label “Interested” | Unchanged | Unchanged | Message notice (read state only) |
 | Invitee reads the answer (invitation, notice or Messages) | Unchanged | **Unchanged** | **Unchanged** | Notice → read; action required stays |
 | Replied → Interested / another question / Decline | As above | −1 | −1 | Clears |
 | Any → Accepted | Leaves Invitations → Active (agreement ready) | Agreement item added | Agreement task +1 | Agreement notice |
@@ -111,7 +118,9 @@ The invitation stops counting as waiting on Accept or Decline. “No further act
 ### D3. Failure, retry, concurrency
 
 ```
-Submit reply → create idempotency key K (once per answer) · keep draft · buttons disabled
+Submit reply → new idempotency key K for this logical submission (bound to actor + invitation + payload)
+            · keep draft, locked while unresolved · buttons disabled
+            (after an outcome, the next submission gets a new key, even with identical text)
   ├─ success → toast “Reply sent” · status updates in place · counts refresh from server · draft cleared
   ├─ timeout / network error → “We couldn't confirm your response”
   │     → look up idempotency record K (not the invitation status alone)

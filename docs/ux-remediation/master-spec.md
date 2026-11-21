@@ -1,7 +1,7 @@
 # Master remediation specification
 
 **Scope today:** Package 1 rules (nav · dashboards · payout readiness · invitations · notifications · inbox dedupe · terminology), plus the master finance scope (§12). Expand when Packages 2–5 land.
-**Revision:** 2026-11-21 (round 3). Corrects the six Ola review findings, the six round-2 follow-ups and the five round-3 consistency rules on Package 1 (see [package-01/README.md § Finding checklist](./package-01/README.md#finding-to-file-checklist)).
+**Revision:** 2026-11-21 (round 4). Corrects the six Ola review findings, the six round-2 follow-ups the five round-3 consistency rules and the two round-4 invitation rules on Package 1 (see [package-01/README.md § Finding checklist](./package-01/README.md#finding-to-file-checklist)).
 **Builds on:** [#533 shared-ui-spec](https://github.com/getnuevetech/Influrios/blob/cursor/ux-design-package-e893/docs/ux-design-package/shared-ui-spec.md) and [navigation-map](https://github.com/getnuevetech/Influrios/blob/cursor/ux-design-package-e893/docs/ux-design-package/navigation-map.md). For what #533 still governs, see its [supersession index](https://github.com/getnuevetech/Influrios/blob/cursor/ux-design-package-e893/docs/ux-design-package/supersession-index.md).
 **Audit feed:** RC-DASHBOARD · INV-DC-* · INV-C-014 · INV-N-004 ([#539](https://github.com/getnuevetech/Influrios/pull/539))
 **Constraints:** Live deposits closed · Agency deferred · Centered popups for list detail (one explicit exception: §12 ledger rows) · Original influencer card unchanged · No implementation until the package is accepted
@@ -77,7 +77,8 @@ Rules: completed steps always render as done. Verification pending never shows �
 | Waiting for your reply | REQUESTED / VIEWED (turn = invitee) | Invitee | I'm interested · Ask a question · Decline | violet |
 | Question sent | NEGOTIATING, turn = business | Business | Decline · View conversation | blue |
 | {Business} replied | NEGOTIATING, **turn = invitee** (set by the business's answer) | **Invitee** | I'm interested · Ask another question · Decline | violet |
-| Interested | RESPONDED | Business | Ask a question · Decline | green |
+| Interested | RESPONDED, turn = business | Business | Ask a follow-up question · Decline | green |
+| Interested · follow-up sent | NEGOTIATING, turn = business, interest recorded, question open | Business | Decline | green |
 | Accepted | ACCEPTED → COLLABORATION_DRAFTED | Invitee (agreement) | Review agreement | green |
 | You declined | DECLINED | — | Close | gray |
 | Expired | EXPIRED | — | Close | gray |
@@ -94,7 +95,35 @@ Semantics follow `APPLICATION_TRANSITIONS` and `inviteeResponsePlan`: “I'm int
 - Each open invitation carries **turn** = `invitee` | `business` | `none`, persisted server-side.
 - Turn changes **only** on a persisted action: business sends/answers → `invitee`; invitee says interested or asks a question → `business`; accept/decline/withdraw/expire → `none`.
 - **Reading never changes turn.** Opening the invitation, the reply notice, or the Messages thread marks those items read but leaves the response task, banner, attention row and badge in place until the invitee responds.
-- Every projection, badge and action-enablement rule uses turn + status, never unread state.
+- Every projection, badge and action-enablement rule uses the §2.2b matrix, never unread state.
+
+#### 2.2b Action matrix (single rule for spec, boards and server)
+
+Inputs: status · turn · `interestRecorded` (set when the invitee says “I'm interested”, never cleared while open) · `openQuestion` (an invitee question the business hasn't answered).
+
+| Case | Status | Turn | Interest recorded | Open question | I'm interested | Ask a question | Decline | Label |
+|------|--------|------|:-:|:-:|:-:|:-:|:-:|-------|
+| 1 New | REQUESTED / VIEWED | invitee | no | no | ✓ | ✓ | ✓ | Waiting for your reply |
+| 2 Question sent | NEGOTIATING | business | no | yes | — | — | ✓ | Question sent |
+| 3 Business answered | NEGOTIATING | invitee | no | no | ✓ (P1-D1) | ✓ “Ask another question” | ✓ | Waiting for your reply |
+| 4 Interested | RESPONDED | business | yes | no | — | ✓ **follow-up** | ✓ | Interested |
+| 5 Interested · follow-up sent | NEGOTIATING | business | yes | yes | — | — | ✓ | Interested · question sent |
+| 6 Interested · follow-up answered | NEGOTIATING | business | yes | no | — | ✓ **follow-up** | ✓ | Interested |
+| Team | member `invited` | invitee | — | — | Accept invitation | — | ✓ | Waiting for your reply |
+| Closed | ACCEPTED / DECLINED / EXPIRED / WITHDRAWN | none | — | — | — | — | — | per §2.2 |
+
+**Turn transitions**
+
+| Event | From case | Result |
+|-------|-----------|--------|
+| Invitee: I'm interested | 1, 3 | case 4 (turn → business) |
+| Invitee: Ask a question | 1, 3 | case 2 (turn → business) |
+| Invitee: Ask a **follow-up** question (exception) | 4, 6 | case 5: turn **stays business** (the business already owes the decision). Doesn't add to the invitee's waiting count |
+| Business answers | 2 | case 3 (turn → invitee: the invitee still has to decide) |
+| Business answers | 5 | case 6: turn **stays business**; interest is already recorded, so no invitee task is created. The answer arrives as a message (read state only) |
+| Business accepts / invitee declines / withdraw / expire | any open | Closed (turn → none) |
+
+One open question at a time: while a question is open (cases 2, 5), further messages go through Messages, not the invitation's Ask action. The **server enforces this same matrix**: a submission not allowed for the current case is rejected (`rejected: not allowed now`) and the popup refreshes to the current case.
 
 **Defect P1-D1 (code, not UX):** `APPLICATION_TRANSITIONS` has no NEGOTIATING → RESPONDED transition, so today interest can't be recorded after a question. The code must add the transition (still never accepting work). Code limitations are logged as defects, not adopted as the desired UX. **Forbidden pairing:** a pending label alongside “No further action needed”.
 
@@ -124,9 +153,7 @@ Badges keep their last known value while loading. Counts never decrement optimis
 | Context | Enabled when | Otherwise |
 |---------|--------------|-----------|
 | Home “Review invitation” | ≥1 invitation waiting for your reply | Hidden |
-| I'm interested | Turn = invitee and status REQUESTED / VIEWED / NEGOTIATING (NEGOTIATING needs P1-D1) | Hidden |
-| Ask a question | Status REQUESTED / VIEWED / RESPONDED, or NEGOTIATING with turn = invitee | Hidden |
-| Decline (marketplace) | REQUESTED / VIEWED / RESPONDED / NEGOTIATING | Hidden |
+| I'm interested · Ask a question · Decline (marketplace) | Exactly per the §2.2b action matrix (UI and server) | Hidden |
 | Accept invitation / Decline (team) | Member `invited` and proposal `sent`/`partial` | Hidden; status text shown |
 | Reply buttons while sending | — | Disabled (prevents double submit) |
 | Payout primary CTA | Per §2.1 | Never shown in Pending / Ready (secondary only) / Unavailable (Try again only) |
@@ -135,16 +162,17 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 
 ### 4.1 Submitting a response (reliability)
 
-- Every response attempt gets an **idempotency key** when the user first submits it. The server stores an **idempotency record** per key: `processing` → `saved` | `rejected` (with reason). A repeat with the same key never applies twice; it returns the record's current outcome.
-- The draft (intent + question text) is **kept client-side** until the outcome is `saved` or `rejected`. Retrying reuses the **same key** and the same draft. A new key is created only if the user changes their answer.
+- **One idempotency key per logical submission.** A key is created when the user submits a response that isn't already in flight. Retries of an **unresolved** submission (no outcome yet, or processing / unable to confirm) reuse that key. Once a submission has an outcome (`saved` or `rejected`), the next submission gets a **new key**, even if its intent and text match an earlier one.
+- The server binds each key to **authenticated actor + invitation + payload hash** and stores a record: `processing` → `saved` | `rejected` (with reason). A repeat with the same key and same binding returns the record's outcome and never applies twice. The same key with a different actor, invitation or payload is refused (`key mismatch`) and nothing is applied.
+- The draft (intent + question text) is kept client-side and **locked while its submission is unresolved**: Try again resends the same payload with the same key. Editing is allowed again once the outcome is saved or rejected; an edited answer is a new submission with a new key.
 - **Timeout or network error:** never say “Nothing changed” or “wasn't saved”. Show “We couldn't confirm your response”, then look up the **idempotency record** for that key (not the invitation status alone, which can be unchanged while the write is still processing):
 
-| Record lookup | Show | Actions | Draft |
+| Record lookup (same key) | Show | Actions | Draft |
 |---------------|------|---------|-------|
 | `saved` | The saved state as success (e.g. Interested) | Close | Cleared |
 | `rejected` | The reason (withdrawn / expired / no longer your turn). Only here may copy say nothing was signed or funded | Back to invitations | Cleared |
-| `processing` | “Your response is still being processed.” | Check again (re-reads the record); reply buttons disabled | Kept |
-| No record, or lookup fails | “We couldn't confirm your response. Your answer is still here.” | Try again (same key, so it can't be stored twice) · Close (draft kept for this invitation) | Kept |
+| `processing` | “Your response is still being processed.” | Check again (re-reads the record); reply buttons disabled | Kept, locked |
+| No record, or lookup fails | “We couldn't confirm your response. Your answer is still here.” | Try again (same key + same payload, so it can't be stored twice) · Close (unresolved submission kept for this invitation) | Kept, locked |
 
 - Counts change only from server-confirmed state.
 
@@ -216,8 +244,9 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 | DB3 | Home Active = hub Active |
 | DB4 | Every invitation state in §2.2 shows its actions/label; badge/attention clear on persisted transition only; INV-DC-015, INV-DC-012 |
 | DB4a | Ask a question leaves the invitation open (NEGOTIATING, turn = business); the business's answer sets turn = invitee with I'm interested · Ask another question · Decline (needs P1-D1) |
+| DB4d | Every case in the §2.2b matrix shows exactly its allowed actions, and the server rejects disallowed submissions; a follow-up question after Interested keeps turn = business and never adds to the invitee's counts |
 | DB4c | Reading the answer (invitation, notice or Messages) leaves turn = invitee: banner, attention, badge and task stay until the invitee responds |
-| DB4b | Timeout: “We couldn't confirm your response” → idempotency record lookup → saved / rejected / processing / unable to confirm per §4.1; draft kept until saved or rejected; retry reuses the key and is stored once; concurrent withdrawal shows the rejection and counts refresh |
+| DB4b | Timeout: “We couldn't confirm your response” → idempotency record lookup → saved / rejected / processing / unable to confirm per §4.1; draft kept and locked until saved or rejected; retry of an unresolved submission reuses its key and is stored once; a new submission after an outcome gets a new key even with identical text; a key reused with another actor, invitation or payload is refused; concurrent withdrawal shows the rejection and counts refresh |
 | DB5 | Open unread decreases bell; action required unchanged by read alone |
 | DB6 | Refresh + re-login + desktop↔mobile keep agreed counts |
 | DB7 | Business dashboard: attention = Collaborations badge + Contracts badge; every attention row opens a working popup/sheet; empty/loading/error per board |

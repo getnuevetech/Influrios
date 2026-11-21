@@ -47,6 +47,9 @@ Each rule is defined once and every place that applies it was checked against th
 | C4 | Timeout recovery via **idempotency record**: saved / rejected / processing / unable to confirm; draft kept; same key | master-spec §4.1 | flows §D3 · team-invite-respond (4 outcome panels) · backlog P1-T5 | DB4b |
 | C5 | Empty earnings ≠ setup incomplete; readiness shown independently | master-spec §9 (Empty) | flows §K · states (new “Empty · earnings on a Ready account” panel) · backlog P1-T2 | DB2e |
 
+| C6 (round 4) | One action matrix on status + turn + interest recorded + open question; follow-up question after Interested is an explicit exception (turn stays business, no count change); server enforces the same matrix | master-spec §2.2b | master-spec §2.2, §4 · flows §D1 (cases [1]–[6]) · team-invite-respond (case labels, new “Interested · question sent” panel, table) · backlog P1-D1 | DB4d |
+| C7 (round 4) | One idempotency key per logical submission, bound to actor + invitation + payload hash; reused only for retries of an unresolved submission; new key after any outcome; draft locked while unresolved | master-spec §4.1 | flows §D3 · team-invite-respond notes · backlog P1-T5 | DB4b |
+
 Search check: “unread business answer”, “Setup required card” and in-UI “Nothing changed” / “wasn't saved” no longer appear. Remaining mentions of “nothing changed” are the prohibitions themselves.
 
 ---
