@@ -605,13 +605,13 @@ Every defect found by the isolated r5 runs, with its owning package. Nothing her
 | ID | Requirement | Evidence required | Status |
 |----|-------------|-------------------|--------|
 | MS1 | Use the contract's frozen fee rules and milestone allocations | Per milestone: business fee, influencer fee, influencer net, platform allocation from the signed version; no recalculation with today's settings | Open |
-| MS2 | Release both allocated amounts | One release authorization linking influencer leg + platform Operations leg | Open |
-| MS3 | Partial success handled honestly | One leg ok / one failed → “Partially completed”; retry only the unfinished leg | Open |
+| MS2 | Release both allocated amounts | One release authorization linking **the influencer payment** and **the corresponding platform-fee movement** into Operations | Open |
+| MS3 | Partial success handled honestly | Influencer payment ok / platform-fee movement failed (or reverse) → “Partially completed”; retry only the unfinished leg | Open |
 | MS4 | No duplicates | Repeated approval, retries, duplicate callbacks never duplicate either payment | Open |
 | MS5 | Every amount reconciles | Allocations total contract amounts incl. rounding; taxes/liabilities separately identified | Open |
 | MS6 | Complete admin ledger | Contract → milestone → both legs: accounts, currency, amount, status, provider refs | Open |
 | MS7 | Operations transfer ≠ bank withdrawal | Separate movements and records | Open |
-| MS8 | Actual movement proven | Sandbox provider evidence per external transfer; simulation labelled and never counts as completion | Open |
+| MS8 | Actual movement proven | Sandbox provider evidence for **both** the influencer payment and the platform-fee movement; simulation labelled and never counts as completion | Open |
 
 **Delivery approval vs release (P1-AUD-08, decided):** authorized approval of a valid submitted version persists and clears the review task even with payout setup incomplete; release waits for readiness and the MS controls; UI “Approved · payout setup required”; auto-approval follows the same rule. Retest: INV-N-016T (currently Blocked) moves to its Package 1 acceptance AUD2 once approval is decoupled; the release half stays under MS1–MS8 + R6.
 

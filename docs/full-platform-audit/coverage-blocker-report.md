@@ -1,115 +1,78 @@
-# Coverage & blocker report — latest position
+# Coverage & blocker report — reconciled
 
-**Status:** **PROVISIONAL** — not platform-wide completion. No audit restart.
-**As of:** 2026-11-21 · matrix revision IPS-45 (isolated r5 host: 10 Package 1 checks + round 2)
-**Host:** https://influrios.com · live collaboration deposits **closed** · Agency **Explicitly deferred**
-**Authoritative sources:** [coverage-matrix.md](./coverage-matrix.md) · [blocked-register.md](./blocked-register.md) · [coverage-status.md](./coverage-status.md) · [remediation-plan.md](./remediation-plan.md)
+**Status:** PROVISIONAL. Not platform-wide completion. No audit restart.
+**As of:** 2026-11-21 · matrix after IPS-46 · **reconciled:** every count below is recomputed from [coverage-matrix.md](./coverage-matrix.md) and cross-checked against [blocked-register.md](./blocked-register.md) (54 = 54).
+**Host:** influrios.com (earlier phases) + local isolated r5 host (IPS-44/45/46, `main` @ `5a5f4c0`) · live collaboration deposits **closed** · Agency deferred
 
-This page is the single summary of what is still open. It does not change any matrix row; counts below were recomputed directly from the matrix Status column.
+## 1. Matrix position
 
----
+| Status | Rows |
+|--------|-----:|
+| Pass | 398 |
+| **Fail** | **40** |
+| **Blocked** | **54** |
+| Not tested | 0 |
+| Explicitly deferred | 10 |
+| **Total** | **502** |
 
-## 1. Matrix position (recomputed)
+**Open = 94 rows** (40 Fail + 54 Blocked). Run evidence: [IPS-44](./execution/r5-isolated-package1-results.md) · [IPS-45](./execution/r5-isolated-round2-results.md) · [IPS-46](./execution/r5-isolated-round3-results.md).
 
-| Status | Rows | Recomputed from matrix | Matches header |
-|--------|-----:|------------------------|:--------------:|
-| Pass | 398 | yes | ✅ |
-| **Fail** | **40** | 40 rows (+5 IPS-44, +10 IPS-45, +1 IPS-46) | ✅ |
-| **Blocked** | **54** | 54 rows (IPS-45 −23, IPS-46 −3) | ✅ |
-| **Not tested** | **0** | — | ✅ |
-| Explicitly deferred | 10 | Agency only | ✅ |
-| **Total** | **502** | | ✅ |
+## 2. Fail rows (40) → root cause → owning package
 
-**Open = 94 rows** (40 Fail + 54 Blocked). IPS-46: [execution/r5-isolated-round3-results.md](./execution/r5-isolated-round3-results.md). IPS-45: [execution/r5-isolated-round2-results.md](./execution/r5-isolated-round2-results.md). IPS-44 results: [execution/r5-isolated-package1-results.md](./execution/r5-isolated-package1-results.md).
+| Root cause | Owner | Rows | IDs |
+|------------|-------|-----:|-----|
+| RC-SEC | R0 | 1 | INV-R-074 |
+| RC-CATALOG | Pkg 3 | 4 | INV-R-006, INV-A-070, INV-A-072, INV-A-073 |
+| RC-PORTAL | Pkg 3 | 2 | INV-A-074, INV-C-004 |
+| RC-INVOICE | Pkg 3 | 1 | INV-D-006 |
+| Fee label / discount (AUD-FEE-01) | Pkg 3 + Pkg 4 | 1 | INV-A-053 |
+| RC-DISCOVERY | Pkg 4 | 3 | INV-P-001, INV-A-035, INV-C-008 |
+| Media kit export (AUD-R2-04) | Pkg 4 | 1 | INV-D-007E |
+| RC-DASHBOARD + P1-AUD (invitations, notices, counts) | **Pkg 1** | 12 | INV-DC-001, INV-DC-002, INV-DC-006, INV-DC-012, INV-DC-013, INV-DC-014, INV-DC-015, INV-C-014, INV-N-004, INV-A-048, INV-N-015T, INV-N-017T |
+| Unreachable actions (AUD-R2-01a/b/d) | Pkg 2 | 6 | INV-A-034, INV-A-036, INV-A-037, INV-A-042, INV-A-065, INV-A-069 |
+| No cancellation entry (AUD-R2-03) | Pkg 2 + R6 | 1 | INV-A-066 |
+| Dispute entry / evidence (AUD-R2-01c) | Pkg 5 + R6 | 2 | INV-A-064, INV-A-079 |
+| RC-MAIL | Pkg 5 | 1 | INV-R-119 |
+| RC-JOBS | Pkg 5 | 2 | INV-J-020, INV-J-021 |
+| RC-EXPORT | Pkg 5 | 3 | INV-D-003, INV-I-014, INV-A-102 |
 
----
+Owners and defect IDs match the remediation-plan defect register. No Fail is closed by design work; only an implementation retest closes it.
 
-## 2. Fail rows (24) → root cause → package
+## 3. Blocked rows (54) by real gate
 
-| Root cause | Fail rows | Remediation / design home | Gate before retest |
-|------------|-----------|---------------------------|--------------------|
-| RC-SEC (P0) | INV-R-074 | R0 — #537 merged `5a5f4c0` | Live redeploy **and** authorized credential/session rotation, each evidenced separately |
-| RC-CATALOG | INV-R-006, INV-A-070, INV-A-072, INV-A-073 | R2 · UX Package 3 | Ola-approved annual/upgrade prices (do not invent amounts) |
-| RC-PORTAL | INV-A-074, INV-C-004 | R2 · UX Package 3 | Same |
-| RC-INVOICE | INV-D-006 | R2 · UX Package 3 | In-app invoice download action designed + retested |
-| RC-DISCOVERY | INV-P-001, INV-A-035, INV-C-008 | R4 · UX Package 4 (card preserved) | Live profiles / `public_pages_live` decision |
-| RC-MAIL | INV-R-119 | R5 · UX Package 5 | Mail failure triage surface |
-| RC-JOBS | INV-J-020, INV-J-021 | R5 · UX Package 5 | Isolated cron host; scheduler **and** behaviour proven separately |
-| RC-EXPORT | INV-D-003, INV-I-014, INV-A-102 | R5 · UX Package 5 | Download + file inspection |
-| RC-DASHBOARD | INV-DC-001, INV-DC-002, INV-DC-006, INV-DC-012, INV-DC-015, INV-C-014, INV-N-004, **IPS-44:** INV-DC-013, INV-DC-014, INV-A-048, INV-N-015T, INV-N-017T | R4b · **UX Package 1 ([#540](https://github.com/getnuevetech/Influrios/pull/540))** | Package 1 design corrections accepted → implementation → retest DB1–DB6 / MOB1 |
+Provider-credential blockers are kept separate from money-path blockers.
 
-None of the 39 is closed. IPS-45 Fails (unreachable actions, missing dispute/cancellation entry, media kit export) are listed in the round-2 results. Package 1 design acceptance does **not** close RC-DASHBOARD rows; only post-implementation retest does.
+| Gate | Rows | What unblocks it | IDs |
+|------|-----:|------------------|-----|
+| Live deposits closed — funding creation / deposit | 10 | Deposits stay closed. Retest only after an approved sandbox funding path | INV-R-030, INV-A-052, INV-A-055, INV-A-056, INV-A-057, INV-A-062, INV-A-063, INV-N-010T, INV-N-011T, INV-N-012T |
+| R6 release / payout / refund (provider movement) | 27 | Separate R6 approval + provider sandbox; MS1–MS8 apply | INV-A-061, INV-A-067, INV-A-068, INV-J-014, INV-N-016T, INV-N-018, INV-N-019, INV-N-020, INV-N-021, INV-N-022, INV-N-027T, INV-N-028, INV-P-012, INV-E-042, INV-E-043, INV-E-044, INV-E-045, INV-E-046, INV-E-047, INV-E-048, INV-E-049, INV-E-050, INV-E-051, INV-E-052, INV-E-063, INV-E-064, INV-E-065 |
+| Dispute / ops / ledger event fixture | 10 | Isolated fixture that emits the event (no live money) | INV-N-023, INV-N-024, INV-N-025, INV-N-026, INV-N-029, INV-N-030, INV-N-031, INV-N-032, INV-N-033, INV-N-034 |
+| Provider credentials (kept separate) | 7 | AI provider key (P-004, A-054) · Meta OAuth test app (I-004, I-005) · SMS sandbox (N-103) · Stripe test subscription / Plus plan (R-065, J-022) | INV-P-004, INV-A-054, INV-I-004, INV-I-005, INV-N-103, INV-R-065, INV-J-022 |
 
----
+None of these may become Pass by reopening live deposits.
 
-## 3. Not tested (1) — IPS-44 executed the other five (see results)
+## 4. Not tested
 
-| Row | Why | What closes it |
-|-----|-----|----------------|
-| INV-J-010 auto-approval sweep | IPS-42: sweep `scanned:0` / `approved:0` | Isolated due submission; sweep approves ≥1; no duplicate on rerun |
-| INV-D-007E media-kit export | Split from INV-D-007 (IPS-43) | Execute export → downloaded file → contents inspected |
-| INV-N-013T milestone_submitted trigger | Linked INV-A-058 proved the action, not the emitted notice | Re-run INV-A-058 fixture; inspect notice to business |
-| INV-N-015T revision_requested trigger | Linked INV-A-059 | Re-run; inspect notice to influencer |
-| INV-N-016T milestone_approved trigger | Linked INV-A-060 | Re-run; inspect notices |
-| INV-N-017T review-period-ended trigger | Depends on INV-J-010 | Closes with INV-J-010 |
+0. INV-J-010, INV-D-007E and the IPS-43 trigger rows were executed in IPS-44/45.
 
----
+## 5. Corrections made while reconciling
 
-## 4. Hidden gaps — now tracked (IPS-43)
+| Was | Now |
+|-----|-----|
+| §2 said 24 Fail rows across 9 root causes | 40 rows, grouped above |
+| §3 listed INV-D-007E as Not tested | Fail (IPS-45: no export) |
+| §5 said 84 Blocked with fixture clusters (UI_FIXTURE_GAP 20, DASHBOARD_CONSISTENCY_FIXTURE 3, TOKEN_FIXTURE 1 …) | 54 Blocked grouped by the gate actually blocking them; former fixture rows either ran (IPS-44/45/46) or are now known to wait on deposits, R6 or provider credentials |
+| Earlier INV-C-013 Pass had no published contrast | Replaced by the IPS-46 contrast test |
+| Historical notes about “95 Blocked” / “NT cleared” | Superseded by this page |
 
-| Former hidden gap | Now |
-|-------------------|-----|
-| INV-D-007 Export inside a Pass row | **INV-D-007E** (Not tested); INV-D-007 = View (Pass) |
-| INV-N-010…017, 027 originating triggers | Delivery rows stay Pass. Trigger rows **INV-N-0xxT**: 010T/011T/012T/027T Blocked (linked INV-A-050 / 057 / 066), 013T/015T/016T/017T Not tested (linked INV-A-058/059/060, INV-J-010) |
-| INV-N-014 trigger | **No new row.** Already proven by INV-J-011 (review_deadline_sweep emits review_deadline_approaching; notified=1, no duplicate) |
-| Deposit+mail combo (14) | Unchanged: stays Blocked |
+## 6. Who runs what next
 
-Trigger rows link to the existing action checks and reuse their fixtures, so no check is duplicated.
+Isolated-host retests follow the Package 1 implementation slices (#540 `SUBMISSION.md`) after Ola's visual approval. Gated rows wait for their gate (table §3). Handoff detail: [check-handoff.md](./check-handoff.md).
 
----
-
-## 5. Blocked rows (84) by blocker cluster
-
-Source: [blocked-register.md](./blocked-register.md) (accounts for all 84; match = YES).
-
-| Cluster | Rows | Unblock path | Can design proceed? |
-|---------|-----:|--------------|---------------------|
-| UI_FIXTURE_GAP | 20 | Seed fixture state on isolated host | Yes |
-| DEPOSITS_CLOSED_AND_MAIL_SINK | 14 | Deposits stay closed → remains Blocked | Yes (no money reopen) |
-| DEPOSITS_CLOSED | 15 | R6 provider sandbox plan (separate approval) | Yes, design only |
-| EVENT_NOT_FIREABLE | 10 | Dispute/ops/ledger fixture (incl. `ledger_mismatch`) | Yes — see ledger/reconciliation scope on #540 master spec |
-| DEEP_LINK_FIXTURE | 5 | Fixture ids | Yes |
-| DASHBOARD_CONSISTENCY_FIXTURE | 3 | INV-DC-010 / 013 / 014 fixtures | Yes (Package 1 / 2) |
-| FEATURE_GATE | 2 | Admin product switches | Yes |
-| INQUIRY_FIXTURE | 2 | Fixture | Yes |
-| PENDING_SIGN_FIXTURE | 3 | Fixture | Yes (Package 4) |
-| PROVIDER_OAUTH | 2 | Meta / social OAuth | Out of Fail set |
-| DEMO_GATE · DESTRUCTIVE_FIXTURE · JOB_NOT_ENQUEUED · NO_TRIGGER · PAYOUT_RISK · SHARED_HOST_ISOLATION · SMS_PROVIDER · TOKEN_FIXTURE | 1 each (8) | Per register | Per register |
-| **Total** | **84** | | |
-
-By prefix: INV-A 28 · INV-N 21 · INV-E 14 · INV-R 5 · INV-P 4 · INV-DC 3 · INV-J 3 · INV-C 2 · INV-I 2 · INV-T 2.
-
----
-
-## 6. Package inconsistencies to correct (found while compiling this report)
-
-| File | Says | Should say |
-|------|------|-----------|
-| [remediation-plan.md](./remediation-plan.md) "What this document claims" | Blocked rows "(95 after IPS-31)" | 80 (post IPS-40/42); 95 was the intermediate IPS-31 figure |
-| [remediation-plan.md](./remediation-plan.md) Blocked dependency map header | "80 Blocked post IPS-40; **NT cleared**" | NT = 1 after IPS-42 (INV-J-010) |
-| [blocked-register.md](./blocked-register.md) header | "Blocked = 80; IPS-40" | Count unchanged by IPS-42; add "IPS-42 verified" |
-
-The first two are corrected in this commit. Counts are unaffected.
-
----
-
-## 7. Who runs the remaining checks
-
-Every Blocked and Not-tested row has a runner, gate and next action in [check-handoff.md](./check-handoff.md): 46 ready to run on the isolated audit host, 11 waiting on an isolated fixture or dependency, 30 waiting on R6 payments-sandbox approval, 3 waiting on provider credentials.
-
-## 8. What this report does not claim
+## 7. What this report does not claim
 
 - That the platform is fully audited or remediated
-- That any Fail row is closed by design work on #540 or #533
-- That Blocked rows may become Pass without the stated gate
+- That design work closes any Fail
+- That Blocked rows can become Pass without their gate
 - That live deposits should be reopened to clear counts
+- That MS1–MS8 (milestone release, both the influencer payment and its platform-fee movement) are satisfied: they remain **open** payment acceptance requirements

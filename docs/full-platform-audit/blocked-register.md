@@ -14,7 +14,19 @@
 | Matrix Blocked (authoritative) | 54 |
 | Match | YES |
 
-### By blocker cluster
+### By gate (authoritative, reconciled IPS-46)
+
+| Gate | Rows |
+|------|-----:|
+| Live deposits closed — funding creation / deposit | 10 |
+| R6 release / payout / refund (provider movement) | 27 |
+| Dispute / ops / ledger event fixture | 10 |
+| Provider credentials (kept separate) | 7 |
+| **Total** | **54** |
+
+Row-level gate lists: [coverage-blocker-report.md §3](./coverage-blocker-report.md#3-blocked-rows-54-by-real-gate). The cluster table below is historical (pre-IPS-45) and kept for traceability.
+
+### By blocker cluster (historical)
 
 > Cluster counts below predate IPS-45; 23 rows left Blocked in IPS-45 (see round-2 results). Authoritative total: **54** after IPS-46 (matches matrix).
 
