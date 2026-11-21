@@ -1,6 +1,7 @@
 # Supersession index — #533 vs the remediation train (#540) and audit (#539)
 
 **Status:** Draft. This index says which parts of this package still apply. It approves nothing.
+**Revision:** 2026-11-21. Ownership gaps resolved per Ola: inbox dedupe and terminology now belong to Package 1. #533 stays a **draft reference** until every retained requirement is transferred and linked (§7).
 **As of:** 2026-11-21
 **Compared against:** [#540](https://github.com/getnuevetech/Influrios/pull/540) `docs/ux-remediation/` (Package 1 + master spec) · [#539](https://github.com/getnuevetech/Influrios/pull/539) `docs/full-platform-audit/` (matrix at `ccc4fc3`)
 **Note:** this branch is based on `e98cea9`, which is older than `main` (`5a5f4c0`). It is a docs-only branch, and `main` has not changed any file under `docs/ux-design-package/`.
@@ -9,6 +10,7 @@
 
 | Status | Meaning |
 |--------|---------|
+| **Transferred → Pkg 1** | Requirement now lives in #540 Package 1. Link given. |
 | **Superseded** | #540 now owns the rule. Do not implement from #533 for this item. |
 | **Retained** | #533 is still the source. #540 references it or doesn't touch it. |
 | **Re-homed → Pkg N** | Still valid as input. The final design comes in remediation Package N (#540 train). |
@@ -25,7 +27,7 @@
 | MOBILE-LOGIN-001 | **Retained** | Same | Same |
 | MEMBER-MOBILE-NAV-001 | **Superseded** | #540 master-spec §6 (signed-in mobile) · board `mobile-auth-nav` · MOB1 · P1-T8 | More drawer replaces "chips or drawer" option |
 | BADGE-COUNT-001 | **Superseded** | #540 master-spec §1 single projection + §3 badge semantics · board `sidebar-badges` · DB1 | Audit confirmed as INV-DC-001 (#539) |
-| INBOX-DUP-001 | **Gap (partial)** | #540 master-spec §1 "Action-required" row covers agreement, **not** dedupe | Carry A-INBOX-01 (≤1 task per fundingId + action kind) into Package 1 acceptance or Package 2 |
+| INBOX-DUP-001 | **Transferred → Pkg 1** | [#540 master-spec §7](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/docs/ux-remediation/master-spec.md#7-action-inbox-deduplication-package-1-from-533-inbox-dup-001) · [action-inbox board](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/docs/ux-remediation/package-01/designs/action-inbox.html) · INB1 | Task identity = (collaboration, milestone/invitation, action kind). Distinct tasks preserved; duplicate representations merged |
 | ADMIN-KPI-001 | **Re-homed → Pkg 5** | — | Active Collaborations definition must match the Package 1 active projection (DB3) |
 | ADMIN-WEBHOOK-001 | **Re-homed → Pkg 5** | #540 master-spec ledger/reconciliation scope | Webhook health feeds the gateway reconciliation requirement |
 | ADMIN-MOBILE-001 | **Re-homed → Pkg 5** | — | |
@@ -40,7 +42,7 @@
 | DISCOVER-SAMPLE-001 | **Re-homed → Pkg 4** | — | #539 RC-DISCOVERY (INV-C-008) |
 | CARD-VANITY-001 | **Re-homed → Pkg 4** | — | Original influencer card preserved |
 | FOOTER-AGENCY-001 | **Retained** | #533 | Public chrome; Agency deferred |
-| TERM-CREATOR-001 | **Gap** | — | Nav copy. Not in #540 Package 1. Assign to Package 1 nav copy or Package 4 |
+| TERM-CREATOR-001 | **Transferred → Pkg 1** | [#540 master-spec §6](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/docs/ux-remediation/master-spec.md#6-navigation-and-terminology) · TERM1 | “Discover Influencers”; no customer-facing “Creator” |
 
 ## 2. Acceptance checklist
 
@@ -49,12 +51,12 @@
 | A-MOBILE-01, A-MOBILE-02 | Retained | — |
 | A-MEMBER-MOBILE-01 | **Superseded** | MOB1 |
 | A-BADGE-01 | **Superseded** | DB1 (+ DB2 for the Earnings badge) |
-| A-INBOX-01 | Retained (gap in #540) | Add to Package 1/2 acceptance |
+| A-INBOX-01 | **Transferred → Pkg 1** | INB1 |
 | A-REQ-01…04, A-ACTIVE-01…03 | Re-homed → Pkg 2 | — |
 | A-TAX-01…03, A-CHECKOUT-01, A-PRICE-01, A-AGENCY-PLAN-01 | Re-homed → Pkg 3 | — |
 | A-MSG-01, A-CONTRACT-01, A-DISCOVER-01, A-CARD-01, A-CARD-FULL-01 | Re-homed → Pkg 4 | — |
 | A-ADMIN-MOBILE-01, A-ADMIN-CHROME-01, A-ADMIN-KPI-01, A-ADMIN-HOOK-01 | Re-homed → Pkg 5 | — |
-| A-TERM-01 | Gap | — |
+| A-TERM-01 | **Transferred → Pkg 1** | TERM1 |
 | A-FOOTER-01 | Retained | — |
 
 ## 3. Implementation backlog (#533 packages 1–14)
@@ -65,9 +67,9 @@
 | 2 Requests list→popup · 3 Active overview | Re-homed → Pkg 2 | — |
 | 4 UX-P2 Member mobile chrome | **Superseded** | #540 P1-T8 |
 | 5 Admin chrome · 12 Ops metrics/webhook | Re-homed → Pkg 5 | — |
-| 6 Messages · 7 Contracts · 11 Vanity/footer/terms · 13 Live Discover | Re-homed → Pkg 4 (footer retained here; terms = gap) | — |
+| 6 Messages · 7 Contracts · 11 Vanity/footer · 13 Live Discover | Re-homed → Pkg 4 (footer retained here) | Terms → #540 P1-T13 |
 | 8 Tax · 9 Pricing · 14 Sandbox checkout | Re-homed → Pkg 3 | — |
-| 10 Inbox dedupe + badges | **Split** | Badges superseded by #540 P1-T1/P1-T9; dedupe = gap (A-INBOX-01) |
+| 10 Inbox dedupe + badges | **Transferred → Pkg 1** | Badges: #540 P1-T1/P1-T9 · dedupe: #540 P1-T12 |
 | "Suggested ship order" | **Superseded** | #540 `docs/ux-remediation/README.md` package order (1→5) |
 
 ## 4. Shared UI spec and navigation map
@@ -95,8 +97,25 @@
 | evidence.md, baseline.md, deltas/, `media/visual-audit-deltas/2026-11-18/` | Evidence only (still valid "before" captures) |
 | product-requirements.md | Retained (Ola §7 requirements) |
 
-## 6. Open decisions arising from this index
+## 6. Resolved decisions (Ola, 2026-11-21)
 
-1. **INBOX-DUP-001 / A-INBOX-01:** add it to Package 1 acceptance, or carry it to Package 2?
-2. **TERM-CREATOR-001:** decide which package owns it.
-3. Should this draft PR stay open as the Packages 2–5 input library, or be closed once those packages restate what they keep? No action until Ola decides.
+1. **INBOX-DUP-001 / A-INBOX-01** → Package 1. Dedupe must keep genuinely distinct tasks separate and stop duplicate representations of the same task.
+2. **TERM-CREATOR-001** → Package 1. Customer-facing navigation uses “Influencer”.
+3. **This PR stays draft** as reference until the retained requirements below are transferred into their packages and linked back here.
+
+## 7. Transfer tracker (close #533 only when every row is linked)
+
+| Retained requirement (#533) | Target | Transferred | Link |
+|-----------------------------|--------|:-----------:|------|
+| Inbox dedupe (INBOX-DUP-001, A-INBOX-01) | Pkg 1 | ✅ | [master-spec §7](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/docs/ux-remediation/master-spec.md#7-action-inbox-deduplication-package-1-from-533-inbox-dup-001) |
+| Influencer terminology (TERM-CREATOR-001, A-TERM-01) | Pkg 1 | ✅ | [master-spec §6](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/docs/ux-remediation/master-spec.md#6-navigation-and-terminology) |
+| Member mobile nav (MEMBER-MOBILE-NAV-001) | Pkg 1 | ✅ | [mobile-auth-nav](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/docs/ux-remediation/package-01/designs/mobile-auth-nav.html) |
+| Badge semantics (BADGE-COUNT-001) | Pkg 1 | ✅ | [master-spec §3](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/docs/ux-remediation/master-spec.md#3-badge-semantics) |
+| Public mobile nav + login (MOBILE-NAV-001, MOBILE-LOGIN-001, A-MOBILE-01/02) | Pkg 1 reference (kept in #533) | ☐ | — |
+| Footer Agency (FOOTER-AGENCY-001, A-FOOTER-01) | Pkg 1 reference (kept in #533) | ☐ | — |
+| Shared UI spec §1, §3, §4, §6, §8, §9, §11, §12 | Master spec (all packages) | ☐ | — |
+| Requests / Active popups (REQUEST-POPUP-001, ACTIVE-OVERVIEW-001, A-REQ, A-ACTIVE) | Pkg 2 | ☐ | — |
+| Tax, checkout, pricing, Agency plan (§13, §14; A-TAX, A-CHECKOUT, A-PRICE, A-AGENCY-PLAN) | Pkg 3 | ☐ | — |
+| Messages, contracts, Discover, vanity card (A-MSG, A-CONTRACT, A-DISCOVER, A-CARD, A-CARD-FULL) | Pkg 4 | ☐ | — |
+| Admin chrome, mobile, KPI, webhook (A-ADMIN-*) | Pkg 5 | ☐ | — |
+| Product requirements (Ola §7) | Master spec | ☐ | — |
