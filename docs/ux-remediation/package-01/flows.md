@@ -1,159 +1,188 @@
 # Package 1 — Complete flows
 
-Roles: **Influencer**, **Business**, **Admin** (shared chrome / jobs alert note).  
-All count surfaces for a role must use the projections in [../master-spec.md](../master-spec.md).
+Roles: **Influencer**, **Business**, **Admin** (shared count rule only).
+Projections, labels and badge rules: [../master-spec.md](../master-spec.md). Boards: [designs/](./designs/).
+In-app copy below is customer copy. Engineering notes are marked *Rule*.
 
 ---
 
-## A. Influencer — invitation count consistency (INV-DC-001 / DB1)
+## A. Influencer — invitation counts (INV-DC-001 · DB1)
 
 ```
-Open invitation exists (marketplace OR team member invited/PENDING)
-        │
-        ├─► /creator banner “N new invitation(s)”
-        ├─► /creator Invitations stat = N
-        ├─► /creator Needs attention (invite rows)
-        ├─► /collaboration/hub Invitations status card = N
-        ├─► Hub Invitations tab/list shows the same rows
-        └─► Sidebar Collaborations badge ≥ N (invite portion explained on hub)
+Invitations waiting for your reply = W   (REQUESTED/VIEWED + team member invited)
+Open invitations                   = O   (W + RESPONDED + NEGOTIATING + team accepted-awaiting-teammates)
+
+/creator  banner “W new invitation(s)” · Invitations stat W “Waiting for your reply” · Needs your attention W rows
+/collaboration/hub  Invitations card O, sub-line “W waiting for your reply” · tab badge W · list shows O rows with status
+Sidebar Collaborations badge = W + collaboration tasks on your turn
 ```
 
-**CTA:** Review invitation → invitation detail (team route or centered review popup per list pattern).  
-**Empty:** Hub may say “No invitations are waiting” **only if** N = 0 on home too.
+*Rule:* “No invitations are waiting” appears only when O = 0. Board: [influencer-home](./designs/influencer-home.html) · [collaborations-hub](./designs/collaborations-hub.html).
 
 ---
 
-## B. Influencer — payout readiness (INV-DC-002 / INV-C-014 / INV-N-004 / DB2)
+## B. Influencer — payout readiness (INV-DC-002 · INV-C-014 · INV-N-004 · DB2)
 
 ```
-globalPayoutReady (or documented equivalent)
-  │
-  ├─ true  → Earnings STATUS Ready
-  │          Hub Payment readiness Ready
-  │          Home setup banner HIDDEN
-  │          Earnings sidebar badge = 0
-  │
-  └─ false → Earnings STATUS Not ready + blockers
-             Hub Payment readiness Not ready + same blockers
-             Home “Complete payout setup” SHOWN
-             Earnings badge = 1 if activeCollabs > 0 (existing product rule)
+Resolve readiness ONCE → one of:
+ setup ─ identity or payout account not submitted
+ pending ─ all submitted; provider/KYC reviewing
+ ready ─ identity verified AND provider payouts enabled   (saved account alone ≠ ready)
+ restricted ─ provider requests a specific item / payouts paused
+ unsupported ─ no payout route for the country
+ unavailable ─ provider/status service unreachable → use last confirmed state + timestamp
 ```
 
-**Continue** on home → `/creator/earnings#payouts` (or Receive payments).  
-Never show Ready on earnings while home/hub still demand setup.
+| State | Earnings › Receive payments | Home | Hub card | Earnings badge |
+|-------|-----------------------------|------|----------|----------------|
+| setup | Setup required · steps to do · **Set up payouts** | Banner “Set up payouts to get paid” + CTA | Set up payouts | 1* |
+| pending | Verification pending · done steps ✓, review step ⏱ · View details | Notice “Payout verification in progress”, no CTA | In review | 0 |
+| ready | Ready · method ••last4 · Update payout account | **Nothing** | Ready | 0 |
+| restricted | Action required · the one item · item CTA | Banner “Payouts paused: one item needed” + same CTA | Action required | 1* |
+| unsupported | Not available in your country · See supported countries | Notice, no setup CTA | Not available | 0 |
+| unavailable | Last known + “Last confirmed …” · Try again | Last known (no new message) | Last known + “(last checked …)” | last known |
+
+\* only while active collaborations or unpaid earnings exist.
+
+*Rules:* pending never shows “Complete setup” or “Continue”. Restricted links straight to the outstanding item, and completed steps stay done. Unavailable never falls back to setup. Board: [earnings-payout](./designs/earnings-payout.html).
 
 ---
 
-## C. Influencer — active collaboration count (INV-DC-006 / DB3)
+## C. Influencer — active count (INV-DC-006 · DB3)
 
-```
-Same membership filter
-  ├─► /creator “Active collaborations” = A
-  └─► Hub Active status card + Active tab = A
-```
+Same membership filter → home Active = hub Active card = Active tab.
 
 ---
 
-## D. Influencer — team invite respond + clear action-required (INV-DC-015 / 012 / DB4)
+## D. Influencer — invitation respond and transitions (INV-DC-015 · INV-DC-012 · DB4)
+
+### D1. Marketplace invitation
 
 ```
-Needs attention “Review invitation”
-  → /collaboration/team/[id]  (or centered invitation popup)
-  → Status: Pending your response
-  → CTAs enabled: Interested | Ask a question | Decline
-  → Footer must NOT say “No further action needed”
-
-User completes response (e.g. Decline → confirm, or Interested)
-  → Persist response
-  → Home attention clears (or decrements)
-  → Invitations N decrements on home + hub
-  → Collaborations badge updates
-  → Related action-required notice clears
-  → Destination shows responded state + “No further action needed” (now valid)
+Waiting for your reply (REQUESTED/VIEWED)
+ ├─ I'm interested ─► Interested (RESPONDED) ───── business to act
+ │                     ├─ Ask a question ─► Question sent
+ │                     └─ Decline ─► You declined
+ ├─ Ask a question (note ≥ 8 chars) ─► Question sent (NEGOTIATING) ─ business to act
+ │                     └─ Decline ─► You declined
+ ├─ Decline (confirm) ─► You declined (DECLINED)
+ ├─ [business] Accept ─► Accepted (ACCEPTED → COLLABORATION_DRAFTED) ─► Review agreement
+ ├─ [business] Withdraw ─► Withdrawn
+ └─ [deadline passes] ─► Expired
 ```
 
-Read-only open of the invitation **without** responding does **not** clear action-required.
+| Transition | Invitation list | Home banner / stat / attention | Collaborations badge | Notification “Action required” |
+|------------|-----------------|--------------------------------|----------------------|--------------------------------|
+| Pending → Interested | Stays, label “Waiting for {business}” | −1 | −1 | Clears |
+| Pending → Question sent | Stays, label “Waiting for {business}” | −1 | −1 | Clears |
+| Business replies to question | Unchanged | Messages unread +1 (not an invitation count) | unchanged | New message notice |
+| Any → Accepted | Leaves Invitations → Active (agreement ready) | Agreement item added | Agreement task +1 | Agreement notice |
+| Any → Declined / Expired / Withdrawn | Leaves open list → Closed | −1 if it was pending | −1 if it was pending | Clears |
+
+*Rules:*
+- Asking a question does **not** complete the invitation.
+- “I'm interested” is not offered after a question (no NEGOTIATING → RESPONDED transition in product); changing that is a product decision.
+- Opening or reading the invitation clears nothing.
+- Counts change only after the server confirms the persisted status.
+
+### D2. Team invitation
+
+```
+Waiting for your reply (member invited; proposal sent/partial)
+ ├─ Accept invitation ─► You accepted ─ waiting for teammates ─► (all accepted) agreement opens
+ └─ Decline ─► You declined
+Business closes proposal ─► “This invitation is closed”
+```
+
+The invitation stops counting as waiting on Accept or Decline. “No further action needed” is never shown while the member is `invited`.
+
+### D3. Failure, retry, concurrency
+
+```
+Submit reply → buttons disabled (sending)
+  ├─ success → toast “Reply sent” · status updates in place · counts refresh from server
+  ├─ network/5xx → inline “We couldn't send your reply. Nothing changed.” · buttons re-enabled · Try again resubmits
+  └─ server: no longer open (withdrawn/expired meanwhile)
+        → popup content swaps to “This invitation was withdrawn … Nothing was signed or funded.”
+        → list, badge, attention refetch; nothing optimistic to undo
+```
+
+Board: [team-invite-respond](./designs/team-invite-respond.html).
 
 ---
 
-## E. Influencer — notifications unread vs action (INV-DC-020 / 005 / DB5)
+## E. Notifications — unread vs action required (INV-DC-020 · INV-DC-005 · DB5)
 
 ```
-Bell = U unread
-  → /creator/notifications
-  → Open Unread row (?open=) → centered popup
-  → Notice marked Read · Bell = U−1
-  → Action-required filter unchanged by this open alone
-
-Complete underlying task on destination
-  → Action-required clears (centre + home attention as applicable)
+Bell U unread → Notifications → open unread notice (centered popup / sheet)
+  → marked read, bell U−1
+  → Action required unchanged (copy: “Your reply is still needed.”)
+  → Review invitation → invitation popup (flow D)
+Task completes → Action required clears (centre + attention + badge)
 ```
 
-Opening an already-Read notice: bell unchanged.
+Board: [notifications](./designs/notifications.html).
 
 ---
 
-## F. Influencer — mobile authenticated chrome (MOB1)
+## F. Mobile authenticated chrome (MOB1)
 
-```
-Mobile top: brand utilities (bell + avatar)
-Horizontal chips: primary destinations with badges
-More → drawer listing ALL CREATOR_NAV destinations
-  + Billing & Plan
-  + same badge numbers as desktop sidebar
-Focus trap · Esc · aria-expanded
-```
-
-Public mobile hamburger remains per prior UX package (out of RC-DASHBOARD but still valid).
+3 chips + More → drawer with every sidebar destination, same order, labels, icons and badges. More shows the badge sum for items not in the chips. Board: [mobile-auth-nav](./designs/mobile-auth-nav.html).
 
 ---
 
-## G. Business — shared chrome consistency
+## G. Business — complete dashboard (finding 5 · DB7)
 
 ```
-Collaborations sidebar badge = B
-  ↔ Needs-your-attention rows (response-to-review + submission review, etc.)
-  ↔ /collaboration/business destination attention scale
-
-Refresh / re-login → B stable (INV-DC-032/033 Pass pattern)
-Bell unread follows same Unread≠action rules on /notifications
+/business/home
+ ├─ Needs your attention (A rows = Collaborations badge + Contracts badge)
+ │    ├─ “{Influencer} is interested” → popup: Accept and draft agreement · Reply · Not a fit
+ │    ├─ “Content submitted for review” → popup: Approve · Request revision
+ │    └─ “Agreement ready to sign” → Contracts › agreement viewer
+ ├─ Summaries: Active requests · Active collaborations · Agreements to sign · Funded this month (each links to its filtered destination)
+ ├─ Recent collaborations (status + who acts next) → collaboration overview popup
+ ├─ Start a new request → request wizard · Discover influencers
+ └─ Right column: Billing & Subscription → billing · Saved influencers → Discover · Recent activity → activity
+States: empty (new workspace CTA) · loading skeleton · partial error with Try again on the failed section only
 ```
 
-No AUDIT invite/payout split on business this pass — design still forbids contradictory projections if they appear later.
+Business decisions persist before counts change. Refresh and re-login keep the badges stable (INV-DC-032/033). No funding/deposit actions while deposits are closed. Board: [business-dashboard](./designs/business-dashboard.html).
 
 ---
 
-## H. Admin — shared chrome + jobs alert (light)
+## H. Action inbox — deduplication (Package 1 · INB1)
 
 ```
-/admin/jobs (or jobs alert entry)
-  → Alert/count opens the jobs surface that explains it
-  → Failure rows: readable + Retry reachable (full recovery UI → Package 5)
-
-Member badge rules do not apply inside admin chrome.
-Do not add marketing nav fixes here (Package 5 / prior ADMIN-CHROME).
+task identity = (collaboration/funding id, milestone id | invitation id, action kind)
+events for an identity with an open row → merge into that row (latest date, “N updates”)
+different identity → separate row (e.g. Milestone 1 vs Milestone 2)
+task completes → row + all merged notices clear
 ```
+
+Board: [action-inbox](./designs/action-inbox.html).
 
 ---
 
-## I. Stability (DB6)
+## I. Admin — shared count rule
 
-After aligned projections load:
-
-1. Soft refresh → same invite / active / payout / badges  
-2. Sign out → sign in → same  
-3. Desktop ↔ mobile → same numbers
+Alert counts sit on the item that opens the explanation (Jobs 2 → 2 failed rows with Retry). Ledger and reconciliation: master-spec §12 (Package 5).
 
 ---
 
-## J. State matrix (all roles, Package 1 surfaces)
+## J. Stability (DB6)
 
-| State | Home | Hub | Earnings | Notifications | Team invite |
-|-------|------|-----|----------|---------------|-------------|
-| Loading | Skeleton stats | Skeleton cards | Skeleton STATUS | Skeleton list | Skeleton card |
-| Empty | Zero invite copy only if N=0 | Same | Ready with $0 activity OK | “No notices” | N/A if deep-linked |
-| Error | Banner + Retry | Banner + Retry | Banner + Retry | Banner + Retry | Banner + Back |
-| Success | Toast after respond | Counts refresh | — | Bell updates | Responded state |
-| Permission | → login / role home | same | same | same | same |
+Soft refresh, sign out/in, and desktop ↔ mobile all show the same counts and states.
 
-See [designs/states.html](./designs/states.html).
+---
+
+## K. State matrix
+
+| State | Home | Hub | Earnings | Notifications | Invitation popup | Business dashboard |
+|-------|------|-----|----------|---------------|------------------|--------------------|
+| Loading | Skeleton; badges last known | Skeleton | Skeleton | Skeleton | Skeleton | Skeleton |
+| Empty | Copy only if projection 0 | “No invitations are waiting” only if O = 0 | Setup required card | “You're all caught up” | — | New-workspace CTA |
+| Error | Banner + Try again | Same | “We couldn't load your earnings” | Same | Inline, nothing changed | Failed section only |
+| Success | Counts refresh | Same | State updates | Bell updates | Toast + status | Toast + row leaves attention |
+| Permission | Login / role home | Same | Same | Same | Not on invitation → hub | Wrong role message |
+
+Board: [states](./designs/states.html).
