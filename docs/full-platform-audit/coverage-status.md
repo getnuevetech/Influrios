@@ -11,7 +11,7 @@
 **Slice evidence:** [execution/auth-results.md](./execution/auth-results.md) · [execution/collab-results.md](./execution/collab-results.md) · [execution/billing-results.md](./execution/billing-results.md) · [execution/admin-results.md](./execution/admin-results.md)  
 **Remediation plan (IPS-20):** [remediation-plan.md](./remediation-plan.md) — **PROVISIONAL**; **24 Fail → 9 root causes** (incl. **RC-JOBS**, **RC-DASHBOARD**); blocked deps mapped; no new product PRs; **not** platform-wide completion
 
-> **This report does not claim the platform is fully audited, fully remediated, or platform-wide complete.** **24 Fail** and **80 Blocked** remain open; **Not tested = 1** (INV-J-010); Agency stays Explicitly deferred; defects are not fixed by this audit. Prior Pass aggregates are **superseded** (IPS-30 demotions + IPS-31 + IPS-40 + IPS-42). Live deposits remain closed. **Do not endorse blanket IPS-40 24/24 Pass.**
+> **This report does not claim the platform is fully audited, fully remediated, or platform-wide complete.** **24 Fail** and **84 Blocked** remain open; **Not tested = 6** (INV-J-010, INV-D-007E, 4 notification triggers — IPS-43); Agency stays Explicitly deferred; defects are not fixed by this audit. Prior Pass aggregates are **superseded** (IPS-30 demotions + IPS-31 + IPS-40 + IPS-42). Live deposits remain closed. **Do not endorse blanket IPS-40 24/24 Pass.**
 
 ---
 
@@ -37,16 +37,17 @@ Do **not** preserve the old **287 Pass** (or post–IPS-29 **296**) where eviden
 |--------|------:|--------------|
 | Pass | **378** | Required cases executed; expected met (incl. IPS-31/40 isolated Mailpit; IPS-42 narrowed notify/View Passes) |
 | Fail | **24** | Defect with evidence — see §2 (prior 17 + 5 INV-DC-* + INV-C-014 + INV-N-004) |
-| Blocked | **80** | Could not execute (env/gate/credentials/fixture) — must not vanish into Pass |
-| Not tested | **1** | INV-J-010 auto-approval (IPS-42 demote — sweep approved:0 / transition unproven) |
+| Blocked | **84** | Could not execute (env/gate/credentials/fixture) — must not vanish into Pass (+4 IPS-43 notification triggers) |
+| Not tested | **6** | INV-J-010 auto-approval (IPS-42); INV-D-007E media-kit export; INV-N-013T/015T/016T/017T notification triggers (IPS-43) |
 | Explicitly deferred | 10 | Agency product entries only (destination checks recorded) |
-| **Matrix rows** | **493** | |
+| **Matrix rows** | **502** | IPS-43 split hidden gaps into tracked rows (+9) |
 
 **IPS-29 delta (+17 INV-DC-* rows):** +9 Pass · +5 Fail · +3 Blocked.  
 **IPS-30 demotions from Pass:** −11 Pass → +2 Fail · +9 Not tested.  
 **IPS-31 mail-sink restore:** +70 Pass · −70 Blocked (isolated Mailpit; 15 MAIL_SINK + 14 deposit+mail remain Blocked).  
 **IPS-40 audit-continue:** +24 Pass / −15 Blocked / −9 NT (pre-reconcile).  
 **IPS-42 evidence reconcile:** −1 Pass → +1 NT (INV-J-010); INV-D-007 View/Export split; INV-N-010…017/027 Pass narrowed to delivery isolation.  
+**IPS-43 hidden-gap split:** +9 rows → +4 Blocked · +5 Not tested (Pass unchanged). INV-D-007E export; INV-N-0xxT originating triggers linked to INV-A-050/057/058/059/060/066 and INV-J-010; INV-N-014 trigger = INV-J-011.  
 **Chase delta (89 former Not tested, IPS-25):** historically 54 Pass · 2 Fail · 33 Blocked — several of those Passes demoted under IPS-30.
 
 **Slices completed:** auth (P-01…P-07), collab (P-08…P-18 + #536 revalidate), billing (P-21…P-23), admin (P-27* + messages/notifications/jobs/email/integrations), **nt-chase (IPS-25)**, **dashboard consistency (IPS-29)**, **mail-sink restore (IPS-31)**.

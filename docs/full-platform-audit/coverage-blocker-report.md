@@ -1,7 +1,7 @@
 # Coverage & blocker report — latest position
 
 **Status:** **PROVISIONAL** — not platform-wide completion. No audit restart.
-**As of:** 2026-11-21 · matrix revision at `ccc4fc3` (IPS-42 reconcile)
+**As of:** 2026-11-21 · matrix revision IPS-43 (hidden gaps split into tracked rows)
 **Host:** https://influrios.com · live collaboration deposits **closed** · Agency **Explicitly deferred**
 **Authoritative sources:** [coverage-matrix.md](./coverage-matrix.md) · [blocked-register.md](./blocked-register.md) · [coverage-status.md](./coverage-status.md) · [remediation-plan.md](./remediation-plan.md)
 
@@ -15,12 +15,12 @@ This page is the single summary of what is still open. It does not change any ma
 |--------|-----:|------------------------|:--------------:|
 | Pass | 378 | yes | ✅ |
 | **Fail** | **24** | 24 rows with Status `Fail` | ✅ |
-| **Blocked** | **80** | 80 rows with Status `Blocked` | ✅ |
-| **Not tested** | **1** | INV-J-010 | ✅ |
+| **Blocked** | **84** | 84 rows with Status `Blocked` (+4 IPS-43) | ✅ |
+| **Not tested** | **6** | INV-J-010, INV-D-007E, INV-N-013T/015T/016T/017T | ✅ |
 | Explicitly deferred | 10 | Agency only | ✅ |
-| **Total** | **493** | | ✅ |
+| **Total** | **502** | | ✅ |
 
-**Open = 105 rows** (24 Fail + 80 Blocked + 1 Not tested), plus the hidden partial items in §4.
+**Open = 114 rows** (24 Fail + 84 Blocked + 6 Not tested). The former hidden partials (§4) are now counted rows.
 
 ---
 
@@ -42,46 +42,52 @@ None of the 24 is closed. Package 1 design acceptance does **not** close RC-DASH
 
 ---
 
-## 3. Not tested (1)
+## 3. Not tested (6)
 
 | Row | Why | What closes it |
 |-----|-----|----------------|
-| INV-J-010 auto-approval sweep | IPS-42 demote: sweep `scanned:0` / `approved:0`; `release_scheduled` provenance unproven | Isolated fixture with a due submission; sweep run shows `scanned ≥1`, `approved ≥1`; resulting state traced to the sweep; rerun produces no duplicate |
+| INV-J-010 auto-approval sweep | IPS-42: sweep `scanned:0` / `approved:0` | Isolated due submission; sweep approves ≥1; no duplicate on rerun |
+| INV-D-007E media-kit export | Split from INV-D-007 (IPS-43) | Execute export → downloaded file → contents inspected |
+| INV-N-013T milestone_submitted trigger | Linked INV-A-058 proved the action, not the emitted notice | Re-run INV-A-058 fixture; inspect notice to business |
+| INV-N-015T revision_requested trigger | Linked INV-A-059 | Re-run; inspect notice to influencer |
+| INV-N-016T milestone_approved trigger | Linked INV-A-060 | Re-run; inspect notices |
+| INV-N-017T review-period-ended trigger | Depends on INV-J-010 | Closes with INV-J-010 |
 
 ---
 
-## 4. Unresolved coverage hidden inside Pass rows
+## 4. Hidden gaps — now tracked (IPS-43)
 
-These are **not** counted as Not tested in the header, but are unproven and must stay visible:
+| Former hidden gap | Now |
+|-------------------|-----|
+| INV-D-007 Export inside a Pass row | **INV-D-007E** (Not tested); INV-D-007 = View (Pass) |
+| INV-N-010…017, 027 originating triggers | Delivery rows stay Pass. Trigger rows **INV-N-0xxT**: 010T/011T/012T/027T Blocked (linked INV-A-050 / 057 / 066), 013T/015T/016T/017T Not tested (linked INV-A-058/059/060, INV-J-010) |
+| INV-N-014 trigger | **No new row.** Already proven by INV-J-011 (review_deadline_sweep emits review_deadline_approaching; notified=1, no duplicate) |
+| Deposit+mail combo (14) | Unchanged: stays Blocked |
 
-| Row | Pass covers | Still unproven | Action |
-|-----|-------------|----------------|--------|
-| INV-D-007 | Media kit **View** | Media kit **Export** (no downloadable file proven) | Split into its own row (e.g. INV-D-007b, Not tested) at the next matrix revision so the header counts it |
-| INV-N-010…017, INV-N-027 | Delivery isolation via direct `notifyCollabFundingEvent` | Emission from the originating business action | Keep narrowed wording; retest from originating action once deposits/fixtures allow |
-| INV-E-* deposit+mail combo (14, Blocked) | Mail portion proven on isolated Mailpit | Money event that should trigger the mail | Stays Blocked; do not split into Pass |
+Trigger rows link to the existing action checks and reuse their fixtures, so no check is duplicated.
 
 ---
 
-## 5. Blocked rows (80) by blocker cluster
+## 5. Blocked rows (84) by blocker cluster
 
-Source: [blocked-register.md](./blocked-register.md) (accounts for all 80; match = YES).
+Source: [blocked-register.md](./blocked-register.md) (accounts for all 84; match = YES).
 
 | Cluster | Rows | Unblock path | Can design proceed? |
 |---------|-----:|--------------|---------------------|
-| UI_FIXTURE_GAP | 19 | Seed fixture state on isolated host | Yes |
+| UI_FIXTURE_GAP | 20 | Seed fixture state on isolated host | Yes |
 | DEPOSITS_CLOSED_AND_MAIL_SINK | 14 | Deposits stay closed → remains Blocked | Yes (no money reopen) |
-| DEPOSITS_CLOSED | 13 | R6 provider sandbox plan (separate approval) | Yes, design only |
+| DEPOSITS_CLOSED | 15 | R6 provider sandbox plan (separate approval) | Yes, design only |
 | EVENT_NOT_FIREABLE | 10 | Dispute/ops/ledger fixture (incl. `ledger_mismatch`) | Yes — see ledger/reconciliation scope on #540 master spec |
 | DEEP_LINK_FIXTURE | 5 | Fixture ids | Yes |
 | DASHBOARD_CONSISTENCY_FIXTURE | 3 | INV-DC-010 / 013 / 014 fixtures | Yes (Package 1 / 2) |
 | FEATURE_GATE | 2 | Admin product switches | Yes |
 | INQUIRY_FIXTURE | 2 | Fixture | Yes |
-| PENDING_SIGN_FIXTURE | 2 | Fixture | Yes (Package 4) |
+| PENDING_SIGN_FIXTURE | 3 | Fixture | Yes (Package 4) |
 | PROVIDER_OAUTH | 2 | Meta / social OAuth | Out of Fail set |
 | DEMO_GATE · DESTRUCTIVE_FIXTURE · JOB_NOT_ENQUEUED · NO_TRIGGER · PAYOUT_RISK · SHARED_HOST_ISOLATION · SMS_PROVIDER · TOKEN_FIXTURE | 1 each (8) | Per register | Per register |
-| **Total** | **80** | | |
+| **Total** | **84** | | |
 
-By prefix: INV-A 28 · INV-N 17 · INV-E 14 · INV-R 5 · INV-P 4 · INV-DC 3 · INV-J 3 · INV-C 2 · INV-I 2 · INV-T 2.
+By prefix: INV-A 28 · INV-N 21 · INV-E 14 · INV-R 5 · INV-P 4 · INV-DC 3 · INV-J 3 · INV-C 2 · INV-I 2 · INV-T 2.
 
 ---
 

@@ -1,6 +1,6 @@
 # Full-platform audit — Influrios
 
-**Phase:** A complete. Phase B + IPS-25 + IPS-29 + IPS-30 + IPS-31/40 + **IPS-42 evidence reconcile**. **Not** platform-wide complete (**24 Fail** / **80 Blocked** / **1 Not tested** / **378 Pass**). Phase C remediation plan (IPS-20) remains **PROVISIONAL**.  
+**Phase:** A complete. Phase B + IPS-25 + IPS-29 + IPS-30 + IPS-31/40 + **IPS-42 evidence reconcile** + **IPS-43 hidden-gap split**. **Not** platform-wide complete (**24 Fail** / **84 Blocked** / **6 Not tested** / **378 Pass**). Phase C remediation plan (IPS-20) remains **PROVISIONAL**.  
 **Coverage status (user-facing):** [coverage-status.md](./coverage-status.md) — Fail (24), Blocked (80), Not tested (1), Pass (378); IPS-30 acceptance + IPS-31/40 Mailpit + IPS-42 reconcile.  
 **NT chase:** [execution/not-tested-chase-results.md](./execution/not-tested-chase-results.md) (IPS-25).  
 **Dashboard consistency:** [execution/dashboard-consistency-results.md](./execution/dashboard-consistency-results.md) (IPS-29 · INV-DC-* · **RC-DASHBOARD**).  
@@ -25,15 +25,15 @@
 | [execution/](./execution/) | Slice results: auth, collab, billing, admin, nt-chase, dashboard-consistency, [mail-sink-restore-results.md](./execution/mail-sink-restore-results.md), [audit-continue-alongside-design-results.md](./execution/audit-continue-alongside-design-results.md) |
 | [media/INDEX.md](./media/INDEX.md) | Evidence catalog (incl. `dashboard-consistency/`, `mail-sink/`, `audit-continue/`) |
 
-## Counts (matrix post IPS-42 reconcile)
+## Counts (matrix post IPS-43 split)
 
 | Metric | Count |
 |--------|------:|
-| Matrix rows | 493 |
+| Matrix rows | 502 |
 | Pass | **378** |
 | Fail | **24** *(17 prior + 5 INV-DC-* + INV-C-014 + INV-N-004)* |
-| Blocked | **80** |
-| Not tested | **1** *(INV-J-010 auto-approval — IPS-42 demote)* |
+| Blocked | **84** *(+4 IPS-43 notification triggers)* |
+| Not tested | **6** *(INV-J-010; INV-D-007E export; INV-N-013T/015T/016T/017T triggers — IPS-43)* |
 | Explicitly deferred (Agency) | 10 |
 | Page routes (`src/app/**/page.tsx`) | 128 |
 | Mapped processes (P-01…P-28) | 28 |

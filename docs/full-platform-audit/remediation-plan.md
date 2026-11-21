@@ -10,7 +10,7 @@
 | **Status** | Provisional design / planning artifact |
 | **Audit execution baseline** | Live host probed @ `40b6288` (#536); matrix post IPS-25 |
 | **Code note** | #537 COR-SEC-01 **merged** → `5a5f4c0` on `main`; live redeploy + credential rotation **not** confirmed |
-| **Matrix** | **378 Pass · 24 Fail · 80 Blocked · 1 Not tested · 10 Explicitly deferred** (493 rows) — +IPS-29/30/31 + IPS-40 + **IPS-42** reconcile (−1 Pass / +1 NT; View/Export + notify isolation narrowed) |
+| **Matrix** | **378 Pass · 24 Fail · 84 Blocked · 6 Not tested · 10 Explicitly deferred** (502 rows, IPS-43) — +IPS-29/30/31 + IPS-40 + **IPS-42** reconcile (−1 Pass / +1 NT; View/Export + notify isolation narrowed) |
 | **Authoritative matrix** | [coverage-matrix.md](./coverage-matrix.md) |
 | **Coverage narrative** | [coverage-status.md](./coverage-status.md) |
 | **Execution** | [execution/](./execution/) (auth, collab, billing, admin, [not-tested-chase-results.md](./execution/not-tested-chase-results.md), [dashboard-consistency-results.md](./execution/dashboard-consistency-results.md), [mail-sink-restore-results.md](./execution/mail-sink-restore-results.md)) |
@@ -25,7 +25,7 @@
 | Claims | Does **not** claim |
 |--------|---------------------|
 | 24 Fail rows are reproduced with evidence paths (incl. IPS-29 INV-DC-* + IPS-30 INV-C-014/INV-N-004) | Platform is fully audited or remediated |
-| Blocked rows are dependencies / retest gates (80 after IPS-40/42; was 95 after IPS-31) | Blocked = Pass, or deposit+mail marked Pass without money event |
+| Blocked rows are dependencies / retest gates (84 after IPS-43; was 95 after IPS-31) | Blocked = Pass, or deposit+mail marked Pass without money event |
 | Corrected flows + acceptance for each Fail | Product PRs are approved to start (except #537 already merged) |
 | Plan is the revision for the GitHub evidence PR | Evidence pack is already on GitHub |
 
@@ -92,7 +92,7 @@ Until that PR exists and is reviewable on GitHub, treat every remediation item b
 
 Blocked rows are **not** Fail. They **block proof** of related remediations and must be called out on each correction.
 
-| Blocker theme (**80 Blocked** post IPS-40/42; NT = 1 — INV-J-010) | Blocks proof of… | Remediations still designable? |
+| Blocker theme (**84 Blocked** post IPS-43; NT = 6) | Blocks proof of… | Remediations still designable? |
 |------------------------------------------|------------------|--------------------------------|
 | Remaining mail-sink gaps (claim-draft / notification-event) | Full claim publish + live notification kind emission | Yes — fixtures; **IPS-31** proved interception (INV-I-019); do not reopen deposits |
 | Live deposits closed (+ deposit+mail) | Funding, release, refund, payout notices; collab discount apply | Yes for subscription Fail; **no** live money reopen; mail portion may be proven via Send-test only |
@@ -629,5 +629,6 @@ See patch **RC-DASHBOARD** (DB1–DB6). Package **R4b**. Deposits stay closed; n
 - **IPS-31** — isolated Mailpit restore; deposit+mail stay Blocked; plan stays **PROVISIONAL**.
 - **IPS-40** — claim draft + notify isolation + demoted NT actions/jobs on isolated host; deposit+mail stay Blocked; plan stays **PROVISIONAL**.  
 - **IPS-42** — evidence reconcile: INV-J-010 → NT; INV-D-007 View Pass / Export NT; INV-N-010…017/027 Pass = delivery isolation only; matrix **378 Pass · 80 Blocked · 1 NT**; design PR not held.  
+- **IPS-43** — hidden gaps made countable: INV-D-007E media-kit export (NT); notification triggers INV-N-010T…017T/027T (4 Blocked · 4 NT) linked to existing action/job checks; INV-N-014 trigger covered by INV-J-011. Matrix **502 rows · 378 Pass · 24 Fail · 84 Blocked · 6 NT**.
 - **#537** — COR-SEC-01 merged `5a5f4c0`; redeploy + rotation open (S1–S5 all required).  
 - **GitHub evidence package** — Audit package worker must commit **this** revision.

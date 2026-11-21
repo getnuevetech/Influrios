@@ -1,7 +1,7 @@
 # Blocked-check register (IPS-28)
 
 **Purpose:** Account for every **Blocked** row in the full-platform coverage matrix so env/fixture gates cannot vanish into Pass.
-**Source matrix:** [coverage-matrix.md](./coverage-matrix.md) (Blocked = **80**; IPS-40 audit-continue; count unchanged and re-verified after IPS-42).
+**Source matrix:** [coverage-matrix.md](./coverage-matrix.md) (Blocked = **84**; IPS-43 added 4 notification-trigger rows INV-N-010T/011T/012T/027T linked to their action checks).
 **Execution narratives:** [execution/](./execution/) (`auth|collab|billing|admin|not-tested-chase|mail-sink-restore|audit-continue-alongside-design`-results.md).
 **Policy:** Do **not** enable live collaboration deposits (`journey_funding`) merely to clear audit counts. Prefer isolated staging + Mailpit / `MAIL_SINK_TO`.
 **Baseline:** Phase B live host; deposits closed; Agency Explicitly deferred.
@@ -10,8 +10,8 @@
 
 | Metric | Value |
 |--------|------:|
-| Blocked rows accounted for | **80** |
-| Matrix Blocked (authoritative) | 80 |
+| Blocked rows accounted for | **84** |
+| Matrix Blocked (authoritative) | 84 |
 | Match | YES |
 
 ### By blocker cluster
@@ -19,15 +19,15 @@
 | Cluster | Count | Owner (default) |
 |---------|------:|-----------------|
 | `MAIL_SINK` | 0 | — cleared IPS-40 (claim draft + notify kinds Pass on isolated host) |
-| `UI_FIXTURE_GAP` | 19 | Collaboration / product surface owner (fixture state) |
+| `UI_FIXTURE_GAP` | 20 | Collaboration / product surface owner (fixture state) |
 | `DASHBOARD_CONSISTENCY_FIXTURE` | 3 | Collaboration QA (IPS-29 INV-DC-010/013/014) |
 | `DEPOSITS_CLOSED_AND_MAIL_SINK` | 14 | Payments (event) + Platform Ops (sink) |
-| `DEPOSITS_CLOSED` | 13 | Payments / Collaboration (R6) — ops gate only; do not reopen for audit counts |
+| `DEPOSITS_CLOSED` | 15 | Payments / Collaboration (R6) — ops gate only; do not reopen for audit counts |
 | `EVENT_NOT_FIREABLE` | 10 | Collaboration / Trust & disputes + Payments ops |
 | `DEEP_LINK_FIXTURE` | 5 | Collaboration QA / fixture owner |
 | `FEATURE_GATE` | 2 | Platform Admin (product switches) + Collaboration |
 | `INQUIRY_FIXTURE` | 2 | Collaboration / Discovery fixture owner |
-| `PENDING_SIGN_FIXTURE` | 2 | Collaboration QA / fixture owner |
+| `PENDING_SIGN_FIXTURE` | 3 | Collaboration QA / fixture owner |
 | `PROVIDER_OAUTH` | 2 | Integrations (Meta / social OAuth) |
 | `DEMO_GATE` | 1 | Discovery / public_pages_live ops |
 | `DESTRUCTIVE_FIXTURE` | 1 | Collaboration QA (isolated fixture) |
@@ -48,7 +48,7 @@
 | INV-E-* | 14 |
 | INV-I-* | 2 |
 | INV-J-* | 3 |
-| INV-N-* | 17 |
+| INV-N-* | 21 |
 | INV-P-* | 4 |
 | INV-R-* | 5 |
 | INV-T-* | 2 |
@@ -107,7 +107,7 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 - **IPS-42 note:** `INV-N-010…017` / `INV-N-027` remain Pass **narrowed** to delivery isolation via direct `notifyCollabFundingEvent` — not originating business-action emission. Not re-Blocked.
 - Deposit+mail combo remains under `DEPOSITS_CLOSED_AND_MAIL_SINK` (14).
 
-### `UI_FIXTURE_GAP` (19)
+### `UI_FIXTURE_GAP` (20)
 
 - **Default owner:** Collaboration / product surface owner (fixture state)
 - **Prerequisite:** Fixture advanced to the state that exposes the CTA/dialog; or isolated clone of production-like deal
@@ -132,6 +132,7 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 | INV-A-064 | P-17 Open dispute / add evidence | Required control/CTA not exposed on audit fixture state (or state-gated) | workroom=0; payments=0 |
 | INV-A-065 | P-15 Stop series / convert ambassador | Required control/CTA not exposed on audit fixture state (or state-gated) | controls=0; text=false |
 | INV-A-066 | P-17 Request cancellation | Dialog/mutation path incomplete on fixture — entry partial or CTA absent | No Request cancellation control found on held workroom/payments for audit fixture |
+| INV-N-027T | P-17 Notification trigger: collaboration cancelled | Originating cancellation not executable (linked INV-A-066 UI_FIXTURE_GAP) | IPS-43 split; delivery proven separately (INV-N-027) |
 | INV-A-067 | P-17 Settlement accept/question/dispute | Dialog/mutation path incomplete on fixture — entry partial or CTA absent | Settlement-related workroom copy present; accept/question/dispute not reachable without cancellation case |
 | INV-A-069 | P-15 Own-milestone dashboard path | Required control/CTA not exposed on audit fixture state (or state-gated) | Business home lacked distinct own-milestone dashboard funding actions; workroom path is separate INV-A-058..060 |
 | INV-A-079 | P-17 Open dispute (trust page) | Required control/CTA not exposed on audit fixture state (or state-gated) | openDispute=0; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Agboola Log out TRUST &  |
@@ -160,7 +161,7 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 | INV-E-064 | P-16/P-17 Email `refund.completed_business` · `refund.completed_business` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
 | INV-E-065 | P-16/P-17 Email `refund.completed_influencer` · `refund.completed_influencer` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
 
-### `DEPOSITS_CLOSED` (13)
+### `DEPOSITS_CLOSED` (15)
 
 - **Default owner:** Payments / Collaboration (R6) — ops gate only; do not reopen for audit counts
 - **Prerequisite:** Isolated sandbox with journey_funding enabled for AUDIT tenants only — never reopen live production deposits solely to clear matrix rows
@@ -174,6 +175,8 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 | INV-A-055 | P-15 Create deal | Live collaboration deposits closed (journey_funding) — must not open Stripe charge to clear audit | createish=0; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Anal |
 | INV-A-056 | P-15 Open funding checkout | Live new deposits closed (INV-C-001 / journey_funding) — checkout must not open Stripe charge | No live Stripe Checkout; checkout probe 404; start-funding stays on payments |
 | INV-A-057 | P-15 Start funding deposit | Live new deposits closed (INV-C-001 / journey_funding) — checkout must not open Stripe charge | Same as INV-A-056 |
+| INV-N-011T | P-15 Notification trigger: funding confirmed | Deposit event closed (linked INV-A-057) | IPS-43 split; delivery proven separately (INV-N-011) |
+| INV-N-012T | P-15 Notification trigger: funding did not complete | Deposit event closed (linked INV-A-057) | IPS-43 split; delivery proven separately (INV-N-012) |
 | INV-A-068 | P-17 Execute approved refund | Live deposits closed / no refundable or payout-retry fixture; isolation required | Deposits CLOSED / no refundable fixture |
 | INV-J-014 | P-16 failed_payout_retry_sweep | Live deposits closed / no refundable or payout-retry fixture; isolation required | Not executed; deposits closed / isolation |
 | INV-N-018 | P-15/P-17 Notification `payout_completed` · `payout_completed` | Money-event notification `payout_completed` — deposits closed; cannot fire payout/refund event | Blocked: deposits closed |
@@ -242,7 +245,7 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 | INV-A-036 | P-07 Inquiry send/reply/decline | No inquiry thread/actions on audit business fixture | inquiryish=0 |
 | INV-A-037 | P-07 Advance/shortlist from inquiry | No inquiry thread/actions on audit business fixture | inquiryish=0; shortlist note: Discover demo blocks shortlist (COR-13) |
 
-### `PENDING_SIGN_FIXTURE` (2)
+### `PENDING_SIGN_FIXTURE` (3)
 
 - **Default owner:** Collaboration QA / fixture owner
 - **Prerequisite:** Dual-party AUDIT deal in pending-signature state (unsigned native contract)
@@ -253,6 +256,7 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 |----|-------------------|--------------------------|-------------------|
 | INV-R-067 | P-11 Agreement detail/sign | No pending native Sign CTA — audit contracts already signed | List surface Pass; pending Sign CTA absent on funded already-signed deal; dialog open flaky via row click |
 | INV-A-050 | P-11 Sign native contract | No pending native Sign CTA — audit contracts already signed | No Sign CTA on audit contracts (already signed for funded workroom) |
+| INV-N-010T | P-11 Notification trigger: funding required | No pending native sign fixture (linked INV-A-050) | IPS-43 split; delivery proven separately (INV-N-010) |
 
 ### `PROVIDER_OAUTH` (2)
 
@@ -1894,9 +1898,47 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** Delete denied/protected on signed/funded request with clear UI/error; fixture remains.
 - **Existing evidence (partial):** `media/full-platform-audit/nt-chase/inv-c-015-delete-protect.png`
 
-## ID index (162)
+### INV-N-010T
+
+- **Exact blocker:** No pending native sign fixture
+- **Affected journey:** Notification trigger (funding_required)
+- **Responsible owner:** Collaboration QA / fixture owner
+- **Prerequisite:** Same as linked INV-A-050; no separate fixture
+- **Safe test method:** When INV-A-050 executes on its isolated fixture, inspect the notice it emits (centre row + Mailpit). Do not invoke `notifyCollabFundingEvent` directly
+- **Acceptance evidence:** Originating action → notice of the right kind to the right recipient; no duplicate on retry
+
+### INV-N-011T
+
+- **Exact blocker:** Live deposits closed
+- **Affected journey:** Notification trigger (funding confirmed)
+- **Responsible owner:** Payments / Collaboration (R6)
+- **Prerequisite:** Same as linked INV-A-057; no separate fixture
+- **Safe test method:** When INV-A-057 executes on its isolated fixture, inspect the notice it emits (centre row + Mailpit). Do not invoke `notifyCollabFundingEvent` directly
+- **Acceptance evidence:** Originating action → notice of the right kind to the right recipient; no duplicate on retry
+
+### INV-N-012T
+
+- **Exact blocker:** Live deposits closed
+- **Affected journey:** Notification trigger (funding did not complete)
+- **Responsible owner:** Payments / Collaboration (R6)
+- **Prerequisite:** Same as linked INV-A-057; no separate fixture
+- **Safe test method:** When INV-A-057 executes on its isolated fixture, inspect the notice it emits (centre row + Mailpit). Do not invoke `notifyCollabFundingEvent` directly
+- **Acceptance evidence:** Originating action → notice of the right kind to the right recipient; no duplicate on retry
+
+### INV-N-027T
+
+- **Exact blocker:** Cancellation entry incomplete on fixture
+- **Affected journey:** Notification trigger (collaboration cancelled)
+- **Responsible owner:** Collaboration / product surface owner
+- **Prerequisite:** Same as linked INV-A-066; no separate fixture
+- **Safe test method:** When INV-A-066 executes on its isolated fixture, inspect the notice it emits (centre row + Mailpit). Do not invoke `notifyCollabFundingEvent` directly
+- **Acceptance evidence:** Originating action → notice of the right kind to the right recipient; no duplicate on retry
+
+## ID index (166)
 
 `INV-R-017`, `INV-R-018`, `INV-R-019`, `INV-R-030`, `INV-R-061`, `INV-R-062`, `INV-R-065`, `INV-R-067`, `INV-T-009`, `INV-T-013`, `INV-P-004`, `INV-P-005`, `INV-P-012`, `INV-P-019`, `INV-A-004`, `INV-A-005`, `INV-A-013`, `INV-A-014`, `INV-A-015`, `INV-A-029`, `INV-A-031`, `INV-A-034`, `INV-A-036`, `INV-A-037`, `INV-A-039`, `INV-A-040`, `INV-A-042`, `INV-A-045`, `INV-A-047`, `INV-A-048`, `INV-A-050`, `INV-A-052`, `INV-A-053`, `INV-A-054`, `INV-A-055`, `INV-A-056`, `INV-A-057`, `INV-A-061`, `INV-A-062`, `INV-A-063`, `INV-A-064`, `INV-A-065`, `INV-A-066`, `INV-A-067`, `INV-A-068`, `INV-A-069`, `INV-A-079`, `INV-J-001`, `INV-J-002`, `INV-J-003`, `INV-J-004`, `INV-J-014`, `INV-J-022`, `INV-N-010`, `INV-N-011`, `INV-N-012`, `INV-N-013`, `INV-N-014`, `INV-N-015`, `INV-N-016`, `INV-N-017`, `INV-N-018`, `INV-N-019`, `INV-N-020`, `INV-N-021`, `INV-N-022`, `INV-N-023`, `INV-N-024`, `INV-N-025`, `INV-N-026`, `INV-N-027`, `INV-N-028`, `INV-N-029`, `INV-N-030`, `INV-N-031`, `INV-N-032`, `INV-N-033`, `INV-N-034`, `INV-E-001`, `INV-E-002`, `INV-E-003`, `INV-E-004`, `INV-E-005`, `INV-E-006`, `INV-E-007`, `INV-E-008`, `INV-E-009`, `INV-E-011`, `INV-E-012`, `INV-E-013`, `INV-E-014`, `INV-E-015`, `INV-E-016`, `INV-E-017`, `INV-E-018`, `INV-E-019`, `INV-E-020`, `INV-E-021`, `INV-E-022`, `INV-E-023`, `INV-E-024`, `INV-E-025`, `INV-E-026`, `INV-E-027`, `INV-E-028`, `INV-E-029`, `INV-E-030`, `INV-E-031`, `INV-E-032`, `INV-E-033`, `INV-E-034`, `INV-E-035`, `INV-E-036`, `INV-E-037`, `INV-E-038`, `INV-E-039`, `INV-E-040`, `INV-E-041`, `INV-E-042`, `INV-E-043`, `INV-E-044`, `INV-E-045`, `INV-E-046`, `INV-E-047`, `INV-E-048`, `INV-E-049`, `INV-E-050`, `INV-E-051`, `INV-E-052`, `INV-E-053`, `INV-E-054`, `INV-E-055`, `INV-E-056`, `INV-E-057`, `INV-E-058`, `INV-E-059`, `INV-E-060`, `INV-E-061`, `INV-E-062`, `INV-E-063`, `INV-E-064`, `INV-E-065`, `INV-E-066`, `INV-E-067`, `INV-E-068`, `INV-E-069`, `INV-E-070`, `INV-E-071`, `INV-E-072`, `INV-E-073`, `INV-E-074`, `INV-E-075`, `INV-E-076`, `INV-E-077`, `INV-E-078`, `INV-E-079`, `INV-N-103`, `INV-I-004`, `INV-I-005`, `INV-I-019`, `INV-C-013`, `INV-C-015`
+
+`INV-N-010T`, `INV-N-011T`, `INV-N-012T`, `INV-N-027T` (IPS-43)
 
 ---
 
