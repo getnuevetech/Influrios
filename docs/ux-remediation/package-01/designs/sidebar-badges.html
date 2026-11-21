@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Package 1 — Sidebar badge semantics</title>
+  <link rel="stylesheet" href="_design-system.css" />
+</head>
+<body>
+  <div class="board-page">
+    <h1 class="board-title">Sidebar badges — count on the item that opens them</h1>
+    <p class="board-lead">
+      PROPOSED · Badge semantics board · Destination pages must explain the number · Messages stay unbadged per contract.
+    </p>
+
+    <div class="pair">
+      <div>
+        <div class="frame-label">Influencer sidebar · Ready scenario</div>
+        <aside class="sidebar" style="max-width:280px;">
+          <div class="brand">Influrios</div>
+          <a class="nav-item" href="#"><span class="label">Dashboard</span></a>
+          <a class="nav-item" href="#"><span class="label">Action inbox</span></a>
+          <a class="nav-item" href="#"><span class="label">My Profile</span></a>
+          <a class="nav-item active" href="#"><span class="label">Collaborations</span><span class="count-badge">1</span></a>
+          <a class="nav-item" href="#"><span class="label">Contracts</span></a>
+          <a class="nav-item" href="#"><span class="label">Earnings &amp; Payouts</span></a>
+          <a class="nav-item" href="#"><span class="label">Messages</span></a>
+          <a class="nav-item" href="#"><span class="label">Settings</span></a>
+        </aside>
+        <div class="topbar" style="margin-top:14px;max-width:280px;">
+          <div class="bell" aria-label="Notifications, 1 unread">🔔<span class="dot">1</span></div>
+          <span style="font-size:13px;color:var(--muted);">Bell = unread only</span>
+        </div>
+      </div>
+      <div>
+        <div class="frame-label">Semantics</div>
+        <div class="legend">
+          <div class="legend-item"><strong>Collaborations 1</strong><span>Open invitations (+ work attention). Hub Overview must show matching invite/work explanation. Not “active collab count.”</span></div>
+          <div class="legend-item"><strong>Earnings (none)</strong><span>Ready ⇒ badge 0. Badge 1 only while Not ready AND activeCollabs &gt; 0.</span></div>
+          <div class="legend-item"><strong>Bell 1</strong><span>Unread notices. Opening Unread clears. ≠ Action required filter.</span></div>
+          <div class="legend-item"><strong>Messages</strong><span>No sidebar badge (home may still show unread messages card).</span></div>
+          <div class="legend-item"><strong>Business Collaborations</strong><span>Attention scale matching Needs-your-attention / collab destination (AUDIT Pass pattern = 2).</span></div>
+        </div>
+        <div class="compare">
+          <div class="bad"><strong>Defect</strong><br/>Earnings badge 1 while earnings page Ready</div>
+          <div class="good"><strong>Rule</strong><br/>Badge and destination STATUS always agree</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

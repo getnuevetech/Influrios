@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Package 1 — Mobile authenticated navigation</title>
+  <link rel="stylesheet" href="_design-system.css" />
+</head>
+<body>
+  <div class="board-page">
+    <h1 class="board-title">Mobile authenticated chrome — chips + More drawer</h1>
+    <p class="board-lead">
+      PROPOSED · MOB1 · All CREATOR_NAV / BUSINESS_NAV destinations reachable · Badges match desktop · Bell in utilities.
+      Public hamburger remains per prior mobile-public-nav design.
+    </p>
+
+    <div class="pair">
+      <div>
+        <div class="frame-label">PROPOSED · Chips (closed)</div>
+        <div class="mobile-shell">
+          <div class="mobile-top">
+            <strong style="font-family:var(--font-display);">Influrios</strong>
+            <div style="display:flex;gap:8px;">
+              <div class="bell" style="width:32px;height:32px;">🔔<span class="dot">1</span></div>
+              <span class="icon-btn">A</span>
+            </div>
+          </div>
+          <div class="chips" style="padding:10px 12px;">
+            <span class="chip on">Dashboard</span>
+            <span class="chip">Action inbox</span>
+            <span class="chip">My Profile</span>
+            <span class="chip">Collaborations <span class="count-badge">1</span></span>
+            <span class="chip" style="background:var(--indigo);color:#fff;">More</span>
+          </div>
+          <div style="padding:16px;min-height:360px;background:linear-gradient(180deg,#f1ecff 0%,#fff 50%);">
+            <h1 style="font-size:22px;">Welcome back</h1>
+            <p style="color:var(--muted);font-size:13px;">Primary chips + More exposes Billing, Earnings, Contracts, Messages, Settings.</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="frame-label">PROPOSED · More drawer open</div>
+        <div class="mobile-shell">
+          <div class="mobile-top">
+            <strong>Menu</strong>
+            <span class="icon-btn" aria-label="Close menu">✕</span>
+          </div>
+          <div class="drawer">
+            <a href="#">Dashboard</a>
+            <a href="#">Action inbox</a>
+            <a href="#">My Profile</a>
+            <a href="#">Collaborations <span class="count-badge">1</span></a>
+            <a href="#">Contracts</a>
+            <a href="#">Earnings &amp; Payouts</a>
+            <a href="#">Messages</a>
+            <a href="#">Settings</a>
+            <a href="#" style="color:var(--muted);">Billing &amp; Plan</a>
+            <a href="#" style="color:var(--rose);">Log out</a>
+          </div>
+        </div>
+        <p class="note">Focus trap · Esc closes · <code>aria-expanded</code> on More · Same badge numbers as desktop sidebar.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Package 1 — Loading / empty / error / success / retry / permission</title>
+  <link rel="stylesheet" href="_design-system.css" />
+</head>
+<body>
+  <div class="board-page">
+    <h1 class="board-title">Package 1 states</h1>
+    <p class="board-lead">Apply across influencer home, hub, earnings, notifications, and business attention chrome. No false empty while projection &gt; 0.</p>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+      <div class="state-card">
+        <h3>Loading</h3>
+        <div class="skel lg"></div>
+        <div class="skel"></div>
+        <div class="skel" style="width:70%;"></div>
+        <p class="footer-note">Skeleton stats + lists · aria-busy · avoid badge flash of wrong N</p>
+      </div>
+      <div class="state-card">
+        <h3>Empty (honest)</h3>
+        <div class="banner" style="background:#f7f8fc;border:1px dashed var(--line);justify-content:center;">
+          No invitations are waiting.
+        </div>
+        <button class="btn btn-primary" style="margin-top:10px;width:100%;">Find opportunities</button>
+        <p class="footer-note">Only when home + hub both = 0</p>
+      </div>
+      <div class="state-card">
+        <h3>Error + Retry</h3>
+        <div class="banner" style="background:var(--rose-wash);border:1px solid #fecdca;color:var(--rose);">
+          <div><strong>Couldn’t load attention counts.</strong><div style="font-size:12px;">Your last known badges are hidden until retry.</div></div>
+          <button class="btn btn-secondary">Retry</button>
+        </div>
+      </div>
+      <div class="state-card">
+        <h3>Success</h3>
+        <div class="banner ready">Invitation response saved. Attention cleared.</div>
+        <p class="footer-note">Toast or inline · lists refresh to agreed projection</p>
+      </div>
+      <div class="state-card">
+        <h3>Permission</h3>
+        <div class="banner warn">
+          <div>
+            <strong>Sign in required</strong>
+            <div style="font-size:12px;">Wrong role → role home, not a blank dashboard.</div>
+          </div>
+          <button class="btn btn-primary">Log in</button>
+        </div>
+      </div>
+      <div class="state-card">
+        <h3>False empty (forbidden)</h3>
+        <div class="compare" style="grid-template-columns:1fr;">
+          <div class="bad">Hub “No invitations” while home shows 1 — never ship</div>
+          <div class="good">Empty copy only after single projection = 0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

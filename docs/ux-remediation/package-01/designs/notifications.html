@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Package 1 — Notifications centre + open popup</title>
+  <link rel="stylesheet" href="_design-system.css" />
+</head>
+<body>
+  <div class="board-page">
+    <h1 class="board-title">Notifications — unread open clears bell; action separate</h1>
+    <p class="board-lead">
+      PROPOSED · INV-DC-020 / INV-DC-005 · Centered popup preserved · Opening Unread marks Read · Completing task clears action-required.
+      Filters may count historical kinds &gt; live sidebar badges — labeled as notice kinds.
+    </p>
+
+    <div class="pair-wide">
+      <div>
+        <div class="frame-label">PROPOSED · Desktop list + open popup</div>
+        <div class="shell" style="position:relative;">
+          <aside class="sidebar">
+            <div class="brand">Influrios</div>
+            <a class="nav-item" href="#"><span class="label">Dashboard</span></a>
+            <a class="nav-item active" href="#"><span class="label">Action inbox</span></a>
+            <a class="nav-item" href="#"><span class="label">Collaborations</span><span class="count-badge">1</span></a>
+            <a class="nav-item" href="#"><span class="label">Earnings &amp; Payouts</span></a>
+          </aside>
+          <section class="main" style="min-height:640px;">
+            <div class="topbar">
+              <div class="search">Search…</div>
+              <div class="bell" aria-label="Notifications, 1 unread">🔔<span class="dot">1</span></div>
+              <div class="user-chip"><span class="ava">A</span> Ag</div>
+            </div>
+            <h1 style="font-size:26px;">Notification centre</h1>
+            <p style="color:var(--muted);font-size:13px;margin:6px 0 0;">
+              Unread and action required are different. Opening a notice marks it read and does not complete the task.
+            </p>
+            <div class="tabs">
+              <span class="tab active">All (9)</span>
+              <span class="tab">Action required (9)</span>
+              <span class="tab">Invitations (6)</span>
+              <span class="tab">Unread (1)</span>
+            </div>
+            <div class="notice-row">
+              <div>
+                <div class="meta">Business label</div>
+                <strong>2nd Collaboration Test</strong>
+                <div style="color:var(--muted);font-size:13px;">Signature · Your signature is needed</div>
+                <div style="font-size:12px;margin-top:6px;"><span class="badge warn">Signature</span> · 12 days ago</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="color:var(--violet);font-size:12px;font-weight:800;">Unread</div>
+                <a href="#">Open</a>
+              </div>
+            </div>
+            <div class="notice-row" style="opacity:.85;">
+              <div>
+                <div class="meta">Business label</div>
+                <strong>Free Tech Support</strong>
+                <div style="color:var(--muted);font-size:13px;">Invitation · Response needed</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="color:var(--muted);font-size:12px;font-weight:800;">Read</div>
+                <a href="#">Open</a>
+              </div>
+            </div>
+
+            <div class="scrim" style="position:absolute;border-radius:28px;">
+              <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="n-title">
+                <div class="dialog-head">
+                  <div>
+                    <h2 id="n-title" style="font-size:22px;">2nd Collaboration Test</h2>
+                    <div class="dialog-meta">Your signature is needed</div>
+                  </div>
+                  <button class="btn btn-secondary" style="padding:6px 10px;">✕</button>
+                </div>
+                <div class="dialog-body">
+                  This notice is now <strong>Read</strong>. Bell decreases by 1.
+                  The invitation, signature, or payment task stays open until you finish it on the destination.
+                </div>
+                <div class="dialog-foot">
+                  <button class="btn btn-secondary">Close</button>
+                  <button class="btn btn-primary">Open destination</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <div>
+        <div class="frame-label">PROPOSED · Mobile sheet + rules</div>
+        <div class="mobile-shell">
+          <div class="mobile-top">
+            <strong>Notifications</strong>
+            <div class="bell" style="width:32px;height:32px;">🔔<span class="dot">1</span></div>
+          </div>
+          <div style="padding:12px 14px 20px;position:relative;min-height:520px;">
+            <p style="font-size:12px;color:var(--muted);">Unread ≠ action required.</p>
+            <div class="notice-row">
+              <div><strong>2nd Collaboration Test</strong><div style="font-size:12px;color:var(--muted);">Unread</div></div>
+              <a href="#">Open</a>
+            </div>
+            <div class="scrim" style="position:absolute;inset:0;border-radius:0;align-items:stretch;padding:0;">
+              <div class="dialog" style="width:100%;max-height:none;border-radius:20px 20px 0 0;margin-top:auto;">
+                <div class="dialog-head">
+                  <h2 style="font-size:18px;">2nd Collaboration Test</h2>
+                  <button class="btn btn-secondary" style="padding:4px 8px;">✕</button>
+                </div>
+                <div class="dialog-body">Marked read. Task still open.</div>
+                <div class="dialog-foot">
+                  <button class="btn btn-primary" style="flex:1;">Open destination</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="legend" style="margin-top:16px;">
+          <div class="legend-item"><strong>Open Unread</strong><span>Bell −1 · row → Read · action-required unchanged</span></div>
+          <div class="legend-item"><strong>Open Read</strong><span>Bell unchanged</span></div>
+          <div class="legend-item"><strong>Complete task</strong><span>Action-required clears on centre + home attention</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

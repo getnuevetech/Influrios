@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Package 1 — Team invite respond (no dead-end)</title>
+  <link rel="stylesheet" href="_design-system.css" />
+</head>
+<body>
+  <div class="board-page">
+    <h1 class="board-title">Team / coordinated invitation — respond when pending</h1>
+    <p class="board-lead">
+      PROPOSED · INV-DC-015 / INV-DC-012 · Pending your response ⇒ respond CTAs · Never pair with “No further action needed”.
+      Completing response clears home attention + invite counts + action-required.
+    </p>
+
+    <div class="pair">
+      <div>
+        <div class="frame-label">BEFORE · Dead-end (evidence)</div>
+        <div class="main" style="max-width:520px;">
+          <a href="#" style="font-size:13px;">← Back to list</a>
+          <div style="font-size:11px;color:var(--violet);font-weight:800;letter-spacing:.06em;margin-top:12px;">COORDINATED INVITATION</div>
+          <h2 style="font-size:24px;margin-top:6px;">Free Tech Support</h2>
+          <p style="color:var(--muted);font-size:13px;">Not a contract · compensation private.</p>
+          <p><strong>Your response:</strong> Pending your response</p>
+          <div class="card-row">ag-olomola-2 (you) · <span style="color:var(--violet);font-weight:800;">PENDING YOUR RESPONSE</span></div>
+          <div class="banner warn" style="margin-top:12px;">No further action needed from you on this invitation.</div>
+          <div class="callout" style="margin-top:12px;">No Decline / Interested / Accept controls — action-required stuck.</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="frame-label">PROPOSED · Respond enabled</div>
+        <div class="main" style="max-width:520px;position:relative;">
+          <a href="#" style="font-size:13px;">← Back to list</a>
+          <div style="font-size:11px;color:var(--violet);font-weight:800;letter-spacing:.06em;margin-top:12px;">COORDINATED INVITATION</div>
+          <h2 style="font-size:24px;margin-top:6px;">Free Tech Support</h2>
+          <p style="color:var(--muted);font-size:13px;">Not a contract · compensation private · Brand Awareness · 30 Days.</p>
+          <p><strong>Your response:</strong> <span style="color:var(--amber);">Pending your response</span></p>
+          <div class="card-row">ag-olomola-2 (you) · creator · <span style="color:var(--violet);font-weight:800;">PENDING · 33%</span></div>
+          <div class="card-row" style="opacity:.7;">jenks-ag-3 · creator</div>
+          <div class="card-row" style="opacity:.7;">argboboy20 · creator</div>
+          <div class="dialog-foot" style="border-top:1px solid var(--line);margin-top:16px;">
+            <button class="btn btn-secondary" style="border-color:#fecdca;color:var(--rose);">Decline</button>
+            <button class="btn btn-secondary">Ask a question</button>
+            <button class="btn btn-primary">I'm interested</button>
+          </div>
+          <div class="callout ok">Footer “No further action needed” appears only after a response is recorded.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pair" style="margin-top:22px;">
+      <div>
+        <div class="frame-label">PROPOSED · Centered confirm on Decline</div>
+        <div class="main" style="min-height:280px;position:relative;">
+          <div class="scrim" style="position:absolute;border-radius:28px;">
+            <div class="dialog" style="width:min(420px,100%);">
+              <div class="dialog-head"><h2 style="font-size:18px;">Decline this invitation?</h2></div>
+              <div class="dialog-body">The business will be notified. You can leave an optional reason.</div>
+              <div class="field"><label>Reason (optional)</label><textarea rows="2"></textarea></div>
+              <div class="dialog-foot">
+                <button class="btn btn-secondary">Cancel</button>
+                <button class="btn btn-primary" style="background:var(--rose);">Decline invitation</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="frame-label">PROPOSED · After respond (cleared)</div>
+        <div class="main">
+          <h2 style="font-size:20px;">Free Tech Support</h2>
+          <p><strong>Your response:</strong> Declined</p>
+          <div class="banner ready" style="color:var(--indigo);">No further action needed from you on this invitation.</div>
+          <div class="legend" style="margin-top:14px;">
+            <div class="legend-item"><strong>Home</strong><span>Attention 0 · Invitations 0 · badge updates</span></div>
+            <div class="legend-item"><strong>Hub</strong><span>Invitations 0 · empty copy now honest</span></div>
+            <div class="legend-item"><strong>Centre</strong><span>Action-required for this invite cleared</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

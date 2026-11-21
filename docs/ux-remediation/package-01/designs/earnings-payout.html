@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Package 1 — Earnings / payout readiness</title>
+  <link rel="stylesheet" href="_design-system.css" />
+</head>
+<body>
+  <div class="board-page">
+    <h1 class="board-title">Earnings &amp; payout readiness — one Ready language</h1>
+    <p class="board-lead">
+      PROPOSED · INV-DC-002 / INV-C-014 / INV-N-004 · When Ready: STATUS Ready, no home setup banner, Earnings badge absent.
+      Live deposits stay closed — withdraw/fund CTAs not claimed.
+    </p>
+
+    <div class="pair-wide">
+      <div>
+        <div class="frame-label">PROPOSED · Desktop · Ready path</div>
+        <div class="shell">
+          <aside class="sidebar">
+            <div class="brand">Influrios</div>
+            <a class="nav-item" href="#"><span class="label">Dashboard</span></a>
+            <a class="nav-item" href="#"><span class="label">Collaborations</span><span class="count-badge">1</span></a>
+            <a class="nav-item active" href="#"><span class="label">Earnings &amp; Payouts</span></a>
+            <a class="nav-item" href="#"><span class="label">Settings</span></a>
+            <div class="footer-note">Badge omitted = Ready (or no active collabs rule).</div>
+          </aside>
+          <section class="main">
+            <div class="header">
+              <div>
+                <h1 style="font-size:26px;">Earnings</h1>
+                <p>Payouts are net totals; platform fees stay on the business deposit.</p>
+              </div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-primary">Receive payments</button>
+                <button class="btn btn-secondary">Billing &amp; plan</button>
+              </div>
+            </div>
+            <div class="stat-grid">
+              <div class="stat"><div class="k">Released this month</div><div class="v">$0</div></div>
+              <div class="stat"><div class="k">Upcoming net</div><div class="v">$5,892</div></div>
+              <div class="stat"><div class="k">Paid to bank</div><div class="v">$0</div></div>
+              <div class="stat"><div class="k">Payout Setup</div><div class="v" style="color:var(--green);font-size:20px;">Ready</div></div>
+            </div>
+            <div class="widget" style="margin-top:16px;">
+              <h3>Receive payments</h3>
+              <div class="banner ready" style="margin-top:8px;">
+                <div>
+                  <strong>STATUS: Ready</strong>
+                  <div style="font-size:13px;margin-top:4px;">You're set up to receive collaboration payments.</div>
+                </div>
+              </div>
+              <div class="attn-row"><span>✓ Verify your identity</span><span style="color:var(--green);font-size:13px;">Identity verified</span></div>
+              <div class="attn-row"><span>✓ Add where you get paid</span><a href="#">Update payout account</a></div>
+            </div>
+            <div class="callout ok">Home + hub must use this same Ready projection — never show “Complete payout setup” or Earnings badge 1 while this STATUS is Ready.</div>
+          </section>
+        </div>
+      </div>
+
+      <div>
+        <div class="frame-label">PROPOSED · Mobile + Not-ready contrast</div>
+        <div class="mobile-shell" style="margin-bottom:18px;">
+          <div class="mobile-top"><strong>Earnings</strong><span class="chip">Ready</span></div>
+          <div style="padding:14px;">
+            <div class="banner ready"><strong>STATUS: Ready</strong></div>
+            <div class="stat"><div class="k">Sidebar Earnings badge</div><div class="v" style="font-size:18px;">None</div></div>
+          </div>
+        </div>
+        <div class="frame-label">ALTERNATE · Not ready (conditional reminder)</div>
+        <div class="mobile-shell">
+          <div class="mobile-top"><strong>Earnings</strong><span class="count-badge">1</span></div>
+          <div style="padding:14px;">
+            <div class="banner warn">
+              <div>
+                <strong>STATUS: Not ready</strong>
+                <div style="font-size:12px;margin-top:4px;">No verified payout method.</div>
+              </div>
+            </div>
+            <div class="banner setup" style="margin-top:10px;">
+              <div><strong>Complete payout setup</strong><div style="font-size:12px;color:var(--muted);">Shown on home only while Not ready.</div></div>
+              <button class="btn btn-primary">Continue</button>
+            </div>
+            <p class="footer-note">INV-C-014 / INV-N-004: reminder presence must track this STATUS.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
