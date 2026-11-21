@@ -1,0 +1,14 @@
+{
+  "check": "INV-P-019",
+  "steps": [],
+  "bellBefore": 2,
+  "url": "http://127.0.0.1:3000/creator/notifications?open=cmwqn85pv01047do5j625jyfv",
+  "dialog": 2,
+  "dialogButtons": [
+    "×",
+    "Close",
+    "Open"
+  ],
+  "bellAfter": 2,
+  "result": "Pass (notice dialog opens with ×/Close/Open; bell 2→2)"
+}

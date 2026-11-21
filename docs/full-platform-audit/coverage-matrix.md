@@ -34,9 +34,11 @@ Do **not** preserve prior aggregate Pass counts where evidence was visibility-on
 | Matrix rows | **502** |
 | Not tested | **0** |
 | Explicitly deferred | 10 |
-| Pass | **396** |
-| Fail | **39** |
-| Blocked | **57** |
+| Pass | **398** |
+| Fail | **40** |
+| Blocked | **54** |
+
+**IPS-46 round 3 (2026-11-21):** contrast test + fixtures: INV-P-019, INV-C-015 Pass · INV-A-053 Fail · INV-R-065 stays Blocked. [Results](./execution/r5-isolated-round3-results.md). Totals: **502 · 398 Pass · 40 Fail · 54 Blocked · 0 NT · 10 deferred**.
 
 **IPS-45 isolated r5 round 2 (2026-11-21):** 37 remaining ready rows: 14 Pass · 10 Fail · 8 attempted/still Blocked · 5 not run. [Results](./execution/r5-isolated-round2-results.md). Totals: **502 · 396 Pass · 39 Fail · 57 Blocked · 0 Not tested · 10 deferred**.
 
@@ -200,7 +202,7 @@ Do **not** preserve prior aggregate Pass counts where evidence was visibility-on
 | INV-R-062 | opening detail | Opening detail loads | IPS-45: admin opening; influencer view loads. Obs: business redirected to card signup | media/full-platform-audit/r5-iso/round2/INV-R-062/ | Blocked: no openings deep-link on audit fixture | — | Pass |
 | INV-R-063 | propose collaboration | Page usable or clear empty | 200; 'Missing influencers for this proposal' | media/full-platform-audit/collab/desktop/business-propose.png | — | — | Pass |
 | INV-R-064 | collaboration records | Records list loads | 200 both viewports | media/full-platform-audit/collab/desktop/business-records.png | — | — | Pass |
-| INV-R-065 | record detail | Detail loads | IPS-45: no Collaboration records exist; needs /collaboration/propose fixture | media/full-platform-audit/r5-iso/round2/INV-R-065/ | Blocked: no record id deep-link on audit business fixture | — | Blocked |
+| INV-R-065 | record detail | Detail loads | IPS-46: needs Plus subscription for proposals (Stripe test / RC-CATALOG); DB planTier not honoured | media/full-platform-audit/r5-iso/round3/INV-R-065/ | Blocked: no record id deep-link on audit business fixture | — | Blocked |
 | INV-R-066 | contracts list both sides | Agreements/templates list | 200; Agreements/Templates filters; Needs my signature / Awaiting other | media/full-platform-audit/collab/desktop/business-contracts.png; media/full-platform-audit/collab/desktop/influencer-contracts-list.png | — | — | Pass |
 | INV-R-067 | agreement detail/sign | Detail/dialog opens | IPS-45: agreement page with sign form | media/full-platform-audit/r5-iso/round2/CONTRACT-CHAIN/ | No pending native sign on audit fixture | — | Pass |
 | INV-R-068 | contract wizard | Wizard loads draft/send/sign intents | CONTRACT & MILESTONE WIZARD Parties→scope→commercial visible | media/full-platform-audit/collab/desktop/business-contract-wizard.png; media/full-platform-audit/collab/mobile/business-contract-wizard.png | — | — | Pass |
@@ -316,7 +318,7 @@ Do **not** preserve prior aggregate Pass counts where evidence was visibility-on
 | INV-P-016 | Admin subscription view | Inspect subscriptions | Billing activity View present | media/full-platform-audit/billing/32-admin-billing.png | — | — | Pass |
 | INV-P-017 | Discount/tax dialogs | Create/edit discount | Create discount code dialog OK | media/full-platform-audit/billing/50b-discount-create-dialog.png | — | — | Pass |
 | INV-P-018 | Open EmailTemplateDialog | Dialog/form usable | Surface loads / control present (no destructive confirm executed) | media/full-platform-audit/admin/66-templates-dialog.png | — | — | Pass |
-| INV-P-019 | NoticeDialog generic notices | Dialog/form usable when triggered | No notice dialog spontaneously triggered during chase; component not force-opened | — | Blocked: no NoticeDialog trigger on audited surfaces this run | — | Blocked |
+| INV-P-019 | NoticeDialog generic notices | Dialog/form usable when triggered | IPS-46: notice dialog opens (Close/Open), readAt set; bell stale until reload (P1-AUD-12) | media/full-platform-audit/r5-iso/round3/INV-P-019/ | Blocked: no NoticeDialog trigger on audited surfaces this run | — | Pass |
 | INV-P-020 | Open Access-levels popup | Dialog/form usable | Surface loads / control present (no destructive confirm executed) | media/full-platform-audit/admin/65-admin-access.png | — | — | Pass |
 | INV-P-021 | Open Admin users popup | Dialog/form usable | Surface loads / control present (no destructive confirm executed) | media/full-platform-audit/admin/harness-results.json | — | — | Pass |
 | INV-P-022 | invitation review UI | Accept/decline invite | Hub shows Invitations 0; Invited/Discover/Applications tabs; no pending accept/decline to execute | media/full-platform-audit/collab/mobile/influencer-invitations.png; media/full-platform-audit/collab/manual/inf-opportunities-final.png | — | — | Pass |
@@ -375,7 +377,7 @@ Do **not** preserve prior aggregate Pass counts where evidence was visibility-on
 | INV-A-050 | sign native contract | Both sides can sign when pending | IPS-45: business 1/2 then influencer 2/2 signed; Fully signed emails | media/full-platform-audit/r5-iso/round2/CONTRACT-CHAIN/ | Needs pending-signature fixture | — | Pass |
 | INV-A-051 | post contract message | Message on agreement | msgControls=0; dialogSignals=true | media/full-platform-audit/nt-chase/inv-a-051-after-click.png | — | — | Pass |
 | INV-A-052 | fund signed agreement | Fund path under closed deposits | Fund/start-funding navigates to needs_funding picker; no Stripe charge | media/full-platform-audit/collab/manual/biz-funding-start-result.png | Live deposits closed | — | Blocked |
-| INV-A-053 | apply collab discount | Discount on quote | discountSignals=false | media/full-platform-audit/nt-chase/inv-a-053-discount.png | Blocked: discount apply UI not exposed on contract wizard for fixture (or needs quote state) | — | Blocked |
+| INV-A-053 | apply collab discount | Discount on quote | IPS-46: admin code AUDITR5TEN (Discovery) rejected on a Discovery agreement: “valid for Discovery only”; total unchanged (AUD-FEE-01) | media/full-platform-audit/r5-iso/round3/INV-A-053/ | Blocked: discount apply UI not exposed on contract wizard for fixture (or needs quote state) | — | Fail |
 | INV-A-054 | AI tailor draft | AI dialog when enabled | AI tailor UI absent — contract_ai_tailor gate off or no draft context | media/full-platform-audit/nt-chase/inv-c-009-ai-tailor.png | Blocked: AI tailor not available (gate off / no draft) | — | Blocked |
 | INV-A-055 | create deal | Create deal | createish=0; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Anal | media/full-platform-audit/nt-chase/inv-a-055-create-deal.png | Blocked: live deposits closed — create/fund deal path must not open Stripe charge; no isolated create-deal fixture | — | Blocked |
 | INV-A-056 | open funding checkout | Refused when journey_funding/gate off | No live Stripe Checkout; checkout probe 404; start-funding stays on payments | media/full-platform-audit/collab/manual/biz-funding-start-result.png | Live deposits closed | — | Blocked |
@@ -610,9 +612,9 @@ Do **not** preserve prior aggregate Pass counts where evidence was visibility-on
 | INV-C-010 | Admin module permissions filter | SIDE_GROUPS filtered | Super Admin sees full groups | media/full-platform-audit/admin/02-admin-home-after-login.png | — | — | Pass |
 | INV-C-011 | Payment settings section visibility | Per modules | All sections visible to super admin | media/full-platform-audit/admin/08-admin-payment-settings.png | — | — | Pass |
 | INV-C-012 | Email template pause / preference | Paused skip delivery | Health: None paused; categories listed | media/full-platform-audit/admin/06-admin-mail-health.png | — | — | Pass |
-| INV-C-013 | Unpublished profile hidden from Discover | Unpublished profiles not listed when public_pages_live on | IPS-45: public pages live; unpublished audit profiles not listed (no published contrast) | media/full-platform-audit/r5-iso/round2/INV-C-013/ | Blocked: public_pages_live demo mode prevents unpublished-vs-live Discover check | — | Pass |
+| INV-C-013 | Unpublished profile hidden from Discover | Unpublished profiles not listed when public_pages_live on | IPS-46 contrast: published card listed + 200; unpublished not listed + 404 | media/full-platform-audit/r5-iso/round3/INV-C-013-contrast/ | Blocked: public_pages_live demo mode prevents unpublished-vs-live Discover check | — | Pass |
 | INV-C-014 | Setup reminders conditional display | Reminders shown only while incomplete (or absent when complete) | cues=true; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Bil [IPS-30 demoted] reminder presence alone; not verified against payout readiness — contradicts INV-A-075 Ready / INV-DC-002 | media/full-platform-audit/nt-chase/inv-c-014-setup-reminders.png | IPS-30: cues=true ≠ conditional; same account shows setup reminder while INV-A-075/earnings Ready (see INV-DC-002) | DC-PAYOUT-MISMATCH / ACCEPT-CONDITIONAL | Fail |
-| INV-C-015 | delete signed/funded request protected | Action refused | IPS-45: signed request fixture has no delete control; needs wizard request to signature | media/full-platform-audit/r5-iso/round2/INV-C-015/ | Blocked: delete control present but not executed on production funded fixture (destructive) | — | Blocked |
+| INV-C-015 | delete signed/funded request protected | Action refused | IPS-46: signed request delete refused with cancellation/settlement guidance; request kept | media/full-platform-audit/r5-iso/round3/C015-A053-CHAIN/ | Blocked: delete control present but not executed on production funded fixture (destructive) | — | Pass |
 | INV-C-016 | Agency upgrade CTA on billing | Exposed CTA | Upgrade to Agency on business billing | media/full-platform-audit/billing/21-business-billing.png | — | — | Pass |
 | INV-C-017 | Mobile public Log in hidden <sm | Log in CTA hidden or constrained on mobile public chrome | href=/login count=1; visible=false | media/full-platform-audit/nt-chase/inv-c-017-mobile-login.png | — | — | Pass |
 | INV-C-018 | CMS header menu override | Override replaces default NAV when present | adminHomepageSignals=true; public home used default NAV (INV-M-001 Pass) — override not active or not configured | media/full-platform-audit/nt-chase/inv-c-018-cms-menu.png | — | — | Pass |

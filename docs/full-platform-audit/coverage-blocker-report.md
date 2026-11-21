@@ -13,14 +13,14 @@ This page is the single summary of what is still open. It does not change any ma
 
 | Status | Rows | Recomputed from matrix | Matches header |
 |--------|-----:|------------------------|:--------------:|
-| Pass | 396 | yes | ✅ |
-| **Fail** | **39** | 39 rows (+5 IPS-44, +10 IPS-45) | ✅ |
-| **Blocked** | **57** | 57 rows (IPS-45: −23 executed) | ✅ |
+| Pass | 398 | yes | ✅ |
+| **Fail** | **40** | 40 rows (+5 IPS-44, +10 IPS-45, +1 IPS-46) | ✅ |
+| **Blocked** | **54** | 54 rows (IPS-45 −23, IPS-46 −3) | ✅ |
 | **Not tested** | **0** | — | ✅ |
 | Explicitly deferred | 10 | Agency only | ✅ |
 | **Total** | **502** | | ✅ |
 
-**Open = 96 rows** (39 Fail + 57 Blocked). IPS-45: [execution/r5-isolated-round2-results.md](./execution/r5-isolated-round2-results.md). IPS-44 results: [execution/r5-isolated-package1-results.md](./execution/r5-isolated-package1-results.md).
+**Open = 94 rows** (40 Fail + 54 Blocked). IPS-46: [execution/r5-isolated-round3-results.md](./execution/r5-isolated-round3-results.md). IPS-45: [execution/r5-isolated-round2-results.md](./execution/r5-isolated-round2-results.md). IPS-44 results: [execution/r5-isolated-package1-results.md](./execution/r5-isolated-package1-results.md).
 
 ---
 

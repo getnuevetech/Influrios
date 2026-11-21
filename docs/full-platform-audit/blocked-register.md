@@ -10,13 +10,13 @@
 
 | Metric | Value |
 |--------|------:|
-| Blocked rows accounted for | **57** |
-| Matrix Blocked (authoritative) | 57 |
+| Blocked rows accounted for | **54** |
+| Matrix Blocked (authoritative) | 54 |
 | Match | YES |
 
 ### By blocker cluster
 
-> Cluster counts below predate IPS-45; 23 rows left Blocked in IPS-45 (see round-2 results). Authoritative total: **57** (matches matrix).
+> Cluster counts below predate IPS-45; 23 rows left Blocked in IPS-45 (see round-2 results). Authoritative total: **54** after IPS-46 (matches matrix).
 
 | Cluster | Count | Owner (default) |
 |---------|------:|-----------------|
@@ -119,7 +119,6 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 | ID | Journey / surface | Exact blocker (this row) | Notes from matrix |
 |----|-------------------|--------------------------|-------------------|
 | INV-P-012 | P-16 Payout detail dialog | Dialog/mutation path incomplete on fixture — entry partial or CTA absent | Automation did not open dialog; deposits closed for new fixtures |
-| INV-A-053 | P-11 Apply collab discount | Required control/CTA not exposed on audit fixture state (or state-gated) | discountSignals=false |
 | INV-A-062 | P-15 Request change order | Required control/CTA not exposed on audit fixture state (or state-gated) | controls=0 |
 | INV-A-063 | P-15 Cancel prefund | Dialog/mutation path incomplete on fixture — entry partial or CTA absent | Payments needs_funding surface; explicit cancel-prefund CTA not found on held funding |
 | INV-N-027T | P-17 Notification trigger: collaboration cancelled | Originating cancellation not executable (linked INV-A-066 UI_FIXTURE_GAP) | IPS-43 split; delivery proven separately (INV-N-027) |
@@ -270,7 +269,6 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 
 | ID | Journey / surface | Exact blocker (this row) | Notes from matrix |
 |----|-------------------|--------------------------|-------------------|
-| INV-C-015 | P-09 Delete signed/funded request protect | Delete control present but must not mutate production funded fixture | deleteControls=6; did not mutate funded fixture — protection observed as UI absence or would need destructive probe |
 
 ### `JOB_NOT_ENQUEUED` (1)
 
@@ -291,7 +289,6 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 
 | ID | Journey / surface | Exact blocker (this row) | Notes from matrix |
 |----|-------------------|--------------------------|-------------------|
-| INV-P-019 | P-27 NoticeDialog (generic) | NoticeDialog not spontaneously triggered; component not force-opened | No notice dialog spontaneously triggered during chase; component not force-opened |
 
 ### `PAYOUT_RISK` (1)
 
@@ -467,7 +464,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** CTA visible; dialog/tabs complete; mutation persisted (or explicit deny) with evidence.
 - **Existing evidence (partial):** `media/full-platform-audit/billing/55b-payout-detail.png`
 
-### INV-P-019
+### INV-P-019 — resolved IPS-46 (Pass); kept for history
 
 - **Exact blocker:** NoticeDialog not spontaneously triggered; component not force-opened
 - **Affected journey:** P-27 NoticeDialog (generic)
@@ -652,7 +649,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** On sandbox: Checkout session created under test mode + ledger hold. On live: evidence of closed-gate behavior only (404/refusal) — Blocked may remain until sandbox retest.
 - **Existing evidence (partial):** `media/full-platform-audit/collab/manual/biz-funding-start-result.png`
 
-### INV-A-053
+### INV-A-053 — resolved IPS-46 (Fail); kept for history
 
 - **Exact blocker:** Required control/CTA not exposed on audit fixture state (or state-gated)
 - **Affected journey:** P-11 Apply collab discount
@@ -1866,7 +1863,7 @@ Each row inherits cluster defaults above; overrides only where the exact blocker
 - **Acceptance evidence needed:** Unpublished profile absent from live Discover when public_pages_live on.
 - **Existing evidence (partial):** `media/full-platform-audit/auth/retest-P-07-discover-business.png`
 
-### INV-C-015
+### INV-C-015 — resolved IPS-46 (Pass); kept for history
 
 - **Exact blocker:** Delete control present but must not mutate production funded fixture
 - **Affected journey:** P-09 Delete signed/funded request protect

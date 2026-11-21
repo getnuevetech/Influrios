@@ -1,0 +1,22 @@
+const { chromium, BASE, U, session } = require('./lib'); const C = require('./capture'); const db = require('./db'); const { createRequest } = require('./wizard'); const fs = require('fs');
+const dir = process.env.EV + '/INV-A-053'; fs.mkdirSync(dir, { recursive: true }); const r = { check: 'INV-A-053', steps: [] };
+(async () => { const b = await chromium.launch(); const biz = await session(b, U.bizA), inf = await session(b, U.infA);
+  await createRequest(biz.p, dir, { title: 'AUDIT r5 A-053 Discount', slugs: ['audit-r5iso01-a'] });
+  const app = db(`select id from "MarketplaceApplication" where "toSlug"='audit-r5iso01-a' and status='REQUESTED' order by "createdAt" desc limit 1`);
+  await inf.p.goto(`${BASE}/collaboration/applications/${app}`); await inf.p.waitForLoadState('networkidle');
+  await Promise.all([inf.p.waitForNavigation().catch(() => {}), inf.p.locator('main button:visible', { hasText: /^Accept$/ }).first().click()]);
+  await biz.p.goto(`${BASE}/collaboration/applications/${app}`); await biz.p.waitForLoadState('networkidle');
+  await Promise.all([biz.p.waitForNavigation().catch(() => {}), biz.p.getByText('Create the agreement').first().click()]); await biz.p.waitForLoadState('networkidle');
+  await biz.p.goto(biz.p.url().replace(/&step=\w+/, '') + '&jurisdiction=US&serviceLevel=discovery&step=preview'); await biz.p.waitForLoadState('networkidle'); await biz.p.waitForTimeout(1200);
+  await biz.p.selectOption('select[name=payoutMethod]', 'local_bank'); for (const n of ['feeDisclosureAccepted', 'partyAccepted']) await biz.p.check(`input[name=${n}]`);
+  await Promise.all([biz.p.waitForNavigation().catch(() => {}), biz.p.click('button[name=intent]:has-text("Send for signature")')]); await biz.p.waitForLoadState('networkidle');
+  const cid = db(`select id from "ContractDocument" order by "createdAt" desc limit 1`); r.contractId = cid; r.steps.push('unsigned agreement sent');
+  const p = biz.p; p.setDefaultTimeout(10000); await p.goto(`${BASE}/collaboration/contracts/${cid}`); await p.waitForLoadState('networkidle');
+  let t = await C.shot(p, dir, '5-agreement-before'); r.payBefore = (t.match(/You pay\s*\n?\s*\$[\d,.]+/) || [null])[0];
+  const add = p.getByText('Add discount code').first(); r.addVisible = await add.count();
+  if (r.addVisible) { await add.click(); await p.waitForTimeout(400); const apply = p.locator('button:visible', { hasText: /^Apply/ }).first(); await apply.locator('xpath=preceding-sibling::input[1]').fill('AUDITR5TEN'); await apply.click(); await p.waitForTimeout(2500);
+    t = await C.shot(p, dir, '6-after-apply'); r.msgs = (t.match(/[^\n]*(AUDITR5TEN|discount|not|only|eligible|expired)[^\n]*/gi) || []).slice(0, 6);
+    await p.reload(); await p.waitForLoadState('networkidle'); t = await C.shot(p, dir, '7-after-reload'); r.payAfter = (t.match(/You pay\s*\n?\s*\$[\d,.]+/) || [null])[0]; r.discountShown = /AUDITR5TEN|Discount/.test(t); }
+  r.reserved = db(`select "reservedCount"||'/'||"redeemedCount" from "DiscountOffer" where "displayCode"='AUDITR5TEN'`);
+  r.result = r.payBefore && r.payAfter && r.payBefore !== r.payAfter && r.discountShown ? 'Pass' : `Fail (before ${r.payBefore}, after ${r.payAfter}, reserved ${r.reserved})`;
+  fs.writeFileSync(dir + '/result.json', JSON.stringify(r, null, 2)); console.log(JSON.stringify(r, null, 1)); await b.close(); })().catch(e => { console.error('ERR', e.message); fs.writeFileSync(dir + '/result.json', JSON.stringify({ ...r, error: e.message }, null, 2)); });

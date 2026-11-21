@@ -10,7 +10,7 @@
 | **Status** | Provisional design / planning artifact |
 | **Audit execution baseline** | Live host probed @ `40b6288` (#536); matrix post IPS-25 |
 | **Code note** | #537 COR-SEC-01 **merged** → `5a5f4c0` on `main`; live redeploy + credential rotation **not** confirmed |
-| **Matrix** | **396 Pass · 39 Fail · 57 Blocked · 0 Not tested · 10 Explicitly deferred** (502 rows, IPS-45) — +IPS-29/30/31 + IPS-40 + **IPS-42** reconcile (−1 Pass / +1 NT; View/Export + notify isolation narrowed) |
+| **Matrix** | **398 Pass · 40 Fail · 54 Blocked · 0 Not tested · 10 Explicitly deferred** (502 rows, IPS-46) — +IPS-29/30/31 + IPS-40 + **IPS-42** reconcile (−1 Pass / +1 NT; View/Export + notify isolation narrowed) |
 | **Authoritative matrix** | [coverage-matrix.md](./coverage-matrix.md) |
 | **Coverage narrative** | [coverage-status.md](./coverage-status.md) |
 | **Execution** | [execution/](./execution/) (auth, collab, billing, admin, [not-tested-chase-results.md](./execution/not-tested-chase-results.md), [dashboard-consistency-results.md](./execution/dashboard-consistency-results.md), [mail-sink-restore-results.md](./execution/mail-sink-restore-results.md)) |
@@ -561,6 +561,40 @@ Business AUDIT: Collaborations badge **2** stable; no parallel invite/payout spl
 See patch **RC-DASHBOARD** (DB1–DB6). Package **R4b**. Deposits stay closed; no money-path reopen.
 
 **Close** INV-DC-001, INV-DC-002, INV-DC-006, INV-DC-012, INV-DC-015, INV-C-014, INV-N-004 after DB1–DB4 (and reminder↔payout agreement) on deployed revision.
+
+---
+
+## Defect register — isolated-host runs (IPS-44 / IPS-45 / IPS-46)
+
+Every defect found by the isolated r5 runs, with its owning package. Nothing here is fixed. Package owners: **Pkg 1** shared nav/dashboards/invitations/notifications (#540) · **Pkg 2** collaborations lists, request composer, popups · **Pkg 3** pricing/billing/checkout · **Pkg 4** contracts, messages, profiles, card · **Pkg 5** admin, ledger, reconciliation, jobs · **R6** payment provider path (separate approval).
+
+| ID | Defect | Evidence rows | Owner | Status |
+|----|--------|---------------|-------|--------|
+| P1-AUD-01 | Withdrawn/expired invitations stay under Action required | INV-DC-013, INV-DC-014 | Pkg 1 | Open |
+| P1-AUD-02 | Withdrawal emails an invitation template; no withdrawal notice | INV-DC-013 | Pkg 1 | Open |
+| P1-AUD-03 | Respond-by deadline doesn't expire invitations (sweep off by default, age-based); dead-end reply | INV-DC-014 | Pkg 1 (+ Pkg 5 sweep config) | Open |
+| P1-AUD-04 | Team invitations counted but not listed in hub; missing from action inbox | INV-A-048 | Pkg 1 | Open |
+| P1-AUD-05 | Accepted team member sees “waiting for teammates” after proposal closed | INV-A-048 | Pkg 1 | Open |
+| P1-AUD-06 | Revision request / auto-approval: no in-app notice; influencer attention + badge miss the revision task | INV-N-015T, INV-N-017T | Pkg 1 | Open |
+| P1-AUD-07 | Auto-approved milestone leaves a stale review task; inbox rows omit the milestone | INV-N-017T | Pkg 1 | Open |
+| P1-AUD-08 | Delivery approval coupled to payout setup and release (decided: separate) | INV-N-016T | Pkg 1 (approval) · R6/Pkg 5 (release, MS1–MS8) | Open — decided |
+| P1-AUD-09 | Business Collaborations badge counts collaborations, not review tasks | INV-N-013T | Pkg 1 | Open |
+| P1-AUD-10 | Invitation detail page offers invitee Accept/Withdraw (popup offers Interested/Ask) | INV-A-045 | Pkg 1 | Open |
+| P1-AUD-11 | No “who acts next” after the business accepts or after full signature | INV-A-045, INV-N-010T | Pkg 1 | Open |
+| P1-AUD-12 | Bell and Unread label don't update after closing a notice until the next full page load | INV-P-019 | Pkg 1 | Open |
+| AUD-WIZ-01 | Request wizard sends invitations on Terms “Next” without stopping at Review; reopens prefilled after sending | INV-DC-013 setup | **Pkg 2** | Open |
+| AUD-FEE-01 | Agreement wizard: fee box names “Contracted Pilot · Business” while “Discovery only” is selected; consequence: a Discovery discount code is rejected on a Discovery agreement (“valid for Discovery only”) | INV-A-047 setup, **INV-A-053** | **Pkg 3** (fee rules, discounts) + Pkg 4 (agreement) | Open |
+| AUD-FEE-02 | Agreement wizard: changing service level resets accepted checkboxes; missing US tax rule shown but doesn't block | INV-A-047 setup | Pkg 3 / Pkg 4 | Open |
+| AUD-R2-01a | Inquiry send/reply/decline/shortlist actions unreachable (no UI) | INV-A-036, INV-A-037 | **Pkg 2** | Open |
+| AUD-R2-01b | Refresh campaign suggestions + request managed match unreachable | INV-A-034, INV-A-042 | **Pkg 2** | Open |
+| AUD-R2-01c | Open dispute / add evidence unreachable for members; no dispute entry on /trust | INV-A-064, INV-A-079 | **Pkg 5** (trust/disputes) + R6 | Open |
+| AUD-R2-01d | Convert to ambassador and own-milestone submit unreachable | INV-A-065, INV-A-069 | **Pkg 2** | Open |
+| AUD-R2-03 | No entry point to request cancellation from a held collaboration (form only at `case=refund`) | INV-A-066 | **Pkg 2** (workroom) + R6 | Open |
+| AUD-R2-04 | Media kit has no export | INV-D-007E | **Pkg 4** | Open |
+| AUD-R2-08 | Business opening an influencer opening is sent to card signup | INV-R-062 | **Pkg 4** | Open |
+| AUD-INV-01 | Admin claim invitation stays QUEUED after SMTP delivery; decline labelled “This isn't my profile”; no decline when profile has no social | INV-A-031 | **Pkg 5** (admin) + Pkg 4 (claim page) | Open |
+| AUD-DIR-01 | Unpublished influencers can't be found in the request wizard audience (side effect of hiding; confirm intended) | INV-C-013 round 3 | Pkg 2 | Needs decision |
+| AUD-ADM-01 | Admin opening form has no visible submit button (Enter only) | INV-R-062 setup | **Pkg 5** | Open |
 
 ---
 

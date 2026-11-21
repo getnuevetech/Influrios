@@ -1,0 +1,21 @@
+{
+  "check": "INV-A-053",
+  "steps": [
+    "unsigned agreement sent"
+  ],
+  "contractId": "cmwqq0cf001457d9ip0zi3ew9",
+  "payBefore": "You pay\n$840.00",
+  "addVisible": 1,
+  "msgs": [
+    "AUDIT r5 A-053 Discount",
+    "Service level Discovery only. The influencer fee is deducted from their compensation and is not a second charge to you.",
+    "This code is valid for Discovery only.",
+    "I agree to the terms of this agreement and intend my typed legal name and on-screen written signature to be my electronic signature for AUDIT r5 A-053 Discount, including page endorsements on each page of the PDF.",
+    "Campaign  AUDIT r5 A-053 Discount",
+    "Service Level  Discovery only"
+  ],
+  "payAfter": "You pay\n$840.00",
+  "discountShown": true,
+  "reserved": "0/0",
+  "result": "Fail (before You pay\n$840.00, after You pay\n$840.00, reserved 0/0)"
+}

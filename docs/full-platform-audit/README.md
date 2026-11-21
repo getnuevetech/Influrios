@@ -1,10 +1,11 @@
 # Full-platform audit — Influrios
 
-**Phase:** A complete. Phase B + IPS-25 + IPS-29 + IPS-30 + IPS-31/40 + **IPS-42 evidence reconcile** + **IPS-43 hidden-gap split**. **Not** platform-wide complete (**39 Fail** / **57 Blocked** / **0 Not tested** / **396 Pass** (IPS-45)). Phase C remediation plan (IPS-20) remains **PROVISIONAL**.  
+**Phase:** A complete. Phase B + IPS-25 + IPS-29 + IPS-30 + IPS-31/40 + **IPS-42 evidence reconcile** + **IPS-43 hidden-gap split**. **Not** platform-wide complete (**40 Fail** / **54 Blocked** / **0 Not tested** / **398 Pass** (IPS-46)). Phase C remediation plan (IPS-20) remains **PROVISIONAL**.  
 **Coverage status (user-facing):** [coverage-status.md](./coverage-status.md) — Fail (24), Blocked (80), Not tested (1), Pass (378); IPS-30 acceptance + IPS-31/40 Mailpit + IPS-42 reconcile.  
 **NT chase:** [execution/not-tested-chase-results.md](./execution/not-tested-chase-results.md) (IPS-25).  
 **Dashboard consistency:** [execution/dashboard-consistency-results.md](./execution/dashboard-consistency-results.md) (IPS-29 · INV-DC-* · **RC-DASHBOARD**).  
 **Mail-sink restore:** [execution/mail-sink-restore-results.md](./execution/mail-sink-restore-results.md) (IPS-31 · isolated Mailpit; deposit+mail rows stay Blocked).  
+**IPS-46 round 3 (contrast + fixtures):** [execution/r5-isolated-round3-results.md](./execution/r5-isolated-round3-results.md)  
 **IPS-45 round 2 (37 remaining ready rows):** [execution/r5-isolated-round2-results.md](./execution/r5-isolated-round2-results.md)  
 **IPS-44 results (10 Package 1 checks, isolated host):** [execution/r5-isolated-package1-results.md](./execution/r5-isolated-package1-results.md)  
 **Runner handoff (every open check → runner + next action):** [check-handoff.md](./check-handoff.md)  
@@ -33,9 +34,9 @@
 | Metric | Count |
 |--------|------:|
 | Matrix rows | 502 |
-| Pass | **396** |
-| Fail | **39** *(24 + IPS-44: 5 + IPS-45: 10)* |
-| Blocked | **57** |
+| Pass | **398** |
+| Fail | **40** *(24 + IPS-44: 5 + IPS-45: 10 + IPS-46: 1)* |
+| Blocked | **54** |
 | Not tested | **0** |
 | Explicitly deferred (Agency) | 10 |
 | Page routes (`src/app/**/page.tsx`) | 128 |

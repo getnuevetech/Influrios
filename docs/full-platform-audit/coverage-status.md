@@ -11,7 +11,7 @@
 **Slice evidence:** [execution/auth-results.md](./execution/auth-results.md) · [execution/collab-results.md](./execution/collab-results.md) · [execution/billing-results.md](./execution/billing-results.md) · [execution/admin-results.md](./execution/admin-results.md)  
 **Remediation plan (IPS-20):** [remediation-plan.md](./remediation-plan.md) — **PROVISIONAL**; **24 Fail → 9 root causes** (incl. **RC-JOBS**, **RC-DASHBOARD**); blocked deps mapped; no new product PRs; **not** platform-wide completion
 
-> **This report does not claim the platform is fully audited, fully remediated, or platform-wide complete.** **39 Fail** and **57 Blocked** remain open; **Not tested = 0** after IPS-45; Agency stays Explicitly deferred; defects are not fixed by this audit. Prior Pass aggregates are **superseded** (IPS-30 demotions + IPS-31 + IPS-40 + IPS-42). Live deposits remain closed. **Do not endorse blanket IPS-40 24/24 Pass.**
+> **This report does not claim the platform is fully audited, fully remediated, or platform-wide complete.** **40 Fail** and **54 Blocked** remain open; **Not tested = 0** after IPS-46; Agency stays Explicitly deferred; defects are not fixed by this audit. Prior Pass aggregates are **superseded** (IPS-30 demotions + IPS-31 + IPS-40 + IPS-42). Live deposits remain closed. **Do not endorse blanket IPS-40 24/24 Pass.**
 
 ---
 
@@ -35,9 +35,9 @@ Do **not** preserve the old **287 Pass** (or post–IPS-29 **296**) where eviden
 
 | Status | Count | Meaning here |
 |--------|------:|--------------|
-| Pass | **396** | Required cases executed; expected met (incl. IPS-31/40 isolated Mailpit; IPS-42 narrowed notify/View Passes) |
-| Fail | **39** | Defect with evidence — see §2 (prior 17 + 5 INV-DC-* + INV-C-014 + INV-N-004) |
-| Blocked | **57** | IPS-44 executed 5 Blocked rows on the isolated r5 host; INV-N-016T newly Blocked |
+| Pass | **398** | Required cases executed; expected met (incl. IPS-31/40 isolated Mailpit; IPS-42 narrowed notify/View Passes) |
+| Fail | **40** | Defect with evidence — see §2 (prior 17 + 5 INV-DC-* + INV-C-014 + INV-N-004) |
+| Blocked | **54** | IPS-44 executed 5 Blocked rows on the isolated r5 host; INV-N-016T newly Blocked |
 | Not tested | **0** | all executed (IPS-44/45) |
 | Explicitly deferred | 10 | Agency product entries only (destination checks recorded) |
 | **Matrix rows** | **502** | IPS-43 split hidden gaps into tracked rows (+9) |
