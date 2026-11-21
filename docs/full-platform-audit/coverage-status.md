@@ -1,17 +1,17 @@
 # Coverage completion status — full-platform audit reopen
 
-**Tracker:** IPS-26 under IPS-19 · **As of:** 2026-11-21 (IPS-29/30/31 + **IPS-40 audit-continue**)  
+**Tracker:** IPS-26 under IPS-19 · **As of:** 2026-11-21 (IPS-29/30/31 + IPS-40 + **IPS-42 evidence reconcile**)  
 **Code baseline:** `main` @ `40b6288` (includes #536 COR-20–23); #537 COR-SEC-01 merged `5a5f4c0` (live redeploy + rotation unconfirmed)  
 **Host:** https://influrios.com · Live collaboration deposits closed (`journey_funding`) · **IPS-31/40 sink:** isolated local Mailpit (not live)  
 **Authoritative matrix:** [coverage-matrix.md](./coverage-matrix.md)  
 **NT chase (IPS-25):** [execution/not-tested-chase-results.md](./execution/not-tested-chase-results.md)  
 **Dashboard consistency (IPS-29):** [execution/dashboard-consistency-results.md](./execution/dashboard-consistency-results.md)  
 **Mail-sink restore (IPS-31):** [execution/mail-sink-restore-results.md](./execution/mail-sink-restore-results.md)  
-**Audit-continue (IPS-40):** [execution/audit-continue-alongside-design-results.md](./execution/audit-continue-alongside-design-results.md)  
+**Audit-continue (IPS-40 + IPS-42):** [execution/audit-continue-alongside-design-results.md](./execution/audit-continue-alongside-design-results.md)  
 **Slice evidence:** [execution/auth-results.md](./execution/auth-results.md) · [execution/collab-results.md](./execution/collab-results.md) · [execution/billing-results.md](./execution/billing-results.md) · [execution/admin-results.md](./execution/admin-results.md)  
 **Remediation plan (IPS-20):** [remediation-plan.md](./remediation-plan.md) — **PROVISIONAL**; **24 Fail → 9 root causes** (incl. **RC-JOBS**, **RC-DASHBOARD**); blocked deps mapped; no new product PRs; **not** platform-wide completion
 
-> **This report does not claim the platform is fully audited, fully remediated, or platform-wide complete.** **24 Fail** and **80 Blocked** remain open; **Not tested = 0**; Agency stays Explicitly deferred; defects are not fixed by this audit. Prior Pass aggregates are **superseded** (IPS-30 demotions + IPS-31 + IPS-40). Live deposits remain closed.
+> **This report does not claim the platform is fully audited, fully remediated, or platform-wide complete.** **24 Fail** and **80 Blocked** remain open; **Not tested = 1** (INV-J-010); Agency stays Explicitly deferred; defects are not fixed by this audit. Prior Pass aggregates are **superseded** (IPS-30 demotions + IPS-31 + IPS-40 + IPS-42). Live deposits remain closed. **Do not endorse blanket IPS-40 24/24 Pass.**
 
 ---
 
@@ -31,20 +31,22 @@ Do **not** preserve the old **287 Pass** (or post–IPS-29 **296**) where eviden
 
 ---
 
-## Snapshot (matrix header — post IPS-29 + IPS-30 + IPS-31 + IPS-40)
+## Snapshot (matrix header — post IPS-29 + IPS-30 + IPS-31 + IPS-40 + IPS-42)
 
 | Status | Count | Meaning here |
 |--------|------:|--------------|
-| Pass | **379** | Required cases executed; expected met (incl. IPS-31/40 isolated Mailpit retests) |
+| Pass | **378** | Required cases executed; expected met (incl. IPS-31/40 isolated Mailpit; IPS-42 narrowed notify/View Passes) |
 | Fail | **24** | Defect with evidence — see §2 (prior 17 + 5 INV-DC-* + INV-C-014 + INV-N-004) |
 | Blocked | **80** | Could not execute (env/gate/credentials/fixture) — must not vanish into Pass |
-| Not tested | **0** | IPS-40 cleared IPS-30 demoted action/job rows |
+| Not tested | **1** | INV-J-010 auto-approval (IPS-42 demote — sweep approved:0 / transition unproven) |
 | Explicitly deferred | 10 | Agency product entries only (destination checks recorded) |
 | **Matrix rows** | **493** | |
 
 **IPS-29 delta (+17 INV-DC-* rows):** +9 Pass · +5 Fail · +3 Blocked.  
 **IPS-30 demotions from Pass:** −11 Pass → +2 Fail · +9 Not tested.  
 **IPS-31 mail-sink restore:** +70 Pass · −70 Blocked (isolated Mailpit; 15 MAIL_SINK + 14 deposit+mail remain Blocked).  
+**IPS-40 audit-continue:** +24 Pass / −15 Blocked / −9 NT (pre-reconcile).  
+**IPS-42 evidence reconcile:** −1 Pass → +1 NT (INV-J-010); INV-D-007 View/Export split; INV-N-010…017/027 Pass narrowed to delivery isolation.  
 **Chase delta (89 former Not tested, IPS-25):** historically 54 Pass · 2 Fail · 33 Blocked — several of those Passes demoted under IPS-30.
 
 **Slices completed:** auth (P-01…P-07), collab (P-08…P-18 + #536 revalidate), billing (P-21…P-23), admin (P-27* + messages/notifications/jobs/email/integrations), **nt-chase (IPS-25)**, **dashboard consistency (IPS-29)**, **mail-sink restore (IPS-31)**.
@@ -227,7 +229,7 @@ Authoritative count **80** after IPS-40. Themes:
 
 | Blocker | Notes / examples |
 |---------|------------------|
-| **Mail sink** | Isolated Mailpit restored; claim-draft + notify-kind MAIL_SINK cleared IPS-40. Deposit+mail money events (14) still Blocked. Live host still has no Mailpit UI. |
+| **Mail sink** | Isolated Mailpit restored; claim-draft MAIL_SINK cleared IPS-40; notify-kind Pass narrowed IPS-42 (delivery isolation only). Deposit+mail money events (14) still Blocked. Live host still has no Mailpit UI. |
 | **Live deposits closed** (`journey_funding`) | Fund/checkout/release/refund/payout money paths; related payout/refund notices & emails |
 | **Fixture / UI gaps** | Pending native sign; payments dialog tabs; cancel/settlement; withdraw; team send/respond; valid invite token; IPS-29 invite create/withdraw/expire |
 | **Notification kinds not fireable** | INV-N-023…026, 029…034 (ops/dispute) |
@@ -238,9 +240,12 @@ Authoritative count **80** after IPS-40. Themes:
 
 Authoritative row list: [coverage-matrix.md](./coverage-matrix.md).
 
-### 4b. Not tested (0)
+### 4b. Not tested (1)
 
-IPS-40 cleared all nine IPS-30 demoted rows (INV-A-008/019/027, INV-D-007, INV-J-006/010/011/015/017) with execute→persist / due→event→notif evidence. See [execution/audit-continue-alongside-design-results.md](./execution/audit-continue-alongside-design-results.md).
+- **INV-J-010** (`milestone_auto_approval`) — IPS-42 demote: both sweep runs `scanned:0` / `approved:0` while milestone ends `release_scheduled`; transition provenance unproven. Evidence retained at `media/full-platform-audit/audit-continue/inv-j-010-auto-approval.json`.
+- **Related narrowed (still Pass, not NT):** INV-D-007 **Export** remains unproven (View Pass only); INV-N-010…017 / INV-N-027 Pass = delivery isolation only (not business-action emission).
+
+See [execution/audit-continue-alongside-design-results.md](./execution/audit-continue-alongside-design-results.md).
 
 ### 4c. Explicitly deferred (10) — Agency product
 

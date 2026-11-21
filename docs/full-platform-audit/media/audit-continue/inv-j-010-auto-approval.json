@@ -17,5 +17,9 @@
   "milestoneStatus": "release_scheduled",
   "autoAudit": true,
   "mail1": 0,
-  "subjects": []
+  "subjects": [],
+  "ips42": {
+    "status": "Not tested",
+    "reason": "Both sweep runs scanned:0/approved:0; release_scheduled transition provenance unproven — empty sweep does not prove auto-approval behavior"
+  }
 }

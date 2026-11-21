@@ -10,7 +10,7 @@
 | **Status** | Provisional design / planning artifact |
 | **Audit execution baseline** | Live host probed @ `40b6288` (#536); matrix post IPS-25 |
 | **Code note** | #537 COR-SEC-01 **merged** → `5a5f4c0` on `main`; live redeploy + credential rotation **not** confirmed |
-| **Matrix** | **379 Pass · 24 Fail · 80 Blocked · 0 Not tested · 10 Explicitly deferred** (493 rows) — +IPS-29/30/31 + **IPS-40** audit-continue (+24 Pass / −15 Blocked / −9 NT) |
+| **Matrix** | **378 Pass · 24 Fail · 80 Blocked · 1 Not tested · 10 Explicitly deferred** (493 rows) — +IPS-29/30/31 + IPS-40 + **IPS-42** reconcile (−1 Pass / +1 NT; View/Export + notify isolation narrowed) |
 | **Authoritative matrix** | [coverage-matrix.md](./coverage-matrix.md) |
 | **Coverage narrative** | [coverage-status.md](./coverage-status.md) |
 | **Execution** | [execution/](./execution/) (auth, collab, billing, admin, [not-tested-chase-results.md](./execution/not-tested-chase-results.md), [dashboard-consistency-results.md](./execution/dashboard-consistency-results.md), [mail-sink-restore-results.md](./execution/mail-sink-restore-results.md)) |
@@ -627,6 +627,7 @@ See patch **RC-DASHBOARD** (DB1–DB6). Package **R4b**. Deposits stay closed; n
 - **IPS-29** — dashboard consistency contradiction coverage; Fail +5 (INV-DC-001/002/006/012/015) → **RC-DASHBOARD**.  
 - **IPS-30** — Pass acceptance corrections (Ola bbc38ce): demote visibility-only Passes; plan stays **PROVISIONAL**.  
 - **IPS-31** — isolated Mailpit restore; deposit+mail stay Blocked; plan stays **PROVISIONAL**.
-- **IPS-40** — claim draft + notify kinds + demoted NT cleared on isolated host; matrix **379 Pass · 80 Blocked · 0 NT**; deposit+mail stay Blocked; plan stays **PROVISIONAL**.  
+- **IPS-40** — claim draft + notify isolation + demoted NT actions/jobs on isolated host; deposit+mail stay Blocked; plan stays **PROVISIONAL**.  
+- **IPS-42** — evidence reconcile: INV-J-010 → NT; INV-D-007 View Pass / Export NT; INV-N-010…017/027 Pass = delivery isolation only; matrix **378 Pass · 80 Blocked · 1 NT**; design PR not held.  
 - **#537** — COR-SEC-01 merged `5a5f4c0`; redeploy + rotation open (S1–S5 all required).  
 - **GitHub evidence package** — Audit package worker must commit **this** revision.

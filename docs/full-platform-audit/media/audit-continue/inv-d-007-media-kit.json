@@ -1,5 +1,7 @@
 {
   "cardHttp": 200,
   "hasName": true,
-  "note": "Product media kit export is View media kit → public card; no downloadable PDF file."
+  "viewStatus": "Pass",
+  "exportStatus": "Not tested",
+  "note": "IPS-42 split: HTTP 200 public card = View only. Export remains Not tested — no downloadable export proven."
 }

@@ -1,9 +1,10 @@
 {
   "summary": {
-    "pass": 24,
+    "pass": 23,
     "fail": 0,
     "blocked": 0,
-    "notTested": 0
+    "notTested": 1,
+    "reconcile": "IPS-42: INV-J-010 demoted NT; INV-D-007 View-only Pass / Export NT; INV-N-010…017+027 Pass narrowed to delivery isolation"
   },
   "rows": [
     {
@@ -94,7 +95,7 @@
     {
       "id": "INV-N-010",
       "status": "Pass",
-      "actual": "queued=true; count=1; mailpit=1; subjects=Funding needed for AUDIT r4cont01 notify fixture",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=1; mailpit=1; subjects=Funding needed for AUDIT r4cont01 notify fixture; NOT originating business-action emission",
       "evidence": [
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
@@ -103,7 +104,7 @@
     {
       "id": "INV-N-011",
       "status": "Pass",
-      "actual": "queued=true; count=2; mailpit=2; subjects=You can begin AUDIT r4cont01 notify fixture | Funding confirmed for AUDIT r4cont01 notify fixture",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=2; mailpit=2; subjects=You can begin AUDIT r4cont01 notify fixture | Funding confirmed for AUDIT r4cont01 notify fixture; NOT originating business-action emission",
       "evidence": [
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
@@ -112,7 +113,7 @@
     {
       "id": "INV-N-012",
       "status": "Pass",
-      "actual": "queued=true; count=1; mailpit=1; subjects=Funding did not complete for AUDIT r4cont01 notify fixture",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=1; mailpit=1; subjects=Funding did not complete for AUDIT r4cont01 notify fixture; NOT originating business-action emission",
       "evidence": [
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
@@ -121,7 +122,7 @@
     {
       "id": "INV-N-013",
       "status": "Pass",
-      "actual": "queued=true; count=1; mailpit=1; subjects=Ready for review: AUDIT Kickoff",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=1; mailpit=1; subjects=Ready for review: AUDIT Kickoff; NOT originating business-action emission",
       "evidence": [
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
@@ -130,7 +131,7 @@
     {
       "id": "INV-N-014",
       "status": "Pass",
-      "actual": "queued=true; count=1; mailpit=1; subjects=Review due soon: AUDIT Kickoff",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=1; mailpit=1; subjects=Review due soon: AUDIT Kickoff; NOT originating business-action emission",
       "evidence": [
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
@@ -139,7 +140,7 @@
     {
       "id": "INV-N-015",
       "status": "Pass",
-      "actual": "queued=true; count=1; mailpit=1; subjects=Revision requested for AUDIT Kickoff",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=1; mailpit=1; subjects=Revision requested for AUDIT Kickoff; NOT originating business-action emission",
       "evidence": [
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
@@ -148,7 +149,7 @@
     {
       "id": "INV-N-016",
       "status": "Pass",
-      "actual": "queued=true; count=2; mailpit=2; subjects=Approved: AUDIT Kickoff | Approved: AUDIT Kickoff",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=2; mailpit=2; subjects=Approved: AUDIT Kickoff | Approved: AUDIT Kickoff; NOT originating business-action emission",
       "evidence": [
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
@@ -157,7 +158,7 @@
     {
       "id": "INV-N-017",
       "status": "Pass",
-      "actual": "queued=true; count=2; mailpit=2; subjects=Review period ended for AUDIT Kickoff | Review period ended for AUDIT Kickoff",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=2; mailpit=2; subjects=Review period ended for AUDIT Kickoff | Review period ended for AUDIT Kickoff; NOT originating business-action emission",
       "evidence": [
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
@@ -166,7 +167,7 @@
     {
       "id": "INV-N-027",
       "status": "Pass",
-      "actual": "queued=true; count=2; mailpit=2; subjects=Collaboration cancelled: AUDIT r4cont01 notify fixture | Collaboration cancelled: AUDIT r4cont01 notify fixture",
+      "actual": "delivery isolation only via notifyCollabFundingEvent; queued=true; count=2; mailpit=2; subjects=Collaboration cancelled: AUDIT r4cont01 notify fixture | Collaboration cancelled: AUDIT r4cont01 notify fixture; NOT originating business-action emission",
       "evidence": [
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-kinds.json",
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/notify-funding-fixture.json"
@@ -191,8 +192,8 @@
     },
     {
       "id": "INV-J-010",
-      "status": "Pass",
-      "actual": "before=submitted; after=release_scheduled; sweepApproved=0; audit=true; rerunApproved=0; mail=0",
+      "status": "Not tested",
+      "actual": "IPS-42 demote: before=submitted; after=release_scheduled but auto1/auto2 scanned=0 approved=0 — sweep did not approve; transition provenance unproven",
       "evidence": [
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-j-010-auto-approval.json"
       ]
@@ -245,7 +246,7 @@
     {
       "id": "INV-D-007",
       "status": "Pass",
-      "actual": "media-kit page + view card http=200; inspected public card HTML",
+      "actual": "View Pass: media-kit page + public card http=200 inspected. Export: Not tested — no downloadable export proven",
       "evidence": [
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-d-007-media-kit.png",
         "/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/media/full-platform-audit/audit-continue/inv-d-007-media-kit-card.png",

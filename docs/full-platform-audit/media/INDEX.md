@@ -72,7 +72,7 @@ Fixture emails matching configured `AUDIT_*_EMAIL` secrets were replaced with `a
 | [nt-chase/](./nt-chase/) | IPS-25 Not-tested chase screenshots + JSON (incl. INV-J-020/021 jobs page) |
 | [dashboard-consistency/](./dashboard-consistency/) | **IPS-29 / RC-DASHBOARD** contradiction coverage (INV-DC-*); `results.json` / `reverify.json` |
 | [mail-sink/](./mail-sink/) | **IPS-31** isolated Mailpit restore (INV-I-019 + journey/catalog evidence); `results.json` |
-| [audit-continue/](./audit-continue/) | **IPS-40** claim draft / notify kinds / demoted NT jobs+actions; `results.json` |
+| [audit-continue/](./audit-continue/) | **IPS-40/42** claim draft / notify isolation / demoted NT; IPS-42 reconcile (J-010 NT; D-007 View/Export; N-* isolation); `results.json` |
 
 ## Text / machine logs (full set committed)
 

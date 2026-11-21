@@ -103,7 +103,8 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 
 ### `MAIL_SINK` (0)
 
-- **Cleared IPS-40 (2026-11-21):** Claim draft path + collab notification kind emails Pass on isolated Mailpit — see [execution/audit-continue-alongside-design-results.md](./execution/audit-continue-alongside-design-results.md). Former rows: `INV-R-017/018/019`, `INV-A-013/014/015`, `INV-N-010…017`, `INV-N-027`.
+- **Cleared IPS-40 (2026-11-21):** Claim draft path + collab notification kind emails on isolated Mailpit — see [execution/audit-continue-alongside-design-results.md](./execution/audit-continue-alongside-design-results.md). Former rows: `INV-R-017/018/019`, `INV-A-013/014/015`, `INV-N-010…017`, `INV-N-027`.
+- **IPS-42 note:** `INV-N-010…017` / `INV-N-027` remain Pass **narrowed** to delivery isolation via direct `notifyCollabFundingEvent` — not originating business-action emission. Not re-Blocked.
 - Deposit+mail combo remains under `DEPOSITS_CLOSED_AND_MAIL_SINK` (14).
 
 ### `UI_FIXTURE_GAP` (19)
