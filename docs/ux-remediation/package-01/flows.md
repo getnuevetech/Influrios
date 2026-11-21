@@ -30,7 +30,8 @@ Resolve readiness ONCE → one of:
  ready ─ identity verified AND provider payouts enabled   (saved account alone ≠ ready)
  restricted ─ provider requests a specific item / payouts paused
  unsupported ─ no payout route for the country
- unavailable ─ provider/status service unreachable → use last confirmed state + timestamp
+ unavailable ─ provider/status service unreachable → last confirmed state + timestamp
+ unavailable, no history ─ unreachable and never confirmed → “Status unavailable” (never infer ready/setup)
 ```
 
 | State | Earnings › Receive payments | Home | Hub card | Earnings badge |
@@ -41,10 +42,11 @@ Resolve readiness ONCE → one of:
 | restricted | Action required · the one item · item CTA | Banner “Payouts paused: one item needed” + same CTA | Action required | 1* |
 | unsupported | Not available in your country · See supported countries | Notice, no setup CTA | Not available | 0 |
 | unavailable | Last known + “Last confirmed …” · Try again | Last known (no new message) | Last known + “(last checked …)” | last known |
+| unavailable, no history | Status unavailable · Try again | **Nothing** | Status unavailable | 0 |
 
 \* only while active collaborations or unpaid earnings exist.
 
-*Rules:* pending never shows “Complete setup” or “Continue”. Restricted links straight to the outstanding item, and completed steps stay done. Unavailable never falls back to setup. Board: [earnings-payout](./designs/earnings-payout.html).
+*Rules:* pending never shows “Complete setup” or “Continue”. Restricted links straight to the outstanding item, and completed steps stay done. Unavailable never falls back to setup, and with no history shows only “Status unavailable”. Copy makes no fixed timing (“1–2 business days”) or “we'll email you” promises unless the provider supplies the timing and the notification flow exists. Board: [earnings-payout](./designs/earnings-payout.html).
 
 ---
 
@@ -64,7 +66,11 @@ Waiting for your reply (REQUESTED/VIEWED)
  │                     ├─ Ask a question ─► Question sent
  │                     └─ Decline ─► You declined
  ├─ Ask a question (note ≥ 8 chars) ─► Question sent (NEGOTIATING) ─ business to act
- │                     └─ Decline ─► You declined
+ │                     ├─ Decline ─► You declined
+ │                     └─ [business answers] ─► {Business} replied ─ YOUR turn again
+ │                             ├─ I'm interested ─► Interested (RESPONDED)   ← needs defect P1-D1 fixed
+ │                             ├─ Ask another question ─► Question sent
+ │                             └─ Decline ─► You declined
  ├─ Decline (confirm) ─► You declined (DECLINED)
  ├─ [business] Accept ─► Accepted (ACCEPTED → COLLABORATION_DRAFTED) ─► Review agreement
  ├─ [business] Withdraw ─► Withdrawn
@@ -75,13 +81,14 @@ Waiting for your reply (REQUESTED/VIEWED)
 |------------|-----------------|--------------------------------|----------------------|--------------------------------|
 | Pending → Interested | Stays, label “Waiting for {business}” | −1 | −1 | Clears |
 | Pending → Question sent | Stays, label “Waiting for {business}” | −1 | −1 | Clears |
-| Business replies to question | Unchanged | Messages unread +1 (not an invitation count) | unchanged | New message notice |
+| Business answers question | Label “Waiting for your reply” | +1 (your turn again) | +1 | Action required again |
+| Replied → Interested / another question / Decline | As above | −1 | −1 | Clears |
 | Any → Accepted | Leaves Invitations → Active (agreement ready) | Agreement item added | Agreement task +1 | Agreement notice |
 | Any → Declined / Expired / Withdrawn | Leaves open list → Closed | −1 if it was pending | −1 if it was pending | Clears |
 
 *Rules:*
 - Asking a question does **not** complete the invitation.
-- “I'm interested” is not offered after a question (no NEGOTIATING → RESPONDED transition in product); changing that is a product decision.
+- After the business answers, “I'm interested” is offered. **Defect P1-D1:** code has no NEGOTIATING → RESPONDED transition today; the code must add it. The limitation is not adopted as UX.
 - Opening or reading the invitation clears nothing.
 - Counts change only after the server confirms the persisted status.
 
@@ -99,9 +106,13 @@ The invitation stops counting as waiting on Accept or Decline. “No further act
 ### D3. Failure, retry, concurrency
 
 ```
-Submit reply → buttons disabled (sending)
+Submit reply (with idempotency key K) → buttons disabled (sending)
   ├─ success → toast “Reply sent” · status updates in place · counts refresh from server
-  ├─ network/5xx → inline “We couldn't send your reply. Nothing changed.” · buttons re-enabled · Try again resubmits
+  ├─ timeout / network error (server may have saved it)
+  │     → “We couldn't confirm your response. Checking whether it was saved…”
+  │     → re-read invitation status
+  │          ├─ saved → show saved state as success (no second submit)
+  │          └─ still pending → “Your response wasn't saved.” · Try again (same K → stored once)
   └─ server: no longer open (withdrawn/expired meanwhile)
         → popup content swaps to “This invitation was withdrawn … Nothing was signed or funded.”
         → list, badge, attention refetch; nothing optimistic to undo
@@ -127,7 +138,7 @@ Board: [notifications](./designs/notifications.html).
 
 ## F. Mobile authenticated chrome (MOB1)
 
-3 chips + More → drawer with every sidebar destination, same order, labels, icons and badges. More shows the badge sum for items not in the chips. Board: [mobile-auth-nav](./designs/mobile-auth-nav.html).
+Fixed four-slot nav bar (3 destinations + More, equal widths, no horizontal scroll; More always fully visible at 320–430 px) → drawer with every sidebar destination, same order, labels, icons and badges. More shows the badge sum for items not in the bar. Board: [mobile-auth-nav](./designs/mobile-auth-nav.html).
 
 ---
 
@@ -156,7 +167,8 @@ Business decisions persist before counts change. Refresh and re-login keep the b
 task identity = (collaboration/funding id, milestone id | invitation id, action kind)
 events for an identity with an open row → merge into that row (latest date, “N updates”)
 different identity → separate row (e.g. Milestone 1 vs Milestone 2)
-task completes → row + all merged notices clear
+task completes → row leaves To do; action-required flag clears on its notices
+                 notices stay in history; read/unread unchanged; unrelated notices untouched
 ```
 
 Board: [action-inbox](./designs/action-inbox.html).

@@ -1,7 +1,7 @@
 # Master remediation specification
 
 **Scope today:** Package 1 rules (nav · dashboards · payout readiness · invitations · notifications · inbox dedupe · terminology), plus the master finance scope (§12). Expand when Packages 2–5 land.
-**Revision:** 2026-11-21. Corrects the six Ola review findings on Package 1 (see [package-01/README.md § Finding checklist](./package-01/README.md#finding-to-file-checklist)).
+**Revision:** 2026-11-21 (round 2). Corrects the six Ola review findings and the six round-2 follow-ups on Package 1 (see [package-01/README.md § Finding checklist](./package-01/README.md#finding-to-file-checklist)).
 **Builds on:** [#533 shared-ui-spec](https://github.com/getnuevetech/Influrios/blob/cursor/ux-design-package-e893/docs/ux-design-package/shared-ui-spec.md) and [navigation-map](https://github.com/getnuevetech/Influrios/blob/cursor/ux-design-package-e893/docs/ux-design-package/navigation-map.md). For what #533 still governs, see its [supersession index](https://github.com/getnuevetech/Influrios/blob/cursor/ux-design-package-e893/docs/ux-design-package/supersession-index.md).
 **Audit feed:** RC-DASHBOARD · INV-DC-* · INV-C-014 · INV-N-004 ([#539](https://github.com/getnuevetech/Influrios/pull/539))
 **Constraints:** Live deposits closed · Agency deferred · Centered popups for list detail (one explicit exception: §12 ledger rows) · Original influencer card unchanged · No implementation until the package is accepted
@@ -57,15 +57,18 @@ A saved bank account alone never makes the state Ready. Ready requires identity 
 | State | When | Message (customer copy) | Primary CTA | Home | Hub label | Earnings badge |
 |-------|------|------------------------|-------------|------|-----------|----------------|
 | **Setup required** | Identity or payout account not started/submitted | Add your identity and payout account to receive collaboration payouts. | Set up payouts | Lavender banner + CTA | Set up payouts | 1* |
-| **Verification pending** | Everything submitted; provider/KYC reviewing | We're checking your details. This usually takes 1–2 business days. You don't need to do anything. | View details (secondary) | Gray notice, **no CTA** | In review | 0 |
+| **Verification pending** | Everything submitted; provider/KYC reviewing | We're checking your details. You don't need to do anything right now. | View details (secondary) | Gray notice, **no CTA** | In review | 0 |
 | **Ready** | Identity verified + provider payouts enabled | You can receive payouts to {method ••last4}. | Update payout account (secondary) | **None** | Ready | 0 |
 | **Action required** (restricted) | Provider/KYC requests a specific item, or payouts paused | Names the **one** outstanding item | Item-specific (e.g. Upload ID photo) | Rose banner + same CTA | Action required | 1* |
-| **Not available in your country** | Corridor has no payout route | Collaboration payouts aren't available in {country} yet. We'll email you as soon as they open. | See supported countries | Gray notice, no setup CTA | Not available | 0 |
-| **Temporarily unavailable** | Provider/status service unreachable | We can't check your payout status right now. Last confirmed: {state}, {timestamp}. | Try again | Unchanged from last known | Last known + “(last checked …)” | Last known (never raised) |
+| **Not available in your country** | Corridor has no payout route | Collaboration payouts aren't available in {country} yet. | See supported countries | Gray notice, no setup CTA | Not available | 0 |
+| **Temporarily unavailable** (last confirmed state exists) | Provider/status service unreachable | We can't check your payout status right now. Last confirmed: {state}, {timestamp}. | Try again | Unchanged from last known | Last known + “(last checked …)” | Last known (never raised) |
+| **Status unavailable** (no confirmed history) | Unreachable **and** no previously confirmed state | We can't check your payout status right now. Please try again in a moment. | Try again | **None** | Status unavailable | 0 |
 
 \* Only while the influencer has active collaborations or unpaid earnings.
 
-Rules: completed steps always render as done. Verification pending never shows “Complete setup” or “Continue”. Temporarily unavailable never falls back to Setup required.
+Rules: completed steps always render as done. Verification pending never shows “Complete setup” or “Continue”. Unavailable never infers a state: with history it shows the last confirmed one; without history it shows “Status unavailable”, never Ready or Setup required.
+
+**Copy promises:** no fixed review time (e.g. “1–2 business days”) and no “we'll email/notify you” unless (a) the provider supplies the timing for that account and (b) a notification flow for that event is implemented and tested. Until then, point to where status appears (“Check Earnings & Payouts for the latest status”).
 
 ### 2.2 Invitation states (finding 4)
 
@@ -73,6 +76,7 @@ Rules: completed steps always render as done. Verification pending never shows �
 |-------|----------------|-------------|-----------------|-------|
 | Waiting for your reply | REQUESTED / VIEWED | Invitee | I'm interested · Ask a question · Decline | violet |
 | Question sent | NEGOTIATING | Business | Decline · View conversation | blue |
+| {Business} replied | NEGOTIATING + unread business answer | **Invitee** | I'm interested · Ask another question · Decline | violet |
 | Interested | RESPONDED | Business | Ask a question · Decline | green |
 | Accepted | ACCEPTED → COLLABORATION_DRAFTED | Invitee (agreement) | Review agreement | green |
 | You declined | DECLINED | — | Close | gray |
@@ -81,7 +85,11 @@ Rules: completed steps always render as done. Verification pending never shows �
 | Team · waiting for your reply | member `invited` | Invitee | Accept invitation · Decline | violet |
 | Team · you accepted | member `accepted`, proposal `partial` | Teammates | — | green |
 
-Semantics follow `APPLICATION_TRANSITIONS` and `inviteeResponsePlan`: “I'm interested” records interest (RESPONDED) and never accepts work. Asking a question (NEGOTIATING) does **not** complete the invitation. Only the business moves an invitation to ACCEPTED. There is no NEGOTIATING → RESPONDED path, so “I'm interested” is not offered after a question; changing that is a product decision. **Forbidden pairing:** a pending label alongside “No further action needed”.
+Semantics follow `APPLICATION_TRANSITIONS` and `inviteeResponsePlan`: “I'm interested” records interest (RESPONDED) and never accepts work. Asking a question (NEGOTIATING) does **not** complete the invitation. Only the business moves an invitation to ACCEPTED.
+
+**Continuation after a question:** when the business answers, the invitation returns to the invitee's turn (“{Business} replied”) and counts again in the banner, attention and badge until the invitee responds. “I'm interested” is available there.
+
+**Defect P1-D1 (code, not UX):** `APPLICATION_TRANSITIONS` has no NEGOTIATING → RESPONDED transition, so today interest can't be recorded after a question. The code must add the transition (still never accepting work). Code limitations are logged as defects, not adopted as the desired UX. **Forbidden pairing:** a pending label alongside “No further action needed”.
 
 ### 2.3 Lifecycle vocabulary
 
@@ -109,14 +117,21 @@ Badges keep their last known value while loading. Counts never decrement optimis
 | Context | Enabled when | Otherwise |
 |---------|--------------|-----------|
 | Home “Review invitation” | ≥1 invitation waiting for your reply | Hidden |
-| I'm interested | REQUESTED / VIEWED | Hidden |
-| Ask a question | REQUESTED / VIEWED / RESPONDED | Hidden |
+| I'm interested | REQUESTED / VIEWED, or NEGOTIATING after the business replied (needs P1-D1) | Hidden |
+| Ask a question | REQUESTED / VIEWED / RESPONDED / NEGOTIATING after the business replied | Hidden |
 | Decline (marketplace) | REQUESTED / VIEWED / RESPONDED / NEGOTIATING | Hidden |
 | Accept invitation / Decline (team) | Member `invited` and proposal `sent`/`partial` | Hidden; status text shown |
 | Reply buttons while sending | — | Disabled (prevents double submit) |
 | Payout primary CTA | Per §2.1 | Never shown in Pending / Ready (secondary only) / Unavailable (Try again only) |
 
 Destructive buttons (Decline, Not a fit) use the rose outline.
+
+### 4.1 Submitting a response (reliability)
+
+- Every response carries an **idempotency key**. The server treats a repeat of the same intent on the same invitation as a no-op and returns the saved state, so retries are duplicate-safe.
+- **Timeout or network error:** never say “Nothing changed”; the server may have saved it. Show “We couldn't confirm your response” and re-read the invitation status. If saved, show the saved state as success. If not saved, show “Your response wasn't saved” + Try again (same key).
+- **Explicit server rejection** (withdrawn/expired): show the rejection state. Only here may the copy say nothing was signed or funded.
+- Counts change only from server-confirmed state.
 
 ---
 
@@ -125,6 +140,7 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 1. Unread ≠ action required. These stay as separate filters.
 2. Opening an **unread** notice marks it read and decreases the bell by 1. Opening a read notice changes nothing.
 3. Action required clears only when the underlying task completes, or the invitation is withdrawn or expires.
+3a. Clearing action-required **never deletes a notice and never changes read state**. Notices stay in history (All); an unopened notice stays Unread. Unrelated notices and messages are untouched.
 4. Notice detail opens as a centered popup (desktop) or sheet (mobile). The primary CTA goes to the task.
 5. The Action required filter counts deduplicated live tasks only.
 
@@ -134,7 +150,7 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 
 - Desktop: left sidebar exactly as `account-shell.tsx` (labels, order, icons).
 - **Terminology (Package 1, from #533 TERM-CREATOR-001):** customer-facing navigation and CTAs say **Influencer**, never “Creator”. Business sidebar: **Discover Influencers**. Search placeholder: “Search influencers, campaigns, or anything...”. Internal identifiers (`creatorSlug`, routes) are unchanged.
-- Mobile (signed-in): 3 primary chips + **More**. More opens a drawer listing every sidebar destination with the same badges. More shows the sum of badges for destinations not in the chip row. Bell in the top bar. Focus trap, Esc, `aria-expanded`.
+- Mobile (signed-in): a **fixed four-slot nav bar** (3 primary destinations + **More**, equal widths, icon + label). It never scrolls horizontally; More is always fully visible and reachable at 320–430 px. More opens a drawer listing every sidebar destination with the same badges, and shows the sum of badges for destinations not in the bar. Bell in the top bar. Focus trap, Esc, `aria-expanded`.
 - Public mobile: #533 mobile-public-nav remains valid.
 - Agency deferred.
 
@@ -145,7 +161,7 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 - **Task identity** = (collaboration/funding id, milestone id *or* invitation id, action kind).
 - One open row per task identity. Repeated events for the same task (reminders, re-sent notices, status pings) merge into that row, which shows the latest date and “N updates”.
 - Genuinely distinct tasks stay separate: different milestones, different invitations, or different action kinds on the same collaboration.
-- Completing the task clears the row and every merged notice together.
+- Completing the task removes the row from To do and clears the **action-required** flag on that task's notices. The notices remain in Notifications history with their own read/unread state; nothing is deleted or silently marked read, and unrelated unread messages/notices are untouched.
 - Badges and Needs your attention count deduplicated tasks, never raw notices.
 
 ---
@@ -178,20 +194,21 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 | DB1 | Home waiting-for-reply count = hub waiting subset = Collaborations badge invite portion; hub open count includes question-sent/interested |
 | DB2 | Earnings, home, hub and badge show the same one of six payout states with the §2.1 copy/CTA; INV-DC-002, INV-C-014, INV-N-004 |
 | DB2a | Saved account without provider verification is **not** Ready |
-| DB2b | Verification pending shows no setup/continue CTA anywhere |
+| DB2b | Verification pending shows no setup/continue CTA anywhere, and no unsupported timing/email promise |
 | DB2c | Provider unreachable shows last known state + timestamp; badge not raised |
+| DB2d | Provider unreachable with no confirmed history shows “Status unavailable”; never Ready or Setup required |
 | DB3 | Home Active = hub Active |
 | DB4 | Every invitation state in §2.2 shows its actions/label; badge/attention clear on persisted transition only; INV-DC-015, INV-DC-012 |
-| DB4a | Ask a question leaves the invitation open (NEGOTIATING), listed as waiting for the business |
-| DB4b | Send failure: no count change, Try again works; concurrent withdrawal: popup shows withdrawn copy and counts refresh |
+| DB4a | Ask a question leaves the invitation open (NEGOTIATING), waiting for the business; after the business answers it returns to the invitee's turn with I'm interested · Ask another question · Decline (needs P1-D1) |
+| DB4b | Timeout: “We couldn't confirm your response” → status re-read → saved state or safe retry; a retried response is stored once; concurrent withdrawal shows withdrawn copy and counts refresh |
 | DB5 | Open unread decreases bell; action required unchanged by read alone |
 | DB6 | Refresh + re-login + desktop↔mobile keep agreed counts |
 | DB7 | Business dashboard: attention = Collaborations badge + Contracts badge; every attention row opens a working popup/sheet; empty/loading/error per board |
-| INB1 | ≤1 open inbox row per task identity; distinct milestones never merge (A-INBOX-01) |
+| INB1 | ≤1 open inbox row per task identity; distinct milestones never merge (A-INBOX-01); completing a task keeps its notices in history and leaves read state unchanged |
 | TERM1 | No customer-facing “Creator(s)” in member navigation or CTAs |
 | CARD1 | Home card is the live component, fully visible, proportional at desktop and 390 px |
 | VIS1 | No serif text; fonts, icons, colors per §0; no internal notes in UI |
-| MOB1 | Mobile More drawer exposes all destinations + badges matching desktop |
+| MOB1 | Mobile nav bar shows More fully at 320–430 px with no horizontal scroll; drawer exposes all destinations + badges matching desktop |
 
 ---
 
@@ -209,7 +226,7 @@ Do not invent commercial prices in designs. Do not reopen live deposits.
 ## 12. Admin contract ledger + gateway/bank reconciliation (master finance scope)
 
 **Status:** scope requirement. Design in **Package 5 (admin finance)**; provider/bank evidence under the separately approved **R6** gate. No implementation. Live deposits stay closed.
-**Design reference:** the **approved ledger mockup** is the visual reference. ⚠️ *Link pending.* The mockup was approved in review, but it is not yet committed anywhere in the repository. Commit it to `docs/ux-remediation/package-05/reference/` and link it here before Package 5 design starts.
+**Design reference:** approved mockup [`package-05/reference/contract-ledger-and-bank-reconciliation-dashboard.png`](./package-05/reference/contract-ledger-and-bank-reconciliation-dashboard.png) ([notes](./package-05/reference/README.md)). Its figures are **illustrative only** and must not become hardcoded payment, fee, tax or allocation rules.
 **Code:** existing code (`LedgerEntry`, `/admin/marketplace`, `/admin/finance`, `ReconciliationCaseV4`, fee snapshots) informs implementation. It **does not reduce** any requirement below.
 
 ### 12.1 Access

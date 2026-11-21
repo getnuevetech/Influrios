@@ -10,9 +10,13 @@ STATES = [
      '<span class="btn danger sm">Decline</span><span class="btn sec sm">Ask a question</span><span class="btn pri sm">I\'m interested</span>',
      "REQUESTED / VIEWED"),
     ("question", "Question sent", "blue",
-     "You asked: “Can the video go live in December?” We'll notify you when Northwind Studio replies.",
+     "You asked: “Can the video go live in December?” Northwind Studio's reply will appear here and in Messages.",
      '<span class="btn danger sm">Decline</span><span class="btn sec sm">View conversation</span>',
-     "NEGOTIATING"),
+     "NEGOTIATING · business to act"),
+    ("replied", "Northwind Studio replied", "violet",
+     "“Yes, December works. Final cut by 15 Dec.” Let Northwind Studio know how you'd like to continue.",
+     '<span class="btn danger sm">Decline</span><span class="btn sec sm">Ask another question</span><span class="btn pri sm">I\'m interested</span>',
+     "NEGOTIATING + business reply · your turn (needs P1-D1)"),
     ("interested", "Interested", "green",
      "You told Northwind Studio you're interested. This isn't an agreement yet. They'll send one if they choose you.",
      '<span class="btn danger sm">Decline</span><span class="btn sec sm">Ask a question</span>',
@@ -43,9 +47,12 @@ TEAM = [
      '<span class="btn sec sm">Close</span>', "member accepted · proposal partial"),
 ]
 EDGE = [
-    ("failure", "Reply not sent", "rose",
-     "We couldn't send your reply. Nothing changed. Check your connection and try again.",
-     '<span class="btn sec sm">Close</span><span class="btn pri sm">' + i("refresh", "sm") + 'Try again</span>', "network / 5xx"),
+    ("unconfirmed", "Checking your response", "amber",
+     "We couldn't confirm your response. Checking whether it was saved…",
+     '<span class="btn sec sm dis">Close</span><span class="btn pri sm dis">Checking…</span>', "timeout / network: re-read status"),
+    ("not-saved", "Response not saved", "rose",
+     "Your response wasn't saved. You can try again; it won't be sent twice.",
+     '<span class="btn sec sm">Close</span><span class="btn pri sm">' + i("refresh", "sm") + 'Try again</span>', "re-read: still pending → safe retry (same key)"),
     ("concurrent", "This invitation was withdrawn", "gray",
      "Northwind Studio withdrew it before your reply arrived. Nothing was signed or funded.",
      '<span class="btn pri sm">Back to invitations</span>', "reply rejected: WITHDRAWN"),
@@ -74,7 +81,8 @@ def build_invite():
     mob = phone("inf", "collab", {"collab": 1}, 3, b_home_hub.hub_content(True), overlay=msheet)
     rows = [
         ("Waiting for your reply", "Invitee", "Interested · Ask a question · Decline", "Listed", "Yes: banner, stat, attention, badge"),
-        ("Question sent", "Business", "Decline · View conversation", "Listed: “Waiting for Northwind Studio”", "No. Business reply creates a Messages item, not an invitation badge"),
+        ("Question sent", "Business", "Decline · View conversation", "Listed: “Waiting for Northwind Studio”", "No"),
+        ("Business replied (to your question)", "Invitee", "I'm interested · Ask another question · Decline", "Listed: “Waiting for your reply”", "Yes, again, until you respond"),
         ("Interested", "Business", "Ask a question · Decline", "Listed: “Waiting for Northwind Studio”", "No"),
         ("Accepted", "Invitee (agreement)", "Review agreement", "Leaves Invitations → Active (agreement ready)", "Agreement item on home + Contracts"),
         ("Declined / Expired / Withdrawn", "Nobody", "None (Close)", "Leaves open list → Closed filter", "No; related notice action-required clears"),
@@ -89,19 +97,21 @@ def build_invite():
 {notes("Transitions (finding 4) · product semantics",[
  "Marketplace invitations follow <code>APPLICATION_TRANSITIONS</code>: “I'm interested” → RESPONDED, Ask a question → NEGOTIATING, Decline → DECLINED. None of these accepts work or drafts a contract. Only the business moves it to ACCEPTED.",
  "Asking a question <b>does not complete</b> the invitation. It stays open, with the business to act next. Decline is still available.",
- "“I'm interested” is not shown again after a question (no NEGOTIATING → RESPONDED path). If Ola wants it, that's a product change to log, not something to put in the board.",
+ "After the business answers, the invitation returns to your turn (“Northwind Studio replied”) with <b>I'm interested · Ask another question · Decline</b>. It counts again in the banner, attention and badge until you respond.",
+ "<b>Defect P1-D1 (code):</b> today there's no NEGOTIATING → RESPONDED transition, so interest can't be recorded after a question. The design is the target; the code must add that transition. The limitation is not adopted as UX.",
  "Team invitations only offer Accept / Decline (team-proposal member status). No Interested or question.",
  "Badge, banner and attention clear <b>when the persisted status leaves the invitee's turn</b>. Opening or reading the invitation alone doesn't clear them.",
 ])}
 {notes("Failure, retry, concurrency",[
- "Send failure: the popup stays open, an inline error says nothing changed, the buttons stay enabled, and counts don't move. Try again resubmits the same reply.",
+ "Timeout or network error: don't claim nothing changed (the server may have saved it). Show “We couldn't confirm your response”, re-read the invitation status, then show either the saved state (success) or “Your response wasn't saved” with Try again.",
+ "Retries are duplicate-safe: each reply carries an idempotency key, and the server treats a repeat of the same intent on the same invitation as a no-op returning the saved state.",
  "Buttons disable while sending, to prevent a double submit.",
  "Concurrent withdrawal or expiry: the server rejects the reply (“no longer open”). The popup swaps to the withdrawn message, and the list, badge and attention refresh from the server. No optimistic decrement before success.",
 ])}
 </div></div>
 <div class="section-title">Marketplace invitation states (popup status area)</div>
 <div class="grid-3">{"".join(mini(s) for s in STATES)}</div>
-<div class="section-title">Team invitation · failure · concurrent withdrawal</div>
+<div class="section-title">Team invitation · unconfirmed response · safe retry · concurrent withdrawal</div>
 <div class="grid-3">{"".join(mini(s) for s in TEAM + EDGE)}</div>
 <div class="section-title">Who acts next, and what clears (also in flows.md §D)</div>
 <table class="spec-table"><thead><tr><th>State</th><th>Next to act</th><th>Invitee actions</th><th>Hub Invitations tab</th><th>Counts toward home banner / attention / Collaborations badge</th></tr></thead><tbody>{table}</tbody></table>"""
@@ -138,6 +148,7 @@ def build_notifications():
 {notes("Rules (DB5 · finding 4)",[
  "Opening an <b>Unread</b> notice marks it read: bell 3 → 2. Opening a read notice changes nothing.",
  "“Action required” is a filter on the live task, not on read state. It clears only when the invitation leaves the invitee's turn (Interested, question, decline, accept), withdrawn or expired.",
+ "Clearing action-required never deletes a notice and never changes read state. The notice stays in All, and stays Unread if it was never opened. Unrelated notices are untouched.",
  "Filter label “Action required 1” counts live tasks only (matches the Collaborations badge). Historical kind counts aren't shown as live attention.",
  "Popup CTA routes to the invitation popup in the hub (same centered pattern). On mobile the notice opens as a full-screen sheet.",
 ])}

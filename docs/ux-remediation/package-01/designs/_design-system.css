@@ -244,6 +244,14 @@ table.t td small { color: var(--muted); font-size: 12px; }
 .drawer { position: absolute; top: 0; bottom: 0; right: 0; width: 300px; background: #fff; z-index: 10; display: flex; flex-direction: column; box-shadow: -12px 0 40px rgba(17,26,90,.2); }
 .drawer .nav { padding: 8px 12px; }
 
+/* Mobile nav: fixed 4 equal slots (3 destinations + More); fits 390 px with no scroll */
+.m-nav { display: grid; grid-template-columns: repeat(4, 1fr); background: #fff; border-bottom: 1px solid #e6ecf7; padding: 6px 6px 8px; }
+.m-tab { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; color: #475467; padding: 6px 2px; border-radius: 12px; min-width: 0; text-align: center; }
+.m-tab.on { background: var(--lavender); color: var(--indigo); }
+.m-tab.on .ico { color: var(--violet); }
+.m-ic { position: relative; display: inline-flex; }
+.m-ic .nb { position: absolute; top: -6px; right: -12px; margin: 0; height: 16px; min-width: 16px; font-size: 10px; border: 2px solid #fff; }
+
 /* Mini panels for state matrices */
 .mini { width: 400px; background: var(--canvas); border: 1px solid #d9def0; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
 .mini .card { padding: 14px; border-radius: 16px; }

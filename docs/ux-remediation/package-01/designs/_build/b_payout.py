@@ -13,10 +13,10 @@ STATES = [
          home=("lav", "wallet", "Set up payouts to get paid", "Add your identity and payout account before your first payout.", '<span class="btn pri">Set up payouts</span>'),
          hub="Set up payouts", badge=1),
     dict(key="pending", label="Verification pending", pill="blue",
-         msg="We're checking your details. This usually takes 1–2 business days. You don't need to do anything.",
-         steps=[("done", "Identity submitted", "Sent 19 Nov"), ("wait", "Payout account in review", "Local bank ••4821 · We'll email you when it's done")],
+         msg="We're checking your details. You don't need to do anything right now.",
+         steps=[("done", "Identity submitted", "Sent 19 Nov"), ("wait", "Payout account in review", "Local bank ••4821 · Submitted 19 Nov")],
          cta='<span class="btn sec">View details</span>',
-         home=("gray", "clock", "Payout verification in progress", "We'll let you know when you can receive payouts.", ""),
+         home=("gray", "clock", "Payout verification in progress", "Check Earnings & Payouts for the latest status.", ""),
          hub="In review", badge=0),
     dict(key="ready", label="Ready", pill="green",
          msg="You can receive payouts to Local bank ••4821.",
@@ -30,16 +30,21 @@ STATES = [
          home=("rose", "alert", "Payouts paused: one item needed", "Upload a clearer ID photo so we can send your earnings.", '<span class="btn pri">Upload ID photo</span>'),
          hub="Action required", badge=1),
     dict(key="unsupported", label="Not available in your country", pill="gray",
-         msg="Collaboration payouts aren't available in Ghana yet. We'll email you as soon as they open.",
+         msg="Collaboration payouts aren't available in Ghana yet.",
          steps=[("off", "Payouts not offered in Ghana", "Your profile, card, and invitations still work")],
          cta='<span class="btn sec">See supported countries</span>',
-         home=("gray", "globe-off", "Payouts aren't available in Ghana yet", "We'll email you when they open.", ""),
+         home=("gray", "globe-off", "Payouts aren't available in Ghana yet", "Your profile, card and invitations still work.", ""),
          hub="Not available", badge=0),
     dict(key="unavailable", label="Status temporarily unavailable", pill="amber",
          msg="We can't check your payout status right now. Last confirmed: Ready, 20 Nov 14:02.",
          steps=[("done", "Identity verified", "Last confirmed 20 Nov"), ("done", "Payout account verified", "Last confirmed 20 Nov")],
          cta=f'<span class="btn sec">{i("refresh","sm")}Try again</span>',
          home=None, hub="Ready (last checked 20 Nov)", badge=0),
+    dict(key="unavailable-none", label="Status unavailable", pill="gray",
+         msg="We can't check your payout status right now. Please try again in a moment.",
+         steps=[("off", "Payout status unavailable", "No confirmed status to show yet")],
+         cta=f'<span class="btn sec">{i("refresh","sm")}Try again</span>',
+         home=None, hub="Status unavailable", badge=0),
 ]
 ICON = {"done": "check", "wait": "clock", "todo": "plus", "bad": "alert", "off": "globe-off"}
 
@@ -86,10 +91,12 @@ def build():
  "<b>Action required</b> names the one outstanding item and links straight to it. Steps already done stay done.",
  "<b>Unsupported</b>: no setup CTA, because there is nothing the user can do. Badge 0.",
  "<b>Temporarily unavailable</b> (provider unreachable): show the last confirmed state with its timestamp and Try again. Never fall back to Setup required, and never raise the badge.",
+ "<b>No confirmed history</b> + unreachable: show “Status unavailable”. Never infer Ready or Setup required. No home message, badge 0.",
+ "Copy makes no timing or email promises. Add them only when the provider gives a timing and a notification flow is implemented.",
  "Earnings badge = 1 only for Setup required and Action required, and only while the user has active collaborations or unpaid earnings.",
 ])}
 </div></div>
-<div class="section-title">All six states · Earnings · Home · Hub · Sidebar</div>
+<div class="section-title">All six states (+ unavailable with no history) · Earnings · Home · Hub · Sidebar</div>
 <div class="grid-3">{"".join(mini(s) for s in STATES)}</div>
 <div class="section-title">State table (also in master-spec §2)</div>
 <table class="spec-table"><thead><tr><th>State</th><th>Message</th><th>Primary CTA</th><th>Home</th><th>Hub label</th><th>Earnings badge</th></tr></thead><tbody>{rows}</tbody></table>"""

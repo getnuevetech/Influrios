@@ -37,13 +37,14 @@ def drawer(role, active, badges):
 
 
 def build_mobile_nav():
-    inf = phone("inf", "dash", {"collab": 1, "earn": 1}, 3, b_home_hub.attention_card(), overlay=drawer("inf", "dash", {"collab": 1, "earn": 1}))
-    biz = phone("biz", "dash", {"collab": 2, "contracts": 1}, 2, b_business.attention(True), overlay=drawer("biz", "dash", {"collab": 2, "contracts": 1}), fid="mobile-business")
+    inf = phone("inf", "dash", {"collab": 1, "earn": 1}, 3, b_home_hub.attention_card(), overlay=drawer("inf", "dash", {"collab": 1, "earn": 1}), more_open=True)
+    biz = phone("biz", "dash", {"collab": 2, "contracts": 1}, 2, b_business.attention(True), overlay=drawer("biz", "dash", {"collab": 2, "contracts": 1}), fid="mobile-business", more_open=True)
     body = f"""<div class="row">
 {frame("Influencer · More drawer open", inf)}
 {frame("Business · More drawer open", biz)}
 <div>{notes("MOB1",[
- "Chip row keeps the 3 most used destinations + <b>More</b>. More carries the sum of badges for items not in the chip row (influencer: Earnings is a chip, so More shows none; business: Contracts is a chip).",
+ "Fixed nav bar: 3 most used destinations + <b>More</b> in four equal slots. It never scrolls horizontally, and More is always fully visible at 320–430 px.",
+ "More carries the sum of badges for destinations not in the bar (influencer: Earnings is in the bar; business: Contracts is in the bar).",
  "Drawer lists every sidebar destination in the same order, labels, icons and badges as desktop, including Billing &amp; Plans and Collaboration Payments.",
  "Business label is “Discover Influencers”.",
  "Focus trap, Esc closes, <code>aria-expanded</code> on More. The bell stays in the top bar.",
@@ -97,7 +98,7 @@ def build_inbox():
  "One row per <b>task identity</b> = (collaboration/funding id, milestone id or invitation id, action kind).",
  "Genuinely distinct tasks stay separate: Milestone 1 and Milestone 2 of the same collaboration are two rows.",
  "Repeated events for the same task (reminders, re-sent notices, status pings) merge into the one row. The row shows the latest date and “N updates”.",
- "A task row disappears when the task completes, and all its merged notices clear together.",
+ "When the task completes, the row leaves To do and the <b>action-required</b> flag clears on that task's notices. The notices <b>stay in Notifications history</b>, keeping their own read/unread state. Nothing is deleted, and unrelated unread messages or notices are not marked read.",
  "Counts: Collaborations badge and Needs your attention count deduplicated tasks, never raw notices.",
  "Acceptance A-INBOX-01: ≤ 1 open row per task identity; two distinct milestones never collapse.",
 ])}</div></div>"""

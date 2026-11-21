@@ -86,28 +86,35 @@ def app(role, active, badges, bell, content, overlay="", tall=False, fid="deskto
 
 
 M_CHIPS = {
-    "inf": [("dash", "Dashboard"), ("collab", "Collaborations"), ("earn", "Earnings")],
-    "biz": [("dash", "Dashboard"), ("collab", "Collaborations"), ("contracts", "Contracts")],
+    "inf": [("dash", "Dashboard", "home"), ("collab", "Collaborations", "handshake"), ("earn", "Earnings", "wallet")],
+    "biz": [("dash", "Dashboard", "home"), ("collab", "Collaborations", "handshake"), ("contracts", "Contracts", "file-text")],
 }
 
 
-def phone(role, active, badges, bell, content, overlay="", tall=False, fid="mobile"):
-    cnt = f'<span class="cnt">{bell}</span>' if bell else ""
-    chips = []
-    for key, label in M_CHIPS[role]:
+def m_nav(role, active, badges, more_open=False):
+    """Fixed 4-slot nav: 3 destinations + More. Never scrolls, never clips."""
+    cells = []
+    for key, label, icon in M_CHIPS[role]:
         b = badges.get(key)
         nb = f'<span class="nb">{b}</span>' if b else ""
         on = " on" if key == active else ""
-        chips.append(f'<span class="m-chip{on}">{label}{nb}</span>')
-    hidden = sum(v for k, v in badges.items() if k not in dict(M_CHIPS[role]))
-    more_b = f'<span class="nb">{hidden}</span>' if hidden else ""
-    chips.append(f'<span class="m-chip">{i("menu", "sm")}More{more_b}</span>')
+        cells.append(f'<span class="m-tab{on}"><span class="m-ic">{i(icon)}{nb}</span>{label}</span>')
+    keys = {k for k, _, _ in M_CHIPS[role]}
+    hidden = sum(v for k, v in badges.items() if k not in keys)
+    nb = f'<span class="nb">{hidden}</span>' if hidden else ""
+    on = " on" if more_open else ""
+    cells.append(f'<span class="m-tab{on}" aria-expanded="{str(more_open).lower()}"><span class="m-ic">{i("menu")}{nb}</span>More</span>')
+    return f'<nav class="m-nav" aria-label="Main">{"".join(cells)}</nav>'
+
+
+def phone(role, active, badges, bell, content, overlay="", tall=False, fid="mobile", more_open=False):
+    cnt = f'<span class="cnt">{bell}</span>' if bell else ""
     cls = "phone tall" if tall else "phone"
     return (
         f'<div class="{cls}" id="{fid}"><div class="m-top"><div class="wordmark"><span class="mark">∞</span>Influrios</div>'
         f'<div class="grow"></div><span class="iconbtn" aria-label="Notifications, {bell or 0} unread">{i("bell")}{cnt}</span>'
         f'<span class="ava" style="width:36px;height:36px">{WHO[role][2]}</span></div>'
-        f'<div class="m-chips">{"".join(chips)}</div><div class="m-content">{content}</div>{overlay}</div>'
+        f'{m_nav(role, active, badges, more_open)}<div class="m-content">{content}</div>{overlay}</div>'
     )
 
 

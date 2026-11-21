@@ -1,6 +1,6 @@
 # Package 1 — Shared navigation, dashboards, payout readiness, invitations, notifications
 
-**Status:** Corrected after Ola review (2026-11-21). Design only, not implemented. Re-submitted for review.
+**Status:** Corrected after Ola review and round-2 targeted review (2026-11-21). Design only, not implemented. Not approved as a whole; re-submitted for review.
 **Root cause:** RC-DASHBOARD · **Tracker:** IPS-35 (parent IPS-34)
 **Master rules:** [../master-spec.md](../master-spec.md) · **Flows:** [flows.md](./flows.md) · **Backlog:** [backlog.md](./backlog.md)
 **Boards:** [designs/](./designs/) · **PNGs:** [`media/ux-remediation/package-01/`](../../../media/ux-remediation/package-01/)
@@ -22,6 +22,18 @@ Constraints: live deposits closed · Agency deferred · centered popups · origi
 | 6 | Shared visual consistency | Serif rule removed; Plus Jakarta Sans + Sora, live tokens, `icons.tsx` icons, live shell, controls and dialog | [_design-system.css](./designs/_design-system.css) · [assets/](./designs/assets/) · all boards | all PNGs | master-spec §0 · VIS1 |
 | + | Inbox dedupe (from #533) | Task identity rule; distinct tasks preserved | [action-inbox](./designs/action-inbox.html) | [desktop](../../../media/ux-remediation/package-01/action-inbox-desktop.png) · [mobile](../../../media/ux-remediation/package-01/action-inbox-mobile.png) | master-spec §7 · flows §H · INB1 |
 | + | Terminology (from #533) | “Discover Influencers”; no customer-facing “Creator” | [business-dashboard](./designs/business-dashboard.html) · [mobile-auth-nav](./designs/mobile-auth-nav.html) · [sidebar-badges](./designs/sidebar-badges.html) | as above | master-spec §6 · TERM1 |
+
+### Round 2 follow-ups (Ola targeted review, 2026-11-21)
+
+| # | Issue | Correction | Board / PNG | Spec · flow · acceptance |
+|---|-------|-----------|-------------|--------------------------|
+| R2-1 | Mobile nav clipped More | Fixed four-slot nav bar (3 destinations + More); no horizontal scroll | all `*-mobile*.png`, e.g. [business mobile](../../../media/ux-remediation/package-01/business-dashboard-mobile.png) · [mobile-auth-nav](../../../media/ux-remediation/package-01/mobile-auth-nav.png) | master-spec §6 · flows §F · MOB1 |
+| R2-2 | Dead end after asking a question | “{Business} replied” state returns the invitee's turn with I'm interested · Ask another question · Decline; code gap logged as **defect P1-D1** | [team-invite-respond](../../../media/ux-remediation/package-01/team-invite-respond.png) | master-spec §2.2, §4 · flows §D1 · DB4a · backlog P1-D1 |
+| R2-3 | Failure copy promised “Nothing changed” | “We couldn't confirm your response” → status re-read → saved state or safe retry; idempotency key | [team-invite-respond](../../../media/ux-remediation/package-01/team-invite-respond.png) | master-spec §4.1 · flows §D3 · DB4b |
+| R2-4 | Completion cleared “every merged notice” | Clears action-required only; notices stay in history; read state unchanged; unrelated notices untouched | [action-inbox](../../../media/ux-remediation/package-01/action-inbox.png) · [notifications](../../../media/ux-remediation/package-01/notifications.png) | master-spec §5.3a, §7 · flows §H · INB1 |
+| R2-5 | Unsupported payout promises | Removed “1–2 business days” and “We'll email you” (payout) and “We'll notify you” (invitation) | [earnings-payout](../../../media/ux-remediation/package-01/earnings-payout.png) | master-spec §2.1 copy rule · DB2b |
+| R2-6 | No payout history undefined | “Status unavailable”, never infer Ready/Setup required; no home message; badge 0 | [earnings-payout](../../../media/ux-remediation/package-01/earnings-payout.png) (7th panel) | master-spec §2.1 · flows §B · DB2d |
+| — | Ledger reference | Approved mockup committed; figures illustrative only | [package-05/reference](../package-05/reference/README.md) | master-spec §12 |
 
 ---
 
