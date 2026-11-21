@@ -34,6 +34,16 @@ Visual system across all frames: Plus Jakarta Sans + Sora only, live tokens, `ic
 | 3 | Hub didn't show a team invitation (runtime defect P1-AUD-04) | Team row added (“Winter Unboxing · Team · Waiting for teammates”); Invitations card 3 open / 1 waiting, so home (1) and badge (1) still agree |
 | 4 | Admin board used an invented job name | Uses `marketplace_application_expire_sweep` |
 
+## Board updates after review (round 6, P1-AUD-10/11)
+
+Only the affected boards changed:
+
+| Board | Change |
+|-------|--------|
+| Invitation transitions | “Accepted” split into “Accepted · agreement not sent” (no influencer action) and “Agreement ready to sign” (task); table updated |
+| Influencer home (desktop + mobile) | Holiday Gift Guide now “Waiting for Northwind Studio to sign” with View agreement (no task), matching the business dashboard; mobile list pills moved under titles |
+| Business dashboard (desktop + mobile + popups) | Recent collaborations shows a fully signed agreement as “Agreement signed · funding isn't available yet” (no task); mobile list pills under titles |
+
 ## Spec additions from the IPS-44 test results
 
 Added to [master-spec](../master-spec.md): expiry at the Respond-by deadline (§2.2); team proposal closed for every member (§2.2); in-app notice for every action-required event (§5.6); withdrawal/expiry notices with the right template (§5.7); inbox rows name their subject, tasks clear on any state change, team invites included (§7); acceptance AUD1. P1-AUD-08 decided 2026-11-21: approval separate from release, “Approved · payout setup required”, same for auto-approval (AUD2).

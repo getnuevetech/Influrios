@@ -79,7 +79,7 @@ Same membership filter → home Active = hub Active card = Active tab.
  │                             ├─ Ask another question ─► Question sent
  │                             └─ Decline ─► You declined
  ├─ Decline (confirm) ─► You declined (DECLINED)
- ├─ [business] Accept ─► Accepted (ACCEPTED → COLLABORATION_DRAFTED) ─► Review agreement
+ ├─ [business] Accept ─► Accepted · agreement not sent (business acts next) ─► see §D5
  ├─ [business] Withdraw ─► Withdrawn
  └─ [deadline passes] ─► Expired
 ```
@@ -95,7 +95,7 @@ Same membership filter → home Active = hub Active card = Active tab.
 | Business answers a follow-up (5 → 6) | Label “Interested” | Unchanged | Unchanged | Message notice (read state only) |
 | Invitee reads the answer (invitation, notice or Messages) | Unchanged | **Unchanged** | **Unchanged** | Notice → read; action required stays |
 | Replied → Interested / another question / Decline | As above | −1 | −1 | Clears |
-| Any → Accepted | Leaves Invitations → Active (agreement ready) | Agreement item added | Agreement task +1 | Agreement notice |
+| Waiting/Interested/Question → Accepted (business) | Leaves Invitations → Active (“Accepted · {Business} is preparing the agreement”) | −1 if it was waiting; no new influencer task | −1 if it was waiting | Accepted notice (in-app + email) |
 | Any → Declined / Expired / Withdrawn | Leaves open list → Closed | −1 if it was pending | −1 if it was pending | Clears |
 
 *Rules:*
@@ -134,6 +134,23 @@ Submit reply → new idempotency key K for this logical submission (bound to act
 ```
 
 Board: [team-invite-respond](./designs/team-invite-respond.html).
+
+---
+
+### D5. After acceptance → agreement → signature (P1-AUD-10/11 · DB8)
+
+```
+[business] accepts ─► influencer: Active “Accepted · {Business} is preparing the agreement” (no task)
+                      business: task “Create the agreement”
+[business] creates + sends agreement ─► influencer: task “Review and sign agreement” (Contracts badge +1)
+                                         business: “Waiting for {Influencer} to sign”
+each party signs ─► task moves to whoever still has to sign
+fully signed ─► influencer: “Agreement signed. {Business} handles the next step.” (no task)
+                business: “Agreement signed” + Fund collaboration ONLY if funding is available;
+                          otherwise “Funding isn't available for this collaboration yet” (no task)
+```
+
+*Rules:* the invitee never sees Accept or Withdraw on the invitation detail page (P1-AUD-10). No state promises payment, a funding date, or a notification (master-spec §2.2c).
 
 ---
 

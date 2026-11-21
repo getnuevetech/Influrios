@@ -11,17 +11,17 @@ def attention_card(compact=False):
 
 def active_list():
     return f"""<div class="card"><div class="card-head"><h2>Active collaborations</h2><span class="link">View all</span></div>
-<div class="list-row"><div class="t"><b>Spring Launch Reel</b><span>Lumen Skincare</span></div>{pill("green","Funded")}</div>
+<div class="list-row"><div class="t"><b>Spring Launch Reel</b><span>Lumen Skincare</span><div style="margin-top:6px">{pill("green","Funded")}</div></div></div>
 <div class="list-row" style="border-top:0;padding-top:0"><span class="btn pri sm" style="width:100%">Submit content</span></div>
-<div class="list-row"><div class="t"><b>Holiday Gift Guide</b><span>Northwind Studio</span></div>{pill("violet","Agreement ready")}</div>
-<div class="list-row" style="border-top:0;padding-top:0"><span class="btn sec sm" style="width:100%">Review agreement</span></div></div>"""
+<div class="list-row"><div class="t"><b>Holiday Gift Guide</b><span>Northwind Studio</span><div style="margin-top:6px">{pill("gray","Waiting for Northwind Studio to sign")}</div></div></div>
+<div class="list-row" style="border-top:0;padding-top:0"><span class="btn sec sm" style="width:100%">View agreement</span></div></div>"""
 
 
 def active_table():
     return f"""<div class="card"><div class="card-head"><h2>Active collaborations</h2><span class="link">View all</span></div>
 <table class="t"><thead><tr><th>Collaboration</th><th>Status</th><th>Next step</th></tr></thead><tbody>
 <tr><td><b>Spring Launch Reel</b><small>Lumen Skincare</small></td><td>{pill("green","Funded")}</td><td><span class="btn pri sm">Submit content</span></td></tr>
-<tr><td><b>Holiday Gift Guide</b><small>Northwind Studio</small></td><td>{pill("violet","Agreement ready")}</td><td><span class="btn sec sm">Review agreement</span></td></tr>
+<tr><td><b>Holiday Gift Guide</b><small>Northwind Studio</small></td><td>{pill("gray","Waiting for Northwind Studio to sign")}</td><td><span class="btn sec sm">View agreement</span></td></tr>
 </tbody></table></div>"""
 
 
@@ -65,6 +65,7 @@ def build_home():
  "Banner, Invitations stat, and Needs your attention all show invitations <b>waiting for your reply</b> = turn is yours: new invitations and ones where the business answered your question (master-spec §1, §2.2a). Reading doesn't change it.",
  "Invitations where it is the business's turn (you said you're interested, or your question is unanswered) appear in the Collaborations hub, not here.",
  "Active collaborations = the same membership filter as the hub Active tab (2).",
+ "Holiday Gift Guide: Amara has signed, so the business acts next. It shows “Waiting for Northwind Studio to sign” with no task (master-spec §2.2c, DB8), matching the business dashboard.",
  "Collaborations sidebar badge 1 = the one invitation waiting for your reply.",
 ])}
 {notes("Payout readiness (finding 3)",[

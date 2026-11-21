@@ -11,7 +11,7 @@ COLLABS = [
     ("Holiday Gift Guide", "Amara Cole · YouTube", ("amber", "Awaiting your signature"), "You", "1d ago"),
     ("Autumn Glow Series", "Priya Nair · TikTok", ("green", "Funded"), "Influencer", "3d ago"),
     ("Free Tech Support", "Request · 2 invited", ("blue", "1 response"), "You", "4h ago"),
-    ("Studio Tour Shorts", "Leo Martins · YouTube", ("gray", "Completed"), "—", "1w ago"),
+    ("Winter Unboxing", "Leo Martins · YouTube", ("gray", "Agreement signed · funding isn't available yet"), "—", "2d ago"),
 ]
 
 
@@ -42,7 +42,7 @@ def collabs_table():
 
 def collabs_list():
     rows = "".join(
-        f'<div class="list-row"><div class="t"><b>{t}</b><span>{s} · {u}</span></div>{pill(*p)}</div>' for t, s, p, o, u in COLLABS[:4])
+        f'<div class="list-row"><div class="t"><b>{t}</b><span>{s} · {u}</span><div style="margin-top:6px">{pill(*p)}</div></div></div>' for t, s, p, o, u in COLLABS)
     return f'<div class="card"><div class="card-head"><h2>Recent collaborations</h2><span class="link">View all</span></div>{rows}</div>'
 
 
@@ -112,7 +112,7 @@ def build():
  "Collaborations badge 2 = response to review + content to review. Contracts badge 1 = agreement waiting for your signature. Attention shows 3 = 2 + 1, so each count sits on the item that opens it.",
  "Stats use the same projections as the destinations: Active requests = Collaborations › Requests; Agreements to sign = Contracts filter.",
  "“Discover Influencers” replaces “Discover Creators” in the sidebar and CTAs (Package 1 terminology).",
- "Funding/deposit actions stay out: live deposits closed.",
+ "Funding/deposit actions stay out: live deposits closed. A fully signed agreement shows “Agreement signed · funding isn't available yet” with no task; Fund collaboration appears only when funding is available (master-spec §2.2c, DB8).",
 ])}
 </div></div>
 <div class="section-title">Empty · loading · error</div>

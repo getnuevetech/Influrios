@@ -1,7 +1,7 @@
 # Master remediation specification
 
 **Scope today:** Package 1 rules (nav · dashboards · payout readiness · invitations · notifications · inbox dedupe · terminology), plus the master finance scope (§12). Expand when Packages 2–5 land.
-**Revision:** 2026-11-21 (round 5: rules added from the IPS-44 isolated-host test results, P1-AUD-01…09). Corrects the six Ola review findings, the six round-2 follow-ups the five round-3 consistency rules and the two round-4 invitation rules on Package 1 (see [package-01/README.md § Finding checklist](./package-01/README.md#finding-to-file-checklist)).
+**Revision:** 2026-11-21 (round 6: post-acceptance states and next steps, P1-AUD-10/11; earlier: IPS-44 rules P1-AUD-01…09). Corrects the six Ola review findings, the six round-2 follow-ups the five round-3 consistency rules and the two round-4 invitation rules on Package 1 (see [package-01/README.md § Finding checklist](./package-01/README.md#finding-to-file-checklist)).
 **Builds on:** [#533 shared-ui-spec](https://github.com/getnuevetech/Influrios/blob/cursor/ux-design-package-e893/docs/ux-design-package/shared-ui-spec.md) and [navigation-map](https://github.com/getnuevetech/Influrios/blob/cursor/ux-design-package-e893/docs/ux-design-package/navigation-map.md). For what #533 still governs, see its [supersession index](https://github.com/getnuevetech/Influrios/blob/cursor/ux-design-package-e893/docs/ux-design-package/supersession-index.md).
 **Audit feed:** RC-DASHBOARD · INV-DC-* · INV-C-014 · INV-N-004 ([#539](https://github.com/getnuevetech/Influrios/pull/539))
 **Constraints:** Live deposits closed · Agency deferred · Centered popups for list detail (one explicit exception: §12 ledger rows) · Original influencer card unchanged · No implementation until the package is accepted
@@ -79,7 +79,9 @@ Rules: completed steps always render as done. Verification pending never shows �
 | {Business} replied | NEGOTIATING, **turn = invitee** (set by the business's answer) | **Invitee** | I'm interested · Ask another question · Decline | violet |
 | Interested | RESPONDED, turn = business | Business | Ask a follow-up question · Decline | green |
 | Interested · follow-up sent | NEGOTIATING, turn = business, interest recorded, question open | Business | Decline | green |
-| Accepted | ACCEPTED → COLLABORATION_DRAFTED | Invitee (agreement) | Review agreement | green |
+| Accepted · agreement not sent | ACCEPTED (set by the **business**), no agreement yet | Business (create + send the agreement) | View invitation | green |
+| Agreement ready to sign | Agreement `sent`, influencer signature pending | Invitee | Review and sign agreement | violet |
+| Agreement signed | Agreement `signed` by every party | Business (next payment step, when available) | View agreement | green |
 | You declined | DECLINED | — | Close | gray |
 | Expired | EXPIRED | — | Close | gray |
 | Withdrawn | WITHDRAWN | — | Close | gray |
@@ -107,6 +109,19 @@ Semantics follow `APPLICATION_TRANSITIONS` and `inviteeResponsePlan`: “I'm int
 - Release waits for payout readiness (§2.1) **and** every other payment control (frozen allocations, holds, disputes, provider state; §13).
 - UI after approval while not ready: **“Approved · payout setup required”**. Never “Paid” or “Released” until the provider confirms (§12 REC4).
 - **Automatic approval follows the same separation:** the sweep approves the delivery and schedules release; release still waits for readiness and controls.
+
+#### 2.2c After acceptance (P1-AUD-10 / P1-AUD-11)
+
+Only the **business** moves an invitation to Accepted (§2.2b); the invitation detail page and the popup offer the invitee the same actions (P1-AUD-10).
+
+| Stage | Influencer sees | Influencer attention / badge | Business sees | Business attention / badge |
+|-------|-----------------|------------------------------|---------------|-----------------------------|
+| Business accepted, no agreement | Hub Active: “Accepted · {Business} is preparing the agreement” | No task | “Create the agreement” on the application | Task: Create the agreement (Collaborations) |
+| Agreement sent | “Review and sign agreement” | Task (Contracts badge) | “Waiting for {Influencer} to sign” | No task |
+| Business must sign | “Waiting for {Business} to sign” | No task | “Sign agreement” | Task (Contracts badge) |
+| Fully signed | “Agreement signed. {Business} handles the next step.” | No task | “Agreement signed”, plus **Fund collaboration** only when funding is available for this collaboration; otherwise “Funding isn't available for this collaboration yet” | Task only when funding is available |
+
+No copy in these states promises a payment, a funding date, or a notification.
 
 #### 2.2b Action matrix (single rule for spec, boards and server)
 
@@ -260,6 +275,7 @@ Destructive buttons (Decline, Not a fit) use the rose outline.
 | DB4 | Every invitation state in §2.2 shows its actions/label; badge/attention clear on persisted transition only; INV-DC-015, INV-DC-012 |
 | DB4a | Ask a question leaves the invitation open (NEGOTIATING, turn = business); the business's answer then follows §2.2b: case 2 → case 3 (turn = invitee, I'm interested · Ask another question · Decline; needs P1-D1); case 5 → case 6 (turn stays business, message only) |
 | DB4d | Every case in the §2.2b matrix shows exactly its allowed actions, and the server rejects disallowed submissions; a follow-up question after Interested keeps turn = business and never adds to the invitee's counts |
+| DB8 | Next step after acceptance and signature (P1-AUD-11, §2.2c): influencer sees “Accepted · {Business} is preparing the agreement” (no action), then “Review and sign agreement” as an attention item when sent; business sees “Create the agreement” after acceptance and “Agreement signed” with its next payment step only when that step is available, otherwise “Funding isn't available for this collaboration yet”; no state promises a payment |
 | DB4c | Reading the answer (invitation, notice or Messages) leaves turn = invitee: banner, attention, badge and task stay until the invitee responds |
 | DB4b | Timeout: “We couldn't confirm your response” → idempotency record lookup → saved / rejected / processing / unable to confirm per §4.1; draft kept and locked until saved or rejected; retry of an unresolved submission reuses its key and is stored once; a new submission after an outcome gets a new key even with identical text; a key reused with another actor, invitation or payload is refused; concurrent withdrawal shows the rejection and counts refresh |
 | DB5 | Open unread decreases bell; action required unchanged by read alone |
