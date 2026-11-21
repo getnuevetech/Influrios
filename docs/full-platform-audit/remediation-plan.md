@@ -1,6 +1,6 @@
 # Full-platform audit — consolidated remediation plan (IPS-20)
 
-> **PROVISIONAL — Ola direction (2026-11-20).**  
+> **PROVISIONAL — Ola direction (2026-11-20; IPS-30 refresh 2026-11-21).**  
 > This plan stays **provisional until the full audit evidence package is committed on GitHub**. It is **not** a platform-wide completion certificate, **not** authorization to open product remediations beyond already-merged #537, and **not** proof that live host already matches `main`.  
 > **Live collaboration deposits remain closed.** Agency product remains Explicitly deferred.  
 > **Commit coordination:** Audit package GitHub worker (`bc-cd0be808-fe9f-5151-9b07-2a30bc90b6cf`) must publish **this** store path as the plan revision in the evidence PR — see [§ Coordination](#coordination--github-evidence-package).
@@ -10,11 +10,12 @@
 | **Status** | Provisional design / planning artifact |
 | **Audit execution baseline** | Live host probed @ `40b6288` (#536); matrix post IPS-25 |
 | **Code note** | #537 COR-SEC-01 **merged** → `5a5f4c0` on `main`; live redeploy + credential rotation **not** confirmed |
-| **Matrix** | **287 Pass · 17 Fail · 162 Blocked · 0 Not tested · 10 Explicitly deferred** (476 rows) |
+| **Matrix** | **285 Pass · 24 Fail · 165 Blocked · 9 Not tested · 10 Explicitly deferred** (493 rows) — +IPS-29 INV-DC-* + IPS-30 Pass-rule demotions |
 | **Authoritative matrix** | [coverage-matrix.md](./coverage-matrix.md) |
 | **Coverage narrative** | [coverage-status.md](./coverage-status.md) |
-| **Execution** | [execution/](./execution/) (auth, collab, billing, admin, [not-tested-chase-results.md](./execution/not-tested-chase-results.md)) |
+| **Execution** | [execution/](./execution/) (auth, collab, billing, admin, [not-tested-chase-results.md](./execution/not-tested-chase-results.md), [dashboard-consistency-results.md](./execution/dashboard-consistency-results.md)) |
 | **Prior pack** | [docs/remediation-pack/](../remediation-pack/) |
+| **IPS-29 patch** | [execution/dashboard-consistency-remediation-patch.md](./execution/dashboard-consistency-remediation-patch.md) (RC-DASHBOARD detail) |
 
 ---
 
@@ -22,7 +23,7 @@
 
 | Claims | Does **not** claim |
 |--------|---------------------|
-| 17 Fail rows are reproduced with evidence paths | Platform is fully audited or remediated |
+| 24 Fail rows are reproduced with evidence paths (incl. IPS-29 INV-DC-* + IPS-30 INV-C-014/INV-N-004) | Platform is fully audited or remediated |
 | Blocked rows are dependencies / retest gates | Blocked = Pass, or Blocked folded into Fail |
 | Corrected flows + acceptance for each Fail | Product PRs are approved to start (except #537 already merged) |
 | Plan is the revision for the GitHub evidence PR | Evidence pack is already on GitHub |
@@ -34,14 +35,14 @@
 | Role | Agent / path | Instruction |
 |------|--------------|-------------|
 | Plan author (this doc) | `bc-6b5c0158-5f8f-5732-976b-411f1252d49a` | Maintain provisional plan in store |
-| **Audit package GitHub** | `bc-cd0be808-fe9f-5151-9b07-2a30bc90b6cf` | Commit **this file** + matrix/status/execution/media into the evidence PR; do not substitute an older plan draft |
+| **Audit package GitHub** | [#539](https://github.com/getnuevetech/Influrios/pull/539) / `cursor/full-platform-audit-package-b6cf` | Commit **this file** + matrix/status/execution/media; IPS-29 + IPS-30 revisions |
 | Coordinator | Project parent | Route handoff; keep plan provisional until PR lands |
 
 **Handoff path for commit:**  
 `/cursor/stores/bc-52867d75-a339-4985-81ae-823456e1a82c/docs/full-platform-audit/remediation-plan.md`  
-Companion in this repo package: [coverage-status.md](./coverage-status.md), [coverage-matrix.md](./coverage-matrix.md), [blocked-register.md](./blocked-register.md), [execution/](./execution/), [media/INDEX.md](./media/INDEX.md).
+Companion: `coverage-status.md`, `coverage-matrix.md`, `execution/*`, `media/**`.
 
-This GitHub package is the independent review surface. Treat every remediation item below as **provisional** until Ola endorses.
+Until that PR exists and is reviewable on GitHub, treat every remediation item below as **provisional**.
 
 ---
 
@@ -57,7 +58,7 @@ This GitHub package is the independent review surface. Treat every remediation i
 
 ---
 
-## Fail inventory (17 rows → 8 root causes)
+## Fail inventory (24 rows → 9 root causes)
 
 | Root cause | Defect IDs | Fail rows | Sev |
 |------------|------------|-----------|-----|
@@ -69,6 +70,7 @@ This GitHub package is the independent review surface. Treat every remediation i
 | **RC-MAIL** | ADMIN-MAIL-FAILED | INV-R-119 | P1 |
 | **RC-JOBS** | INV-J-020 / INV-J-021 | INV-J-020, INV-J-021 | P2 |
 | **RC-EXPORT** | INV-D-003 | INV-D-003, INV-I-014, INV-A-102 | P2 |
+| **RC-DASHBOARD** | DC-INVITE-MISMATCH, DC-PAYOUT-MISMATCH, DC-ACTIVE-MISMATCH, DC-TEAM-INVITE-DEADEND, DC-ACTION-STUCK, ACCEPT-CONDITIONAL (IPS-29/30) | INV-DC-001, INV-DC-002, INV-DC-006, INV-DC-015, INV-DC-012, INV-C-014, INV-N-004 | High |
 
 **Non-Fail follow-ups (do not inflate Fail count):** COR-09a dual chrome; BILL-06 Manage downgrade → `/claim`; MSG-NAV; INV-J-022 `subscription_renewal_sweep` **Blocked** (adjacent cron); COR-20 soft-error path not re-mutated on waiting-review fixture.
 
@@ -79,6 +81,7 @@ This GitHub package is the independent review surface. Treat every remediation i
 | 1 | R0 | RC-SEC | Redeploy `5a5f4c0` + authorized rotation |
 | 2 | R2 (+ R3 quote) | RC-CATALOG, RC-PORTAL, RC-INVOICE | Ola-approved Stripe year/upgrade Prices — **do not invent amounts** |
 | 3 | R4 discovery | RC-DISCOVERY | Live profiles / shortlist |
+| 3b | R4b dashboard consistency | RC-DASHBOARD | Single invite/payout/active projection; team invite CTAs — [patch](./execution/dashboard-consistency-remediation-patch.md) |
 | 4 | R5 ops | RC-MAIL, RC-JOBS, RC-EXPORT | Cron + mail triage + CSV export |
 | — | R6 / Agency | — | Out of scope while deposits closed / deferred |
 
@@ -88,16 +91,16 @@ This GitHub package is the independent review surface. Treat every remediation i
 
 Blocked rows are **not** Fail. They **block proof** of related remediations and must be called out on each correction.
 
-| Blocker theme (~162 rows) | Blocks proof of… | Remediations still designable? |
-|---------------------------|------------------|--------------------------------|
+| Blocker theme (~165 Blocked post IPS-29; +9 Not tested IPS-30) | Blocks proof of… | Remediations still designable? |
+|------------------------------------------|------------------|--------------------------------|
 | No Mailpit / mail sink | Email delivery for claim follow-ups (RC-JOBS), invite/contract/billing templates, OTP/reset | Yes — UI/ops; delivery Pass stays Blocked until sink |
 | Live deposits closed | Funding, release, refund, payout notices; collab discount apply | Yes for subscription Fail; **no** live money reopen |
-| Cron / shared-host isolation | INV-J-022 renewal; safe live fire of INV-J-020/021 | Prefer staging/isolation for first success |
-| Fixture gaps | Pending Sign, cancel entry, deep-link ids, AI tailor off | Separate fixture work — not Fail |
+| Cron / shared-host isolation | INV-J-022 renewal; safe live fire of INV-J-020/021; INV-DC-014 expire mutation | Prefer staging/isolation for first success |
+| Fixture gaps | Pending Sign, cancel entry, deep-link ids, AI tailor off; IPS-29 INV-DC-010 invite create / INV-DC-013 withdraw | Separate fixture work — not Fail |
 | OAuth / Meta | Social connect provider-confirmed | Out of Fail set |
 | Agency deferred | Agency product depth | Destinations only |
 
-Full themes: [coverage-status.md §4](./coverage-status.md) · chase Blockeds: [not-tested-chase-results.md](./execution/not-tested-chase-results.md).
+Full themes: [coverage-status.md §4](./coverage-status.md) · chase Blockeds: [not-tested-chase-results.md](./execution/not-tested-chase-results.md) · IPS-29 Blockeds: [dashboard-consistency-results.md](./execution/dashboard-consistency-results.md).
 
 ---
 
@@ -157,7 +160,7 @@ Each root-cause section below includes:
 | S4 | Live phrase from `01-admin-login-public.png` absent | Redeploy |
 | S5 | Prior secret unusable; sessions invalidated | **Ops authorization** |
 
-**Close INV-R-074** after S1–S4 on deployed revision; S5 when Ola authorizes.
+**Close INV-R-074** only after **all** of S1–S5: code containment (merged), deployment verification (S1–S4), and credential/session rotation (S5). Merged #537 alone does **not** close security remediation.
 
 ---
 
@@ -400,6 +403,10 @@ Each root-cause section below includes:
 | **Evidence** | `media/nt-chase/inv-j-jobs-page.png` — **latest: never** + crontab/`CRON_SECRET` warning |
 | **Adjacent** | INV-J-022 `subscription_renewal_sweep` **Blocked** (shared-host isolation) |
 
+### IPS-30 note
+
+Kind listed / historical UI visibility on `/admin/jobs` is **not** behavior acceptance. INV-J-006/010/011/015/017 were demoted to **Not tested** (listing-only). Closing INV-J-020/021 still requires scheduler operation **and** due-fixture behavior (event + notification; no duplicate on rerun) — not merely a recorded empty/failed scan.
+
 ### Product effects of never running (why this Fail matters)
 
 Handlers live in `src/lib/jobs.ts` (`runInvitationFollowUpSweep`, `runQuoteExpirySweep`).
@@ -520,6 +527,42 @@ Handlers live in `src/lib/jobs.ts` (`runInvitationFollowUpSweep`, `runQuoteExpir
 
 ---
 
+## RC-DASHBOARD — Dashboard / hub / earnings contradiction (IPS-29)
+
+| | |
+|--|--|
+| **Fail rows** | INV-DC-001, INV-DC-002, INV-DC-006, INV-DC-015, INV-DC-012, **INV-C-014**, **INV-N-004** |
+| **Defects** | DC-INVITE-MISMATCH · DC-PAYOUT-MISMATCH · DC-ACTIVE-MISMATCH · DC-TEAM-INVITE-DEADEND · DC-ACTION-STUCK · ACCEPT-CONDITIONAL |
+| **Full patch** | [execution/dashboard-consistency-remediation-patch.md](./execution/dashboard-consistency-remediation-patch.md) |
+| **Evidence** | `media/dashboard-consistency/` · [dashboard-consistency-results.md](./execution/dashboard-consistency-results.md) |
+
+### 1) Current evidence (influencer AUDIT, desktop + mobile)
+
+- Home: **1 new invitation** / Invitations **1** / attention Free Tech Support; hub: Invitations **0** + “No invitations are waiting”; Collaborations badge **1**.  
+- Home: **Complete payout setup**; hub: Payment readiness **Not ready**; earnings: Payout Setup **Ready**; Earnings badge **1**.  
+- Home Active collaborations **3** vs hub Active **2**.  
+- Team invite detail: **Pending your response** + **No further action needed** + no respond CTAs → action-required cannot clear.
+
+Business AUDIT: Collaborations badge **2** stable; no parallel invite/payout split this pass.
+
+**IPS-30:** INV-C-014 / INV-N-004 demoted from Pass — setup-reminder cues/`Not forced` alone ≠ conditional acceptance while INV-A-075 earnings shows Ready (same account as INV-DC-002).
+
+### 2) Intended flow
+
+1. One open-invitation projection across home, hub, and Collaborations badge (invite portion).  
+2. One payout-readiness projection across home reminder, hub widget, earnings page, Earnings badge.  
+3. Home Active count = hub Active.  
+4. Pending team invite shows respond controls; completing response clears attention + counts together.  
+5. Opening Unread `?open=` clears bell; completing action clears action-required (unread ≠ action-required remains).
+
+### 3–5) Design / implementation / acceptance
+
+See patch **RC-DASHBOARD** (DB1–DB6). Package **R4b**. Deposits stay closed; no money-path reopen.
+
+**Close** INV-DC-001, INV-DC-002, INV-DC-006, INV-DC-012, INV-DC-015, INV-C-014, INV-N-004 after DB1–DB4 (and reminder↔payout agreement) on deployed revision.
+
+---
+
 ## Retained remediation-pack (still applicable)
 
 | Item | Status vs this provisional plan |
@@ -544,7 +587,7 @@ Handlers live in `src/lib/jobs.ts` (`runInvitationFollowUpSweep`, `runQuoteExpir
 
 ---
 
-## Closure ledger (17 Fail)
+## Closure ledger (24 Fail)
 
 | Fail row | RC | Close when | Still provisional until |
 |----------|----|------------|-------------------------|
@@ -565,6 +608,13 @@ Handlers live in `src/lib/jobs.ts` (`runInvitationFollowUpSweep`, `runQuoteExpir
 | INV-D-003 | RC-EXPORT | E1 | evidence PR |
 | INV-I-014 | RC-EXPORT | E2 | evidence PR |
 | INV-A-102 | RC-EXPORT | E2 | evidence PR |
+| INV-DC-001 | RC-DASHBOARD | DB1 | evidence PR |
+| INV-DC-002 | RC-DASHBOARD | DB2 | evidence PR |
+| INV-DC-006 | RC-DASHBOARD | DB3 | evidence PR |
+| INV-DC-012 | RC-DASHBOARD | DB4 | evidence PR |
+| INV-DC-015 | RC-DASHBOARD | DB4 | evidence PR |
+| INV-C-014 | RC-DASHBOARD | DB2 + reminder conditional | evidence PR |
+| INV-N-004 | RC-DASHBOARD | DB2 + reminder conditional | evidence PR |
 
 ---
 
@@ -573,5 +623,7 @@ Handlers live in `src/lib/jobs.ts` (`runInvitationFollowUpSweep`, `runQuoteExpir
 - **IPS-20** — this provisional plan (expand for Ola; no new product PRs).  
 - **IPS-25** — NT chase complete; Fail +2 (INV-J-020/021).  
 - **IPS-26** — [coverage-status.md](./coverage-status.md).  
-- **#537** — COR-SEC-01 merged `5a5f4c0`; redeploy + rotation open.  
+- **IPS-29** — dashboard consistency contradiction coverage; Fail +5 (INV-DC-001/002/006/012/015) → **RC-DASHBOARD**.  
+- **IPS-30** — Pass acceptance corrections (Ola bbc38ce): demote visibility-only Passes; recalculate matrix (**285 Pass · 24 Fail · 165 Blocked · 9 Not tested**); plan stays **PROVISIONAL**.  
+- **#537** — COR-SEC-01 merged `5a5f4c0`; redeploy + rotation open (S1–S5 all required).  
 - **GitHub evidence package** — Audit package worker must commit **this** revision.

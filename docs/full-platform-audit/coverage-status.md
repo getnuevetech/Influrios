@@ -1,40 +1,56 @@
 # Coverage completion status — full-platform audit reopen
 
-**Tracker:** IPS-26 under IPS-19 · **As of:** 2026-11-20 (post–IPS-25 matrix refresh)  
-**Package baseline:** `main` @ `5a5f4c0` (includes #536 COR-20–23 + merged #537 R0)  
-**Audit execution host:** live probes @ `40b6288` (pre–#537 deploy)  
+**Tracker:** IPS-26 under IPS-19 · **As of:** 2026-11-21 (IPS-29 dashboard + **IPS-30 Pass acceptance corrections**)  
+**Code baseline:** `main` @ `40b6288` (includes #536 COR-20–23); #537 COR-SEC-01 merged `5a5f4c0` (live redeploy + rotation unconfirmed)  
 **Host:** https://influrios.com · Live collaboration deposits closed (`journey_funding`)  
 **Authoritative matrix:** [coverage-matrix.md](./coverage-matrix.md)  
-**Blocked register:** [blocked-register.md](./blocked-register.md) (162 rows)  
-**Evidence INDEX:** [media/INDEX.md](./media/INDEX.md)  
-**NT chase (IPS-25 complete):** [execution/not-tested-chase-results.md](./execution/not-tested-chase-results.md)  
+**NT chase (IPS-25):** [execution/not-tested-chase-results.md](./execution/not-tested-chase-results.md)  
+**Dashboard consistency (IPS-29):** [execution/dashboard-consistency-results.md](./execution/dashboard-consistency-results.md)  
 **Slice evidence:** [execution/auth-results.md](./execution/auth-results.md) · [execution/collab-results.md](./execution/collab-results.md) · [execution/billing-results.md](./execution/billing-results.md) · [execution/admin-results.md](./execution/admin-results.md)  
-**Remediation plan (IPS-20):** [remediation-plan.md](./remediation-plan.md) — **provisional** until Ola endorses; **17 Fail → 8 root causes** (incl. **RC-JOBS** INV-J-020/021 + invitation/quote stale-alert effects); blocked deps mapped; no new product PRs; **not** platform-wide completion
+**Remediation plan (IPS-20):** [remediation-plan.md](./remediation-plan.md) — **PROVISIONAL**; **24 Fail → 9 root causes** (incl. **RC-JOBS**, **RC-DASHBOARD**); blocked deps mapped; no new product PRs; **not** platform-wide completion
 
-> **This report does not claim the platform is fully audited, fully remediated, or platform-wide complete.** Phase B matrix execution closed all seeded Not tested rows (IPS-25 complete → **Not tested = 0**), but **17 Fail** and **162 Blocked** remain open, Agency stays Explicitly deferred, and defects are not fixed by this audit. Prior e2e Pass results and #536 do not close this reopen. Live deposits remain closed.
+> **This report does not claim the platform is fully audited, fully remediated, or platform-wide complete.** **24 Fail**, **165 Blocked**, and **9 Not tested** (reopened under IPS-30) remain open; Agency stays Explicitly deferred; defects are not fixed by this audit. Prior **287** / **296** Pass aggregates are **superseded** where evidence was visibility-only. Live deposits remain closed.
 
 ---
 
-## Snapshot (matrix header — post IPS-25)
+## Acceptance criteria (IPS-30 / Ola bbc38ce)
+
+Pass requires proof beyond control visibility. Applied in the matrix revision on #539:
+
+| Rule | Requirement | Implication |
+|------|-------------|-------------|
+| **Conditional reminders** | Same account + same state: reminder presence/absence must agree with payout readiness on home / hub / earnings | Reminder cues alone ≠ Pass. INV-C-014 + INV-N-004 demoted to **Fail** (paired with INV-DC-002 / INV-A-075 Ready). |
+| **Action checks** | Execute action → persistence after reload → inspect resulting record or downloaded file | Visibility of save / opt-in / save-listing / media-kit export controls ≠ functional Pass. INV-A-008, INV-A-019, INV-A-027, INV-D-007 → **Not tested**. |
+| **Annual purchase** | Unavailable/error-handling UX may Pass; purchasing the configured annual plan must succeed for purchase Pass | Annual purchase rows remain **Fail** (INV-R-006, INV-A-070, INV-A-072) until year price is purchasable. |
+| **Cron / jobs** | Separately prove (a) scheduler operation and (b) behavior: due invitation/quote → correct event → expected notification; no duplicate sends on rerun | Kind listed / empty or failed scan alone ≠ behavior Pass. INV-J-006/010/011/015/017 → **Not tested**. INV-J-020/021 stay **Fail**. |
+| **Security** | Track code containment, deployment verification, and credential/session rotation as separate steps | Overall RC-SEC / INV-R-074 stays open until all required steps complete — merged #537 ≠ closed. |
+
+Do **not** preserve the old **287 Pass** (or post–IPS-29 **296**) where evidence only proves visibility.
+
+---
+
+## Snapshot (matrix header — post IPS-29 + IPS-30)
 
 | Status | Count | Meaning here |
 |--------|------:|--------------|
-| Pass | 287 | Required cases executed; expected met (with caveats in Actual) |
-| Fail | 17 | Defect with evidence — see §2 (incl. new INV-J-020/021) |
-| Blocked | 162 | Could not execute (env/gate/credentials/fixture) — must not vanish into Pass |
-| Not tested | **0** | IPS-25 chase complete — see [not-tested-chase-results.md](./execution/not-tested-chase-results.md) |
+| Pass | **285** | Required cases executed; expected met under IPS-30 acceptance rules |
+| Fail | **24** | Defect with evidence — see §2 (prior 17 + 5 INV-DC-* + INV-C-014 + INV-N-004) |
+| Blocked | 165 | Could not execute (env/gate/credentials/fixture) — must not vanish into Pass |
+| Not tested | **9** | IPS-30 reopened visibility-only / listing-only rows (see §4b) |
 | Explicitly deferred | 10 | Agency product entries only (destination checks recorded) |
-| **Matrix rows** | **476** | |
+| **Matrix rows** | **493** | |
 
-**Chase delta (89 former Not tested):** 54 Pass · 2 Fail · 33 Blocked · 0 Not tested ([chase report](./execution/not-tested-chase-results.md)).
+**IPS-29 delta (+17 INV-DC-* rows):** +9 Pass · +5 Fail · +3 Blocked.  
+**IPS-30 demotions from Pass:** −11 Pass → +2 Fail · +9 Not tested.  
+**Chase delta (89 former Not tested, IPS-25):** historically 54 Pass · 2 Fail · 33 Blocked — several of those Passes demoted under IPS-30.
 
-**Slices completed (IPS-21…25):** auth (P-01…P-07), collab (P-08…P-18 + #536 revalidate), billing (P-21…P-23 / payouts-refunds surface), admin (P-27* + messages/notifications/jobs/email/integrations), **nt-chase (IPS-25)**.
+**Slices completed:** auth (P-01…P-07), collab (P-08…P-18 + #536 revalidate), billing (P-21…P-23), admin (P-27* + messages/notifications/jobs/email/integrations), **nt-chase (IPS-25)**, **dashboard consistency (IPS-29)**.
 
 ---
 
 ## 1) Coverage completed (what was tested)
 
-Executed work that reached **Pass** (or deliberate gate observation) across slices **plus IPS-25 nt-chase**. Detail lives in the matrix Actual/Evidence columns, slice reports, and [not-tested-chase-results.md](./execution/not-tested-chase-results.md).
+Executed work that reached **Pass** (or deliberate gate observation) across slices **plus IPS-25 nt-chase**, minus IPS-30 demotions. Detail lives in the matrix Actual/Evidence columns, slice reports, [not-tested-chase-results.md](./execution/not-tested-chase-results.md), and [dashboard-consistency-results.md](./execution/dashboard-consistency-results.md).
 
 ### Auth (IPS-21) — P-01…P-07
 
@@ -45,7 +61,6 @@ Executed work that reached **Pass** (or deliberate gate observation) across slic
 | Password surfaces | Reset **request** (`?sent=1`); set-password redirect when `hasPassword`; `/account?tab=security` change form |
 | Verify UI | Code + resend present (OTP completion Blocked — §4) |
 | Profiles | Influencer dashboard/details/social/links tabs; details save; business profile save (`?saved=1`) |
-| Onboarding | Creator setup reminders visible |
 | Discovery routes | `/discover`, `/categories` load (shortlist/card **Fail** — §2) |
 | Business marketing | `/business` form + consent |
 
@@ -73,9 +88,11 @@ Evidence root: `media/collab/` · Report: [execution/collab-results.md](./execut
 | Billing shells | Guest/member `/billing`; success/cancel auth gates; business billing/plans monthly UI |
 | Admin billing ops | Plans editor (incl. annual fields), billing activity (Stripe·Sandbox), discounts create UI, finance, marketplace destination |
 | Tax / auto-renew display | Tax lines on cards; Auto-renewal On shown |
-| Connect setup UI | Earnings payout setup Ready |
+| Connect setup UI | Earnings payout setup Ready (surface) — **does not** clear INV-C-014 / INV-DC-002 contradiction |
 | Hosted invoice | Stripe invoice `in_1UddzZ…` paid + hosted URL + PDF (**provider-confirmed**) |
 | Agency CTA destination | Upgrade CTA present / not silent 404 (product still deferred) |
+
+Annual **purchase** remains **Fail** (BILL-01) until year Stripe price is purchasable — error/unavailable UX may Pass separately.
 
 Evidence root: `media/billing/` · Report: [execution/billing-results.md](./execution/billing-results.md)
 
@@ -85,14 +102,25 @@ Evidence root: `media/billing/` · Report: [execution/billing-results.md](./exec
 |------|-------------|
 | Admin routes | Authenticated load for probed admin pages (48/48 in slice), menus SIDE_GROUPS, accounts tabs, payment-settings sections |
 | Mail ops | SMTP ready; **79/79** templates listed; admin Send test → `mail_test` **SUCCEEDED**; cron sweeps endpoint **401** without secret |
-| Jobs UI | Kinds listed; historical succeeded where present; retry copy |
+| Jobs UI | Kinds listed; historical succeeded where present; retry copy — **behavior Pass** for invitation/quote sweeps still open (INV-J-020/021 Fail; listing-only rows demoted IPS-30) |
 | Messages | Workroom round-trip business ↔ influencer |
-| Notifications | Bell, centre, account prefs, inbox consistency samples |
+| Notifications | Bell, centre, account prefs surface, inbox consistency samples |
 | Downloads | Accounts CSV, legal acceptances CSV, legal doc view |
 | Webhooks (mount) | Billing/marketplace/signing/meta/cron/health unsigned probes behave as mounted gates |
 | Agency destinations | Gated `/agency` + views + admin CMS + invalid invite token (product Explicitly deferred) |
 
 Evidence root: `media/admin/` · Report: [execution/admin-results.md](./execution/admin-results.md)
+
+### Dashboard consistency (IPS-29) — P-28 deep
+
+| Area | Outcome |
+|------|---------|
+| Invitation / payout / active projections | **Fail** INV-DC-001/002/006 (home ≠ hub ≠ earnings/badge) |
+| Team invite action-required | **Fail** INV-DC-012/015 (pending + no-action + no CTAs) |
+| Bell / unread / badge stability / refresh / re-login | Pass INV-DC-003/004/005/020/030–033 |
+| Create / withdraw / expire invite mutations | Blocked INV-DC-010/013/014 |
+
+Evidence root: `media/dashboard-consistency/` · Report: [execution/dashboard-consistency-results.md](./execution/dashboard-consistency-results.md)
 
 ### Process coverage (executed vs incomplete)
 
@@ -101,8 +129,8 @@ Evidence root: `media/admin/` · Report: [execution/admin-results.md](./executio
 | P-01 Signup | Partial Pass (claim verify/publish Blocked) |
 | P-02 Verify / password | Partial Pass (OTP + reset-token + mail Blocked) |
 | P-03 Business signup | Surfaces Pass; welcome mail Blocked |
-| P-04 Onboarding | Pass (reminders) |
-| P-05 Profiles | Pass (core save paths) |
+| P-04 Onboarding | **Fail** conditional reminders (INV-C-014 / INV-N-004) |
+| P-05 Profiles | Pass (core save paths); managed-intro / notif prefs functional → Not tested (IPS-30) |
 | P-06 Social | UI Pass; OAuth/webhook Blocked |
 | P-07 Discovery | Route Pass; shortlist/card **Fail** |
 | P-08…P-11 | Partial / Pass (see collab report) |
@@ -115,15 +143,13 @@ Evidence root: `media/admin/` · Report: [execution/admin-results.md](./executio
 | P-25 Mentorship | Community UI Pass (nt-chase); paid path gated |
 | P-26 Trust/disputes | Not newly fired (kinds mostly Blocked) |
 | P-27 Admin config | Route/UI readiness Pass; deep destructive mutates avoided |
-| P-28 Consistency | Light checks only in slices |
-
-**IPS-25 Pass highlights (formerly Not tested):** public marketing/legal/card routes; creator analytics/media-kit/KYC; business intelligence + nav; places/QR APIs; several job kinds listed operable; gates observed (`financial_reports`, `paid_mentoring`, mobile Log in hidden). Full chase detail: [not-tested-chase-results.md](./execution/not-tested-chase-results.md).
+| P-28 Consistency | **IPS-29** deep — 5 Fail / 9 Pass / 3 Blocked (+ IPS-30 reminder Fails) |
 
 ---
 
 ## 2) Defects found (Fail list with evidence)
 
-Seventeen matrix rows are **Fail**. Evidence paths are under [media/](./media/) ([INDEX](./media/INDEX.md)). #537 COR-SEC-01 is **merged** @ `5a5f4c0`; audit evidence still shows pre-deploy hints @ `40b6288` — live redeploy + rotation unconfirmed. **Fail ≠ remediated.** Root-cause packaging: [remediation-plan.md](./remediation-plan.md).
+Twenty-four matrix rows are **Fail**. Evidence paths under `docs/full-platform-audit/media/`. **Fail ≠ remediated.** Root-cause packaging: [remediation-plan.md](./remediation-plan.md).
 
 | Inventory ID | Defect ID | Summary | Evidence |
 |--------------|-----------|---------|----------|
@@ -134,20 +160,25 @@ Seventeen matrix rows are **Fail**. Evidence paths are under [media/](./media/) 
 | INV-A-074 | BILL-05 | Admin customer portal **On**; member **Manage billing** absent | [32-admin-billing.png](./media/billing/32-admin-billing.png); [12-billing-member.png](./media/billing/12-billing-member.png) |
 | INV-C-004 | BILL-05 | `customer_portal` gate ineffective on member path | same as INV-A-074 |
 | INV-D-006 | BILL-04 / COR-24 | Billing history COMPLETED rows; **no in-app invoice/PDF download** | [12-billing-member.png](./media/billing/12-billing-member.png) |
-| INV-R-074 | COR-SEC-01 | Public `/admin/login` showed default super-admin hint + email prefill on live @ `40b6288`; #537 merged `5a5f4c0` — redeploy + rotation unconfirmed | [admin/01-admin-login-public.png](./media/admin/01-admin-login-public.png) |
+| INV-R-074 | COR-SEC-01 | Public `/admin/login` still shows default super-admin hint + email prefill (code merged #537; live redeploy + rotation open) | [admin/01-admin-login-public.png](./media/admin/01-admin-login-public.png) |
 | INV-R-119 | ADMIN-MAIL-FAILED | Mail health: **Failed mail jobs: 32** while SMTP ready | [admin/06-admin-mail-health.png](./media/admin/06-admin-mail-health.png); [60-mail-health-detail.png](./media/admin/60-mail-health-detail.png) |
 | INV-D-003 | INV-D-003 | Intelligence export returns **JSON**, not CSV | [admin/export-INV-D-003.bin](./media/admin/export-INV-D-003.bin) |
 | INV-A-102 | INV-D-003 | Finance/intelligence export path same JSON≠CSV defect | [14-admin-intelligence.png](./media/admin/14-admin-intelligence.png); export bin above |
 | INV-I-014 | INV-D-003 | `/api/intelligence/export` JSON≠CSV | export bin above |
-| INV-P-001 | COR-13 | Discover card modal / `/c/` links blocked by **Sample directory** | [auth/retest-P-07-*.png](./media/auth/); `P-07-discover-*.png` |
+| INV-P-001 | COR-13 | Discover card modal / `/c/` links blocked by **Sample directory** | [auth/retest-P-07-*.png](./media/auth/) |
 | INV-A-035 | COR-13 | No Shortlist CTA for signed-in business (demo directory) | [auth/retest-P-07-discover-business.png](./media/auth/retest-P-07-discover-business.png) |
 | INV-C-008 | COR-13 | `public_pages_live` / demo mode active — blocks booking/shortlist | same Discover evidence |
-| INV-J-020 | **RC-JOBS** / JOBS-SWEEP-NEVER *(IPS-25)* | `invitation_followup_sweep` on `/admin/jobs`: **latest: never** + crontab/CRON_SECRET warning | [nt-chase/inv-j-jobs-page.png](./media/nt-chase/inv-j-jobs-page.png) · [chase report](./execution/not-tested-chase-results.md) · plan [RC-JOBS](./remediation-plan.md#rc-jobs--invitation--quote-cron-sweeps-never-ran) |
-| INV-J-021 | **RC-JOBS** / JOBS-SWEEP-NEVER *(IPS-25)* | `quote_expiry_sweep` on `/admin/jobs`: **latest: never** + crontab warning | same jobs-page evidence · [chase report](./execution/not-tested-chase-results.md) · plan [RC-JOBS](./remediation-plan.md#rc-jobs--invitation--quote-cron-sweeps-never-ran) |
+| INV-J-020 | **RC-JOBS** / JOBS-SWEEP-NEVER | `invitation_followup_sweep` **latest: never** + crontab/CRON_SECRET warning | [nt-chase/inv-j-jobs-page.png](./media/nt-chase/inv-j-jobs-page.png) |
+| INV-J-021 | **RC-JOBS** / JOBS-SWEEP-NEVER | `quote_expiry_sweep` **latest: never** + crontab warning | same |
+| INV-DC-001 | **RC-DASHBOARD** / DC-INVITE-MISMATCH | Home invites 1 vs hub 0 | [dashboard-consistency/re-inf-home.png](./media/dashboard-consistency/re-inf-home.png); [re-inf-hub.png](./media/dashboard-consistency/re-inf-hub.png) |
+| INV-DC-002 | **RC-DASHBOARD** / DC-PAYOUT-MISMATCH | Home/hub Not ready vs earnings Ready | same + [re-inf-earnings.png](./media/dashboard-consistency/re-inf-earnings.png) |
+| INV-DC-006 | **RC-DASHBOARD** / DC-ACTIVE-MISMATCH | Home Active 3 vs hub Active 2 | home/hub shots |
+| INV-DC-012 | **RC-DASHBOARD** / DC-ACTION-STUCK | Cannot complete invitation action-required | [re-inf-invitation-open.png](./media/dashboard-consistency/re-inf-invitation-open.png) |
+| INV-DC-015 | **RC-DASHBOARD** / DC-TEAM-INVITE-DEADEND | Pending + “No further action needed”; no CTAs | [re-inf-team-invite-detail.png](./media/dashboard-consistency/re-inf-team-invite-detail.png) |
+| INV-C-014 | **RC-DASHBOARD** / ACCEPT-CONDITIONAL *(IPS-30)* | Setup reminder cues Pass withdrawn — contradicts payout Ready | [nt-chase/inv-c-014-setup-reminders.png](./media/nt-chase/inv-c-014-setup-reminders.png); INV-DC-002 |
+| INV-N-004 | **RC-DASHBOARD** / ACCEPT-CONDITIONAL *(IPS-30)* | Setup reminders conditional not proven; paired with INV-C-014 | [admin/20-influencer-home.png](./media/admin/20-influencer-home.png) |
 
-**Noted on Pass rows (not matrix Fail):** COR-09a dual public+admin chrome; MSG-NAV workroom Messages vs sidebar; BILL-02 business annual unavailable copy; BILL-06 Starter “Manage downgrade” → `/claim`. Tracked in slice reports for remediation planning — do not treat as closed.
-
-**Collab slice:** no new matrix Fail rows. **IPS-25** added the two job-sweep Fails above only.
+**Noted on Pass rows (not matrix Fail):** COR-09a dual public+admin chrome; MSG-NAV workroom Messages vs sidebar; BILL-02 business annual unavailable copy; BILL-06 Starter “Manage downgrade” → `/claim`. Tracked in slice reports — do not treat as closed.
 
 ---
 
@@ -172,11 +203,9 @@ Seventeen matrix rows are **Fail**. Evidence paths are under [media/](./media/) 
 | Item | Result | Evidence |
 |------|--------|----------|
 | COR-21 deliverable download (INV-D-001) | **Pass** — influencer + business 200 / 2015041 bytes; signed-out 401 | `media/collab/desktop-*-download-status.txt`; `signed-out-deny.txt` |
-| COR-22 “Saved as https://…” link normalize | **Pass** | Review hub note + green `https://agboolaolomola.com` (collab manual shots) |
-| COR-23 separated Request changes / Approve (INV-A-059, INV-A-060) | **Pass** | `manual/cor23-request-changes-step.png`; `manual/cor23-approve-after-click.png`; `manual/biz-review-hub-focus.png` |
-| COR-20 soft-error / upload retry | **Not re-run** — waiting-review milestones; avoided mutating fixture (same skip as deployed smoke) | Prior pack retained under `media/cor-20-23-deployed-smoke/` |
-
-Approve confirm / release and request-changes **submit** were not confirmed (would mutate production audit fixture).
+| COR-22 “Saved as https://…” link normalize | **Pass** | Review hub note + green `https://agboolaolomola.com` |
+| COR-23 separated Request changes / Approve (INV-A-059, INV-A-060) | **Pass** | `manual/cor23-*.png` |
+| COR-20 soft-error / upload retry | **Not re-run** — waiting-review milestones; avoided mutating fixture | Prior pack under `media/cor-20-23-deployed-smoke/` |
 
 ### Billing revalidation
 
@@ -189,33 +218,38 @@ Approve confirm / release and request-changes **submit** were not confirmed (wou
 
 ## 4) Unresolved limitations (Blocked + Not tested)
 
-### 4a. Blocked (162) — cannot execute; not Pass
+### 4a. Blocked (165) — cannot execute; not Pass
 
-**Not tested = 0** after IPS-25; unresolved execution gaps are **Blocked** (plus Fail in §2). Pre-chase Blocked (129) plus **33** chase Blockeds = **162**. Themes:
+Pre-chase Blocked (129) + chase Blockeds (33) + IPS-29 Blockeds (3: INV-DC-010/013/014) = **165**. Themes:
 
 | Blocker | Notes / examples |
 |---------|------------------|
 | **No live mail sink / Mailpit** | Claim verify/publish; OTP/reset complete; most INV-E-* delivery; notification kinds needing email proof; INV-I-019 |
 | **Live deposits closed** (`journey_funding`) | Fund/checkout/release/refund/payout money paths; related payout/refund notices & emails |
-| **Fixture / UI gaps (slices)** | Pending native sign; payments dialog tabs; cancel/settlement; withdraw; team send/respond; valid invite token |
-| **Fixture / UI gaps (IPS-25)** | Deep-link ids (applications/openings/records); collab mutations needing quote/series/dispute/inquiry; AI tailor off; NoticeDialog not triggered; dashboard-own milestone path; `invitation_email` not listed until enqueued |
-| **Notification kinds not fireable** | INV-N-023…026, 029…034 (ops/dispute) — no live fire / no centre match |
+| **Fixture / UI gaps** | Pending native sign; payments dialog tabs; cancel/settlement; withdraw; team send/respond; valid invite token; IPS-29 invite create/withdraw/expire |
+| **Notification kinds not fireable** | INV-N-023…026, 029…034 (ops/dispute) |
 | **Provider / OAuth** | Meta webhook; social OAuth |
 | **Shared-host isolation** | INV-J-022 subscription renewal sweep; related cron isolation |
 | **SMS** | INV-N-103 not exercised |
-| **Destructive / demo gates** | INV-C-013 unpublished check blocked by demo Discover; INV-C-015 delete not executed on funded fixture |
+| **Destructive / demo gates** | INV-C-013 unpublished check; INV-C-015 delete not executed on funded fixture |
 
-Authoritative row list: [coverage-matrix.md](./coverage-matrix.md). Chase Blocked detail: [not-tested-chase-results.md](./execution/not-tested-chase-results.md).
+Authoritative row list: [coverage-matrix.md](./coverage-matrix.md).
 
-### 4b. Remaining Not tested — **none** (IPS-25 complete)
+### 4b. Not tested (9) — IPS-30 reopened
 
-| Metric | Value |
-|--------|------:|
-| Not tested (matrix) | **0** |
-| IPS-25 status | **Complete** |
-| Chase report | [execution/not-tested-chase-results.md](./execution/not-tested-chase-results.md) |
+| ID | Why reopened |
+|----|--------------|
+| INV-A-008 | Save prefs — visibility only; need save → reload → persist |
+| INV-A-019 | Managed-intro opt-in — visibility only |
+| INV-A-027 | Save/unsave listing — controls only |
+| INV-D-007 | Media-kit export — page load only; no file inspect |
+| INV-J-006 | Job behavior — kind listed only |
+| INV-J-010 | Job behavior — kind listed only |
+| INV-J-011 | Job behavior — kind listed only |
+| INV-J-015 | Job behavior — kind listed only |
+| INV-J-017 | Job behavior — kind listed only |
 
-Former Not tested IDs were closed to Pass (54), Fail (INV-J-020/021), or Blocked (33) — never folded into aggregate Pass without evidence.
+These are **not** Pass. Functional / behavior acceptance remains outstanding (IPS-31 mail sink / fixture work may unblock some).
 
 ### 4c. Explicitly deferred (10) — Agency product
 
@@ -227,7 +261,7 @@ Former Not tested IDs were closed to Pass (54), Fail (INV-J-020/021), or Blocked
 - **No Mailpit** on live — email delivery remains unproven except SMTP-accepted `mail_test`.
 - Agency product deferred by scope.
 - Destructive admin CMS / approve-release / dispute fires avoided on shared live data.
-- Matrix status closed ≠ product remediated: **17 Fail** still open.
+- Matrix status closed ≠ product remediated: **24 Fail** still open; plan **PROVISIONAL**.
 
 ---
 
@@ -238,9 +272,10 @@ Former Not tested IDs were closed to Pass (54), Fail (INV-J-020/021), or Blocked
 | [inventory.md](./inventory.md) | Surfaces inventoried |
 | [process-map.md](./process-map.md) | P-01…P-28 |
 | [coverage-matrix.md](./coverage-matrix.md) | Row-level status (authoritative) |
-| [execution/not-tested-chase-results.md](./execution/not-tested-chase-results.md) | IPS-25 NT chase (complete) |
+| [execution/not-tested-chase-results.md](./execution/not-tested-chase-results.md) | IPS-25 NT chase |
+| [execution/dashboard-consistency-results.md](./execution/dashboard-consistency-results.md) | IPS-29 |
 | [execution/*](./execution/) | Slice narratives + defect tables |
-| [remediation-plan.md](./remediation-plan.md) | Phase C **provisional** plan (17 Fail + blocked deps; not remediated until GitHub pack + impl) |
+| [remediation-plan.md](./remediation-plan.md) | Phase C **PROVISIONAL** plan (24 Fail + blocked deps) |
 | Prior [docs/e2e-audit/](../e2e-audit/), [docs/remediation-pack/](../remediation-pack/) | Historical only — not substitute for this reopen |
 
-**Status language:** Phase B matrix coverage is closed (Not tested = 0), but the platform is **not** fully remediated or platform-wide complete — **17 Fail** and **162 Blocked** remain. [remediation-plan.md](./remediation-plan.md) is **provisional** until the Audit package GitHub worker commits the evidence pack (must include the expanded plan). Do not open new product PRs from the plan alone; live deposits stay closed.
+**Status language:** Platform is **not** fully remediated or platform-wide complete — **24 Fail**, **165 Blocked**, and **9 Not tested** remain. [remediation-plan.md](./remediation-plan.md) is **PROVISIONAL**. Do not open new product PRs from the plan alone; live deposits stay closed.

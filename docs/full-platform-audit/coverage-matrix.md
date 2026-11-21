@@ -1,8 +1,8 @@
 # Coverage matrix (IPS-19 seed)
 
-**Phase:** B chase (IPS-25) — remaining Not tested closed; auth/collab/billing/admin + nt-chase. Statuses allowed: Pass | Fail | Blocked | Not tested | Explicitly deferred.
+**Phase:** B chase (IPS-25) + **IPS-29 dashboard consistency** (INV-DC-*) + **IPS-30 Pass acceptance corrections**. Statuses allowed: Pass | Fail | Blocked | Not tested | Explicitly deferred.
 **Baseline:** `main` @ `40b6288`. Live deposits closed. Agency product Explicitly deferred (exposed entries remain for destination checks in Phase B).
-**Source inventory:** [inventory.md](./inventory.md) · Processes: [process-map.md](./process-map.md)
+**Source inventory:** [inventory.md](./inventory.md) · Processes: [process-map.md](./process-map.md) · Dashboard consistency: [execution/dashboard-consistency-results.md](./execution/dashboard-consistency-results.md)
 
 ## Status legend
 
@@ -11,19 +11,32 @@
 | Pass | Required cases executed; expected met |
 | Fail | Defect with evidence |
 | Blocked | Cannot execute (env/gate/credentials) — must not vanish into Pass |
-| Not tested | Seeded; awaiting IPS-19 |
+| Not tested | Not executed to acceptance (incl. IPS-30 visibility/listing-only reopen) |
 | Explicitly deferred | Agency product (and only that) |
+
+
+## Acceptance criteria (IPS-30 / Ola bbc38ce)
+
+Pass requires proof beyond control visibility. Rules applied in this revision:
+
+1. **Conditional reminders** — same account + same state: reminder presence/absence must agree with payout readiness across home/hub/earnings (INV-C-014 / INV-N-004 / INV-DC-002). Reminder cues alone ≠ Pass.
+2. **Action checks** — execute action → persistence after reload → inspect resulting record or downloaded file. Visibility of save/opt-in/export controls ≠ functional Pass (INV-A-008, INV-A-019, INV-A-027, INV-D-007).
+3. **Annual purchase** — unavailable/error UX may Pass; annual purchasing remains Fail until the configured annual plan is purchasable (INV-R-006 / INV-A-070 / INV-A-072).
+4. **Cron / jobs** — separately prove (a) scheduler operation and (b) behavior: due invitation/quote → correct event → expected notification, no duplicate on rerun. Kind listed / empty or failed scan alone ≠ behavior Pass.
+5. **Security** — track code containment, deployment verification, and credential/session rotation as separate steps; overall RC-SEC stays open until all required steps complete (INV-R-074).
+
+Do **not** preserve prior aggregate Pass counts where evidence was visibility-only.
 
 ## Counts
 
 | Metric | Value |
 |--------|------:|
-| Matrix rows | 476 |
-| Not tested | 0 |
+| Matrix rows | 493 |
+| Not tested | 9 |
 | Explicitly deferred | 10 |
-| Pass | 287 |
-| Fail | 17 |
-| Blocked | 162 |
+| Pass | 285 |
+| Fail | 24 |
+| Blocked | 165 |
 
 
 
@@ -309,7 +322,7 @@
 | INV-A-005 | P-02 request+complete reset | Request email + set new password via token | Request UI Pass (?sent=1); token complete needs mailbox | media/auth/inv-a-005-*.png; retest-INV-A-005-reset-mobile.png | Blocked: no live mail sink for reset token | — | Blocked |
 | INV-A-006 | P-02 set/replace password form | Password change form for logged-in user | Available at /account?tab=security (3 password fields); /account/password is set-password-only | media/auth/retest-password-account-tab-security.png | — | — | Pass |
 | INV-A-007 | Save personal details / country form | Account details form + save control | formish=true; saveVisible=true; url=https://influrios.com/account | media/nt-chase/inv-a-007-account-details.png | — | — | Pass |
-| INV-A-008 | Save email & comm preferences | Notification prefs + save | prefs=true; url=https://influrios.com/account?tab=notifications; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Bil | media/nt-chase/inv-a-008-notif-prefs.png | — | — | Pass |
+| INV-A-008 | Save email & comm preferences | Notification prefs + save | prefs=true; url=https://influrios.com/account?tab=notifications; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Bil [IPS-30 demoted] control visible; save/persist/reload not executed | media/nt-chase/inv-a-008-notif-prefs.png | IPS-30: visibility-only (prefs=true); need save → reload → persisted prefs | — | Not tested |
 | INV-A-009 | Auto-renew display | Auto-renew status on billing tab | Auto-renewal On shown | media/billing/46b-account-billing-autorenew.png | — | — | Pass |
 | INV-A-010 | P-03 business register surfaces | Business signup form + role radio | Form on /business; BUSINESS radio on /signup | media/auth/inv-a-010-*.png | — | — | Pass |
 | INV-A-011 | P-03 accept business terms | Terms/consent on business signup | Consent checkboxes present on /business form | media/auth/inv-a-010-business-signup-form.png | — | — | Pass |
@@ -320,7 +333,7 @@
 | INV-A-016 | P-05 update dashboard profile/media | Overview profile surface | Dashboard overview loads; publish status copy present | media/auth/inv-a-023-publish-controls.png; inv-r-043-*.png | — | — | Pass |
 | INV-A-017 | P-05 confirm specialties/details save | Details save | Save on /dashboard/details succeeded | media/auth/inv-a-017-*.png | — | — | Pass |
 | INV-A-018 | P-05 discovery facets save | Facets/notes on details | Same details surface; Save available | media/auth/inv-a-017-*.png | — | — | Pass |
-| INV-A-019 | Save managed-intro opt-in | Opt-in control on profile/details | optInSignals=true; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out  | media/nt-chase/inv-a-019-managed-intro.png | — | — | Pass |
+| INV-A-019 | Save managed-intro opt-in | Opt-in control on profile/details | optInSignals=true; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out [IPS-30 demoted] opt-in control visible; functional persist not executed | media/nt-chase/inv-a-019-managed-intro.png | IPS-30: visibility-only opt-in signals; need toggle → persist → reload | — | Not tested |
 | INV-A-020 | P-06 connect/refresh/disconnect UI | Social actions visible | 7 connect/refresh/disconnect controls; provider OAuth terminal on INV-I-005 | media/auth/inv-a-020-social-panel.png | — | — | Pass |
 | INV-A-021 | Short-link slug/destination UI | Links panel editable | signals=true; url=https://influrios.com/dashboard/links | media/nt-chase/inv-a-021-links.png | — | — | Pass |
 | INV-A-022 | Submit document KYC / start gateway KYC UI | KYC surface with submit/start | signals=true; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out  | media/nt-chase/inv-a-022-kyc.png | — | — | Pass |
@@ -328,7 +341,7 @@
 | INV-A-024 | P-05 business profile save | Save persists with confirmation | POST → /business/profile?saved=1 | media/auth/retest3-biz-profile-save.png | — | retest precise form Pass | Pass |
 | INV-A-025 | Workspace actions | Workspace actions available | signals=true; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & | media/nt-chase/inv-a-025-workspace.png | — | — | Pass |
 | INV-A-026 | apply to business request | Apply CTA or empty opportunities | Opportunities Discover/Invited/Applications; apply=0 empty-fit state | media/collab/manual/inf-opportunities-final.png | — | — | Pass |
-| INV-A-027 | toggle saved listing | Save/unsave | saveControls=2; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Bil | media/nt-chase/inv-a-027-saved.png | — | — | Pass |
+| INV-A-027 | toggle saved listing | Save/unsave | saveControls=2; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Bil [IPS-30 demoted] save controls visible; toggle persistence not executed | media/nt-chase/inv-a-027-saved.png | IPS-30: visibility-only saveControls; need save/unsave → reload → listing state | — | Not tested |
 | INV-A-028 | apply to creator opportunity | Apply CTA or empty | Same opportunities surface as INV-A-026 | media/collab/desktop/influencer-opportunities.png | — | — | Pass |
 | INV-A-029 | creator transition application | Transition controls | appLinks=0; transitionish=0 | media/nt-chase/inv-a-029-transition.png | No application id / transition CTA on audit fixture | — | Blocked |
 | INV-A-030 | respond to invitation | Accept/decline controls | UI/tabs present; 0 pending invitations on fixture — accept/decline not mutated | media/collab/manual/inf-hub-collabs.png | — | — | Pass |
@@ -409,18 +422,18 @@
 | INV-J-003 | P-01 claim_verification_email job | Claim verify email delivered | No mail sink | — | Blocked | — | Blocked |
 | INV-J-004 | P-02 password_reset_email job | Reset email delivered | Request UI ok; delivery unproven | — | Blocked | — | Blocked |
 | INV-J-005 | mail_test via admin Send test | Job SUCCEEDED after SMTP accept | mail_test SUCCEEDED 2026-11-20T22:37:08Z (SMTP accept; not Mailpit) | media/admin/15-admin-mail-after-test.png; media/admin/61-jobs-after-mail-test.png | — | — | Pass |
-| INV-J-006 | job execution/sweep | Job succeeds/fails observably | Kind listed on /admin/jobs | media/nt-chase/inv-j-jobs-page.png | — | — | Pass |
+| INV-J-006 | job execution/sweep | Job succeeds/fails observably | Kind listed on /admin/jobs [IPS-30 demoted] listing-only; no recorded behavior run against due fixture | media/nt-chase/inv-j-jobs-page.png | IPS-30: kind listed ≠ scheduler+behavior proof (due item → event → notification; no duplicate on rerun) | — | Not tested |
 | INV-J-007 | Kind listed / historical success on Jobs UI | Kind operable or historical succeeded | Visible on /admin/jobs with succeeded history and/or catalog presence | media/admin/07-admin-jobs.png; media/admin/61-jobs-after-mail-test.png | — | — | Pass |
 | INV-J-008 | Kind listed / historical success on Jobs UI | Kind operable or historical succeeded | Visible on /admin/jobs with succeeded history and/or catalog presence | media/admin/07-admin-jobs.png; media/admin/61-jobs-after-mail-test.png | — | — | Pass |
 | INV-J-009 | Kind listed / historical success on Jobs UI | Kind operable or historical succeeded | Visible on /admin/jobs with succeeded history and/or catalog presence | media/admin/07-admin-jobs.png; media/admin/61-jobs-after-mail-test.png | — | — | Pass |
-| INV-J-010 | job execution/sweep | Job succeeds/fails observably | Kind listed on /admin/jobs | media/nt-chase/inv-j-jobs-page.png | — | — | Pass |
-| INV-J-011 | job execution/sweep | Job succeeds/fails observably | Kind listed on /admin/jobs | media/nt-chase/inv-j-jobs-page.png | — | — | Pass |
+| INV-J-010 | job execution/sweep | Job succeeds/fails observably | Kind listed on /admin/jobs [IPS-30 demoted] listing-only; no recorded behavior run against due fixture | media/nt-chase/inv-j-jobs-page.png | IPS-30: kind listed ≠ scheduler+behavior proof (due item → event → notification; no duplicate on rerun) | — | Not tested |
+| INV-J-011 | job execution/sweep | Job succeeds/fails observably | Kind listed on /admin/jobs [IPS-30 demoted] listing-only; no recorded behavior run against due fixture | media/nt-chase/inv-j-jobs-page.png | IPS-30: kind listed ≠ scheduler+behavior proof (due item → event → notification; no duplicate on rerun) | — | Not tested |
 | INV-J-012 | Kind listed / historical success on Jobs UI | Kind operable or historical succeeded | Visible on /admin/jobs with succeeded history and/or catalog presence | media/admin/07-admin-jobs.png; media/admin/61-jobs-after-mail-test.png | — | — | Pass |
 | INV-J-013 | Kind listed / historical success on Jobs UI | Kind operable or historical succeeded | Visible on /admin/jobs with succeeded history and/or catalog presence | media/admin/07-admin-jobs.png; media/admin/61-jobs-after-mail-test.png | — | — | Pass |
 | INV-J-014 | failed_payout_retry_sweep | Retry failed payouts | Not executed; deposits closed / isolation | — | — | — | Blocked |
-| INV-J-015 | job execution/sweep | Job succeeds/fails observably | Kind listed on /admin/jobs | media/nt-chase/inv-j-jobs-page.png | — | — | Pass |
+| INV-J-015 | job execution/sweep | Job succeeds/fails observably | Kind listed on /admin/jobs [IPS-30 demoted] listing-only; no recorded behavior run against due fixture | media/nt-chase/inv-j-jobs-page.png | IPS-30: kind listed ≠ scheduler+behavior proof (due item → event → notification; no duplicate on rerun) | — | Not tested |
 | INV-J-016 | Kind listed / historical success on Jobs UI | Kind operable or historical succeeded | Visible on /admin/jobs with succeeded history and/or catalog presence | media/admin/07-admin-jobs.png; media/admin/61-jobs-after-mail-test.png | — | — | Pass |
-| INV-J-017 | job execution/sweep | Job succeeds/fails observably | Kind listed on /admin/jobs | media/nt-chase/inv-j-jobs-page.png | — | — | Pass |
+| INV-J-017 | job execution/sweep | Job succeeds/fails observably | Kind listed on /admin/jobs [IPS-30 demoted] listing-only; no recorded behavior run against due fixture | media/nt-chase/inv-j-jobs-page.png | IPS-30: kind listed ≠ scheduler+behavior proof (due item → event → notification; no duplicate on rerun) | — | Not tested |
 | INV-J-018 | Kind listed / historical success on Jobs UI | Kind operable or historical succeeded | Visible on /admin/jobs with succeeded history and/or catalog presence | media/admin/07-admin-jobs.png; media/admin/61-jobs-after-mail-test.png | — | — | Pass |
 | INV-J-019 | Kind listed / historical success on Jobs UI | Kind operable or historical succeeded | Visible on /admin/jobs with succeeded history and/or catalog presence | media/admin/07-admin-jobs.png; media/admin/61-jobs-after-mail-test.png | — | — | Pass |
 | INV-J-020 | job execution/sweep | Job succeeds/fails observably | Kind listed on /admin/jobs; window=invitation_followup_sweep latest: never No succeeded row yet — confirm crontab + CRON_SECRET. quote_expiry_sweep latest: never No succeeded row yet — confirm cr | media/nt-chase/inv-j-jobs-page.png | sweep shows never / crontab warning | — | Fail |
@@ -431,7 +444,7 @@
 | INV-N-001 | Bell open + unread label desk | Bell consistent with centre | Bell 2 unread; centre lists notices; copy distinguishes unread vs action | media/admin/24-influencer-bell.png; media/admin/71-notif-counts.png | — | — | Pass |
 | INV-N-002 | action inbox tasks | Tasks or empty; openable | Influencer: review_contract/delivery/invitation/funding signals; 4 open tasks | media/collab/manual/inf-inbox-tasks.png | — | — | Pass |
 | INV-N-003 | Notification routes consistency | Pages load | /creator/notifications, /account notifications, /notifications Pass | media/admin/23-influencer-notifications.png | — | — | Pass |
-| INV-N-004 | Setup reminders conditional | Shown when incomplete | Not forced this run — account shell present | media/admin/20-influencer-home.png | — | — | Pass |
+| INV-N-004 | Setup reminders conditional | Shown when incomplete | Not forced this run — account shell present [IPS-30 demoted] visibility/not-forced only; conditional vs payout readiness unproven | media/admin/20-influencer-home.png | IPS-30: paired with INV-C-014; setup-reminder conditional not proven; same-account payout Ready contradiction | DC-PAYOUT-MISMATCH / ACCEPT-CONDITIONAL | Fail |
 | INV-N-010 | in-app/email notification kind | Emitted on state change | In-app inbox partially observed; email delivery not verified (no Mailpit on live) | media/collab/manual/inf-inbox-tasks.png | Mail sink unavailable on live | — | Blocked |
 | INV-N-011 | in-app/email notification kind | Emitted on state change | In-app inbox partially observed; email delivery not verified (no Mailpit on live) | media/collab/manual/inf-inbox-tasks.png | Mail sink unavailable on live | — | Blocked |
 | INV-N-012 | in-app/email notification kind | Emitted on state change | In-app inbox partially observed; email delivery not verified (no Mailpit on live) | media/collab/manual/inf-inbox-tasks.png | Mail sink unavailable on live | — | Blocked |
@@ -564,7 +577,7 @@
 | INV-D-004 | Legal acceptances CSV | CSV download | influrios-legal-acceptances.csv downloaded | media/admin/export-INV-D-004-influrios-legal-acceptances.csv | — | — | Pass |
 | INV-D-005 | Hosted Stripe invoice/PDF | Provider hosted URL+PDF | in_1UddzZ paid; hosted_invoice_url+invoice_pdf revalidated | media/billing/stripe-api-invoice-in_1UddzZ1geYv2y1v8tm2vcCBe.json | — | — | Pass |
 | INV-D-006 | In-app invoice download | Download from billing history | COMPLETED rows; no download control | media/billing/12-billing-member.png | BILL-04/COR-24 | — | Fail |
-| INV-D-007 | Media kit export | Creator media kit | http=200; signals=true; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Bil | media/nt-chase/inv-d-007-media-kit.png | — | — | Pass |
+| INV-D-007 | Media kit export | Creator media kit | http=200; signals=true; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Bil [IPS-30 demoted] media-kit page loads; export file not produced/inspected | media/nt-chase/inv-d-007-media-kit.png | IPS-30: page/signals visibility only; need export → inspect downloaded file | — | Not tested |
 | INV-D-008 | contract PDF/printable | Printable/PDF view | printControls=4; afterClickSignals=true | media/nt-chase/inv-d-008-after.png | — | — | Pass |
 | INV-D-009 | QR/short link assets | Resolve/QR | Short resolve unknown handled; QR not deeply probed | media/admin/deep-results.json | — | — | Pass |
 | INV-D-010 | Legal document view | /legal/[slug] | /legal/privacy-policy 200 | media/admin/deep-results.json | — | — | Pass |
@@ -581,7 +594,7 @@
 | INV-C-011 | Payment settings section visibility | Per modules | All sections visible to super admin | media/admin/08-admin-payment-settings.png | — | — | Pass |
 | INV-C-012 | Email template pause / preference | Paused skip delivery | Health: None paused; categories listed | media/admin/06-admin-mail-health.png | — | — | Pass |
 | INV-C-013 | Unpublished profile hidden from Discover | Unpublished profiles not listed when public_pages_live on | Cannot validate: Discover is Sample directory demo (public_pages_live off) — live publish gating not observable | media/auth/retest-P-07-discover-business.png | Blocked: public_pages_live demo mode prevents unpublished-vs-live Discover check | — | Blocked |
-| INV-C-014 | Setup reminders conditional display | Reminders shown only while incomplete (or absent when complete) | cues=true; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Bil | media/nt-chase/inv-c-014-setup-reminders.png | — | — | Pass |
+| INV-C-014 | Setup reminders conditional display | Reminders shown only while incomplete (or absent when complete) | cues=true; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Bil [IPS-30 demoted] reminder presence alone; not verified against payout readiness — contradicts INV-A-075 Ready / INV-DC-002 | media/nt-chase/inv-c-014-setup-reminders.png | IPS-30: cues=true ≠ conditional; same account shows setup reminder while INV-A-075/earnings Ready (see INV-DC-002) | DC-PAYOUT-MISMATCH / ACCEPT-CONDITIONAL | Fail |
 | INV-C-015 | delete signed/funded request protected | Action refused | deleteControls=6; did not mutate funded fixture — protection observed as UI absence or would need destructive probe | media/nt-chase/inv-c-015-delete-protect.png | Blocked: delete control present but not executed on production funded fixture (destructive) | — | Blocked |
 | INV-C-016 | Agency upgrade CTA on billing | Exposed CTA | Upgrade to Agency on business billing | media/billing/21-business-billing.png | — | — | Pass |
 | INV-C-017 | Mobile public Log in hidden <sm | Log in CTA hidden or constrained on mobile public chrome | href=/login count=1; visible=false | media/nt-chase/inv-c-017-mobile-login.png | — | — | Pass |
@@ -591,3 +604,20 @@
 | INV-AG-003 | /agency/invite/[token] states | Accept/sign-in/seats-off/wrong-email | Invalid token 404; other states need valid token | media/admin/77-agency-invite.png | — | — | Explicitly deferred |
 | INV-AG-004 | /admin/agency CMS destination | CMS loads | Admin agency CMS Pass load | media/admin/12-admin-agency-cms.png | — | — | Explicitly deferred |
 | INV-AG-005 | Agency CTA destination | Not silent 404 | CTA present; destination usable/gated (product deferred) | media/billing/24-agency-upgrade-cta.png; 21-business-billing.png | — | — | Pass |
+| INV-DC-001 | Invitation counts home/banner/attention vs hub vs Collaborations badge (inf d+m; biz attention check) | Same open-invite count across surfaces | Influencer home Invitations=1 + banner/attention; hub Invitations=0 “No invitations are waiting”; sidebar Collaborations=1. Business badge=2 matches attention scale | media/dashboard-consistency/re-inf-home.png; re-inf-hub.png; re-inf-mobile-home.png; re-inf-mobile-hub.png; re-biz-home.png | DC-INVITE-MISMATCH | IPS-29 | Fail |
+| INV-DC-002 | Payout readiness home reminder vs hub widget vs earnings page vs Earnings badge (inf d+m) | All four agree Ready or Not ready | Home “Complete payout setup”; hub Payment readiness Not ready; earnings Payout Setup Ready; Earnings badge=1 | media/dashboard-consistency/re-inf-home.png; re-inf-hub.png; re-inf-earnings.png; re-inf-mobile-*.png | DC-PAYOUT-MISMATCH | IPS-29 | Fail |
+| INV-DC-003 | Sidebar badges stable across home/hub/money pages both roles | Same badge numbers in session | Influencer collab=1 earnings=1 stable; business collab=2 payments=0 stable | media/dashboard-consistency/re-inf-home.png; re-biz-home.png; re-biz-collab.png | — | IPS-29 | Pass |
+| INV-DC-004 | Bell unread vs notification centre Unread rows | Bell N = Unread-tagged notices | Bell 2 matched 2 Unread rows before clear | media/dashboard-consistency/re-inf-notif-fresh.png; re-inf-notif-before.png | — | IPS-29 | Pass |
+| INV-DC-005 | Unread vs action-required distinction in centre | Copy + separate Action required filter | Centre states unread≠action-required; Action required (9) filter separate from bell | media/dashboard-consistency/re-inf-notif-before.png | — | IPS-29 | Pass |
+| INV-DC-006 | Active collaboration count home vs hub (inf d+m) | Same Active count | Home Active collaborations=3; hub Active=2 | media/dashboard-consistency/re-inf-home.png; re-inf-hub.png; re-inf-mobile-home.png; re-inf-mobile-hub.png | DC-ACTIVE-MISMATCH | IPS-29 | Fail |
+| INV-DC-010 | Business create invitation for consistency lifecycle | Invitation sendable without live deposit | Request composer opened; send not completed (picker/demo) | media/dashboard-consistency/biz-invite-composer-start.png; biz-invite-composer-after.png | Blocked: invite create | IPS-29 | Blocked |
+| INV-DC-011 | View invitation from dashboard attention CTA | Opens invitation destination | Review invitation → team invite Free Tech Support | media/dashboard-consistency/re-inf-invitation-open.png | — | IPS-29 | Pass |
+| INV-DC-012 | Completing invitation action clears action-required; home/hub/badge agree after | After respond/decline, attention+counts clear together | Pending team invite has no respond controls; action-required cannot be completed from destination | media/dashboard-consistency/re-inf-invitation-open.png; re-inf-team-invite-detail.png | DC-ACTION-STUCK | IPS-29 | Fail |
+| INV-DC-013 | Business withdraw pending invite; badges/destinations agree after | Withdraw updates counts together | No Withdraw control on current business list; funded fixtures not mutated | media/dashboard-consistency/biz-withdraw-surface.png; re-biz-collab.png | Blocked: no safe withdraw fixture | IPS-29 | Blocked |
+| INV-DC-014 | Expire invitation (deadline/sweep); counts agree after | Expire updates home/hub/badge together | marketplace_application_expire_sweep listed; no pending invite expired this pass | media/dashboard-consistency/re-admin-jobs-expire.png; admin-expire-sweep-jobs.png | Blocked: no expire mutation | IPS-29 | Blocked |
+| INV-DC-015 | Team invite destination self-consistency | Pending response XOR no-action; respond CTAs when pending | Same page: “Pending your response” + “No further action needed”; no Decline/Interested | media/dashboard-consistency/re-inf-invitation-open.png; re-inf-team-invite-detail.png | DC-TEAM-INVITE-DEADEND | IPS-29 | Fail |
+| INV-DC-020 | Opening Unread notice clears unread bell; action-required unchanged by read | Bell decreases after ?open= on Unread row | Bell 2→1→0 after two Unread opens; already-Read open does not change bell | media/dashboard-consistency/re-inf-home-bell-after-1.png; re-inf-home-bell-after-2.png; re-inf-open-unread-sig.png | — | IPS-29 | Pass |
+| INV-DC-030 | Influencer refresh keeps badge/invite agreement | Counts unchanged after reload | Collaborations/Earnings badges stable after refresh | media/dashboard-consistency/re-inf-refresh.png | — | IPS-29 | Pass |
+| INV-DC-031 | Influencer re-login keeps Collaborations/Earnings badges | Same after sign-in again | Stable after clearCookies + login | media/dashboard-consistency/re-inf-relogin.png | — | IPS-29 | Pass |
+| INV-DC-032 | Business refresh badge stability | Unchanged after reload | Collaborations=2 stable | media/dashboard-consistency/re-biz-refresh.png | — | IPS-29 | Pass |
+| INV-DC-033 | Business re-login Collaborations badge stability | Same after sign-in again | Collaborations=2 stable | media/dashboard-consistency/re-biz-relogin.png | — | IPS-29 | Pass |

@@ -20,14 +20,15 @@ Fixture emails matching configured `AUDIT_*_EMAIL` secrets were replaced with `a
 | `billing/` | 53 | 9.4 MiB |
 | `collab/` | 125 | 16.1 MiB |
 | `nt-chase/` | 84 | 14.6 MiB |
-| **All** | **434** | **87.6 MiB** |
+| `dashboard-consistency/` | 99 | 16.9 MiB |
+| **All** | **533** | **104.6 MiB** |
 
 ### By file type
 
 | Ext | Count |
 |-----|------:|
-| `.png` | 401 |
-| `.json` | 22 |
+| `.png` | 497 |
+| `.json` | 25 |
 | `.txt` | 5 |
 | `.bin` | 2 |
 | `.csv` | 2 |
@@ -50,6 +51,9 @@ Fixture emails matching configured `AUDIT_*_EMAIL` secrets were replaced with `a
 | RC-EXPORT bin | [admin/export-INV-D-003.bin](./admin/export-INV-D-003.bin) |
 | RC-EXPORT intel UI | [admin/14-admin-intelligence.png](./admin/14-admin-intelligence.png) |
 | RC-JOBS INV-J-020/021 | [nt-chase/inv-j-jobs-page.png](./nt-chase/inv-j-jobs-page.png) |
+| RC-DASHBOARD INV-DC-001/002 | [dashboard-consistency/re-inf-home.png](./dashboard-consistency/re-inf-home.png); [re-inf-hub.png](./dashboard-consistency/re-inf-hub.png); [re-inf-earnings.png](./dashboard-consistency/re-inf-earnings.png) |
+| RC-DASHBOARD INV-DC-012/015 | [dashboard-consistency/re-inf-invitation-open.png](./dashboard-consistency/re-inf-invitation-open.png); [re-inf-team-invite-detail.png](./dashboard-consistency/re-inf-team-invite-detail.png) |
+| ACCEPT-CONDITIONAL INV-C-014 | [nt-chase/inv-c-014-setup-reminders.png](./nt-chase/inv-c-014-setup-reminders.png) |
 
 ## Slice directories
 
@@ -60,6 +64,7 @@ Fixture emails matching configured `AUDIT_*_EMAIL` secrets were replaced with `a
 | [billing/](./billing/) | Pricing, member billing, portal, upgrade dialogs, Stripe probes |
 | [collab/](./collab/) | Collaboration hubs, deliverables, review (#536 revalidate), desktop/mobile/manual |
 | [nt-chase/](./nt-chase/) | IPS-25 Not-tested chase screenshots + JSON (incl. INV-J-020/021 jobs page) |
+| [dashboard-consistency/](./dashboard-consistency/) | **IPS-29 / RC-DASHBOARD** contradiction coverage (INV-DC-*); `results.json` / `reverify.json` |
 
 ## Text / machine logs (full set committed)
 
@@ -104,7 +109,7 @@ Prefer these over screenshots when asserting API/status outcomes:
 ## Full file listing
 
 <details>
-<summary>All 434 evidence paths</summary>
+<summary>All 533 evidence paths</summary>
 
 | Path | Bytes |
 |------|------:|
@@ -542,6 +547,106 @@ Prefer these over screenshots when asserting API/status outcomes:
 | [nt-chase/inv-r-065-records-list.png](./nt-chase/inv-r-065-records-list.png) | 111973 |
 | [nt-chase/inv-r-071-team-detail.png](./nt-chase/inv-r-071-team-detail.png) | 81981 |
 | [nt-chase/inv-r-071-team-list.png](./nt-chase/inv-r-071-team-list.png) | 269264 |
+
+| [dashboard-consistency/admin-expire-sweep-jobs.png](./dashboard-consistency/admin-expire-sweep-jobs.png) | 555975 |
+| [dashboard-consistency/after-view-influencer-desktop-collab.png](./dashboard-consistency/after-view-influencer-desktop-collab.png) | 121426 |
+| [dashboard-consistency/after-view-influencer-desktop-home.png](./dashboard-consistency/after-view-influencer-desktop-home.png) | 121426 |
+| [dashboard-consistency/after-view-influencer-desktop-inbox.png](./dashboard-consistency/after-view-influencer-desktop-inbox.png) | 121426 |
+| [dashboard-consistency/after-view-influencer-desktop-money.png](./dashboard-consistency/after-view-influencer-desktop-money.png) | 121426 |
+| [dashboard-consistency/after-view-influencer-desktop-notifications.png](./dashboard-consistency/after-view-influencer-desktop-notifications.png) | 121426 |
+| [dashboard-consistency/before-business-desktop-collab.png](./dashboard-consistency/before-business-desktop-collab.png) | 123606 |
+| [dashboard-consistency/before-business-desktop-home.png](./dashboard-consistency/before-business-desktop-home.png) | 295687 |
+| [dashboard-consistency/before-business-desktop-inbox.png](./dashboard-consistency/before-business-desktop-inbox.png) | 190391 |
+| [dashboard-consistency/before-business-desktop-money.png](./dashboard-consistency/before-business-desktop-money.png) | 116142 |
+| [dashboard-consistency/before-business-desktop-notifications.png](./dashboard-consistency/before-business-desktop-notifications.png) | 42100 |
+| [dashboard-consistency/before-business-mobile-collab.png](./dashboard-consistency/before-business-mobile-collab.png) | 61440 |
+| [dashboard-consistency/before-business-mobile-home.png](./dashboard-consistency/before-business-mobile-home.png) | 274343 |
+| [dashboard-consistency/before-business-mobile-inbox.png](./dashboard-consistency/before-business-mobile-inbox.png) | 152230 |
+| [dashboard-consistency/before-business-mobile-money.png](./dashboard-consistency/before-business-mobile-money.png) | 78555 |
+| [dashboard-consistency/before-business-mobile-notifications.png](./dashboard-consistency/before-business-mobile-notifications.png) | 40011 |
+| [dashboard-consistency/before-influencer-desktop-collab.png](./dashboard-consistency/before-influencer-desktop-collab.png) | 159170 |
+| [dashboard-consistency/before-influencer-desktop-home.png](./dashboard-consistency/before-influencer-desktop-home.png) | 290888 |
+| [dashboard-consistency/before-influencer-desktop-inbox.png](./dashboard-consistency/before-influencer-desktop-inbox.png) | 267647 |
+| [dashboard-consistency/before-influencer-desktop-money.png](./dashboard-consistency/before-influencer-desktop-money.png) | 250536 |
+| [dashboard-consistency/before-influencer-desktop-notifications.png](./dashboard-consistency/before-influencer-desktop-notifications.png) | 141783 |
+| [dashboard-consistency/before-influencer-mobile-collab.png](./dashboard-consistency/before-influencer-mobile-collab.png) | 137544 |
+| [dashboard-consistency/before-influencer-mobile-home.png](./dashboard-consistency/before-influencer-mobile-home.png) | 263934 |
+| [dashboard-consistency/before-influencer-mobile-inbox.png](./dashboard-consistency/before-influencer-mobile-inbox.png) | 226712 |
+| [dashboard-consistency/before-influencer-mobile-money.png](./dashboard-consistency/before-influencer-mobile-money.png) | 214900 |
+| [dashboard-consistency/before-influencer-mobile-notifications.png](./dashboard-consistency/before-influencer-mobile-notifications.png) | 108865 |
+| [dashboard-consistency/biz-invite-composer-after.png](./dashboard-consistency/biz-invite-composer-after.png) | 78628 |
+| [dashboard-consistency/biz-invite-composer-start.png](./dashboard-consistency/biz-invite-composer-start.png) | 76607 |
+| [dashboard-consistency/biz-post-refresh-business-desktop-collab.png](./dashboard-consistency/biz-post-refresh-business-desktop-collab.png) | 123606 |
+| [dashboard-consistency/biz-post-refresh-business-desktop-home.png](./dashboard-consistency/biz-post-refresh-business-desktop-home.png) | 295687 |
+| [dashboard-consistency/biz-post-refresh-business-desktop-inbox.png](./dashboard-consistency/biz-post-refresh-business-desktop-inbox.png) | 190391 |
+| [dashboard-consistency/biz-post-refresh-business-desktop-money.png](./dashboard-consistency/biz-post-refresh-business-desktop-money.png) | 116142 |
+| [dashboard-consistency/biz-post-refresh-business-desktop-notifications.png](./dashboard-consistency/biz-post-refresh-business-desktop-notifications.png) | 42100 |
+| [dashboard-consistency/biz-post-relogin-business-desktop-collab.png](./dashboard-consistency/biz-post-relogin-business-desktop-collab.png) | 121426 |
+| [dashboard-consistency/biz-post-relogin-business-desktop-home.png](./dashboard-consistency/biz-post-relogin-business-desktop-home.png) | 121426 |
+| [dashboard-consistency/biz-post-relogin-business-desktop-inbox.png](./dashboard-consistency/biz-post-relogin-business-desktop-inbox.png) | 121426 |
+| [dashboard-consistency/biz-post-relogin-business-desktop-money.png](./dashboard-consistency/biz-post-relogin-business-desktop-money.png) | 121426 |
+| [dashboard-consistency/biz-post-relogin-business-desktop-notifications.png](./dashboard-consistency/biz-post-relogin-business-desktop-notifications.png) | 121426 |
+| [dashboard-consistency/biz-pre-refresh-business-desktop-collab.png](./dashboard-consistency/biz-pre-refresh-business-desktop-collab.png) | 123606 |
+| [dashboard-consistency/biz-pre-refresh-business-desktop-home.png](./dashboard-consistency/biz-pre-refresh-business-desktop-home.png) | 295687 |
+| [dashboard-consistency/biz-pre-refresh-business-desktop-inbox.png](./dashboard-consistency/biz-pre-refresh-business-desktop-inbox.png) | 190391 |
+| [dashboard-consistency/biz-pre-refresh-business-desktop-money.png](./dashboard-consistency/biz-pre-refresh-business-desktop-money.png) | 116142 |
+| [dashboard-consistency/biz-pre-refresh-business-desktop-notifications.png](./dashboard-consistency/biz-pre-refresh-business-desktop-notifications.png) | 42100 |
+| [dashboard-consistency/biz-withdraw-surface.png](./dashboard-consistency/biz-withdraw-surface.png) | 123606 |
+| [dashboard-consistency/inf-invitations-tab.png](./dashboard-consistency/inf-invitations-tab.png) | 121426 |
+| [dashboard-consistency/inf-opportunities.png](./dashboard-consistency/inf-opportunities.png) | 121426 |
+| [dashboard-consistency/post-refresh-influencer-desktop-collab.png](./dashboard-consistency/post-refresh-influencer-desktop-collab.png) | 159170 |
+| [dashboard-consistency/post-refresh-influencer-desktop-home.png](./dashboard-consistency/post-refresh-influencer-desktop-home.png) | 290888 |
+| [dashboard-consistency/post-refresh-influencer-desktop-inbox.png](./dashboard-consistency/post-refresh-influencer-desktop-inbox.png) | 267647 |
+| [dashboard-consistency/post-refresh-influencer-desktop-money.png](./dashboard-consistency/post-refresh-influencer-desktop-money.png) | 250536 |
+| [dashboard-consistency/post-refresh-influencer-desktop-notifications.png](./dashboard-consistency/post-refresh-influencer-desktop-notifications.png) | 141783 |
+| [dashboard-consistency/post-relogin-influencer-desktop-collab.png](./dashboard-consistency/post-relogin-influencer-desktop-collab.png) | 159170 |
+| [dashboard-consistency/post-relogin-influencer-desktop-home.png](./dashboard-consistency/post-relogin-influencer-desktop-home.png) | 290888 |
+| [dashboard-consistency/post-relogin-influencer-desktop-inbox.png](./dashboard-consistency/post-relogin-influencer-desktop-inbox.png) | 267647 |
+| [dashboard-consistency/post-relogin-influencer-desktop-money.png](./dashboard-consistency/post-relogin-influencer-desktop-money.png) | 250536 |
+| [dashboard-consistency/post-relogin-influencer-desktop-notifications.png](./dashboard-consistency/post-relogin-influencer-desktop-notifications.png) | 141783 |
+| [dashboard-consistency/pre-invite-action-influencer-desktop-collab.png](./dashboard-consistency/pre-invite-action-influencer-desktop-collab.png) | 121426 |
+| [dashboard-consistency/pre-invite-action-influencer-desktop-home.png](./dashboard-consistency/pre-invite-action-influencer-desktop-home.png) | 121426 |
+| [dashboard-consistency/pre-invite-action-influencer-desktop-inbox.png](./dashboard-consistency/pre-invite-action-influencer-desktop-inbox.png) | 121426 |
+| [dashboard-consistency/pre-invite-action-influencer-desktop-money.png](./dashboard-consistency/pre-invite-action-influencer-desktop-money.png) | 121426 |
+| [dashboard-consistency/pre-invite-action-influencer-desktop-notifications.png](./dashboard-consistency/pre-invite-action-influencer-desktop-notifications.png) | 121426 |
+| [dashboard-consistency/pre-refresh-influencer-desktop-collab.png](./dashboard-consistency/pre-refresh-influencer-desktop-collab.png) | 159170 |
+| [dashboard-consistency/pre-refresh-influencer-desktop-home.png](./dashboard-consistency/pre-refresh-influencer-desktop-home.png) | 290888 |
+| [dashboard-consistency/pre-refresh-influencer-desktop-inbox.png](./dashboard-consistency/pre-refresh-influencer-desktop-inbox.png) | 267647 |
+| [dashboard-consistency/pre-refresh-influencer-desktop-money.png](./dashboard-consistency/pre-refresh-influencer-desktop-money.png) | 250536 |
+| [dashboard-consistency/pre-refresh-influencer-desktop-notifications.png](./dashboard-consistency/pre-refresh-influencer-desktop-notifications.png) | 141783 |
+| [dashboard-consistency/re-admin-jobs-expire.png](./dashboard-consistency/re-admin-jobs-expire.png) | 555975 |
+| [dashboard-consistency/re-biz-collab.png](./dashboard-consistency/re-biz-collab.png) | 123606 |
+| [dashboard-consistency/re-biz-home.png](./dashboard-consistency/re-biz-home.png) | 295687 |
+| [dashboard-consistency/re-biz-notif-before.png](./dashboard-consistency/re-biz-notif-before.png) | 42100 |
+| [dashboard-consistency/re-biz-refresh.png](./dashboard-consistency/re-biz-refresh.png) | 123606 |
+| [dashboard-consistency/re-biz-relogin.png](./dashboard-consistency/re-biz-relogin.png) | 295687 |
+| [dashboard-consistency/re-inf-after-mark-read-home.png](./dashboard-consistency/re-inf-after-mark-read-home.png) | 290888 |
+| [dashboard-consistency/re-inf-earnings.png](./dashboard-consistency/re-inf-earnings.png) | 250536 |
+| [dashboard-consistency/re-inf-home-after-invite-action.png](./dashboard-consistency/re-inf-home-after-invite-action.png) | 290888 |
+| [dashboard-consistency/re-inf-home-bell-after-1.png](./dashboard-consistency/re-inf-home-bell-after-1.png) | 290431 |
+| [dashboard-consistency/re-inf-home-bell-after-2.png](./dashboard-consistency/re-inf-home-bell-after-2.png) | 290136 |
+| [dashboard-consistency/re-inf-home.png](./dashboard-consistency/re-inf-home.png) | 290888 |
+| [dashboard-consistency/re-inf-hub-after-invite-action.png](./dashboard-consistency/re-inf-hub-after-invite-action.png) | 159170 |
+| [dashboard-consistency/re-inf-hub.png](./dashboard-consistency/re-inf-hub.png) | 159170 |
+| [dashboard-consistency/re-inf-invitation-after-action.png](./dashboard-consistency/re-inf-invitation-after-action.png) | 83358 |
+| [dashboard-consistency/re-inf-invitation-open.png](./dashboard-consistency/re-inf-invitation-open.png) | 83358 |
+| [dashboard-consistency/re-inf-mobile-earnings.png](./dashboard-consistency/re-inf-mobile-earnings.png) | 214900 |
+| [dashboard-consistency/re-inf-mobile-home.png](./dashboard-consistency/re-inf-mobile-home.png) | 263934 |
+| [dashboard-consistency/re-inf-mobile-hub.png](./dashboard-consistency/re-inf-mobile-hub.png) | 137544 |
+| [dashboard-consistency/re-inf-notif-after-mark.png](./dashboard-consistency/re-inf-notif-after-mark.png) | 141783 |
+| [dashboard-consistency/re-inf-notif-after-open.png](./dashboard-consistency/re-inf-notif-after-open.png) | 290888 |
+| [dashboard-consistency/re-inf-notif-before.png](./dashboard-consistency/re-inf-notif-before.png) | 141783 |
+| [dashboard-consistency/re-inf-notif-fresh.png](./dashboard-consistency/re-inf-notif-fresh.png) | 141783 |
+| [dashboard-consistency/re-inf-notif-open-dialog.png](./dashboard-consistency/re-inf-notif-open-dialog.png) | 158169 |
+| [dashboard-consistency/re-inf-open-unread-sig.png](./dashboard-consistency/re-inf-open-unread-sig.png) | 160560 |
+| [dashboard-consistency/re-inf-refresh.png](./dashboard-consistency/re-inf-refresh.png) | 290888 |
+| [dashboard-consistency/re-inf-relogin.png](./dashboard-consistency/re-inf-relogin.png) | 290888 |
+| [dashboard-consistency/re-inf-team-invite-detail.png](./dashboard-consistency/re-inf-team-invite-detail.png) | 83358 |
+| [dashboard-consistency/results.json](./dashboard-consistency/results.json) | 32874 |
+| [dashboard-consistency/reverify.json](./dashboard-consistency/reverify.json) | 8885 |
+| [dashboard-consistency/summary.json](./dashboard-consistency/summary.json) | 493 |
+| [dashboard-consistency/unread-after-open-business.png](./dashboard-consistency/unread-after-open-business.png) | 295687 |
+| [dashboard-consistency/unread-after-open-influencer.png](./dashboard-consistency/unread-after-open-influencer.png) | 290888 |
 
 </details>
 
