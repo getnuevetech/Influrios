@@ -1,0 +1,29 @@
+{
+  "queued": true,
+  "mailpitTotal": 1,
+  "sample": {
+    "ID": "2BIT5OCzc2JfWNvjqhZ5Cv",
+    "MessageID": "40Z8DqsG7PeGhb7fwiqRWx@mailpit",
+    "Read": false,
+    "From": {
+      "Name": "Influrios Audit",
+      "Address": "noreply@audit.local"
+    },
+    "To": [
+      {
+        "Name": "",
+        "Address": "audit.r3pr12vx.claim-ee653e@example.com"
+      }
+    ],
+    "Cc": null,
+    "Bcc": null,
+    "ReplyTo": null,
+    "Subject": "Verify your email for your Influrios Card",
+    "Created": "2026-11-21T01:52:07.859Z",
+    "Username": "",
+    "Tags": [],
+    "Size": 3982,
+    "Attachments": 0,
+    "Snippet": "One more step to continue claiming your card. ∞ Influrios Your account Continue claiming your card Hello, Enter this code in the card claim screen to confirm access to this email address. This step ..."
+  }
+}

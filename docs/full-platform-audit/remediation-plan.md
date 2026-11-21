@@ -1,6 +1,6 @@
 # Full-platform audit — consolidated remediation plan (IPS-20)
 
-> **PROVISIONAL — Ola direction (2026-11-20; IPS-30 refresh 2026-11-21).**  
+> **PROVISIONAL — Ola direction (2026-11-20; IPS-30/31 refresh 2026-11-21).**  
 > This plan stays **provisional until the full audit evidence package is committed on GitHub**. It is **not** a platform-wide completion certificate, **not** authorization to open product remediations beyond already-merged #537, and **not** proof that live host already matches `main`.  
 > **Live collaboration deposits remain closed.** Agency product remains Explicitly deferred.  
 > **Commit coordination:** Audit package GitHub worker (`bc-cd0be808-fe9f-5151-9b07-2a30bc90b6cf`) must publish **this** store path as the plan revision in the evidence PR — see [§ Coordination](#coordination--github-evidence-package).
@@ -10,12 +10,13 @@
 | **Status** | Provisional design / planning artifact |
 | **Audit execution baseline** | Live host probed @ `40b6288` (#536); matrix post IPS-25 |
 | **Code note** | #537 COR-SEC-01 **merged** → `5a5f4c0` on `main`; live redeploy + credential rotation **not** confirmed |
-| **Matrix** | **285 Pass · 24 Fail · 165 Blocked · 9 Not tested · 10 Explicitly deferred** (493 rows) — +IPS-29 INV-DC-* + IPS-30 Pass-rule demotions |
+| **Matrix** | **355 Pass · 24 Fail · 95 Blocked · 9 Not tested · 10 Explicitly deferred** (493 rows) — +IPS-29/30 + **IPS-31** mail-sink (+70 Pass / −70 Blocked) |
 | **Authoritative matrix** | [coverage-matrix.md](./coverage-matrix.md) |
 | **Coverage narrative** | [coverage-status.md](./coverage-status.md) |
-| **Execution** | [execution/](./execution/) (auth, collab, billing, admin, [not-tested-chase-results.md](./execution/not-tested-chase-results.md), [dashboard-consistency-results.md](./execution/dashboard-consistency-results.md)) |
+| **Execution** | [execution/](./execution/) (auth, collab, billing, admin, [not-tested-chase-results.md](./execution/not-tested-chase-results.md), [dashboard-consistency-results.md](./execution/dashboard-consistency-results.md), [mail-sink-restore-results.md](./execution/mail-sink-restore-results.md)) |
 | **Prior pack** | [docs/remediation-pack/](../remediation-pack/) |
 | **IPS-29 patch** | [execution/dashboard-consistency-remediation-patch.md](./execution/dashboard-consistency-remediation-patch.md) (RC-DASHBOARD detail) |
+| **IPS-31 mail-sink** | [execution/mail-sink-restore-results.md](./execution/mail-sink-restore-results.md) — isolated Mailpit; deposit+mail remain Blocked |
 
 ---
 
@@ -24,7 +25,7 @@
 | Claims | Does **not** claim |
 |--------|---------------------|
 | 24 Fail rows are reproduced with evidence paths (incl. IPS-29 INV-DC-* + IPS-30 INV-C-014/INV-N-004) | Platform is fully audited or remediated |
-| Blocked rows are dependencies / retest gates | Blocked = Pass, or Blocked folded into Fail |
+| Blocked rows are dependencies / retest gates (95 after IPS-31) | Blocked = Pass, or deposit+mail marked Pass without money event |
 | Corrected flows + acceptance for each Fail | Product PRs are approved to start (except #537 already merged) |
 | Plan is the revision for the GitHub evidence PR | Evidence pack is already on GitHub |
 
@@ -35,7 +36,7 @@
 | Role | Agent / path | Instruction |
 |------|--------------|-------------|
 | Plan author (this doc) | `bc-6b5c0158-5f8f-5732-976b-411f1252d49a` | Maintain provisional plan in store |
-| **Audit package GitHub** | [#539](https://github.com/getnuevetech/Influrios/pull/539) / `cursor/full-platform-audit-package-b6cf` | Commit **this file** + matrix/status/execution/media; IPS-29 + IPS-30 revisions |
+| **Audit package GitHub** | [#539](https://github.com/getnuevetech/Influrios/pull/539) / `cursor/full-platform-audit-package-b6cf` | Commit **this file** + matrix/status/execution/media; IPS-29 + IPS-30 + IPS-31 revisions |
 | Coordinator | Project parent | Route handoff; keep plan provisional until PR lands |
 
 **Handoff path for commit:**  
@@ -91,16 +92,16 @@ Until that PR exists and is reviewable on GitHub, treat every remediation item b
 
 Blocked rows are **not** Fail. They **block proof** of related remediations and must be called out on each correction.
 
-| Blocker theme (~165 Blocked post IPS-29; +9 Not tested IPS-30) | Blocks proof of… | Remediations still designable? |
+| Blocker theme (**95 Blocked** post IPS-31; +9 Not tested IPS-30) | Blocks proof of… | Remediations still designable? |
 |------------------------------------------|------------------|--------------------------------|
-| No Mailpit / mail sink | Email delivery for claim follow-ups (RC-JOBS), invite/contract/billing templates, OTP/reset | Yes — UI/ops; delivery Pass stays Blocked until sink |
-| Live deposits closed | Funding, release, refund, payout notices; collab discount apply | Yes for subscription Fail; **no** live money reopen |
+| Remaining mail-sink gaps (claim-draft / notification-event) | Full claim publish + live notification kind emission | Yes — fixtures; **IPS-31** proved interception (INV-I-019); do not reopen deposits |
+| Live deposits closed (+ deposit+mail) | Funding, release, refund, payout notices; collab discount apply | Yes for subscription Fail; **no** live money reopen; mail portion may be proven via Send-test only |
 | Cron / shared-host isolation | INV-J-022 renewal; safe live fire of INV-J-020/021; INV-DC-014 expire mutation | Prefer staging/isolation for first success |
 | Fixture gaps | Pending Sign, cancel entry, deep-link ids, AI tailor off; IPS-29 INV-DC-010 invite create / INV-DC-013 withdraw | Separate fixture work — not Fail |
 | OAuth / Meta | Social connect provider-confirmed | Out of Fail set |
 | Agency deferred | Agency product depth | Destinations only |
 
-Full themes: [coverage-status.md §4](./coverage-status.md) · chase Blockeds: [not-tested-chase-results.md](./execution/not-tested-chase-results.md) · IPS-29 Blockeds: [dashboard-consistency-results.md](./execution/dashboard-consistency-results.md).
+Full themes: [coverage-status.md §4](./coverage-status.md) · [blocked-register.md](./blocked-register.md) · chase: [not-tested-chase-results.md](./execution/not-tested-chase-results.md) · IPS-29: [dashboard-consistency-results.md](./execution/dashboard-consistency-results.md) · IPS-31: [mail-sink-restore-results.md](./execution/mail-sink-restore-results.md).
 
 ---
 
@@ -624,6 +625,7 @@ See patch **RC-DASHBOARD** (DB1–DB6). Package **R4b**. Deposits stay closed; n
 - **IPS-25** — NT chase complete; Fail +2 (INV-J-020/021).  
 - **IPS-26** — [coverage-status.md](./coverage-status.md).  
 - **IPS-29** — dashboard consistency contradiction coverage; Fail +5 (INV-DC-001/002/006/012/015) → **RC-DASHBOARD**.  
-- **IPS-30** — Pass acceptance corrections (Ola bbc38ce): demote visibility-only Passes; recalculate matrix (**285 Pass · 24 Fail · 165 Blocked · 9 Not tested**); plan stays **PROVISIONAL**.  
+- **IPS-30** — Pass acceptance corrections (Ola bbc38ce): demote visibility-only Passes; plan stays **PROVISIONAL**.  
+- **IPS-31** — isolated Mailpit restore; matrix **355 Pass · 95 Blocked** (deposit+mail stay Blocked); plan stays **PROVISIONAL**.  
 - **#537** — COR-SEC-01 merged `5a5f4c0`; redeploy + rotation open (S1–S5 all required).  
 - **GitHub evidence package** — Audit package worker must commit **this** revision.

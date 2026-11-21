@@ -21,18 +21,20 @@ Fixture emails matching configured `AUDIT_*_EMAIL` secrets were replaced with `a
 | `collab/` | 125 | 16.1 MiB |
 | `nt-chase/` | 84 | 14.6 MiB |
 | `dashboard-consistency/` | 99 | 16.9 MiB |
-| **All** | **533** | **104.6 MiB** |
+| `mail-sink/` | 14 | 0.7 MiB |
+| **All** | **547** | **105.3 MiB** |
 
 ### By file type
 
 | Ext | Count |
 |-----|------:|
-| `.png` | 497 |
-| `.json` | 25 |
+| `.png` | 501 |
+| `.json` | 35 |
 | `.txt` | 5 |
 | `.bin` | 2 |
 | `.csv` | 2 |
 | `.tsv` | 2 |
+
 
 ## Key Fail evidence (quick links)
 
@@ -54,6 +56,8 @@ Fixture emails matching configured `AUDIT_*_EMAIL` secrets were replaced with `a
 | RC-DASHBOARD INV-DC-001/002 | [dashboard-consistency/re-inf-home.png](./dashboard-consistency/re-inf-home.png); [re-inf-hub.png](./dashboard-consistency/re-inf-hub.png); [re-inf-earnings.png](./dashboard-consistency/re-inf-earnings.png) |
 | RC-DASHBOARD INV-DC-012/015 | [dashboard-consistency/re-inf-invitation-open.png](./dashboard-consistency/re-inf-invitation-open.png); [re-inf-team-invite-detail.png](./dashboard-consistency/re-inf-team-invite-detail.png) |
 | ACCEPT-CONDITIONAL INV-C-014 | [nt-chase/inv-c-014-setup-reminders.png](./nt-chase/inv-c-014-setup-reminders.png) |
+| IPS-31 INV-I-019 Mailpit | [mail-sink/inv-i-019-admin-send-test.png](./mail-sink/inv-i-019-admin-send-test.png); [inv-i-019-mailpit.json](./mail-sink/inv-i-019-mailpit.json) |
+| IPS-31 OTP/reset | [mail-sink/inv-a-004-verify-complete.png](./mail-sink/inv-a-004-verify-complete.png); [inv-a-005-reset-complete.png](./mail-sink/inv-a-005-reset-complete.png) |
 
 ## Slice directories
 
@@ -65,6 +69,7 @@ Fixture emails matching configured `AUDIT_*_EMAIL` secrets were replaced with `a
 | [collab/](./collab/) | Collaboration hubs, deliverables, review (#536 revalidate), desktop/mobile/manual |
 | [nt-chase/](./nt-chase/) | IPS-25 Not-tested chase screenshots + JSON (incl. INV-J-020/021 jobs page) |
 | [dashboard-consistency/](./dashboard-consistency/) | **IPS-29 / RC-DASHBOARD** contradiction coverage (INV-DC-*); `results.json` / `reverify.json` |
+| [mail-sink/](./mail-sink/) | **IPS-31** isolated Mailpit restore (INV-I-019 + journey/catalog evidence); `results.json` |
 
 ## Text / machine logs (full set committed)
 
@@ -109,7 +114,7 @@ Prefer these over screenshots when asserting API/status outcomes:
 ## Full file listing
 
 <details>
-<summary>All 533 evidence paths</summary>
+<summary>All 547 evidence paths</summary>
 
 | Path | Bytes |
 |------|------:|
@@ -647,6 +652,21 @@ Prefer these over screenshots when asserting API/status outcomes:
 | [dashboard-consistency/summary.json](./dashboard-consistency/summary.json) | 493 |
 | [dashboard-consistency/unread-after-open-business.png](./dashboard-consistency/unread-after-open-business.png) | 295687 |
 | [dashboard-consistency/unread-after-open-influencer.png](./dashboard-consistency/unread-after-open-influencer.png) | 290888 |
+
+| [mail-sink/catalog-sends.json](./mail-sink/catalog-sends.json) | 28158 |
+| [mail-sink/fixtures.json](./mail-sink/fixtures.json) | 788 |
+| [mail-sink/inv-a-004-verify-complete-retry.png](./mail-sink/inv-a-004-verify-complete-retry.png) | 121733 |
+| [mail-sink/inv-a-004-verify-complete.png](./mail-sink/inv-a-004-verify-complete.png) | 72138 |
+| [mail-sink/inv-a-004-verify-mail.json](./mail-sink/inv-a-004-verify-mail.json) | 204 |
+| [mail-sink/inv-a-004-verify-retry.json](./mail-sink/inv-a-004-verify-retry.json) | 173 |
+| [mail-sink/inv-a-005-reset-complete.png](./mail-sink/inv-a-005-reset-complete.png) | 222234 |
+| [mail-sink/inv-a-005-reset-mail.json](./mail-sink/inv-a-005-reset-mail.json) | 102 |
+| [mail-sink/inv-i-019-admin-send-test.png](./mail-sink/inv-i-019-admin-send-test.png) | 252558 |
+| [mail-sink/inv-i-019-mailpit.json](./mail-sink/inv-i-019-mailpit.json) | 496 |
+| [mail-sink/inv-j-003-claim-mail.json](./mail-sink/inv-j-003-claim-mail.json) | 829 |
+| [mail-sink/invite-test-mail.json](./mail-sink/invite-test-mail.json) | 857 |
+| [mail-sink/meta.json](./mail-sink/meta.json) | 744 |
+| [mail-sink/results.json](./mail-sink/results.json) | 61953 |
 
 </details>
 

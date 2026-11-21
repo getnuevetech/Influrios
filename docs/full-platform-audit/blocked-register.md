@@ -1,8 +1,8 @@
 # Blocked-check register (IPS-28)
 
 **Purpose:** Account for every **Blocked** row in the full-platform coverage matrix so env/fixture gates cannot vanish into Pass.
-**Source matrix:** [coverage-matrix.md](./coverage-matrix.md) (Blocked = **162**).
-**Execution narratives:** [execution/](./execution/) (`auth|collab|billing|admin|not-tested-chase`-results.md).
+**Source matrix:** [coverage-matrix.md](./coverage-matrix.md) (Blocked = **95**; IPS-31 mail-sink restore).
+**Execution narratives:** [execution/](./execution/) (`auth|collab|billing|admin|not-tested-chase|mail-sink-restore`-results.md).
 **Policy:** Do **not** enable live collaboration deposits (`journey_funding`) merely to clear audit counts. Prefer isolated staging + Mailpit / `MAIL_SINK_TO`.
 **Baseline:** Phase B live host; deposits closed; Agency Explicitly deferred.
 
@@ -10,16 +10,17 @@
 
 | Metric | Value |
 |--------|------:|
-| Blocked rows accounted for | **162** |
-| Matrix Blocked (authoritative) | 162 |
+| Blocked rows accounted for | **95** |
+| Matrix Blocked (authoritative) | 95 |
 | Match | YES |
 
 ### By blocker cluster
 
 | Cluster | Count | Owner (default) |
 |---------|------:|-----------------|
-| `MAIL_SINK` | 85 | Platform Ops (R5 mail) + Audit harness owner |
+| `MAIL_SINK` | 15 | Platform Ops (R5 mail) + Audit harness owner |
 | `UI_FIXTURE_GAP` | 19 | Collaboration / product surface owner (fixture state) |
+| `DASHBOARD_CONSISTENCY_FIXTURE` | 3 | Collaboration QA (IPS-29 INV-DC-010/013/014) |
 | `DEPOSITS_CLOSED_AND_MAIL_SINK` | 14 | Payments (event) + Platform Ops (sink) |
 | `DEPOSITS_CLOSED` | 13 | Payments / Collaboration (R6) — ops gate only; do not reopen for audit counts |
 | `EVENT_NOT_FIREABLE` | 10 | Collaboration / Trust & disputes + Payments ops |
@@ -41,11 +42,12 @@
 
 | Prefix | Count |
 |--------|------:|
-| INV-A-* | 33 |
+| INV-A-* | 31 |
 | INV-C-* | 2 |
-| INV-E-* | 78 |
-| INV-I-* | 3 |
-| INV-J-* | 6 |
+| INV-DC-* | 3 |
+| INV-E-* | 14 |
+| INV-I-* | 2 |
+| INV-J-* | 3 |
 | INV-N-* | 26 |
 | INV-P-* | 4 |
 | INV-R-* | 8 |
@@ -55,7 +57,7 @@
 
 ### Mail sink — Mailpit / `MAIL_SINK` / `MAIL_SINK_TO`
 
-Live Phase B proved **SMTP Ready** and `mail_test` job **SUCCEEDED** (SMTP accept). That is **not** sink-confirmed delivery. INV-I-019 and most INV-E-*/OTP/reset/claim rows stay Blocked until interception is restored.
+**IPS-31 restored isolated Mailpit** (`127.0.0.1:1025` SMTP / `8025` API) with local Postgres fixtures; INV-I-019 Pass; 70 MAIL_SINK rows Pass. Live Phase B still has no Mailpit UI — do not treat live SMTP 250 as sink proof. Remaining MAIL_SINK blockers: claim-draft fixture (6) + notification event fire (9). Deposit+mail combo (14) stays Blocked (mail portion proven; money event closed).
 
 #### Local / isolated staging (preferred)
 
@@ -80,7 +82,7 @@ Historical local proof pattern: `docs/e2e-audit/mail-sink-proof.md`, `docs/e2e-a
 
 #### Rows unlocked by mail-sink restore (retest batch)
 
-Count touching mail sink: **99** (includes combo deposit+sink).
+Count touching mail sink: **99** (includes combo deposit+sink). **IPS-31 result:** 70 Pass · 15 MAIL_SINK still Blocked · 14 combo still Blocked. Evidence: [execution/mail-sink-restore-results.md](./execution/mail-sink-restore-results.md).
 
 Primary auth/claim/job unlocks after sink alone (no deposit reopen):
 
@@ -103,100 +105,31 @@ Primary auth/claim/job unlocks after sink alone (no deposit reopen):
 
 Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **Safe test method**, **Acceptance evidence**.
 
-### `MAIL_SINK` (85)
+### `MAIL_SINK` (15)
 
 - **Default owner:** Platform Ops (R5 mail) + Audit harness owner
 - **Prerequisite:** Dedicated Mailpit (or MAIL_SINK_TO allowlist) on isolated host; AUDIT_* recipients only; SMTP pointed at sink
-- **Safe test method:** Local/staging: Docker Mailpit :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
+- **Safe test method:** Local/staging: Mailpit binary or Docker :1025/:8025; point admin mailSettings host/port at Mailpit; trigger only to AUDIT_* / @example.com; assert via Mailpit API `/api/v1/messages`. Live: set MAIL_SINK_TO to allowlisted audit mailbox only; never customer addresses. SMTP accept alone ≠ Pass.
+- **IPS-31 (2026-11-21):** Isolated Mailpit restored (`127.0.0.1:1025`/`8025`); INV-I-019 Pass; **70** former MAIL_SINK rows → Pass (see [execution/mail-sink-restore-results.md](./execution/mail-sink-restore-results.md)). **15** remain Blocked below.
 - **Acceptance evidence:** Mailpit (or allowlisted sink) shows message with expected template id/subject; job SUCCEEDED; screenshot of sink UI or API JSON; recipient is AUDIT-only.
 
 | ID | Journey / surface | Exact blocker (this row) | Notes from matrix |
 |----|-------------------|--------------------------|-------------------|
-| INV-R-017 | P-01 Claim draft preview | Claim draft + mail sink required; Mailpit/MAIL_SINK unavailable on live | No draftId without claim+mail path |
-| INV-R-018 | P-01/P-02 Claim verify | Claim draft + mail sink required; Mailpit/MAIL_SINK unavailable on live | Requires draft+mailbox |
-| INV-R-019 | P-01 Claim publish | Claim draft + mail sink required; Mailpit/MAIL_SINK unavailable on live | Depends on verified draft |
-| INV-A-004 | P-02 Verify OTP complete | Mailbox interception (Mailpit/MAIL_SINK) unavailable on live for OTP/reset/claim verify delivery | UI+resend Pass; OTP complete needs mailbox |
-| INV-A-005 | P-02 Password reset complete | Mailbox interception (Mailpit/MAIL_SINK) unavailable on live for OTP/reset/claim verify delivery | Request UI Pass (?sent=1); token complete needs mailbox |
-| INV-A-013 | P-01 Claim draft email verify | Claim draft + mail sink required; Mailpit/MAIL_SINK unavailable on live | Needs draft+mail |
-| INV-A-014 | P-01 Claim draft publish | Claim draft + mail sink required; Mailpit/MAIL_SINK unavailable on live | Depends on A-013 |
-| INV-A-015 | P-01/P-06 Claim draft social | Claim draft + mail sink required; Mailpit/MAIL_SINK unavailable on live | Depends on active claim draft |
-| INV-J-002 | P-01/P-02 verification_email job | Mailbox interception (Mailpit/MAIL_SINK) unavailable on live for OTP/reset/claim verify delivery | No mail sink on live |
-| INV-J-003 | P-01 claim_verification_email job | Mailbox interception (Mailpit/MAIL_SINK) unavailable on live for OTP/reset/claim verify delivery | No mail sink |
-| INV-J-004 | P-02 password_reset_email job | Mailbox interception (Mailpit/MAIL_SINK) unavailable on live for OTP/reset/claim verify delivery | Request UI ok; delivery unproven |
-| INV-N-010 | P-15/P-17 Notification `funding_required` · `funding_required` | In-app partially observed; email delivery of `funding_required` unproven — no Mailpit on live | In-app inbox partially observed; email delivery not verified (no Mailpit on live) |
-| INV-N-011 | P-15/P-17 Notification `funding_successful` · `funding_successful` | In-app partially observed; email delivery of `funding_successful` unproven — no Mailpit on live | In-app inbox partially observed; email delivery not verified (no Mailpit on live) |
-| INV-N-012 | P-15/P-17 Notification `funding_failed` · `funding_failed` | In-app partially observed; email delivery of `funding_failed` unproven — no Mailpit on live | In-app inbox partially observed; email delivery not verified (no Mailpit on live) |
-| INV-N-013 | P-15/P-17 Notification `milestone_submitted` · `milestone_submitted` | In-app partially observed; email delivery of `milestone_submitted` unproven — no Mailpit on live | In-app inbox partially observed; email delivery not verified (no Mailpit on live) |
-| INV-N-014 | P-15/P-17 Notification `review_deadline_approaching` · `review_deadline_approaching` | In-app partially observed; email delivery of `review_deadline_approaching` unproven — no Mailpit on live | In-app inbox partially observed; email delivery not verified (no Mailpit on live) |
-| INV-N-015 | P-15/P-17 Notification `revision_requested` · `revision_requested` | In-app partially observed; email delivery of `revision_requested` unproven — no Mailpit on live | In-app inbox partially observed; email delivery not verified (no Mailpit on live) |
-| INV-N-016 | P-15/P-17 Notification `milestone_approved` · `milestone_approved` | In-app partially observed; email delivery of `milestone_approved` unproven — no Mailpit on live | In-app inbox partially observed; email delivery not verified (no Mailpit on live) |
-| INV-N-017 | P-15/P-17 Notification `milestone_auto_approved` · `milestone_auto_approved` | In-app partially observed; email delivery of `milestone_auto_approved` unproven — no Mailpit on live | In-app inbox partially observed; email delivery not verified (no Mailpit on live) |
-| INV-N-027 | P-15/P-17 Notification `collaboration_cancelled` · `collaboration_cancelled` | In-app partially observed; email delivery of `collaboration_cancelled` unproven — no Mailpit on live | In-app inbox partially observed; email delivery not verified (no Mailpit on live) |
-| INV-E-001 | P-01/P-02 Email `account.verify` · `account.verify` | Template `account.verify` listed or journey-linked; sink-confirmed delivery unavailable on live | Unproven on live |
-| INV-E-002 | P-01/P-02 Email `account.card_verify` · `account.card_verify` | Template `account.card_verify` listed or journey-linked; sink-confirmed delivery unavailable on live | Unproven |
-| INV-E-003 | P-01/P-02 Email `account.reset` · `account.reset` | Template `account.reset` listed or journey-linked; sink-confirmed delivery unavailable on live | Unproven |
-| INV-E-004 | P-01/P-02 Email `account.admin_setup` · `account.admin_setup` | Template `account.admin_setup` listed or journey-linked; sink-confirmed delivery unavailable on live | Listed in /admin/mail/templates (79/79). Live Mailpit sink unavailable; journey send not exercised this slice |
-| INV-E-005 | P-01/P-02 Email `account.claim` · `account.claim` | Template `account.claim` listed or journey-linked; sink-confirmed delivery unavailable on live | Unproven |
-| INV-E-006 | P-01/P-02 Email `account.claim_followup` · `account.claim_followup` | Template `account.claim_followup` listed or journey-linked; sink-confirmed delivery unavailable on live | Unproven |
-| INV-E-007 | P-01/P-02 Email `account.welcome_influencer` · `account.welcome_influencer` | Template `account.welcome_influencer` listed or journey-linked; sink-confirmed delivery unavailable on live | Unproven |
-| INV-E-008 | P-01/P-02 Email `account.welcome_business` · `account.welcome_business` | Template `account.welcome_business` listed or journey-linked; sink-confirmed delivery unavailable on live | Unproven |
-| INV-E-009 | P-01/P-02 Email `account.password_changed` · `account.password_changed` | Template `account.password_changed` listed or journey-linked; sink-confirmed delivery unavailable on live | Form not mutated on AUDIT fixture |
-| INV-E-011 | P-08/P-12 Email `invite.collaboration` · `invite.collaboration` | Template `invite.collaboration` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-012 | P-08/P-12 Email `invite.private_campaign` · `invite.private_campaign` | Template `invite.private_campaign` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-013 | P-08/P-12 Email `invite.accepted` · `invite.accepted` | Template `invite.accepted` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-014 | P-08/P-12 Email `invite.declined` · `invite.declined` | Template `invite.declined` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-015 | P-08/P-12 Email `invite.team_sent` · `invite.team_sent` | Template `invite.team_sent` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-016 | P-08/P-12 Email `invite.team_accepted` · `invite.team_accepted` | Template `invite.team_accepted` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-017 | P-08/P-12 Email `invite.team_declined` · `invite.team_declined` | Template `invite.team_declined` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-018 | P-08/P-12 Email `invite.team_expired` · `invite.team_expired` | Template `invite.team_expired` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-019 | P-11 Email `contract.sign` · `contract.sign` | Template `contract.sign` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-020 | P-11 Email `contract.progress` · `contract.progress` | Template `contract.progress` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-021 | P-11 Email `contract.reminder` · `contract.reminder` | Template `contract.reminder` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-022 | P-11 Email `contract.signed_business` · `contract.signed_business` | Template `contract.signed_business` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-023 | P-11 Email `contract.signed_influencer` · `contract.signed_influencer` | Template `contract.signed_influencer` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-024 | P-11 Email `contract.declined` · `contract.declined` | Template `contract.declined` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-025 | P-11 Email `contract.voided` · `contract.voided` | Template `contract.voided` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-026 | P-11 Email `contract.message` · `contract.message` | Template `contract.message` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-027 | P-11 Email `contract.quote_expiring` · `contract.quote_expiring` | Template `contract.quote_expiring` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-028 | P-11 Email `contract.change_requested` · `contract.change_requested` | Template `contract.change_requested` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-029 | P-11 Email `contract.change_accepted` · `contract.change_accepted` | Template `contract.change_accepted` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-030 | P-15 Email `funding.required` · `funding.required` | Template `funding.required` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-031 | P-15 Email `funding.open` · `funding.open` | Template `funding.open` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-032 | P-15 Email `funding.processing` · `funding.processing` | Template `funding.processing` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-033 | P-15 Email `funding.confirmed_business` · `funding.confirmed_business` | Template `funding.confirmed_business` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-034 | P-15 Email `funding.confirmed_influencer` · `funding.confirmed_influencer` | Template `funding.confirmed_influencer` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-035 | P-15 Email `funding.failed` · `funding.failed` | Template `funding.failed` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-036 | P-15 Email `funding.expired` · `funding.expired` | Template `funding.expired` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-037 | P-15 Email `milestone.submitted` · `milestone.submitted` | Template `milestone.submitted` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-038 | P-15 Email `milestone.review_reminder` · `milestone.review_reminder` | Template `milestone.review_reminder` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-039 | P-15 Email `milestone.revision` · `milestone.revision` | Template `milestone.revision` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-040 | P-15 Email `milestone.approved` · `milestone.approved` | Template `milestone.approved` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-041 | P-15 Email `milestone.auto_approved` · `milestone.auto_approved` | Template `milestone.auto_approved` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-053 | P-17 Email `dispute.opened` · `dispute.opened` | Template `dispute.opened` listed or journey-linked; sink-confirmed delivery unavailable on live | Listed in /admin/mail/templates (79/79). Live Mailpit sink unavailable; journey send not exercised this slice |
-| INV-E-054 | P-17 Email `dispute.opened_admin` · `dispute.opened_admin` | Template `dispute.opened_admin` listed or journey-linked; sink-confirmed delivery unavailable on live | Listed in /admin/mail/templates (79/79). Live Mailpit sink unavailable; journey send not exercised this slice |
-| INV-E-055 | P-17 Email `dispute.resolved` · `dispute.resolved` | Template `dispute.resolved` listed or journey-linked; sink-confirmed delivery unavailable on live | Listed in /admin/mail/templates (79/79). Live Mailpit sink unavailable; journey send not exercised this slice |
-| INV-E-056 | P-17 Email `dispute.response_reminder` · `dispute.response_reminder` | Template `dispute.response_reminder` listed or journey-linked; sink-confirmed delivery unavailable on live | Listed in /admin/mail/templates (79/79). Live Mailpit sink unavailable; journey send not exercised this slice |
-| INV-E-057 | P-17 Email `dispute.overdue_admin` · `dispute.overdue_admin` | Template `dispute.overdue_admin` listed or journey-linked; sink-confirmed delivery unavailable on live | Listed in /admin/mail/templates (79/79). Live Mailpit sink unavailable; journey send not exercised this slice |
-| INV-E-058 | P-17 Email `cancellation.review` · `cancellation.review` | Template `cancellation.review` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-059 | P-17 Email `cancellation.request_received` · `cancellation.request_received` | Template `cancellation.request_received` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-060 | P-17 Email `cancellation.review_admin` · `cancellation.review_admin` | Template `cancellation.review_admin` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-061 | P-17 Email `cancellation.waiting_payout` · `cancellation.waiting_payout` | Template `cancellation.waiting_payout` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-062 | P-17 Email `cancellation.completed` · `cancellation.completed` | Template `cancellation.completed` listed or journey-linked; sink-confirmed delivery unavailable on live | Live host has no audit mail sink; template not provider-confirmed this slice |
-| INV-E-066 | P-22 Email `payment.risk` · `payment.risk` | Template `payment.risk` catalog-mapped; delivery blocked without mail sink (do not use live customer mail) | Listed in /admin/mail/templates (79/79). Live Mailpit sink unavailable; journey send not exercised this slice |
-| INV-E-067 | P-22 Email `payment.activation_receipt` · `payment.activation_receipt` | Template `payment.activation_receipt` catalog-mapped; delivery blocked without mail sink (do not use live customer mail) | Listed in /admin/mail/templates (79/79). Live Mailpit sink unavailable; journey send not exercised this slice |
-| INV-E-068 | Email catalog `ops.relationship_claim` · `ops.relationship_claim` | Template `ops.relationship_claim` listed or journey-linked; sink-confirmed delivery unavailable on live | Listed in /admin/mail/templates (79/79). Live Mailpit sink unavailable; journey send not exercised this slice |
-| INV-E-069 | Email catalog `ops.route_blocked` · `ops.route_blocked` | Template `ops.route_blocked` listed or journey-linked; sink-confirmed delivery unavailable on live | Listed in /admin/mail/templates (79/79). Live Mailpit sink unavailable; journey send not exercised this slice |
-| INV-E-070 | Email catalog `ops.route_blocked_admin` · `ops.route_blocked_admin` | Template `ops.route_blocked_admin` listed or journey-linked; sink-confirmed delivery unavailable on live | Listed in /admin/mail/templates (79/79). Live Mailpit sink unavailable; journey send not exercised this slice |
-| INV-E-071 | Email catalog `ops.stale_funding` · `ops.stale_funding` | Template `ops.stale_funding` listed or journey-linked; sink-confirmed delivery unavailable on live | Listed in /admin/mail/templates (79/79). Live Mailpit sink unavailable; journey send not exercised this slice |
-| INV-E-072 | Email catalog `ops.ledger_mismatch` · `ops.ledger_mismatch` | Template `ops.ledger_mismatch` listed or journey-linked; sink-confirmed delivery unavailable on live | Listed in /admin/mail/templates (79/79). Live Mailpit sink unavailable; journey send not exercised this slice |
-| INV-E-073 | Email catalog `ops.hold_warning` · `ops.hold_warning` | Template `ops.hold_warning` listed or journey-linked; sink-confirmed delivery unavailable on live | Listed in /admin/mail/templates (79/79). Live Mailpit sink unavailable; journey send not exercised this slice |
-| INV-E-074 | P-22 Email `billing.paid` · `billing.paid` | Template `billing.paid` catalog-mapped; delivery blocked without mail sink (do not use live customer mail) | Catalog mapped; delivery blocked (no mail sink) |
-| INV-E-075 | P-22 Email `billing.failed` · `billing.failed` | Template `billing.failed` catalog-mapped; delivery blocked without mail sink (do not use live customer mail) | Catalog mapped; delivery blocked (no mail sink) |
-| INV-E-076 | P-22 Email `billing.renewal` · `billing.renewal` | Template `billing.renewal` catalog-mapped; delivery blocked without mail sink (do not use live customer mail) | Catalog mapped; delivery blocked (no mail sink) |
-| INV-E-077 | P-22 Email `billing.cancel_scheduled` · `billing.cancel_scheduled` | Template `billing.cancel_scheduled` catalog-mapped; delivery blocked without mail sink (do not use live customer mail) | Catalog mapped; delivery blocked (no mail sink) |
-| INV-E-078 | P-22 Email `billing.ended` · `billing.ended` | Template `billing.ended` catalog-mapped; delivery blocked without mail sink (do not use live customer mail) | Catalog mapped; delivery blocked (no mail sink) |
-| INV-E-079 | Email catalog `marketing.broadcast` · `marketing.broadcast` | Template `marketing.broadcast` listed or journey-linked; sink-confirmed delivery unavailable on live | Listed in /admin/mail/templates (79/79). Live Mailpit sink unavailable; journey send not exercised this slice |
-| INV-I-019 | P-27 SMTP / Mailpit sink | SMTP Ready + mail_test SUCCEEDED; Mailpit UI / MAIL_SINK interception unavailable on live | SMTP ready + mail_test SUCCEEDED; Mailpit UI not on live → sink Blocked |
+| INV-R-017 | P-01 Claim draft preview | CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
+| INV-R-018 | P-01/P-02 Claim verify | CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
+| INV-R-019 | P-01 Claim publish | CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
+| INV-A-013 | P-01 Claim draft email verify | CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
+| INV-A-014 | P-01 Claim draft publish | CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
+| INV-A-015 | P-01/P-06 Claim draft social | CLAIM_DRAFT_FIXTURE + prior MAIL_SINK cleared for interception: need claim draftId + claim_verification_email enqueue on isolated host | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
+| INV-N-010 | P-15/P-17 Notification `funding_required` · `funding_required` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
+| INV-N-011 | P-15/P-17 Notification `funding_successful` · `funding_successful` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
+| INV-N-012 | P-15/P-17 Notification `funding_failed` · `funding_failed` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
+| INV-N-013 | P-15/P-17 Notification `milestone_submitted` · `milestone_submitted` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
+| INV-N-014 | P-15/P-17 Notification `review_deadline_approaching` · `review_deadline_approaching` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
+| INV-N-015 | P-15/P-17 Notification `revision_requested` · `revision_requested` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
+| INV-N-016 | P-15/P-17 Notification `milestone_approved` · `milestone_approved` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
+| INV-N-017 | P-15/P-17 Notification `milestone_auto_approved` · `milestone_auto_approved` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
+| INV-N-027 | P-15/P-17 Notification `collaboration_cancelled` · `collaboration_cancelled` | EVENT_NOT_FIREABLE_ON_ISOLATED_HOST: notification kind email still needs collab state-change trigger; MAIL_SINK interception restored (see INV-I-019 + catalog Pass). Do not reopen live deposits. | IPS-31: Mailpit restored; still Blocked — see execution/mail-sink-restore-results.md |
 
 ### `UI_FIXTURE_GAP` (19)
 
@@ -236,20 +169,20 @@ Field legend: **Blocker** (exact), **Journey**, **Owner**, **Prerequisite**, **S
 
 | ID | Journey / surface | Exact blocker (this row) | Notes from matrix |
 |----|-------------------|--------------------------|-------------------|
-| INV-E-042 | P-16/P-17 Email `payout.requested` · `payout.requested` | Template `payout.requested` needs money event + Mailpit/MAIL_SINK; deposits remain closed | Blocked: deposits closed + no mail sink |
-| INV-E-043 | P-16/P-17 Email `payout.requested_business` · `payout.requested_business` | Template `payout.requested_business` needs money event + Mailpit/MAIL_SINK; deposits remain closed | Blocked: deposits closed + no mail sink |
-| INV-E-044 | P-16/P-17 Email `payout.confirmed` · `payout.confirmed` | Template `payout.confirmed` needs money event + Mailpit/MAIL_SINK; deposits remain closed | Blocked: deposits closed + no mail sink |
-| INV-E-045 | P-16/P-17 Email `payout.confirmed_business` · `payout.confirmed_business` | Template `payout.confirmed_business` needs money event + Mailpit/MAIL_SINK; deposits remain closed | Blocked: deposits closed + no mail sink |
-| INV-E-046 | P-16/P-17 Email `payout.failed` · `payout.failed` | Template `payout.failed` needs money event + Mailpit/MAIL_SINK; deposits remain closed | Blocked: deposits closed + no mail sink |
-| INV-E-047 | P-16/P-17 Email `payout.failed_admin` · `payout.failed_admin` | Template `payout.failed_admin` needs money event + Mailpit/MAIL_SINK; deposits remain closed | Blocked: deposits closed + no mail sink |
-| INV-E-048 | P-16/P-17 Email `payout.retry` · `payout.retry` | Template `payout.retry` needs money event + Mailpit/MAIL_SINK; deposits remain closed | Blocked: deposits closed + no mail sink |
-| INV-E-049 | P-16/P-17 Email `payout.returned` · `payout.returned` | Template `payout.returned` needs money event + Mailpit/MAIL_SINK; deposits remain closed | Blocked: deposits closed + no mail sink |
-| INV-E-050 | P-16/P-17 Email `payout.returned_business` · `payout.returned_business` | Template `payout.returned_business` needs money event + Mailpit/MAIL_SINK; deposits remain closed | Blocked: deposits closed + no mail sink |
-| INV-E-051 | P-16/P-17 Email `payout.returned_admin` · `payout.returned_admin` | Template `payout.returned_admin` needs money event + Mailpit/MAIL_SINK; deposits remain closed | Blocked: deposits closed + no mail sink |
-| INV-E-052 | P-16/P-17 Email `payout.ready` · `payout.ready` | Template `payout.ready` needs money event + Mailpit/MAIL_SINK; deposits remain closed | Blocked: deposits closed + no mail sink |
-| INV-E-063 | P-16/P-17 Email `refund.processing` · `refund.processing` | Template `refund.processing` needs money event + Mailpit/MAIL_SINK; deposits remain closed | Blocked: deposits closed + no mail sink |
-| INV-E-064 | P-16/P-17 Email `refund.completed_business` · `refund.completed_business` | Template `refund.completed_business` needs money event + Mailpit/MAIL_SINK; deposits remain closed | Blocked: deposits closed + no mail sink |
-| INV-E-065 | P-16/P-17 Email `refund.completed_influencer` · `refund.completed_influencer` | Template `refund.completed_influencer` needs money event + Mailpit/MAIL_SINK; deposits remain closed | Blocked: deposits closed + no mail sink |
+| INV-E-042 | P-16/P-17 Email `payout.requested` · `payout.requested` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
+| INV-E-043 | P-16/P-17 Email `payout.requested_business` · `payout.requested_business` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
+| INV-E-044 | P-16/P-17 Email `payout.confirmed` · `payout.confirmed` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
+| INV-E-045 | P-16/P-17 Email `payout.confirmed_business` · `payout.confirmed_business` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
+| INV-E-046 | P-16/P-17 Email `payout.failed` · `payout.failed` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
+| INV-E-047 | P-16/P-17 Email `payout.failed_admin` · `payout.failed_admin` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
+| INV-E-048 | P-16/P-17 Email `payout.retry` · `payout.retry` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
+| INV-E-049 | P-16/P-17 Email `payout.returned` · `payout.returned` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
+| INV-E-050 | P-16/P-17 Email `payout.returned_business` · `payout.returned_business` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
+| INV-E-051 | P-16/P-17 Email `payout.returned_admin` · `payout.returned_admin` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
+| INV-E-052 | P-16/P-17 Email `payout.ready` · `payout.ready` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
+| INV-E-063 | P-16/P-17 Email `refund.processing` · `refund.processing` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
+| INV-E-064 | P-16/P-17 Email `refund.completed_business` · `refund.completed_business` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
+| INV-E-065 | P-16/P-17 Email `refund.completed_influencer` · `refund.completed_influencer` | DEPOSITS_CLOSED_AND_MAIL_SINK: journey money event still closed (journey_funding / no live deposits). Mail sink restored — catalog test send PROVEN; payout/refund journey remains Blocked. | IPS-31: catalog Send-test mail portion PROVEN on Mailpit; deposit/money event still closed — row stays Blocked |
 
 ### `DEPOSITS_CLOSED` (13)
 
