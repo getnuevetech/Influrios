@@ -88,12 +88,19 @@ export function CreatorCollaborations({
   const applications = hub.applications.filter((row) => !applicationIsInvitation(row) && applicationIsOpenPipeline(row.status));
   const openProposals = proposals.filter((proposal) => {
     if (closedProposal(proposal.status) || proposal.status === "accepted") return false;
+    if (proposal.status !== "sent" && proposal.status !== "partial") return false;
     return proposal.members.some((member) => member.creatorSlug === creatorSlug && member.status === "invited");
   });
   const active = hub.pipeline.filter((row) => row.awaitingFunding || (row.stage !== "Released" && row.stage !== "Match"));
   const completed = hub.pipeline.filter((row) => row.stage === "Released");
   const history = hub.history ?? [];
-  const invitationCount = invitations.length + openProposals.length + hub.status.pending;
+  // Team invitations you accepted stay listed (turn = teammates) until the proposal is accepted or closed.
+  const teamWaitingOnOthers = proposals.filter(
+    (proposal) =>
+      (proposal.status === "sent" || proposal.status === "partial") &&
+      proposal.members.some((member) => member.creatorSlug === creatorSlug && member.status === "accepted"),
+  );
+  const invitationCount = invitations.length + openProposals.length + teamWaitingOnOthers.length + hub.status.pending;
   const waitingCount = waitingInvitations.length + openProposals.length + hub.status.pending;
   const payoutAccountOnFile = Boolean(hub.payout.readiness?.accountOnFile || hub.payout.readiness?.hasVerifiedMethod);
   const payoutReady = Boolean(hub.payout.readiness?.globalPayoutReady);
@@ -379,7 +386,7 @@ export function CreatorCollaborations({
       {current === "overview" || current === "invitations" ? (
         <section className="rounded-[24px] border border-[#E7ECF5] bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)] sm:p-5">
           <h2 className="font-display text-lg font-bold text-[#1B1464]">Invitations</h2>
-          {invitations.length + openProposals.length === 0 && hub.status.pending === 0 ? (
+          {invitations.length + openProposals.length + teamWaitingOnOthers.length === 0 && hub.status.pending === 0 ? (
             <p className="mt-3 text-sm text-[#667085]">No invitations are waiting. Applications you send stay in Applications sent.</p>
           ) : (
             <>
@@ -401,10 +408,20 @@ export function CreatorCollaborations({
                 <InviteRow
                   key={proposal.id}
                   brand={proposal.title}
-                  title="Coordinated proposal"
-                  meta="Needs your response · accepting does not start the collaboration"
+                  title="Team invitation"
+                  meta="Waiting for your reply · accepting doesn't sign a contract"
                   href={`/collaboration/team/${proposal.id}`}
                   action="View invitation →"
+                />
+              ))}
+              {teamWaitingOnOthers.map((proposal) => (
+                <InviteRow
+                  key={proposal.id}
+                  brand={proposal.title}
+                  title="Team invitation · You accepted"
+                  meta="Waiting for teammates · the agreement opens after everyone accepts"
+                  href={`/collaboration/team/${proposal.id}`}
+                  action="Open →"
                 />
               ))}
               {hub.status.pending > 0 ? (

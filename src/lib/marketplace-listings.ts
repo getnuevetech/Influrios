@@ -739,6 +739,14 @@ export async function transitionMarketplaceApplication(input: {
       data: { collaborationId: collab.id },
     });
   });
+  if ((input.toStatus === "WITHDRAWN" || input.toStatus === "EXPIRED") && applicationIsInvitation(updated) && applicationIsOpenPipeline(row.status)) {
+    const { notifyInvitationClosed } = await import("@/lib/invitation-notices");
+    await notifyInvitationClosed({
+      applicationId: updated.id,
+      outcome: input.toStatus === "WITHDRAWN" ? "withdrawn" : "expired",
+      note: input.note,
+    }).catch((error) => console.error("invitation closed notice", error));
+  }
   if (input.toStatus === "ACCEPTED" && applicationIsInvitation(updated)) {
     const { deliverCatalogEmail, liveMailLinks } = await import("@/lib/email-live");
     const links = liveMailLinks();
@@ -1361,9 +1369,23 @@ export function applicationIsStaleForExpire(input: {
  */
 export async function sweepExpiredMarketplaceApplications(now = new Date()) {
   const { getCollabControlPlane } = await import("@/lib/collab-control-plane");
+  // P1-AUD-03: an invitation expires at its own Respond-by date whatever the admin age rule says.
+  const pastDeadline = await prisma.marketplaceApplication.findMany({
+    where: { status: { in: AUTO_EXPIREABLE_STATUSES }, responseDeadline: { lt: now }, toSlug: { not: null }, fromSlug: null },
+    take: 100,
+    orderBy: { responseDeadline: "asc" },
+  });
+  let deadlineExpired = 0;
+  for (const row of pastDeadline) {
+    if (!canTransitionApplication(row.status, "EXPIRED")) continue;
+    await transitionMarketplaceApplication({ id: row.id, toStatus: "EXPIRED", note: "Expired at its Respond-by date." }).then(
+      () => { deadlineExpired += 1; },
+      () => undefined,
+    );
+  }
   const plane = await getCollabControlPlane();
   if (plane.applicationExpire.mode !== "auto") {
-    return { mode: "manual" as const, scanned: 0, expired: 0 };
+    return { mode: "manual" as const, scanned: pastDeadline.length, expired: deadlineExpired };
   }
   const afterDays = plane.applicationExpire.afterDays;
   const cutoff = new Date(now.getTime() - afterDays * 24 * 60 * 60 * 1000);
@@ -1375,7 +1397,7 @@ export async function sweepExpiredMarketplaceApplications(now = new Date()) {
     take: 100,
     orderBy: { createdAt: "asc" },
   });
-  let expired = 0;
+  let expired = deadlineExpired;
   for (const row of candidates) {
     if (!applicationIsStaleForExpire({ createdAt: row.createdAt, afterDays, now })) continue;
     if (!canTransitionApplication(row.status, "EXPIRED")) continue;

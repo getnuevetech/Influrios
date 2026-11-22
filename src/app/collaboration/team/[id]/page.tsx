@@ -7,6 +7,7 @@ import { getWorkspace } from "@/lib/business";
 import { prisma } from "@/lib/db";
 import {
   getTeamProposal,
+  proposalIsExpired,
   teamMemberStatusLabel,
   visibleTeamMembers,
   wizardHrefForProposal,
@@ -69,9 +70,15 @@ export default async function TeamProposalDetailPage({ params, searchParams }: P
     redirect("/collaboration/team?error=" + encodeURIComponent("You are not on this proposal."));
   }
 
+  // P1-AUD-05: declined by a teammate, closed by the business, or past its expiry — closed for every member.
+  const proposalClosed =
+    proposal.status === "declined" ||
+    proposal.status === "expired" ||
+    proposalIsExpired({ status: proposal.status, expiresAt: proposal.expiresAt, now: new Date() });
   const canRespond =
     Boolean(myMember && myMember.status === "invited") &&
-    (proposal.status === "sent" || proposal.status === "partial");
+    (proposal.status === "sent" || proposal.status === "partial") &&
+    !proposalClosed;
   const wizardHref = ownsAsBusiness ? wizardHrefForProposal(proposal) : null;
   const members = visibleTeamMembers(proposal.members, {
     creatorSlug: creator?.slug ?? null,
@@ -169,6 +176,15 @@ export default async function TeamProposalDetailPage({ params, searchParams }: P
                 </button>
               </form>
             </>
+          ) : !ownsAsBusiness && myMember && proposalClosed ? (
+            <div>
+              <p className="text-sm font-bold text-indigo">This invitation is closed</p>
+              <p className="mt-1 text-xs text-muted">
+                {myMember.status === "accepted"
+                  ? "The business closed this team proposal after you accepted. Nothing was signed or funded, and there's nothing more for you to do."
+                  : "This team proposal is closed. Nothing was signed or funded."}
+              </p>
+            </div>
           ) : myMember?.status === "accepted" ? (
             <div>
               <p className="text-sm font-bold text-indigo">You accepted this invitation</p>

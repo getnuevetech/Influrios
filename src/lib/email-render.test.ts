@@ -8,8 +8,8 @@ import { emailCopyFromCatalog, renderCatalogPreview, renderEmail } from "@/lib/e
 describe("email catalog renderer", () => {
   it("keeps every catalog template disabled and renderable", () => {
     const templates = listEmailCatalog();
-    assert.equal(templates.length, 79);
-    assert.equal(new Set(templates.map((row) => row.id)).size, 79);
+    assert.equal(templates.length, 81);
+    assert.equal(new Set(templates.map((row) => row.id)).size, 81);
     for (const template of templates) {
       assert.equal(template.enabled, false);
       const rendered = renderCatalogPreview(template);
