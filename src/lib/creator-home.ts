@@ -448,14 +448,19 @@ export async function loadCreatorHome(userId: string) {
   const attention: HomeAttentionItem[] = [
     ...invitationRows.map((row) => ({
       id: `invitation:${row.id}`,
-      title: row.requestBrand || row.opportunityLookingFor || "Campaign invitation",
+      title: row.requestBrand || row.opportunityLookingFor || row.note?.trim() || "Campaign invitation",
       detail: row.status === "NEGOTIATING" ? `${row.requestBrand || "The business"} replied` : "Waiting for your reply",
       action: "Review invitation",
       href: `/collaboration/applications/${row.id}`,
       kind: "invitation" as const,
     })),
     ...teamProposals
-      .filter((proposal) => proposal.members.some((member) => member.creatorSlug === slug && member.status === "invited"))
+      // Only open proposals (a teammate's decline or expiry closes it for everyone — P1-AUD-05).
+      .filter(
+        (proposal) =>
+          (proposal.status === "sent" || proposal.status === "partial") &&
+          proposal.members.some((member) => member.creatorSlug === slug && member.status === "invited"),
+      )
       .map((proposal) => ({
         id: `invitation:team:${proposal.id}`,
         title: proposal.title,

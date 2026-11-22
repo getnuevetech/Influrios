@@ -431,6 +431,59 @@
       ]
     },
     {
+      "id": "invite.withdrawn",
+      "group": "invite",
+      "audience": "Invited influencer",
+      "trigger": "Business withdraws an open invitation",
+      "subject": "{{business_name}} withdrew an invitation",
+      "preheader": "Nothing was signed or funded.",
+      "title": "This invitation was withdrawn",
+      "body": [
+        "{{business_name}} withdrew the invitation to {{collaboration_name}}.",
+        "{{reason_line}}",
+        "Nothing was signed or funded. You don't need to do anything."
+      ],
+      "cta": "View invitation",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "One private recipient. Send only on the persisted WITHDRAWN transition of an open invitation. reason_line is \"Reason given: …\" only when a reason was recorded; otherwise empty and the paragraph is dropped. Never invent one.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "business_name",
+        "collaboration_name",
+        "reason_line"
+      ]
+    },
+    {
+      "id": "invite.expired",
+      "group": "invite",
+      "audience": "Invited influencer",
+      "trigger": "Invitation passes its Respond-by date without a decision",
+      "subject": "An invitation from {{business_name}} expired",
+      "preheader": "The Respond-by date has passed.",
+      "title": "This invitation has expired",
+      "body": [
+        "The invitation to {{collaboration_name}} expired on {{expires_at}}. It can no longer be answered.",
+        "Nothing was signed or funded. {{business_name}} can send a new invitation."
+      ],
+      "cta": "View invitation",
+      "cta_url": "{{action_url}}",
+      "facts": [],
+      "category": "transactional",
+      "guard": "One private recipient. Send only on the persisted EXPIRED transition of an open invitation.",
+      "version": 1,
+      "enabled": false,
+      "variables": [
+        "action_url",
+        "business_name",
+        "collaboration_name",
+        "expires_at"
+      ]
+    },
+    {
       "id": "invite.team_sent",
       "group": "invite",
       "audience": "Invited team member",

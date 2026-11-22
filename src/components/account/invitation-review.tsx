@@ -60,7 +60,7 @@ function intentCopy(view: InviteeInvitationView, brand: string) {
     default:
       if (view.closedAs === "accepted") return `${brand} accepted you and is preparing the agreement. You don't need to do anything yet.`;
       if (view.closedAs === "declined") return "You declined this invitation. Nothing was signed or funded.";
-      if (view.closedAs === "withdrawn") return `${brand} withdrew this invitation. Nothing was signed or funded.`;
+      if (view.closedAs === "withdrawn") return `${brand} withdrew this invitation.`;
       return "This invitation has expired. Nothing was signed or funded.";
   }
 }
@@ -104,6 +104,19 @@ export function InvitationResponsePanel({
         <p className="mt-2 rounded-xl border border-[#E4E9F5] bg-[#F8F6FF] px-3 py-2 text-xs text-[#1B1464]">
           <span className="font-semibold">{brand} replied: </span>“{view.answer}”
         </p>
+      ) : null}
+      {view.closedAs === "withdrawn" ? (
+        <>
+          {view.withdrawnReason ? (
+            <p className="mt-3 rounded-xl border border-[#E4E9F5] px-3 py-2 text-xs text-[#344054]">
+              <span className="font-semibold">Reason given: </span>“{view.withdrawnReason}”
+            </p>
+          ) : null}
+          {view.withdrawnMessage ? (
+            <p className="mt-2 rounded-xl bg-[#F8F6FF] px-3 py-2 text-xs text-[#344054]">“{view.withdrawnMessage}”</p>
+          ) : null}
+          <p className="mt-2 text-sm text-[#344054]">Nothing was signed or funded.</p>
+        </>
       ) : null}
       {view.kase !== "closed" ? (
         <p className="mt-3 rounded-xl bg-[#F8F6FF] px-3 py-2 text-xs text-[#5C657F]">

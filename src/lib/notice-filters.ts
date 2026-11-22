@@ -29,6 +29,8 @@ export function noticeGroup(kind: string, title = ""): NoticeGroup {
 export function noticeNeedsAction(kind: string, title = "") {
   const text = `${kind} ${title}`.toLowerCase();
   if (noticeGroup(kind, title) === "updates") return false;
+  // Withdrawal / expiry / closure notices tell the member something ended; there's nothing to do.
+  if (/withdrawn|expired|closed/.test(kind.toLowerCase())) return false;
   if (/completed|successful|succeeded/.test(text) && !/returned|failed/.test(text)) return false;
   return true;
 }

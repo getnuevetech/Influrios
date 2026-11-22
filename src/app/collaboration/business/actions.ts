@@ -690,28 +690,9 @@ export async function actionWithdrawParticipation(formData: FormData) {
   }
   const slug = (fresh.toSlug || fresh.fromSlug || "").trim();
   if (slug) {
-    const creator = await prisma.creator.findUnique({
-      where: { slug },
-      include: { user: { select: { email: true } } },
-    }).catch(() => null);
+    // The invitee's in-app notice and withdrawal email (invite.withdrawn, with the recorded reason) are sent by
+    // transitionMarketplaceApplication on the persisted WITHDRAWN transition (P1-AUD-02).
     const brief = ws.briefs.find((item) => item.id === (briefId || fresh.briefId || ""));
-    const { deliverCatalogEmail, liveMailLinks } = await import("@/lib/email-live");
-    const links = liveMailLinks();
-    if (creator?.user?.email) {
-      await deliverCatalogEmail({
-        templateId: "invite.collaboration",
-        to: creator.user.email,
-        vars: {
-          first_name: creator.displayName.split(/\s+/)[0] || creator.displayName,
-          business_name: ws.name || "A business",
-          campaign_name: brief?.title || "a collaboration request",
-          collaboration_name: brief?.title || "a collaboration request",
-          reason,
-          message,
-          action_url: `${links.origin}/collaboration/hub`,
-        },
-      }).catch(() => undefined);
-    }
     await prisma.auditLog
       .create({
         data: {

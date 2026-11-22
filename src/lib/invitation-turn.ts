@@ -241,6 +241,10 @@ export type InviteeInvitationView = {
   answer: string | null;
   /** Why a closed invitation is closed, for its own message. */
   closedAs: "accepted" | "declined" | "expired" | "withdrawn" | null;
+  /** The business's recorded withdrawal reason, when one was given. */
+  withdrawnReason: string | null;
+  /** The business's message to the influencer, when one was given. */
+  withdrawnMessage: string | null;
 };
 
 export function inviteeInvitationView(
@@ -250,7 +254,7 @@ export function inviteeInvitationView(
     interestRecorded?: boolean | null;
     openQuestion?: boolean | null;
     responseDeadline?: string | Date | null;
-    events?: { note: string | null }[];
+    events?: { note: string | null; toStatus?: string }[];
   },
   business: string,
   now = new Date(),
@@ -269,12 +273,33 @@ export function inviteeInvitationView(
             ? "withdrawn"
             : "expired";
   const closedLabel = { accepted: "Accepted", declined: "You declined", expired: "Expired", withdrawn: "Withdrawn" } as const;
+  const withdrawal = closedAs === "withdrawn" ? [...(row.events ?? [])].reverse().find((event) => event.toStatus === "WITHDRAWN") : undefined;
   return {
     kase,
     closedAs,
+    withdrawnReason: withdrawal ? withdrawalFromNote(withdrawal.note).reason : null,
+    withdrawnMessage: withdrawal ? withdrawalFromNote(withdrawal.note).message : null,
     label: closedAs ? closedLabel[closedAs] : inviteeCaseLabel(kase, business),
     tone,
     actions: inviteeActionsFor(kase),
     ...invitationConversation(row.events ?? []),
   };
+}
+
+/**
+ * "[Withdrawn by business] {reason}. {message}" → the recorded reason and message (each null when absent).
+ * The reason is one of WITHDRAW_REASONS (no full stop); never invented.
+ */
+export function withdrawalFromNote(note: string | null | undefined): { reason: string | null; message: string | null } {
+  const match = /^\[Withdrawn by business\]\s*([\s\S]*)$/.exec((note ?? "").trim());
+  if (!match) return { reason: null, message: null };
+  const body = match[1].trim();
+  const cut = body.indexOf(". ");
+  const reason = (cut >= 0 ? body.slice(0, cut) : body).replace(/[.\s]+$/, "").trim();
+  const message = cut >= 0 ? body.slice(cut + 2).trim() : "";
+  return { reason: reason || null, message: message && message !== "." ? message : null };
+}
+
+export function withdrawalReasonFromNote(note: string | null | undefined): string | null {
+  return withdrawalFromNote(note).reason;
 }

@@ -109,7 +109,9 @@ export function renderEmail(input: {
       `<tr><td style="padding:12px 32px 0;font-size:12px;line-height:1.5;color:#6E6A86;">Button not working? Copy this address into your browser:<br>${safeUrl}</td></tr>`;
   }
   const facts = renderFacts(copy, context, skeleton);
+  // A paragraph whose only content was an empty optional variable (e.g. reason_line) is dropped.
   const body = paragraphs
+    .filter((paragraph) => paragraph.trim() !== "")
     .map(
       (paragraph) =>
         `<p style="margin:0 0 14px;font-size:15px;line-height:1.6;color:#211E4E;">${escapeHtml(paragraph)}</p>`,

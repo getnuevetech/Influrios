@@ -147,7 +147,8 @@ export async function loadActionInbox(account: AccountSession): Promise<InboxLoa
     const creator = await prisma.creator.findUnique({ where: { userId: account.id }, select: { slug: true } });
     const slug = creator?.slug ?? "";
     const fundings = slug ? await listFundingsForCreator(slug) : [];
-    const [submissions, applications] = await Promise.all([
+    const { listTeamProposalsForCreator } = await import("@/lib/team-proposal");
+    const [submissions, applications, teamProposals] = await Promise.all([
       fundings.length
         ? prisma.milestoneSubmission.findMany({
             where: { fundingId: { in: fundings.map((deal) => deal.id) } },
@@ -166,10 +167,12 @@ export async function loadActionInbox(account: AccountSession): Promise<InboxLoa
               interestRecorded: true,
               openQuestion: true,
               responseDeadline: true,
+              note: true,
               businessRequest: { select: { brand: true } },
             },
           })
         : Promise.resolve([]),
+      slug ? listTeamProposalsForCreator(slug).catch(() => []) : Promise.resolve([]),
     ]);
     const covered = new Set(submissions.map((row) => row.milestoneId));
     const tasks = projectInboxTasks(
@@ -181,10 +184,26 @@ export async function loadActionInbox(account: AccountSession): Promise<InboxLoa
           .filter((row) => applicationIsInvitation(row) && invitationWaitingForInvitee(row))
           .map((row) => ({
             id: row.id,
-            title: "Campaign invitation",
+            // Name the campaign (brief-based invitations have no request brand).
+            title: row.note?.trim() || row.businessRequest?.brand || "Campaign invitation",
             counterparty: row.businessRequest?.brand || "Business",
             href: `/collaboration/applications/${row.id}`,
-          })),
+          }))
+          // P1-AUD-04: pending team invitations are tasks too.
+          .concat(
+            teamProposals
+              .filter(
+                (proposal) =>
+                  (proposal.status === "sent" || proposal.status === "partial") &&
+                  proposal.members.some((member) => member.creatorSlug === slug && member.status === "invited"),
+              )
+              .map((proposal) => ({
+                id: `team:${proposal.id}`,
+                title: "Team invitation",
+                counterparty: proposal.title,
+                href: `/collaboration/team/${proposal.id}`,
+              })),
+          ),
         funding: fundings.map((deal) => {
           const attention = fundingAttention(deal);
           return {

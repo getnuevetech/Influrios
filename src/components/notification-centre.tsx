@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { NoticeDialog } from "@/components/notice-dialog";
 import { listAccountNotices, markNoticeRead } from "@/lib/account-notices";
+import { prisma } from "@/lib/db";
+import { closedTaskNoticeIds } from "@/lib/notice-tasks";
 import {
   PAYOUT_RETURNED_NOTE,
   noticeActor,
@@ -35,9 +37,15 @@ export async function NotificationCentre({
   const notices = await listAccountNotices(userId).catch(() => []);
   const open = openId ? notices.find((row) => row.id === openId) ?? null : null;
   const destination = open ? await markNoticeRead(userId, open.id).catch(() => open.href) : null;
-  const rows = notices.filter((row) => noticeMatchesFilter(filter, row.kind, row.title));
-  const actionCount = notices.filter((row) => noticeNeedsAction(row.kind, row.title)).length;
-  const count = (next: NoticeFilter) => notices.filter((row) => noticeMatchesFilter(next, row.kind, row.title)).length;
+  // Action required follows the live task (P1-AUD-01); history and read state are untouched.
+  const creator = await prisma.creator.findFirst({ where: { userId }, select: { slug: true } }).catch(() => null);
+  const closedTasks = await closedTaskNoticeIds(notices, creator?.slug ?? null).catch(() => new Set<string>());
+  const needsAction = (row: (typeof notices)[number]) => noticeNeedsAction(row.kind, row.title) && !closedTasks.has(row.id);
+  const matches = (next: NoticeFilter, row: (typeof notices)[number]) =>
+    next === "action" ? needsAction(row) : noticeMatchesFilter(next, row.kind, row.title);
+  const rows = notices.filter((row) => matches(filter, row));
+  const actionCount = notices.filter(needsAction).length;
+  const count = (next: NoticeFilter) => notices.filter((row) => matches(next, row)).length;
   const href = (nextFilter: NoticeFilter, id?: string) => {
     const params = new URLSearchParams();
     if (nextFilter !== "all") params.set("filter", nextFilter);
@@ -66,7 +74,7 @@ export async function NotificationCentre({
       ) : (
         <ul className="divide-y divide-[#EEF2F7] rounded-2xl border border-[#E7ECF5] bg-white">
           {rows.map((row) => {
-            const action = noticeNeedsAction(row.kind, row.title);
+            const action = needsAction(row);
             const read = Boolean(row.readAt) || row.id === openId;
             return (
               <li key={row.id}>
