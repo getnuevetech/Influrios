@@ -576,7 +576,7 @@ export function choosePayoutOnboardingRail(input: {
 
 export async function resolvePayoutOnboardingRail(input: {
   locationCountry?: string | null;
-  /** ISO country from payout profile when location text does not resolve. */
+  /** Ignored: the payout country always follows the profile country. Kept for call compatibility. */
   fallbackCountryCode?: string | null;
   stripeConnectReady: boolean;
   providerReady: boolean;
@@ -584,9 +584,9 @@ export async function resolvePayoutOnboardingRail(input: {
   hasProviderAccount: boolean;
 }): Promise<PayoutOnboardingChoice> {
   await ensureCountryActivationCorridors();
-  const fromLocation = countryCodeFromLocation(input.locationCountry ?? null);
-  const fallback = (input.fallbackCountryCode ?? "").trim().toUpperCase();
-  const countryCode = fromLocation || (/^[A-Z]{2}$/.test(fallback) ? fallback : null);
+  // The payout country is the influencer's profile country. The stored payout-profile country is a
+  // copy kept in step with it, never a second source.
+  const countryCode = countryCodeFromLocation(input.locationCountry ?? null);
   const corridor = countryCode
     ? await prisma.countryActivationCorridor.findUnique({ where: { countryCode } })
     : null;

@@ -149,10 +149,8 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
   const pipeline = hub?.pipeline ?? [];
 
   const locationCountry = identity?.creator?.locationCountry ?? null;
-  const countryCode =
-    countryCodeFromLocation(locationCountry) ||
-    (identity?.creator?.payoutProfile?.primaryCountryCode ?? "").trim().toUpperCase() ||
-    null;
+  // The payout country is the profile country; the payout profile only keeps a copy of it.
+  const countryCode = countryCodeFromLocation(locationCountry) || null;
   const creatorSlug = identity?.creator?.slug || creator?.slug || draft?.slug || null;
   const measures = creatorSlug ? await loadInfluencerEarningFacts(creatorSlug) : { ok: true as const, summary: emptyEarningSummary() };
   const summary = measures.ok ? measures.summary : null;

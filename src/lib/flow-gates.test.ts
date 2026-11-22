@@ -39,10 +39,10 @@ describe("agreement and money gates (recorded journey breaks)", () => {
     assert.match(read("src/app/collaboration/contract/page.tsx"), /Not set up for \{jurisdictionCode\}/);
   });
 
-  it("keeps the payout method across Refresh preview and lists only the deal country's methods", () => {
+  it("keeps the payout method across Refresh preview and lists only the influencer payout country methods", () => {
     assert.match(read("src/app/collaboration/contract/actions.ts"), /qs\.set\("payoutMethod", payoutMethodEntered\)/);
     const page = read("src/app/collaboration/contract/page.tsx");
-    assert.match(page, /choice\.countryCode === jurisdictionCode/);
+    assert.match(page, /choice\.countryCode === payoutCountry/);
     assert.match(page, /findIndex\(\(other\) => other\.method === choice\.method\) === index/);
   });
 

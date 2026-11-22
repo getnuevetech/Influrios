@@ -238,8 +238,10 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   const commercial = entered.commercial;
   const jurisdictionCode = entered.jurisdictionCode;
   // Only the deal country's payout methods, once each. A method from another country fails at funding.
+  // Payout methods are the influencer's: their profile country decides how they can be paid.
+  const payoutCountry = countryCodeFromLocation(creator?.locationCountry) || jurisdictionCode;
   const payoutChoices = allPayoutChoices
-    .filter((choice) => !jurisdictionCode || choice.countryCode === jurisdictionCode)
+    .filter((choice) => !payoutCountry || choice.countryCode === payoutCountry)
     .filter((choice, index, list) => list.findIndex((other) => other.method === choice.method) === index);
   const serviceLevel = entered.serviceLevel;
   const grossRaw = entered.grossRaw;

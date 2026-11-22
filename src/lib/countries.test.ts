@@ -74,4 +74,11 @@ describe("one country list for the whole app", () => {
     assert.match(page, /Completed \$\{/);
     assert.equal(/kycTypeByCode/.test(page), false);
   });
+
+  it("pays the influencer by their profile country, with no second stored country", () => {
+    assert.equal(/fallback/.test(read("src/lib/providers/airwallex-runtime.ts").match(/const country =[^;]+;/)?.[0] ?? ""), false);
+    assert.match(read("src/lib/payout-readiness.ts"), /const countryCode = countryCodeFromLocation\(input\.locationCountry \?\? null\);/);
+    assert.equal(/payoutProfile\?\.primaryCountryCode \?\? ""\)\.trim/.test(read("src/app/creator/earnings/page.tsx")), false);
+    assert.match(read("src/app/collaboration/contract/page.tsx"), /const payoutCountry = countryCodeFromLocation\(creator\?\.locationCountry\)/);
+  });
 });
