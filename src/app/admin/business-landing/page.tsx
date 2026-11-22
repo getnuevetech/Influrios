@@ -105,6 +105,7 @@ export default async function AdminBusinessLandingPage({ searchParams }: Props) 
               These photos are the business page collage. Upload them here.
             </p>
             <AdminUploadedImages
+              nested
               images={landing.hero.images}
               uploadAction={actionUploadBusinessHeroImage}
               removeAction={actionRemoveBusinessHeroImage}
@@ -152,6 +153,7 @@ export default async function AdminBusinessLandingPage({ searchParams }: Props) 
             <h3 className="font-display text-base font-bold text-indigo">Section photo</h3>
             <p className="mt-1 text-sm text-muted">Shown beside the reasons. A missing photo stays the color panel.</p>
             <AdminUploadedImages
+              nested
               images={landing.whyChoose.image ? [landing.whyChoose.image] : []}
               uploadAction={actionUploadBusinessWhyImage}
               removeAction={actionRemoveBusinessWhyImage}

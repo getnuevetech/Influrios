@@ -137,7 +137,7 @@ export function CreatorProfileShell({
               <div className="min-w-0 pt-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="font-display text-2xl font-bold text-indigo sm:text-[1.75rem]">
-                    {draft.displayName || "Creator profile"}
+                    {draft.displayName || "Influencer profile"}
                   </h1>
                   {draft.stage === "published" ? (
                     <span className="inline-flex text-[#2F6BFF]" title="Published profile">

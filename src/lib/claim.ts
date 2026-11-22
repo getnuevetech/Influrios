@@ -132,7 +132,7 @@ export async function resolveSocialAvatar(
   if (platform === "X") candidates.push(`https://unavatar.io/twitter/${encodeURIComponent(clean)}`);
   if (platform === "YOUTUBE") candidates.push(`https://unavatar.io/youtube/${encodeURIComponent(clean)}`);
   if (platform === "TIKTOK") candidates.push(`https://unavatar.io/tiktok/${encodeURIComponent(clean)}`);
-  if (platform === "FACEBOOK") candidates.push(`https://unavatar.io/facebook/${encodeURIComponent(clean)}`);
+  // Facebook lookups no longer return images (400), so they are not tried.
   candidates.push(`https://unavatar.io/${encodeURIComponent(clean)}`);
 
   for (const url of candidates) {

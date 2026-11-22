@@ -168,7 +168,7 @@ export default async function ClaimPage({ searchParams }: Props) {
             </ol>
             <p className="mt-2 text-xs text-[#667085]">Connect a channel to verify ownership and sync available metrics.</p>
             <Link href="/discover" className="mt-3 inline-flex text-sm font-semibold text-[#6D4AFF]">
-              Browse creators
+              Browse influencers
             </Link>
             <Link href="/login?next=/creator" className="mt-3 block text-sm font-semibold text-[#6D4AFF]">
               Log in

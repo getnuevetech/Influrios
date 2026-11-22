@@ -215,7 +215,7 @@ export function RequestEditor(props: {
               <li key={creator.slug} className="flex items-center justify-between gap-3 py-2 text-sm">
                 <span>
                   <span className="font-semibold text-indigo">{creator.name}</span>
-                  <span className="text-[#667085]"> @{creator.handle} · {creator.country}</span>
+                  <span className="text-[#667085]"> @{creator.handle.replace(/^@+/, "")} · {creator.country}</span>
                 </span>
                 <button
                   type="button"

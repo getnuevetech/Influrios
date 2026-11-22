@@ -108,7 +108,7 @@ export default async function CreatorHomePage({
       </section>
       <p className="text-xs text-[#98A2B3]">
         Profile views {viewCount} · {viewNote}. Released this month {moneyLabel(home.earnings.cents, home.earnings.currency, home.earnings.failed)}
-        {home.earnings.note ? ` · ${home.earnings.note}` : ""}.
+        {home.earnings.note ? ` · ${home.earnings.note.replace(/\.$/, "")}` : ""}.
       </p>
 
       {openSetupReminders({

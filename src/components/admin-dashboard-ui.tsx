@@ -501,7 +501,7 @@ export function AdminPlatformOverview({
 
         <div className="rounded-2xl border border-[#E4EBFF] bg-white p-5 shadow-[0_8px_24px_rgba(17,26,90,0.04)] xl:col-span-4">
           <h2 className="font-display text-lg font-bold text-indigo">Marketplace Insights</h2>
-          <p className="mt-1 text-[12px] text-muted">Top Creator Categories</p>
+          <p className="mt-1 text-[12px] text-muted">Top Influencer Categories</p>
           <div className="mt-3">
             {data.categories.length ? (
               <Donut

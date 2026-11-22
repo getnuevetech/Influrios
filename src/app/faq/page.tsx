@@ -31,7 +31,7 @@ export default async function FaqPage({ searchParams }: Props) {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lavender/80">Help</p>
           <h1 className="mt-2 font-display text-4xl font-bold">FAQ</h1>
           <p className="mt-3 text-white/75">
-            Answers for visitors, creators, businesses, and agencies. Plans and features are configured by Influrios, so a screen follows the plan on the account.
+            Answers for visitors, influencers, businesses, and agencies. Plans and features are configured by Influrios, so a screen follows the plan on the account.
           </p>
         </div>
       </section>

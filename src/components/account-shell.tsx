@@ -61,7 +61,7 @@ const BUSINESS_NAV: NavItem[] = [
   { href: "/business/home", label: "Dashboard", icon: <IconHome size={18} /> },
   { href: "/collaboration/inbox", label: "Action inbox", icon: <IconBell size={18} /> },
   { href: "/business/profile", label: "Company Profile", icon: <IconBuilding size={18} /> },
-  { href: "/discover", label: "Discover Creators", icon: <IconSearch size={18} /> },
+  { href: "/discover", label: "Discover Influencers", icon: <IconSearch size={18} /> },
   { href: "/collaboration/business", label: "Collaborations", icon: <IconHandshake size={18} /> },
   { href: "/collaboration/contracts", label: "Contracts", icon: <IconFileText size={18} /> },
   { href: "/business/intelligence", label: "Analytics", icon: <IconIntelligence size={18} /> },
@@ -168,7 +168,7 @@ export async function MemberFrame({
   const secondaryName = agencyAccount ? "Agency" : audience === "business" ? company || "Business" : "Influencer";
   const searchPlaceholder =
     audience === "business"
-      ? "Search creators, campaigns, or anything..."
+      ? "Search influencers, campaigns, or anything..."
       : "Search opportunities, brands, or anything...";
 
   return (

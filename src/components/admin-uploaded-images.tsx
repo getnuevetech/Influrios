@@ -7,12 +7,19 @@ export function AdminUploadedImages({
   removeAction,
   canEdit,
   emptyLabel,
+  nested = false,
 }: {
   images: string[];
   uploadAction: (formData: FormData) => void | Promise<void>;
   removeAction: (formData: FormData) => void | Promise<void>;
   canEdit: boolean;
   emptyLabel: string;
+  /**
+   * Inside another <form> (the landing editors). Forms cannot nest: the browser dropped the inner
+   * forms, so the page failed to hydrate and the required file input blocked the page's Save.
+   * Nested mode uses buttons with formAction on the surrounding form instead.
+   */
+  nested?: boolean;
 }) {
   return (
     <div>
@@ -21,18 +28,42 @@ export function AdminUploadedImages({
           <div key={img} className="relative h-24 w-36 overflow-hidden rounded-xl border border-[#E4EBFF]">
             <Image src={img} alt="" fill className="object-cover" sizes="144px" />
             {canEdit ? (
-              <form action={removeAction} className="absolute bottom-1 right-1">
-                <input type="hidden" name="image" value={img} />
-                <button type="submit" className="rounded bg-white/95 px-2 py-0.5 text-[10px] font-bold text-violet">
+              nested ? (
+                <button
+                  type="submit"
+                  formAction={removeAction}
+                  formNoValidate
+                  name="image"
+                  value={img}
+                  className="absolute bottom-1 right-1 rounded bg-white/95 px-2 py-0.5 text-[10px] font-bold text-violet"
+                >
                   Remove
                 </button>
-              </form>
+              ) : (
+                <form action={removeAction} className="absolute bottom-1 right-1">
+                  <input type="hidden" name="image" value={img} />
+                  <button type="submit" className="rounded bg-white/95 px-2 py-0.5 text-[10px] font-bold text-violet">
+                    Remove
+                  </button>
+                </form>
+              )
             ) : null}
           </div>
         ))}
         {images.length === 0 ? <p className="text-sm text-muted">{emptyLabel}</p> : null}
       </div>
-      {canEdit ? (
+      {canEdit && nested ? (
+        <div className="mt-4 flex flex-wrap items-end gap-3">
+          <label className="text-sm">
+            <span className="font-semibold text-indigo">Upload image</span>
+            <input type="file" name="file" accept="image/*" className="mt-1 block w-full text-sm" />
+          </label>
+          <button type="submit" formAction={uploadAction} formNoValidate className="btn-secondary !py-2 text-sm">
+            Add image
+          </button>
+        </div>
+      ) : null}
+      {canEdit && !nested ? (
         <form action={uploadAction} className="mt-4 flex flex-wrap items-end gap-3">
           <label className="text-sm">
             <span className="font-semibold text-indigo">Upload image</span>
