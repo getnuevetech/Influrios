@@ -1,0 +1,28 @@
+PASS B0 all five waiting on home, inbox and hub · badge 5 · missing none
+PASS B1 invitation notices are Action required before anything changes · centre action 5
+PASS W1.1 withdrawal persisted, turn none · WITHDRAWN|none
+PASS W1.2 counts clear together (home, inbox, hub, badge) · badge 5→4
+PASS W1.3 original notice kept in history, no longer Action required, read state unchanged · action 5→4
+PASS W1.4 in-app withdrawal notice names the business, with recorded reason, not Action required · BUSINESS AUDIT r5iso01 Co A withdrew an invitation Invitation · S2-W1 Withdraw with reason s2e · Reason given: Schedule changed · Nothing was signed or funded U
+PASS W1.5 withdrawal email (invite.withdrawn) with reason; no invitation template · AUDIT r5iso01 Co A withdrew an invitation
+PASS W1.6 withdrawn panel shows reason and message, no actions · detail page
+PASS W2.1 withdrawal persisted · WITHDRAWN|none
+PASS W2.2 email sent without an invented reason · no reason line
+PASS W2.3 panel omits the reason line · detail page
+PASS E1.1 past deadline leaves every count before the sweep runs · REQUESTED|invitee · badge 4→2 · {"fixture":"responseDeadline moved 1 minute into the past","id":"cmwr3lfl5000g7d4tppnn3jq9"}
+PASS E1.2 detail shows Expired, no reply actions · detail page
+PASS E1.3 its notice leaves Action required immediately · action 2
+PASS E1.4 sweep persists EXPIRED at the deadline · EXPIRED|none · {"mode":"manual","scanned":1,"expired":1}
+PASS E1.5 expiry notice + invite.expired email · An invitation from AUDIT r5iso01 Co A expired
+PASS T.1 pending team invitations listed in hub and inbox · baseline
+PASS T.2 after accept: hub shows "You accepted · Waiting for teammates"; inbox and home drop it · badge 2→1
+PASS T.3 teammate decline closes both proposals · db
+PASS T.4 still-invited member sees "This invitation is closed", no respond controls · T1
+PASS T.5 accepted member sees closed-after-you-accepted, not "waiting for teammates" · T2
+PASS T.6 closed proposals leave hub, inbox, home and badge · badge 1→0
+PASS T.7 team notice stays in history, not Action required · action 0
+PASS M.1 mobile hub agrees (no withdrawn/expired/closed rows) · all five gone at 390
+PASS M.2 mobile withdrawn panel shows reason · 390
+PASS R.1 signed-out item link → login with the exact item (S1 layout fix) · http://127.0.0.1:3000/login?next=%2Fcollaboration%2Fapplications%2Fcmwr3lfjc00047d4ticv814p4&gate=applications
+
+26/26 pass

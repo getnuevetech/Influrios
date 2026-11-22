@@ -1,23 +1,23 @@
 # Coverage & blocker report — reconciled
 
 **Status:** PROVISIONAL. Not platform-wide completion. No audit restart.
-**As of:** 2026-11-21 · matrix after IPS-47 (Package 1 S1 retest) · **reconciled:** every count below is recomputed from [coverage-matrix.md](./coverage-matrix.md) and cross-checked against [blocked-register.md](./blocked-register.md) (54 = 54).
-**Host:** influrios.com (earlier phases) + local isolated r5 host (IPS-44/45/46 on `main` @ `5a5f4c0`; IPS-47 on S1 code `claude/vigilant-darwin-h4tha4` @ `bd65bb9`) · live collaboration deposits **closed** · Agency deferred
+**As of:** 2026-11-21 · matrix after IPS-48 (Package 1 S1 + S2 retests) · **reconciled:** every count below is recomputed from [coverage-matrix.md](./coverage-matrix.md) and cross-checked against [blocked-register.md](./blocked-register.md) (54 = 54).
+**Host:** influrios.com (earlier phases) + local isolated r5 host (IPS-44/45/46 on `main` @ `5a5f4c0`; IPS-47 on S1 code `claude/vigilant-darwin-h4tha4` @ `bd65bb9`; IPS-48 on S2 code `claude/vigilant-darwin-h4tha4-s2` @ `d57e2fa`) · live collaboration deposits **closed** · Agency deferred
 
 ## 1. Matrix position
 
 | Status | Rows |
 |--------|-----:|
-| Pass | 400 |
-| **Fail** | **38** |
+| Pass | 403 |
+| **Fail** | **35** |
 | **Blocked** | **54** |
 | Not tested | 0 |
 | Explicitly deferred | 10 |
 | **Total** | **502** |
 
-**Open = 92 rows** (38 Fail + 54 Blocked). Run evidence: [IPS-44](./execution/r5-isolated-package1-results.md) · [IPS-45](./execution/r5-isolated-round2-results.md) · [IPS-46](./execution/r5-isolated-round3-results.md) · [IPS-47 S1](./execution/r5-isolated-s1-results.md).
+**Open = 89 rows** (35 Fail + 54 Blocked). Run evidence: [IPS-44](./execution/r5-isolated-package1-results.md) · [IPS-45](./execution/r5-isolated-round2-results.md) · [IPS-46](./execution/r5-isolated-round3-results.md) · [IPS-47 S1](./execution/r5-isolated-s1-results.md) · [IPS-48 S2](./execution/r5-isolated-s2-results.md).
 
-## 2. Fail rows (38) → root cause → owning package
+## 2. Fail rows (35) → root cause → owning package
 
 | Root cause | Owner | Rows | IDs |
 |------------|-------|-----:|-----|
@@ -28,7 +28,7 @@
 | Fee label / discount (AUD-FEE-01) | Pkg 3 + Pkg 4 | 1 | INV-A-053 |
 | RC-DISCOVERY | Pkg 4 | 3 | INV-P-001, INV-A-035, INV-C-008 |
 | Media kit export (AUD-R2-04) | Pkg 4 | 1 | INV-D-007E |
-| RC-DASHBOARD + P1-AUD (invitations, notices, counts) | **Pkg 1** | 10 | INV-DC-002, INV-DC-006, INV-DC-012, INV-DC-013, INV-DC-014, INV-C-014, INV-N-004, INV-A-048, INV-N-015T, INV-N-017T |
+| RC-DASHBOARD + P1-AUD (invitations, notices, counts) | **Pkg 1** | 7 | INV-DC-002, INV-DC-006, INV-DC-012, INV-C-014, INV-N-004, INV-N-015T, INV-N-017T |
 | Unreachable actions (AUD-R2-01a/b/d) | Pkg 2 | 6 | INV-A-034, INV-A-036, INV-A-037, INV-A-042, INV-A-065, INV-A-069 |
 | No cancellation entry (AUD-R2-03) | Pkg 2 + R6 | 1 | INV-A-066 |
 | Dispute entry / evidence (AUD-R2-01c) | Pkg 5 + R6 | 2 | INV-A-064, INV-A-079 |
@@ -36,7 +36,7 @@
 | RC-JOBS | Pkg 5 | 2 | INV-J-020, INV-J-021 |
 | RC-EXPORT | Pkg 5 | 3 | INV-D-003, INV-I-014, INV-A-102 |
 
-Owners and defect IDs match the remediation-plan defect register. No Fail is closed by design work; only an implementation retest closes it. IPS-47 closed INV-DC-001 and INV-DC-015 by retest on the S1 code.
+Owners and defect IDs match the remediation-plan defect register. No Fail is closed by design work; only an implementation retest closes it. IPS-47 closed INV-DC-001 and INV-DC-015 (S1 code); IPS-48 closed INV-DC-013, INV-DC-014 and INV-A-048 (S2 code). Neither branch is merged yet.
 
 ## 3. Blocked rows (54) by real gate
 
@@ -59,7 +59,7 @@ None of these may become Pass by reopening live deposits.
 
 | Was | Now |
 |-----|-----|
-| §2 said 24 Fail rows across 9 root causes | 40 rows at reconciliation, 38 after IPS-47, grouped above |
+| §2 said 24 Fail rows across 9 root causes | 40 rows at reconciliation, 38 after IPS-47, 35 after IPS-48, grouped above |
 | §3 listed INV-D-007E as Not tested | Fail (IPS-45: no export) |
 | §5 said 84 Blocked with fixture clusters (UI_FIXTURE_GAP 20, DASHBOARD_CONSISTENCY_FIXTURE 3, TOKEN_FIXTURE 1 …) | 54 Blocked grouped by the gate actually blocking them; former fixture rows either ran (IPS-44/45/46) or are now known to wait on deposits, R6 or provider credentials |
 | Earlier INV-C-013 Pass had no published contrast | Replaced by the IPS-46 contrast test |

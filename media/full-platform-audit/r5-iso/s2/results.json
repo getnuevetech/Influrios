@@ -1,0 +1,145 @@
+{
+  "stamp": "s2e",
+  "ids": {
+    "S2-W1 Withdraw with reason": "cmwr3lfjc00047d4ticv814p4",
+    "S2-W1 Withdraw with reason:brief": "cmwr3lfi200037d4te6t37hrs",
+    "S2-W2 Withdraw from detail": "cmwr3lfkn000a7d4tz4fhxez9",
+    "S2-W2 Withdraw from detail:brief": "cmwr3lfki00097d4t6tyzgm3v",
+    "S2-E1 Expire at deadline": "cmwr3lfl5000g7d4tppnn3jq9",
+    "S2-E1 Expire at deadline:brief": "cmwr3lfl0000f7d4tf5boxl8b",
+    "S2-T1 Team decline closes": "cmwr3lfln000k7d4t8pqzev3g",
+    "S2-T2 Team listing": "cmwr3lfmr000s7d4t6l09alep"
+  },
+  "results": [
+    {
+      "id": "B0 all five waiting on home, inbox and hub",
+      "ok": true,
+      "detail": "badge 5 · missing none"
+    },
+    {
+      "id": "B1 invitation notices are Action required before anything changes",
+      "ok": true,
+      "detail": "centre action 5"
+    },
+    {
+      "id": "W1.1 withdrawal persisted, turn none",
+      "ok": true,
+      "detail": "WITHDRAWN|none"
+    },
+    {
+      "id": "W1.2 counts clear together (home, inbox, hub, badge)",
+      "ok": true,
+      "detail": "badge 5→4"
+    },
+    {
+      "id": "W1.3 original notice kept in history, no longer Action required, read state unchanged",
+      "ok": true,
+      "detail": "action 5→4"
+    },
+    {
+      "id": "W1.4 in-app withdrawal notice names the business, with recorded reason, not Action required",
+      "ok": true,
+      "detail": "BUSINESS AUDIT r5iso01 Co A withdrew an invitation Invitation · S2-W1 Withdraw with reason s2e · Reason given: Schedule changed · Nothing was signed or funded U"
+    },
+    {
+      "id": "W1.5 withdrawal email (invite.withdrawn) with reason; no invitation template",
+      "ok": true,
+      "detail": "AUDIT r5iso01 Co A withdrew an invitation"
+    },
+    {
+      "id": "W1.6 withdrawn panel shows reason and message, no actions",
+      "ok": true,
+      "detail": "detail page"
+    },
+    {
+      "id": "W2.1 withdrawal persisted",
+      "ok": true,
+      "detail": "WITHDRAWN|none"
+    },
+    {
+      "id": "W2.2 email sent without an invented reason",
+      "ok": true,
+      "detail": "no reason line"
+    },
+    {
+      "id": "W2.3 panel omits the reason line",
+      "ok": true,
+      "detail": "detail page"
+    },
+    {
+      "id": "E1.1 past deadline leaves every count before the sweep runs",
+      "ok": true,
+      "detail": "REQUESTED|invitee · badge 4→2 · {\"fixture\":\"responseDeadline moved 1 minute into the past\",\"id\":\"cmwr3lfl5000g7d4tppnn3jq9\"}"
+    },
+    {
+      "id": "E1.2 detail shows Expired, no reply actions",
+      "ok": true,
+      "detail": "detail page"
+    },
+    {
+      "id": "E1.3 its notice leaves Action required immediately",
+      "ok": true,
+      "detail": "action 2"
+    },
+    {
+      "id": "E1.4 sweep persists EXPIRED at the deadline",
+      "ok": true,
+      "detail": "EXPIRED|none · {\"mode\":\"manual\",\"scanned\":1,\"expired\":1}"
+    },
+    {
+      "id": "E1.5 expiry notice + invite.expired email",
+      "ok": true,
+      "detail": "An invitation from AUDIT r5iso01 Co A expired"
+    },
+    {
+      "id": "T.1 pending team invitations listed in hub and inbox",
+      "ok": true,
+      "detail": "baseline"
+    },
+    {
+      "id": "T.2 after accept: hub shows \"You accepted · Waiting for teammates\"; inbox and home drop it",
+      "ok": true,
+      "detail": "badge 2→1"
+    },
+    {
+      "id": "T.3 teammate decline closes both proposals",
+      "ok": true,
+      "detail": "db"
+    },
+    {
+      "id": "T.4 still-invited member sees \"This invitation is closed\", no respond controls",
+      "ok": true,
+      "detail": "T1"
+    },
+    {
+      "id": "T.5 accepted member sees closed-after-you-accepted, not \"waiting for teammates\"",
+      "ok": true,
+      "detail": "T2"
+    },
+    {
+      "id": "T.6 closed proposals leave hub, inbox, home and badge",
+      "ok": true,
+      "detail": "badge 1→0"
+    },
+    {
+      "id": "T.7 team notice stays in history, not Action required",
+      "ok": true,
+      "detail": "action 0"
+    },
+    {
+      "id": "M.1 mobile hub agrees (no withdrawn/expired/closed rows)",
+      "ok": true,
+      "detail": "all five gone at 390"
+    },
+    {
+      "id": "M.2 mobile withdrawn panel shows reason",
+      "ok": true,
+      "detail": "390"
+    },
+    {
+      "id": "R.1 signed-out item link → login with the exact item (S1 layout fix)",
+      "ok": true,
+      "detail": "http://127.0.0.1:3000/login?next=%2Fcollaboration%2Fapplications%2Fcmwr3lfjc00047d4ticv814p4&gate=applications"
+    }
+  ]
+}

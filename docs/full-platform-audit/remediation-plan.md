@@ -10,7 +10,7 @@
 | **Status** | Provisional design / planning artifact |
 | **Audit execution baseline** | Live host probed @ `40b6288` (#536); matrix post IPS-25 |
 | **Code note** | #537 COR-SEC-01 **merged** → `5a5f4c0` on `main`; live redeploy + credential rotation **not** confirmed |
-| **Matrix** | **400 Pass · 38 Fail · 54 Blocked · 0 Not tested · 10 Explicitly deferred** (502 rows, IPS-47: S1 retest closed INV-DC-001, INV-DC-015) — +IPS-29/30/31 + IPS-40 + **IPS-42** reconcile (−1 Pass / +1 NT; View/Export + notify isolation narrowed) |
+| **Matrix** | **403 Pass · 35 Fail · 54 Blocked · 0 Not tested · 10 Explicitly deferred** (502 rows, IPS-47/48: S1 + S2 retests closed INV-DC-001, INV-DC-015, INV-DC-013, INV-DC-014, INV-A-048) — +IPS-29/30/31 + IPS-40 + **IPS-42** reconcile (−1 Pass / +1 NT; View/Export + notify isolation narrowed) |
 | **Authoritative matrix** | [coverage-matrix.md](./coverage-matrix.md) |
 | **Coverage narrative** | [coverage-status.md](./coverage-status.md) |
 | **Execution** | [execution/](./execution/) (auth, collab, billing, admin, [not-tested-chase-results.md](./execution/not-tested-chase-results.md), [dashboard-consistency-results.md](./execution/dashboard-consistency-results.md), [mail-sink-restore-results.md](./execution/mail-sink-restore-results.md)) |
