@@ -110,7 +110,9 @@ export function CreatorOpportunities({
   const returnTo = hrefFor(tab);
   const savedRequests = requests.filter((row) => saved.has(`business_request:${row.id}`));
   const savedOpenings = openings.filter((row) => saved.has(`creator_opportunity:${row.id}`));
-  const recommendedRequests = requests.filter((row) => (row.score ?? 0) > 0);
+  // Matched campaigns first, then every other open campaign. A request open to any specialty
+  // scores 0 and must still be discoverable from the default tab.
+  const recommendedRequests = [...requests].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
   const visibleRequests = tab === "saved" ? savedRequests : tab === "openings" ? [] : tab === "recommended" ? recommendedRequests : requests;
   const visibleOpenings = tab === "saved" ? savedOpenings : tab === "openings" ? openings : [];
   const savedCount = savedRequests.length + savedOpenings.length + savedMatches.length;
@@ -236,7 +238,7 @@ export function CreatorOpportunities({
       </div>
 
       {tab === "recommended" ? (
-        <p className="text-sm text-[#667085]">Campaigns below are open listings with a match score. People further down are recommended partners, not available campaigns.</p>
+        <p className="text-sm text-[#667085]">Open campaigns, best matches first. People further down are recommended partners, not available campaigns.</p>
       ) : null}
 
       {count === 0 ? (

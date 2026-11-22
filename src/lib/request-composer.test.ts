@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { composerStep, composerSubmit, draftRecipientSlugs, joinDraftRecipients, requestVisibility } from "./request-composer";
+import { composerStep, composerSubmit, draftRecipientSlugs, joinDraftRecipients, requestMarketChoice, requestVisibility } from "./request-composer";
 
 describe("request composer", () => {
   it("keeps a saved visibility and step, and restores selected recipients", () => {
@@ -49,5 +49,20 @@ describe("request composer", () => {
     const publish = workspace.slice(workspace.indexOf('decision.action === "publish"'));
     assert.equal(publish.includes("inviteCreatorsIndependently"), false);
     assert.equal(workspace.includes("executeHeldCancellation"), false);
+  });
+});
+
+describe("request market picker", () => {
+  const markets = [{ code: "US", name: "United States" }, { code: "GH", name: "Ghana" }];
+  it("accepts an enabled market by name or code and normalises it", () => {
+    assert.deepEqual(requestMarketChoice("united states", markets), { ok: true, name: "United States" });
+    assert.deepEqual(requestMarketChoice("GH", markets), { ok: true, name: "Ghana" });
+  });
+  it("allows no market", () => {
+    assert.deepEqual(requestMarketChoice("", markets), { ok: true, name: "" });
+  });
+  it("rejects free text that isn't a market, but keeps a value already saved", () => {
+    assert.equal(requestMarketChoice("Narnia", markets).ok, false);
+    assert.deepEqual(requestMarketChoice("Lagos, Nigeria", markets, "Lagos, Nigeria"), { ok: true, name: "Lagos, Nigeria" });
   });
 });

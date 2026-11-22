@@ -33,6 +33,9 @@ export default async function RequestEditorPage({ params, searchParams }: Props)
   const currency = brief?.budgetCurrency || "USD";
   const currencies = [...new Set([currency, "USD", ...fx.filter((row) => row.active).map((row) => row.currency)])];
   const location = parseLocationParts(brief?.location ?? "");
+  const markets = await prisma.country
+    .findMany({ where: { enabled: true }, select: { code: true, name: true }, orderBy: { name: "asc" } })
+    .catch(() => []);
   const creators = (directory?.creators ?? []).slice(0, 80).map((creator) => ({
     slug: creator.slug,
     name: creator.displayName,
@@ -58,6 +61,9 @@ export default async function RequestEditorPage({ params, searchParams }: Props)
       }).catch(() => null)
     : null;
 
+  // After sending or publishing, show the outcome — never reopen the editor at step 1 (AUD-WIZ-01).
+  const sentOrPublished = query.saved === "invites" || query.saved === "published";
+
   return (
     <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-[#1B1464]/40 px-4 py-8">
       <div className="w-full max-w-3xl" role="dialog" aria-modal="true" aria-labelledby="request-composer-title">
@@ -66,15 +72,28 @@ export default async function RequestEditorPage({ params, searchParams }: Props)
             Close
           </Link>
         </div>
-        {query.saved === "invites" ? (
-          <p className="mb-3 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-emerald-800">
-            {query.sent ? `${query.sent} invitation${query.sent === "1" ? "" : "s"} recorded.` : "Invitations recorded."} Each recipient has a private invitation. Nothing was charged.
-          </p>
-        ) : null}
-        {query.saved === "published" ? (
-          <p className="mb-3 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-emerald-800">
-            The listing is public. Invitations were not sent.
-          </p>
+        {sentOrPublished ? (
+          <section role="status" className="mb-3 rounded-[28px] bg-white p-6 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">
+              {query.saved === "invites" ? "Invitations sent" : "Request published"}
+            </p>
+            <h2 className="mt-1 font-display text-2xl font-bold text-[#1B1464]">{brief?.title || "Your request"}</h2>
+            <p className="mt-2 text-sm text-[#344054]">
+              {query.saved === "invites"
+                ? `${query.sent ? `${query.sent} private invitation${query.sent === "1" ? "" : "s"}` : "Private invitations"} sent. Each influencer sees only their own invitation. Nothing was signed or charged.`
+                : "Your request is public. Eligible influencers can now apply. No private invitations were sent."}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link href="/collaboration/business?tab=requests" className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-bold text-white">
+                Back to requests
+              </Link>
+              {brief ? (
+                <Link href={`/collaboration/business/request/${encodeURIComponent(brief.id)}?step=0`} className="rounded-full border border-[#E4E9F5] px-4 py-2 text-sm font-bold text-[#1B1464]">
+                  Edit request
+                </Link>
+              ) : null}
+            </div>
+          </section>
         ) : null}
         {invites.length > 0 ? (
           <ul className="mb-3 divide-y divide-[#EEF2F7] rounded-2xl bg-white px-4 text-sm">
@@ -94,6 +113,7 @@ export default async function RequestEditorPage({ params, searchParams }: Props)
             </Link>
           </p>
         ) : null}
+        {sentOrPublished ? null : (
         <RequestEditor
           briefId={brief?.id ?? ""}
           locked={brief ? campaignEditLocked(brief) : false}
@@ -107,6 +127,7 @@ export default async function RequestEditorPage({ params, searchParams }: Props)
           currencies={currencies}
           deadline={brief?.responseDeadline ?? ""}
           locationCountry={location.country || location.city}
+          markets={markets}
           specialties={taxonomy.map((item) => ({ slug: item.slug, name: item.name }))}
           specialty={brief?.specialty ?? ""}
           platforms={["Instagram", "TikTok", "YouTube"]}
@@ -116,6 +137,7 @@ export default async function RequestEditorPage({ params, searchParams }: Props)
           initialStep={composerStep(query.step)}
           initialVisibility={visibility}
         />
+        )}
       </div>
     </div>
   );

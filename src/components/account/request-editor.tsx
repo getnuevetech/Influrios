@@ -27,6 +27,8 @@ export function RequestEditor(props: {
   currencies: string[];
   deadline: string;
   locationCountry: string;
+  /** Markets enabled in the system (admin Country list). */
+  markets: { code: string; name: string }[];
   specialties: { slug: string; name: string }[];
   specialty: string;
   platforms: string[];
@@ -48,6 +50,12 @@ export function RequestEditor(props: {
   const [deadline, setDeadline] = useState(props.deadline);
   const [block, setBlock] = useState("");
   const chosen = props.creators.filter((creator) => selected.includes(creator.slug));
+  const savedMarket = props.locationCountry.trim();
+  const knownMarket = props.markets.find((market) => market.name.toLowerCase() === savedMarket.toLowerCase());
+  // A free-text market saved before the picker existed stays selectable so it isn't silently lost.
+  const legacyMarket = savedMarket && !knownMarket ? savedMarket : "";
+  const marketDefault = knownMarket?.name ?? legacyMarket;
+  const lastStep = STEPS.length - 1;
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
     return props.creators
@@ -94,7 +102,20 @@ export function RequestEditor(props: {
   }
 
   return (
-    <form action={actionWorkspaceRequest} className="rounded-[28px] border border-[#E6ECF7] bg-white p-5 shadow-sm sm:p-6">
+    <form
+      action={actionWorkspaceRequest}
+      onSubmit={(event) => {
+        // Only the draft button, or the final button on Review, may submit (AUD-WIZ-01).
+        const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+        const intent = submitter?.value ?? "";
+        if (intent !== "draft" && step !== lastStep) event.preventDefault();
+      }}
+      onKeyDown={(event) => {
+        // Enter in a single-line field moves nothing and submits nothing; use the buttons.
+        const target = event.target as HTMLElement;
+        if (event.key === "Enter" && target.tagName === "INPUT") event.preventDefault();
+      }}
+      className="rounded-[28px] border border-[#E6ECF7] bg-white p-5 shadow-sm sm:p-6">
       {props.briefId ? <input type="hidden" name="briefId" value={props.briefId} /> : null}
       {selected.map((slug) => (
         <input key={slug} type="hidden" name="creatorSlug" value={slug} />
@@ -225,7 +246,13 @@ export function RequestEditor(props: {
         </label>
         <label className="text-sm font-semibold text-indigo">
           Market
-          <input name="locationCountry" defaultValue={props.locationCountry} placeholder="Country or market" className="mt-1 w-full rounded-xl border border-[#E4E9F5] px-3 py-2 font-normal" />
+          <select name="locationCountry" defaultValue={marketDefault} className="mt-1 w-full rounded-xl border border-[#E4E9F5] px-3 py-2 font-normal">
+            <option value="">Choose a market</option>
+            {legacyMarket ? <option value={legacyMarket}>{legacyMarket} (saved earlier)</option> : null}
+            {props.markets.map((market) => (
+              <option key={market.code} value={market.name}>{market.name}</option>
+            ))}
+          </select>
         </label>
         <label className="text-sm font-semibold text-indigo">
           Respond by
@@ -250,15 +277,19 @@ export function RequestEditor(props: {
             Back
           </button>
         ) : null}
-        <button type="submit" name="submitIntent" value="draft" className="rounded-full border border-[#E4E9F5] px-4 py-2 text-sm font-bold text-indigo">
+        {/* formNoValidate: a draft needs only a title (checked on the server); empty fields on later steps must not block it. */}
+        <button type="submit" name="submitIntent" value="draft" formNoValidate className="rounded-full border border-[#E4E9F5] px-4 py-2 text-sm font-bold text-indigo">
           Save draft
         </button>
         {step < STEPS.length - 1 ? (
-          <button type="button" onClick={next} className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-bold text-white">
+          // Distinct keys: React must not reuse this button as the submit button on Review,
+          // or the click that advances the step also submits the form (AUD-WIZ-01).
+          <button key="next" type="button" onClick={next} className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-bold text-white">
             Next
           </button>
         ) : mode === "private" ? (
           <button
+            key="invite"
             type="submit"
             name="submitIntent"
             value="invite"
@@ -268,7 +299,7 @@ export function RequestEditor(props: {
             Send invitations
           </button>
         ) : (
-          <button type="submit" name="submitIntent" value="publish" className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-bold text-white">
+          <button key="publish" type="submit" name="submitIntent" value="publish" className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-bold text-white">
             Publish request
           </button>
         )}

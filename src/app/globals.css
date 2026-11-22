@@ -56,12 +56,17 @@ body {
   min-height: 100vh;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+/* In the base layer so a link's own colour utility (e.g. text-[#6D4AFF]) wins.
+   Unlayered, this rule beat every Tailwind utility and turned light buttons on dark
+   banners white-on-white. */
+@layer base {
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 }
 
-/* Unlayered so it wins over `a { color: inherit }` inside light pills on dark banners. */
+/* Explicit ink colours for light pills on dark banners (kept for existing markup). */
 a.ink-on-light,
 button.ink-on-light {
   color: #111a5a;

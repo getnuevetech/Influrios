@@ -20,8 +20,9 @@ import {
   updateInquiryStatus,
   addToShortlist,
   enteredNote,
+  parseLocationParts,
 } from "@/lib/business";
-import { composerStep, composerSubmit, joinDraftRecipients, requestVisibility } from "@/lib/request-composer";
+import { composerStep, composerSubmit, joinDraftRecipients, requestMarketChoice, requestVisibility } from "@/lib/request-composer";
 import { domesticInviteDecision } from "@/lib/discovery-access";
 import { verifiedDomesticCountry } from "@/lib/payment-engine";
 import { getLaunchGate } from "@/lib/launch-gate";
@@ -165,12 +166,24 @@ export async function actionWorkspaceRequest(formData: FormData) {
   const visibility = requestVisibility(String(formData.get("distribution") ?? ""), slugs.length > 0);
   const decision = composerSubmit({ intent, visibility, recipientCount: slugs.length });
   if (!decision.ok) redirect(`${back}?step=${step}&error=${encodeURIComponent(decision.error)}`);
+  // Market comes from the enabled markets list, not free text (a value saved earlier is kept).
+  const markets = await prisma.country
+    .findMany({ where: { enabled: true }, select: { code: true, name: true } })
+    .catch(() => []);
+  const savedBrief = briefId ? ws.briefs.find((item) => item.id === briefId) : undefined;
+  const savedLocation = savedBrief ? parseLocationParts(savedBrief.location) : null;
+  const market = requestMarketChoice(
+    String(formData.get("locationCountry") ?? ""),
+    markets,
+    savedLocation ? savedLocation.country || savedLocation.city : "",
+  );
+  if (!market.ok) redirect(`${back}?step=2&error=${encodeURIComponent(market.error)}`);
   let fields;
   try {
     const locationParts = [
       String(formData.get("locationCity") ?? ""),
       String(formData.get("locationState") ?? ""),
-      String(formData.get("locationCountry") ?? ""),
+      market.name,
     ]
       .map((part) => part.trim())
       .filter(Boolean);
@@ -241,6 +254,9 @@ export async function actionWorkspaceRequest(formData: FormData) {
     if (!invited.ok) {
       redirect(`${saved}?step=${step}&error=${encodeURIComponent(invited.error)}`);
     }
+    // Invitations went out, so the request is live (invite-only), not a draft.
+    await activateBrief(brief.id, ws.businessId);
+    revalidateHub();
     redirect(`${saved}?saved=invites&sent=${invited.ids.length}`);
   }
   if (decision.action === "publish") {
