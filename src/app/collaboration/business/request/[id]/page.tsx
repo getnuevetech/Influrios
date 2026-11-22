@@ -81,7 +81,9 @@ export default async function RequestEditorPage({ params, searchParams }: Props)
             <p className="mt-2 text-sm text-[#344054]">
               {query.saved === "invites"
                 ? `${query.sent ? `${query.sent} private invitation${query.sent === "1" ? "" : "s"}` : "Private invitations"} sent. Each influencer sees only their own invitation. Nothing was signed or charged.`
-                : "Your request is public. Eligible influencers can now apply. No private invitations were sent."}
+                : query.sent
+                  ? `Your request is public, so eligible influencers can apply. The ${query.sent === "1" ? "influencer" : `${query.sent} influencers`} you chose also got a direct invitation.`
+                  : "Your request is public. Eligible influencers can find it in Opportunities and apply."}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Link href="/collaboration/business?tab=requests" className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-bold text-white">

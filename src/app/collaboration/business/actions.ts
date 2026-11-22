@@ -220,7 +220,10 @@ export async function actionWorkspaceRequest(formData: FormData) {
   }
   const brief = mode === "update" ? await updateBrief(briefId, fields, ws.businessId) : await createBrief(fields, ws.businessId);
   const saved = `/collaboration/business/request/${encodeURIComponent(brief.id)}`;
-  if (decision.action === "invite") {
+  // Direct invitations to the influencers chosen on the Audience step. Used by "Send invitations"
+  // (private) and by "Publish request" (public listing + the people the business picked).
+  const sendDirectInvitations = async (): Promise<string[]> => {
+    if (slugs.length === 0) return [];
     const [gate, business, kycRows] = await Promise.all([
       getLaunchGate().catch(() => null),
       prisma.businessProfile.findUnique({ where: { userId: account.id }, select: { verifiedCountryCode: true } }).catch(() => null),
@@ -254,10 +257,14 @@ export async function actionWorkspaceRequest(formData: FormData) {
     if (!invited.ok) {
       redirect(`${saved}?step=${step}&error=${encodeURIComponent(invited.error)}`);
     }
+    return invited.ids;
+  };
+  if (decision.action === "invite") {
+    const ids = await sendDirectInvitations();
     // Invitations went out, so the request is live (invite-only), not a draft.
     await activateBrief(brief.id, ws.businessId);
     revalidateHub();
-    redirect(`${saved}?saved=invites&sent=${invited.ids.length}`);
+    redirect(`${saved}?saved=invites&sent=${ids.length}`);
   }
   if (decision.action === "publish") {
     try {
@@ -285,8 +292,11 @@ export async function actionWorkspaceRequest(formData: FormData) {
       const message = error instanceof Error ? error.message : "Could not publish this request.";
       redirect(`${saved}?step=${step}&error=${encodeURIComponent(message)}`);
     }
+    // The influencers the business picked on the Audience step also get a direct invitation
+    // (they would otherwise only find the listing by browsing Opportunities).
+    const ids = await sendDirectInvitations();
     revalidateHub();
-    redirect(`${saved}?saved=published`);
+    redirect(`${saved}?saved=published${ids.length ? `&sent=${ids.length}` : ""}`);
   }
   revalidateHub();
   redirect(`${saved}?saved=draft&step=${step}`);
