@@ -16,9 +16,9 @@ export type FundingBadgeInput = {
   releasedCents?: number;
   fundedCents?: number;
   protectedPaymentsEnabled?: boolean;
-  /** Product funding mode FULL | STAGED | NONE — NONE never shows Fully Funded. */
+  /** Product funding mode FULL | NONE — NONE never shows Fully Funded. */
   fundingMode?: string;
-  /** For STAGED: true when later sibling stages in the schedule are still unfunded. */
+  /** True when only part of the agreed budget is held by the provider. */
   schedulePartiallyFunded?: boolean;
 };
 

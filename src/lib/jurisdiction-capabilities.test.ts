@@ -22,8 +22,6 @@ function caps(overrides: Partial<JurisdictionCapabilities> = {}): JurisdictionCa
     protectedPaymentsEnabled: true,
     escrowTermAllowed: false,
     fullPrefundingEnabled: true,
-    stagedPrefundingEnabled: false,
-    recurringFundingEnabled: false,
     managedIntroductionEnabled: false,
     managedNegotiationEnabled: false,
     approvedProviderIds: [],
@@ -62,7 +60,6 @@ describe("jurisdiction capability parsing", () => {
       escrowTermAllowed: false,
     });
     assert.equal(row.fullPrefundingEnabled, true);
-    assert.equal(row.stagedPrefundingEnabled, false);
     assert.equal(row.legalReviewStatus, "PENDING");
     assert.equal(
       capabilitiesFromJurisdictionRow({
@@ -157,13 +154,10 @@ describe("managed-mode gates (Dev §24)", () => {
 });
 
 describe("funding schedule + provider gates", () => {
-  it("requires full / staged / recurring flags", () => {
+  it("allows only full prefunding", () => {
     assert.equal(scheduleKindAllowedByJurisdiction(caps(), "once").ok, true);
+    assert.equal(scheduleKindAllowedByJurisdiction(caps({ fullPrefundingEnabled: false }), "once").ok, false);
     assert.equal(scheduleKindAllowedByJurisdiction(caps(), "staged").ok, false);
-    assert.equal(
-      scheduleKindAllowedByJurisdiction(caps({ stagedPrefundingEnabled: true }), "staged").ok,
-      true,
-    );
     assert.equal(scheduleKindAllowedByJurisdiction(caps(), "recurring").ok, false);
   });
 

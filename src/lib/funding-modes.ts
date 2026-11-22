@@ -1,72 +1,35 @@
 /**
- * W3.4 — Product funding modes FULL / STAGED / NONE (Product Addendum §7).
- * Recurring/ambassador remains deferred (Dev P3); schedule kind still exists but is not a product mode exit.
+ * Product funding modes (Product Addendum §7): FULL prefunding, or NONE when the corridor is outside
+ * protected payments. Staged and recurring funding were removed; older rows stored as STAGED read as FULL.
  */
 
-export const FUNDING_MODES = ["FULL", "STAGED", "NONE"] as const;
+export const FUNDING_MODES = ["FULL", "NONE"] as const;
 export type FundingMode = (typeof FUNDING_MODES)[number];
 
 export const FUNDING_MODE_LABELS: Record<FundingMode, string> = {
   FULL: "Full prefunding",
-  STAGED: "Staged prefunding",
   NONE: "Outside protected coverage",
 };
 
 export function asFundingMode(value: string | null | undefined): FundingMode {
   const raw = String(value ?? "").trim().toUpperCase();
-  if ((FUNDING_MODES as readonly string[]).includes(raw)) return raw as FundingMode;
-  return "FULL";
+  return raw === "NONE" ? "NONE" : "FULL";
 }
 
-/**
- * Map schedule + jurisdiction protection into the product funding mode.
- * Recurring keeps storing scheduleKind=recurring but product mode stays FULL for the cycle amount
- * (ambassador expansion is deferred — do not invent a fourth product mode yet).
- */
+/** Jurisdiction protection decides the product funding mode. */
 export function resolveFundingMode(input: {
-  scheduleKind?: string | null;
   protectedPaymentsEnabled?: boolean | null;
   explicitMode?: string | null;
 }): FundingMode {
-  if (input.explicitMode) {
-    const explicit = asFundingMode(input.explicitMode);
-    if (input.protectedPaymentsEnabled === false) return "NONE";
-    return explicit;
-  }
   if (input.protectedPaymentsEnabled === false) return "NONE";
-  const kind = String(input.scheduleKind ?? "once").trim().toLowerCase();
-  if (kind === "staged") return "STAGED";
-  if (kind === "none") return "NONE";
+  if (input.explicitMode) return asFundingMode(input.explicitMode);
   return "FULL";
 }
 
-/**
- * Staged: later phases cannot start unfunded (Product §7).
- * A phase "starts" when work is submitted against that tranche's milestones.
- */
-export function stagedPhaseCanStart(input: {
-  fundingMode: string;
-  fundingStatus: string;
-  trancheIndex: number;
-  scheduleKind?: string | null;
-}): { ok: true } | { ok: false; error: string } {
-  const mode = asFundingMode(input.fundingMode);
-  const kind = String(input.scheduleKind ?? "").toLowerCase();
-  const staged = mode === "STAGED" || kind === "staged";
-  if (!staged) {
-    if (input.fundingStatus !== "held") {
-      return { ok: false, error: "Submit work after the provider confirms the prefund." };
-    }
-    return { ok: true };
-  }
+/** Work is submitted only after the provider confirms the prefund. */
+export function fundedWorkCanStart(input: { fundingStatus: string }): { ok: true } | { ok: false; error: string } {
   if (input.fundingStatus !== "held") {
-    const phase = Number.isInteger(input.trancheIndex) && input.trancheIndex > 1
-      ? `Stage ${input.trancheIndex}`
-      : "This stage";
-    return {
-      ok: false,
-      error: `${phase} is not funded yet. Fund this phase before work begins.`,
-    };
+    return { ok: false, error: "Submit work after the provider confirms the prefund." };
   }
   return { ok: true };
 }

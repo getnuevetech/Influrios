@@ -5,39 +5,25 @@ import {
   FUNDING_MODE_LABELS,
   fundingModeBlocksFullyFundedBadge,
   resolveFundingMode,
-  stagedPhaseCanStart,
+  fundedWorkCanStart,
 } from "./funding-modes";
 import { fundingBadge } from "./funding-badge";
 
 describe("funding modes (W3.4)", () => {
-  it("resolves FULL / STAGED / NONE from schedule + jurisdiction", () => {
-    assert.equal(resolveFundingMode({ scheduleKind: "once", protectedPaymentsEnabled: true }), "FULL");
-    assert.equal(resolveFundingMode({ scheduleKind: "staged", protectedPaymentsEnabled: true }), "STAGED");
-    assert.equal(resolveFundingMode({ scheduleKind: "once", protectedPaymentsEnabled: false }), "NONE");
-    assert.equal(resolveFundingMode({ scheduleKind: "staged", protectedPaymentsEnabled: false }), "NONE");
+  it("resolves FULL / NONE from jurisdiction protection", () => {
+    assert.equal(resolveFundingMode({ protectedPaymentsEnabled: true }), "FULL");
+    assert.equal(resolveFundingMode({ protectedPaymentsEnabled: false }), "NONE");
     assert.equal(resolveFundingMode({ explicitMode: "NONE", protectedPaymentsEnabled: true }), "NONE");
     assert.equal(asFundingMode("nope"), "FULL");
-    assert.equal(asFundingMode("STAGED"), "STAGED");
+    // Staged funding was removed; an old STAGED value reads as full prefunding.
+    assert.equal(asFundingMode("STAGED"), "FULL");
+    assert.deepEqual(Object.keys(FUNDING_MODE_LABELS), ["FULL", "NONE"]);
     assert.equal(FUNDING_MODE_LABELS.NONE, "Outside protected coverage");
   });
 
-  it("refuses unfunded staged phases", () => {
-    const blocked = stagedPhaseCanStart({
-      fundingMode: "STAGED",
-      fundingStatus: "awaiting_provider",
-      trancheIndex: 2,
-      scheduleKind: "staged",
-    });
-    assert.equal(blocked.ok, false);
-    if (!blocked.ok) assert.match(blocked.error, /not funded/i);
-
-    const allowed = stagedPhaseCanStart({
-      fundingMode: "STAGED",
-      fundingStatus: "held",
-      trancheIndex: 2,
-      scheduleKind: "staged",
-    });
-    assert.equal(allowed.ok, true);
+  it("starts work only after the provider confirms the prefund", () => {
+    assert.equal(fundedWorkCanStart({ fundingStatus: "awaiting_provider" }).ok, false);
+    assert.equal(fundedWorkCanStart({ fundingStatus: "held" }).ok, true);
   });
 
   it("never shows Fully Funded for NONE mode", () => {

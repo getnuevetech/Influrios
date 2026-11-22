@@ -77,7 +77,6 @@ describe("corridor checkout", () => {
     assert.match(actions, /checkoutUsesStoredCorridor/);
     assert.match(ledger, /corridorPrefundSnapshot/);
     assert.match(ledger, /collectionProviderCode: corridorFacts\.collectionProviderCode/);
-    assert.match(ledger, /collectionProviderCode: row\.collectionProviderCode/);
     assert.equal(ledger.includes('|| "USD"'), false);
     assert.equal(migration.includes("UPDATE"), false);
   });

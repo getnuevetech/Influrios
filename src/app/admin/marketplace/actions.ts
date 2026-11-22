@@ -10,7 +10,6 @@ import { saveDisputeReasons } from "@/lib/milestone-disputes";
 import {
   marketplaceConfig,
   scheduleMilestoneRelease,
-  saveFundingSchedule,
   saveJurisdiction,
   saveMarketplaceProvider,
   saveMarketplaceSettings,
@@ -129,8 +128,6 @@ export async function actionSaveJurisdiction(formData: FormData) {
       protectedPaymentsEnabled: flag(formData, "protectedPaymentsEnabled"),
       escrowTermAllowed: flag(formData, "escrowTermAllowed"),
       fullPrefundingEnabled: flag(formData, "fullPrefundingEnabled"),
-      stagedPrefundingEnabled: flag(formData, "stagedPrefundingEnabled"),
-      recurringFundingEnabled: flag(formData, "recurringFundingEnabled"),
       managedIntroductionEnabled: flag(formData, "managedIntroductionEnabled"),
       managedNegotiationEnabled: flag(formData, "managedNegotiationEnabled"),
       approvedProviderIds: formData.getAll("approvedProviderIds").map((value) => String(value)),
@@ -344,25 +341,6 @@ export async function actionSaveDisputeReasons(formData: FormData) {
   revalidatePath("/admin/marketplace");
   revalidatePath("/trust");
   redirect("/admin/marketplace?saved=reasons");
-}
-
-export async function actionSaveFundingSchedule(formData: FormData) {
-  await requireAdminAction("marketplace.manage");
-  try {
-    await saveFundingSchedule({
-      stagedFundingEnabled: formData.get("stagedFundingEnabled") === "on",
-      recurringFundingEnabled: formData.get("recurringFundingEnabled") === "on",
-      maxStages: Number(formData.get("maxStages")),
-      recurringIntervalDays: Number(formData.get("recurringIntervalDays")),
-      maxRecurrences: Number(formData.get("maxRecurrences")),
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not save the funding schedule.";
-    redirect(`/admin/marketplace?error=${encodeURIComponent(message)}`);
-  }
-  revalidatePath("/admin/marketplace");
-  revalidatePath("/payments");
-  redirect("/admin/marketplace?saved=schedule");
 }
 
 export async function actionSaveAttributionPolicy(formData: FormData) {

@@ -10,7 +10,6 @@ export const SWEEP_JOB_KINDS = [
   "funding_recon_sweep",
   "scheduled_release_sweep",
   "marketplace_application_expire_sweep",
-  "recurring_cycle_sweep",
   "short_link_schedule_sweep",
   "invitation_followup_sweep",
   "quote_expiry_sweep",

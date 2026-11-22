@@ -32,8 +32,6 @@
     "staging:e6-ensure-us": "bash scripts/staging-e6-marketplace-evidence.sh --ensure-us",
     "staging:e6-seed-awaiting": "bash scripts/staging-e6-marketplace-evidence.sh --seed-awaiting",
     "staging:e6-prove-chain": "bash scripts/staging-e6-marketplace-evidence.sh --prove-chain",
-    "staging:e8-recurring-evidence": "bash scripts/staging-e8-recurring-evidence.sh",
-    "staging:e8-prove-chain": "bash scripts/staging-e8-recurring-evidence.sh --prove-chain",
     "staging:e9-team-proposal-evidence": "bash scripts/staging-e9-team-proposal-evidence.sh",
     "staging:e9-prove-chain": "bash scripts/staging-e9-team-proposal-evidence.sh --prove-chain",
     "staging:e10-docusign-evidence": "bash scripts/staging-e10-docusign-evidence.sh",

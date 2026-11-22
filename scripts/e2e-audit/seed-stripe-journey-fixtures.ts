@@ -53,13 +53,11 @@ async function main() {
       providerCode: "primary",
       currency: "USD",
       minorDigits: 2,
-      stagedPrefundingEnabled: true,
     },
     update: {
       protectedPaymentsEnabled: true,
       legalReviewStatus: "APPROVED",
       providerCode: "primary",
-      stagedPrefundingEnabled: true,
     },
   });
 
@@ -72,7 +70,6 @@ async function main() {
       earningRefundPolicyApproved: true,
       providerRouteApproved: true,
       providerTraceReady: true,
-      stagedFundingEnabled: true,
     },
     update: {
       feeSchedulesApproved: true,
@@ -80,7 +77,6 @@ async function main() {
       earningRefundPolicyApproved: true,
       providerRouteApproved: true,
       providerTraceReady: true,
-      stagedFundingEnabled: true,
     },
   });
 

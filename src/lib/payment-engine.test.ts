@@ -16,7 +16,6 @@ import {
   recordedVerifiedCountry,
   verifiedDomesticCountry,
   earnPlatformFees,
-  launchMilestoneGate,
   teamFundingGate,
   ordinaryDealShareSnapshot,
   providerEventMayAdvance,
@@ -783,9 +782,6 @@ describe("payment engine acceptance", () => {
       }).ok,
       false,
     );
-    assert.equal(launchMilestoneGate(3).ok, false);
-    assert.equal(launchMilestoneGate(3, { stagedAllowed: true, maxMilestones: 4 }).ok, true);
-    assert.equal(launchMilestoneGate(1).ok, true);
     assert.equal(teamFundingGate(2, false).ok, false);
     assert.equal(teamFundingGate(2, true).ok, true);
     const abroad = domesticCollaborationGate({

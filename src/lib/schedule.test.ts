@@ -1,441 +1,51 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { prisma } from "./db";
-import { listAttributionSources } from "./deal-attribution";
-import {
-  applyMarketplaceEvent,
-  recurringTrancheFeeCents,
-  requestPrefund,
-  saveFundingSchedule,
-  stopRecurringSeries,
-  sweepDueRecurrences,
-} from "./marketplace-ledger";
-import { nextRecurrenceDueAt, planSchedule, recurrenceIsDue, recurringSeriesSummary, splitTranches } from "./schedule";
+import { planSchedule } from "./schedule";
 
-describe("funding schedule rules", () => {
-  it("copies the original tranche fee instead of resolving a new one", () => {
-    const copied = recurringTrancheFeeCents({ sourceGrossCents: 375_000, sourceFeeCents: 32_000, nextGrossCents: 375_000 });
-    assert.equal(copied.ok && copied.feeCents, 32_000);
-    const ledger = readFileSync("src/lib/marketplace-ledger.ts", "utf8");
-    const start = ledger.indexOf("export async function sweepDueRecurrences");
-    const end = ledger.indexOf("export async function runAutoApprovalSweep");
-    const body = ledger.slice(start, end);
-    assert.equal(body.includes("resolveFee"), false);
-    assert.equal(body.includes("recurringTrancheFeeCents"), true);
-  });
-
-  it("splits a staged gross without losing cents", () => {
-    assert.deepEqual(splitTranches(10_000, 3), [3333, 3333, 3334]);
-    assert.equal(splitTranches(10_000, 3)?.reduce((sum, part) => sum + part, 0), 10_000);
-    assert.equal(splitTranches(2, 3), null);
-    assert.equal(splitTranches(100, 1), null);
-  });
-
-  it("plans a staged or recurring prefund only when that schedule is on", () => {
-    const staged = planSchedule({
-      kind: "staged",
-      grossCents: 300,
-      stageCount: 3,
-      stagedEnabled: true,
-      recurringEnabled: true,
-      maxStages: 4,
-      maxRecurrences: 6,
-      intervalDays: 30,
-    });
-    assert.equal(staged.ok, true);
-    if (staged.ok) assert.deepEqual(staged.parts, [100, 100, 100]);
-    assert.equal(
-      planSchedule({
-        kind: "staged",
-        grossCents: 300,
-        stageCount: 3,
-        stagedEnabled: false,
-        recurringEnabled: true,
-        maxStages: 4,
-        maxRecurrences: 6,
-        intervalDays: 30,
-      }).ok,
-      false,
-    );
-    const recurring = planSchedule({
-      kind: "recurring",
-      grossCents: 500,
-      occurrenceCount: 4,
-      stagedEnabled: true,
-      recurringEnabled: true,
-      maxStages: 4,
-      maxRecurrences: 6,
-      intervalDays: 30,
-    });
-    assert.equal(recurring.ok, true);
-    if (recurring.ok) {
-      assert.deepEqual(recurring.parts, [500]);
-      assert.equal(recurring.trancheCount, 4);
+describe("funding schedule", () => {
+  it("funds every collaboration once, in full", () => {
+    const once = planSchedule({ grossCents: 250_000 });
+    assert.equal(once.ok, true);
+    if (once.ok) {
+      assert.equal(once.kind, "once");
+      assert.deepEqual(once.parts, [250_000]);
+      assert.equal(once.trancheCount, 1);
     }
-    assert.equal(
-      planSchedule({
-        kind: "recurring",
-        grossCents: 500,
-        occurrenceCount: 4,
-        stagedEnabled: true,
-        recurringEnabled: false,
-        maxStages: 4,
-        maxRecurrences: 6,
-        intervalDays: 30,
-      }).ok,
-      false,
-    );
+    assert.equal(planSchedule({ kind: "once", grossCents: 100 }).ok, true);
   });
 
-  it("waits out the interval after the provider hold", () => {
-    const holdAt = new Date("2026-09-01T00:00:00.000Z");
-    assert.equal(recurrenceIsDue({ holdAt, intervalDays: 30, now: new Date("2026-09-30T00:00:00.000Z") }), false);
-    assert.equal(recurrenceIsDue({ holdAt, intervalDays: 30, now: new Date("2026-10-01T00:00:00.000Z") }), true);
-    assert.equal(recurrenceIsDue({ holdAt: null, intervalDays: 30, now: new Date("2026-10-01T00:00:00.000Z") }), false);
-  });
-
-  it("summarizes a recurring series for the payments UI", () => {
-    const holdAt = new Date("2026-09-01T00:00:00.000Z");
-    assert.equal(nextRecurrenceDueAt({
-      scheduleKind: "recurring",
-      trancheIndex: 1,
-      trancheCount: 2,
-      intervalDays: 1,
-      holdAt,
-    })?.toISOString(), "2026-09-02T00:00:00.000Z");
-    assert.equal(nextRecurrenceDueAt({
-      scheduleKind: "recurring",
-      seriesStopped: true,
-      trancheIndex: 1,
-      trancheCount: 2,
-      intervalDays: 1,
-      holdAt,
-    }), null);
-    const open = recurringSeriesSummary({
-      scheduleKind: "recurring",
-      trancheIndex: 1,
-      trancheCount: 2,
-      intervalDays: 1,
-      holdAt,
-      now: new Date("2026-09-01T12:00:00.000Z"),
-    });
-    assert.equal(open?.remaining, 1);
-    assert.equal(open?.canStop, true);
-    assert.match(open?.label ?? "", /Recurring 1 of 2/);
-    const stopped = recurringSeriesSummary({
-      scheduleKind: "recurring",
-      seriesStopped: true,
-      trancheIndex: 1,
-      trancheCount: 2,
-      intervalDays: 1,
-      holdAt,
-    });
-    assert.equal(stopped?.canStop, false);
-    assert.match(stopped?.nextDueLabel ?? "", /stopped/i);
-    const payments = readFileSync("src/app/payments/payments-panel.tsx", "utf8");
-    assert.match(payments, /actionStopSeries/);
-    assert.match(payments, /recurringSeriesSummary/);
-    assert.match(payments, /Stop later tranches/);
-    assert.match(readFileSync("src/app/payments/actions.ts", "utf8"), /stopRecurringSeries/);
-    assert.match(readFileSync("scripts/staging-e8-recurring-evidence.sh", "utf8"), /prove-chain/);
-    assert.match(readFileSync("package.json", "utf8"), /staging:e8-prove-chain/);
-  });
-});
-
-describe("staged and recurring prefunds", () => {
-  async function enableUsScheduleCapabilities() {
-    const before = await prisma.collaborationJurisdiction.findUnique({ where: { code: "US" } });
-    await prisma.collaborationJurisdiction.update({
-      where: { code: "US" },
-      data: {
-        protectedPaymentsEnabled: true,
-        fullPrefundingEnabled: true,
-        stagedPrefundingEnabled: true,
-        recurringFundingEnabled: true,
-        legalReviewStatus: "APPROVED",
-      },
-    });
-    return before;
-  }
-
-  it("creates no rows when the provider is not ready", async () => {
-    const jurisdiction = await enableUsScheduleCapabilities();
-    const sources = await listAttributionSources();
-    const source = sources.find((row) => row.active);
-    if (!source) throw new Error("expected an attribution source");
-    const titled = { title: { startsWith: "Staged while provider is off" } };
-    const before = await prisma.collaborationFunding.count({ where: titled });
-    try {
-      const result = await requestPrefund({
-        jurisdictionCode: "US",
-        businessName: "Harbor Co",
-        creatorSlug: "sofia-martinez",
-        title: "Staged while provider is off",
-        grossCents: 30_000,
-        serviceLevel: "contracted",
-        sourceId: source.id,
-        scheduleKind: "staged",
-        stageCount: 3,
-      });
+  it("refuses staged and recurring schedules", () => {
+    for (const kind of ["staged", "recurring"]) {
+      const result = planSchedule({ kind, grossCents: 10_000 });
       assert.equal(result.ok, false);
-      if (!result.ok) assert.match(result.error, /not ready/);
-      assert.equal(await prisma.collaborationFunding.count({ where: titled }), before);
-    } finally {
-      if (jurisdiction) {
-        await prisma.collaborationJurisdiction.update({
-          where: { code: "US" },
-          data: {
-            protectedPaymentsEnabled: jurisdiction.protectedPaymentsEnabled,
-            fullPrefundingEnabled: jurisdiction.fullPrefundingEnabled,
-            stagedPrefundingEnabled: jurisdiction.stagedPrefundingEnabled,
-            recurringFundingEnabled: jurisdiction.recurringFundingEnabled,
-            legalReviewStatus: jurisdiction.legalReviewStatus,
-          },
-        });
-      }
+      if (!result.ok) assert.match(result.error, /in full up front/);
     }
   });
 
-  it("splits a staged gross into unfunded prefunds and opens the next recurrence only after the interval", async () => {
-    const provider = await prisma.integrationProvider.findUnique({
-      where: { kind_code: { kind: "marketplace", code: "primary" } },
-    });
-    const settings = await prisma.marketplaceSettings.findUnique({ where: { id: "default" } });
-    const sources = await listAttributionSources();
-    const source = sources.find((row) => row.active);
-    if (!source || !settings) throw new Error("marketplace settings are missing");
-    const jurisdiction = await enableUsScheduleCapabilities();
-    const launchGate = await prisma.collaborationLaunchGate.findUnique({ where: { id: "default" } });
-    const ids: string[] = [];
-    try {
-      await prisma.integrationProvider.update({
-        where: { kind_code: { kind: "marketplace", code: "primary" } },
-        data: { enabled: true, webhookCipher: provider?.webhookCipher ?? "v1.dGVzdC1pdi1wYWRk.dGVzdC10YWc.dGVzdA" },
-      });
-      await prisma.collaborationLaunchGate.upsert({
-        where: { id: "default" },
-        create: { id: "default", stagedFundingEnabled: true },
-        update: { stagedFundingEnabled: true },
-      });
-      await saveFundingSchedule({
-        stagedFundingEnabled: true,
-        recurringFundingEnabled: settings.recurringFundingEnabled,
-        maxStages: settings.maxStages,
-        recurringIntervalDays: settings.recurringIntervalDays,
-        maxRecurrences: settings.maxRecurrences,
-      });
-      const staged = await requestPrefund({
-        jurisdictionCode: "US",
-        businessName: "Harbor Co",
-        creatorSlug: "sofia-martinez",
-        title: "Launch stages",
-        grossCents: 30_000,
-        serviceLevel: "contracted",
-        sourceId: source.id,
-        scheduleKind: "staged",
-        stageCount: 3,
-      });
-      assert.equal(staged.ok, true);
-      if (!staged.ok) return;
-      const stagedRows = await prisma.collaborationFunding.findMany({
-        where: { title: { startsWith: "Launch stages" } },
-        include: { entries: true, milestones: true },
-        orderBy: { trancheIndex: "asc" },
-      });
-      ids.push(...stagedRows.map((row) => row.id));
-      assert.equal(stagedRows.length, 3);
-      assert.deepEqual(
-        stagedRows.map((row) => row.grossCents),
-        [10_000, 10_000, 10_000],
+  it("leaves no staged or recurring switches, sweeps or screens behind", () => {
+    const files = [
+      "src/lib/marketplace-ledger.ts",
+      "src/app/admin/marketplace/settings/page.tsx",
+      "src/app/admin/marketplace/actions.ts",
+      "src/app/admin/payment-settings/country-routes-panel.tsx",
+      "src/app/payments/payments-panel.tsx",
+      "src/app/payments/actions.ts",
+      "src/lib/payment-engine.ts",
+      "src/lib/launch-gate.ts",
+      "src/lib/sweep-clock.ts",
+      "src/lib/payment-charge-switches.ts",
+    ];
+    for (const file of files) {
+      const text = readFileSync(file, "utf8");
+      assert.doesNotMatch(
+        text,
+        /stagedFundingEnabled|stagedPrefundingEnabled|recurringFundingEnabled|maxStages|maxRecurrences|sweepDueRecurrences|stopRecurringSeries|recurring_collection|Stop later tranches/,
+        file,
       );
-      assert.equal(stagedRows.every((row) => row.status === "awaiting_provider" && row.entries.length === 0), true);
-      assert.equal(
-        stagedRows.every((row) => row.milestones.reduce((sum, milestone) => sum + milestone.amountCents, 0) === row.grossCents),
-        true,
-      );
-      const held = await applyMarketplaceEvent({
-        provider: "primary",
-        eventId: `hold-${stagedRows[0].id}`,
-        eventType: "funding.held",
-        fundingId: stagedRows[0].id,
-        amountCents: stagedRows[0].grossCents,
-      });
-      assert.equal(held.applied, true);
-      const afterHold = await prisma.collaborationFunding.findMany({
-        where: { id: { in: stagedRows.map((row) => row.id) } },
-        include: { entries: true },
-        orderBy: { trancheIndex: "asc" },
-      });
-      assert.equal(afterHold[0]?.status, "held");
-      assert.equal(afterHold[0]?.entries.filter((entry) => entry.kind === "hold").length, 1);
-      assert.equal(afterHold[1]?.status, "awaiting_provider");
-      assert.equal(afterHold[1]?.entries.length, 0);
-
-      const recurring = await requestPrefund({
-        jurisdictionCode: "US",
-        businessName: "Harbor Co",
-        creatorSlug: "sofia-martinez",
-        title: "Monthly retain",
-        grossCents: 15_000,
-        serviceLevel: "contracted",
-        sourceId: source.id,
-        scheduleKind: "recurring",
-        occurrenceCount: 3,
-      });
-      assert.equal(recurring.ok, true);
-      if (!recurring.ok) return;
-      ids.push(recurring.id);
-      const first = await prisma.collaborationFunding.findUnique({ where: { id: recurring.id } });
-      assert.equal(first?.trancheIndex, 1);
-      assert.equal(first?.trancheCount, 3);
-      assert.equal(first?.intervalDays, settings.recurringIntervalDays);
-      const confirmed = await applyMarketplaceEvent({
-        provider: "primary",
-        eventId: `hold-${recurring.id}`,
-        eventType: "funding.held",
-        fundingId: recurring.id,
-        amountCents: 15_000,
-      });
-      assert.equal(confirmed.applied, true);
-      const hold = await prisma.ledgerEntry.findFirst({
-        where: { fundingId: recurring.id, kind: "hold" },
-        orderBy: { createdAt: "asc" },
-      });
-      if (!hold) throw new Error("hold was not posted");
-      const frozenFee = first?.feeSnapshotJson;
-      await saveFundingSchedule({
-        stagedFundingEnabled: settings.stagedFundingEnabled,
-        recurringFundingEnabled: settings.recurringFundingEnabled,
-        maxStages: settings.maxStages,
-        recurringIntervalDays: settings.recurringIntervalDays + 30,
-        maxRecurrences: settings.maxRecurrences,
-      });
-      await sweepDueRecurrences(new Date(hold.createdAt.getTime() + 24 * 60 * 60 * 1000));
-      assert.equal(await prisma.collaborationFunding.count({ where: { scheduleId: first?.scheduleId } }), 1);
-      await sweepDueRecurrences(new Date(hold.createdAt.getTime() + (settings.recurringIntervalDays + 1) * 24 * 60 * 60 * 1000));
-      const series = await prisma.collaborationFunding.findMany({
-        where: { scheduleId: first?.scheduleId },
-        include: { entries: true },
-        orderBy: { trancheIndex: "asc" },
-      });
-      ids.push(...series.map((row) => row.id));
-      assert.equal(series.length, 2);
-      assert.equal(series[1]?.status, "awaiting_provider");
-      assert.equal(series[1]?.entries.length, 0);
-      assert.equal(series[1]?.grossCents, 15_000);
-      assert.equal(series[1]?.intervalDays, settings.recurringIntervalDays);
-      const firstAfter = await prisma.collaborationFunding.findUnique({ where: { id: recurring.id } });
-      assert.deepEqual(firstAfter?.feeSnapshotJson, frozenFee);
-      await sweepDueRecurrences(new Date(hold.createdAt.getTime() + (settings.recurringIntervalDays + 1) * 24 * 60 * 60 * 1000));
-      assert.equal(await prisma.collaborationFunding.count({ where: { scheduleId: first?.scheduleId } }), 2);
-      await saveFundingSchedule({
-        stagedFundingEnabled: false,
-        recurringFundingEnabled: false,
-        maxStages: settings.maxStages,
-        recurringIntervalDays: settings.recurringIntervalDays,
-        maxRecurrences: settings.maxRecurrences,
-      });
-      const blocked = await requestPrefund({
-        jurisdictionCode: "US",
-        businessName: "Harbor Co",
-        creatorSlug: "sofia-martinez",
-        title: "Blocked schedule",
-        grossCents: 15_000,
-        serviceLevel: "contracted",
-        sourceId: source.id,
-        scheduleKind: "recurring",
-        occurrenceCount: 2,
-      });
-      assert.equal(blocked.ok, false);
-
-      await saveFundingSchedule({
-        stagedFundingEnabled: true,
-        recurringFundingEnabled: true,
-        maxStages: settings.maxStages,
-        recurringIntervalDays: settings.recurringIntervalDays,
-        maxRecurrences: settings.maxRecurrences,
-      });
-      const stopSeries = await requestPrefund({
-        jurisdictionCode: "US",
-        businessName: "Harbor Co",
-        creatorSlug: "sofia-martinez",
-        title: "Stop later retain",
-        grossCents: 12_000,
-        serviceLevel: "contracted",
-        sourceId: source.id,
-        scheduleKind: "recurring",
-        occurrenceCount: 3,
-      });
-      assert.equal(stopSeries.ok, true);
-      if (!stopSeries.ok) return;
-      ids.push(stopSeries.id);
-      const stopFirst = await prisma.collaborationFunding.findUnique({ where: { id: stopSeries.id } });
-      const stopHold = await applyMarketplaceEvent({
-        provider: "primary",
-        eventId: `hold-${stopSeries.id}`,
-        eventType: "funding.held",
-        fundingId: stopSeries.id,
-        amountCents: 12_000,
-      });
-      assert.equal(stopHold.applied, true);
-      const stopHoldAt = await prisma.ledgerEntry.findFirst({
-        where: { fundingId: stopSeries.id, kind: "hold" },
-        orderBy: { createdAt: "asc" },
-      });
-      if (!stopHoldAt || !stopFirst?.scheduleId) throw new Error("stop series hold missing");
-      const stopped = await stopRecurringSeries(stopFirst.scheduleId);
-      assert.equal(stopped.ok, true);
-      await sweepDueRecurrences(
-        new Date(stopHoldAt.createdAt.getTime() + (settings.recurringIntervalDays + 1) * 24 * 60 * 60 * 1000),
-      );
-      assert.equal(await prisma.collaborationFunding.count({ where: { scheduleId: stopFirst.scheduleId } }), 1);
-      const stoppedRow = await prisma.collaborationFunding.findUnique({ where: { id: stopSeries.id } });
-      assert.equal(stoppedRow?.seriesStopped, true);
-    } finally {
-      const unique = [...new Set(ids)];
-      if (unique.length) {
-        await prisma.processedWebhook.deleteMany({
-          where: { OR: unique.map((id) => ({ eventId: { contains: id } })) },
-        });
-        await prisma.collaborationFunding.deleteMany({ where: { id: { in: unique } } });
-      }
-      await prisma.collaborationFunding.deleteMany({
-        where: { title: { in: ["Launch stages", "Monthly retain", "Blocked schedule", "Stop later retain"] } },
-      });
-      await saveFundingSchedule({
-        stagedFundingEnabled: settings.stagedFundingEnabled,
-        recurringFundingEnabled: settings.recurringFundingEnabled,
-        maxStages: settings.maxStages,
-        recurringIntervalDays: settings.recurringIntervalDays,
-        maxRecurrences: settings.maxRecurrences,
-      });
-      if (provider) {
-        await prisma.integrationProvider.update({
-          where: { id: provider.id },
-          data: { enabled: provider.enabled, webhookCipher: provider.webhookCipher, name: provider.name },
-        });
-      }
-      if (launchGate) {
-        await prisma.collaborationLaunchGate.update({
-          where: { id: "default" },
-          data: { stagedFundingEnabled: launchGate.stagedFundingEnabled },
-        });
-      } else {
-        await prisma.collaborationLaunchGate.delete({ where: { id: "default" } }).catch(() => undefined);
-      }
-      if (jurisdiction) {
-        await prisma.collaborationJurisdiction.update({
-          where: { code: "US" },
-          data: {
-            protectedPaymentsEnabled: jurisdiction.protectedPaymentsEnabled,
-            fullPrefundingEnabled: jurisdiction.fullPrefundingEnabled,
-            stagedPrefundingEnabled: jurisdiction.stagedPrefundingEnabled,
-            recurringFundingEnabled: jurisdiction.recurringFundingEnabled,
-            legalReviewStatus: jurisdiction.legalReviewStatus,
-          },
-        });
-      }
     }
+    const schema = readFileSync("prisma/schema.prisma", "utf8");
+    assert.doesNotMatch(schema, /stagedFundingEnabled|stagedPrefundingEnabled|recurringFundingEnabled|maxStages|maxRecurrences/);
+    assert.equal(existsSync("scripts/staging-e8-recurring-evidence.sh"), false);
   });
 });

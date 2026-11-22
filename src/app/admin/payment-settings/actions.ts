@@ -67,7 +67,6 @@ export async function actionSaveDeferredFunding(formData: FormData) {
       switches: {
         crossBorderFundingEnabled: formData.get("crossBorderFundingEnabled") === "on",
         teamFundingEnabled: formData.get("teamFundingEnabled") === "on",
-        stagedFundingEnabled: formData.get("stagedFundingEnabled") === "on",
         automaticMilestoneApprovalEnabled: formData.get("automaticMilestoneApprovalEnabled") === "on",
         automaticProviderSwitchingEnabled: formData.get("automaticProviderSwitchingEnabled") === "on",
         allInBudgetEntryEnabled: formData.get("allInBudgetEntryEnabled") === "on",

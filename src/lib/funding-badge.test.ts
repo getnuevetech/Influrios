@@ -33,13 +33,13 @@ describe("funding-badge", () => {
     );
   });
 
-  it("marks staged schedules partial when later stages await funding", () => {
+  it("marks a funding partial when only part of the budget is held", () => {
     assert.equal(
       fundingBadge({
         status: "held",
         heldCents: 1000,
         releasedCents: 0,
-        fundingMode: "STAGED",
+        fundingMode: "FULL",
         schedulePartiallyFunded: true,
       }),
       "Partially Funded",
