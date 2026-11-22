@@ -453,9 +453,9 @@ function Filter({
   options: (readonly [string, string])[];
 }) {
   return (
-    <label className="h-10 rounded-full border border-[#E7ECF5] bg-white px-3 text-sm text-[#667085]">
+    <label className="h-10 min-w-0 max-w-full rounded-full border border-[#E7ECF5] bg-white px-3 text-sm text-[#667085]">
       <span className="sr-only">{label}</span>
-      <select name={name} defaultValue={value} className="h-10 bg-transparent pr-1 outline-none">
+      <select name={name} defaultValue={value} className="h-10 w-full max-w-[14rem] truncate bg-transparent pr-1 outline-none">
         <option value="">{label}</option>
         {options.map(([key, text]) => (
           <option key={key} value={key}>
