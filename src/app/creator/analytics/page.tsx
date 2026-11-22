@@ -58,7 +58,7 @@ export default async function CreatorAnalyticsPage() {
     return (
       <div className="space-y-4">
         <h1 className="font-display text-3xl font-bold">Analytics</h1>
-        <p className="text-sm text-muted">Publish a creator card to see profile, link, and social analytics.</p>
+        <p className="text-sm text-muted">Publish an Influencer Card to see profile, link, and social analytics.</p>
         <Link href="/claim" className="btn-primary">
           Create your card
         </Link>

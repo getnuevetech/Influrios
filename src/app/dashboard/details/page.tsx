@@ -159,7 +159,7 @@ export default async function ProfileDetailsPage({ searchParams }: Props) {
                 ))}
               </select>
               <span className="mt-1 block text-xs font-normal text-muted">
-                Platform role stays Influencer. Pick a self-description from the admin-managed list.
+                Platform role stays Influencer. Pick the description that fits you best.
               </span>
             </label>
             <label className="text-sm sm:col-span-2">

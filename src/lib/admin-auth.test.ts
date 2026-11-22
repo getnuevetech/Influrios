@@ -269,8 +269,9 @@ describe("COR-SEC-01 admin bootstrap containment", () => {
     assert.equal(/ADMIN_SUPER_EMAIL/i.test(login), false);
     // Help text may mention setup, but must not embed email/password literals
     assert.equal(/@[a-z0-9.-]+\.[a-z]{2,}/i.test(login), false);
-    assert.match(login, /never shown on this page/i);
-    assert.match(login, /setup invitation link/i);
+    // The public page no longer describes how admin access is bootstrapped.
+    assert.equal(/bootstrap|server environment/i.test(login), false);
+    assert.match(login, /Admin access is by invitation only/);
     // Setup path remains available outside the public password hint
     const setup = readFileSync("src/app/admin/setup/page.tsx", "utf8");
     assert.match(setup, /Set up your account/);

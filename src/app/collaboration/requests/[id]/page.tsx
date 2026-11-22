@@ -139,7 +139,7 @@ export default async function CreatorCampaignRequestPage({ params, searchParams 
           <section>
             <h2 className="text-sm font-bold text-indigo">Looking for</h2>
             <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-[#4E5872]">
-              {request.lookingFor || "Open to matching creators."}
+              {request.lookingFor || "Open to matching influencers."}
             </p>
           </section>
 

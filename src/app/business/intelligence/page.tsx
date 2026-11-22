@@ -78,9 +78,9 @@ export default async function BusinessIntelligencePage() {
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-muted">
-                Audience splits appear only when a creator record includes claimed demographics.
+                Audience splits appear only when an influencer record includes claimed demographics.
                 Reach uses follower totals already on the profile. Niche rows compare open requests
-                with creators in the directory. Searches are not stored, so they are not counted.
+                with influencers in the directory. Searches are not stored, so they are not counted.
               </p>
               {entitlements?.exports ? (
                 <div className="flex flex-wrap gap-2">
@@ -105,10 +105,10 @@ export default async function BusinessIntelligencePage() {
               <h2 className="font-display text-xl font-bold text-indigo">Niche counts</h2>
               <p className="mt-1 text-sm text-muted">
                 Open briefs, collaborations, agency campaigns, and published marketplace listings
-                compared with creators in the directory.
+                compared with influencers in the directory.
               </p>
               {trends.length === 0 ? (
-                <p className="mt-5 text-sm text-muted">No specialties are on published creators or open requests.</p>
+                <p className="mt-5 text-sm text-muted">No specialties are on published influencers or open requests.</p>
               ) : (
                 <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   {trends.map((t) => (
@@ -198,7 +198,7 @@ export default async function BusinessIntelligencePage() {
                           href={`/api/intelligence/export?format=json&slug=${s.creatorSlug}`}
                           className="mt-2 inline-block text-xs font-semibold text-violet hover:underline"
                         >
-                          Export this creator →
+                          Export this influencer →
                         </a>
                       </div>
                     </div>

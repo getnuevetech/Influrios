@@ -66,8 +66,7 @@ export default async function AdminLoginPage({ searchParams }: Props) {
           </form>
 
           <p className="mt-6 text-[11px] leading-relaxed text-muted">
-            First-time operators set the bootstrap admin through server environment configuration and the
-            private setup invitation link. Credentials are never shown on this page.
+            Admin access is by invitation only. Ask a super admin if you need an account.
           </p>
           <Link href="/" className="mt-4 inline-block text-sm font-semibold text-violet hover:underline">
             ← Back to site

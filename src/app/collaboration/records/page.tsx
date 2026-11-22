@@ -234,7 +234,7 @@ export default async function CollaborationRecordsPage({
           <p className="text-sm font-semibold text-indigo">No active collaborations yet</p>
           <p className="mt-2 text-sm text-muted">
             {isBusiness
-              ? "When creators accept invitations or you fund a collaboration, it appears here."
+              ? "When influencers accept invitations or you fund a collaboration, it appears here."
               : "When you accept an invitation or a brand funds a collaboration, it appears here."}
           </p>
           <div className="mt-4 flex flex-wrap justify-center gap-3">

@@ -148,7 +148,7 @@ export default async function BusinessHomePage() {
     { label: "Location", done: Boolean(profile?.geography?.trim()) },
     { label: "Contact person", done: Boolean(contactName) },
     { label: "A brief / request", done: workspace.briefs.length > 0 },
-    { label: "A saved creator", done: workspace.shortlist.length > 0 },
+    { label: "A saved influencer", done: workspace.shortlist.length > 0 },
   ];
   const complete = checks.filter((item) => item.done).length;
   const setupPercent = Math.round((complete / checks.length) * 100);
@@ -188,8 +188,8 @@ export default async function BusinessHomePage() {
   });
   const bio =
     workspace.industry.trim()
-      ? `${companyName} works in ${workspace.industry}. Discover creators, publish requests, and manage collaborations from one place.`
-      : "Add your industry and company details so creators know who they are working with.";
+      ? `${companyName} works in ${workspace.industry}. Discover influencers, publish requests, and manage collaborations from one place.`
+      : "Add your industry and company details so influencers know who they are working with.";
 
   const responded = applications.filter((app) =>
     ["RESPONDED", "NEGOTIATING", "ACCEPTED", "COLLABORATION_DRAFTED"].includes(app.status),
@@ -200,6 +200,18 @@ export default async function BusinessHomePage() {
       ? Math.round((responded / applications.length) * 100)
       : null;
 
+  // People are shown by name, not by their URL handle (jenks-ag-3).
+  const nameSlugs = [
+    ...new Set(
+      [...applications.flatMap((app) => [app.creatorSlug, app.toSlug, app.fromSlug]), ...workspace.shortlist.map((item) => item.creatorSlug)]
+        .filter((slug): slug is string => Boolean(slug)),
+    ),
+  ];
+  const nameRows = nameSlugs.length
+    ? await prisma.creator.findMany({ where: { slug: { in: nameSlugs } }, select: { slug: true, displayName: true } }).catch(() => [])
+    : [];
+  const names = new Map(nameRows.map((row) => [row.slug, row.displayName || row.slug]));
+  const nameOf = (slug: string | null | undefined, fallback = "An influencer") => (slug ? names.get(slug) || slug : fallback);
   const appsByRequest = new Map<string, typeof applications>();
   for (const app of applications) {
     if (!app.businessRequestId) continue;
@@ -282,7 +294,7 @@ export default async function BusinessHomePage() {
     ...applications.slice(0, 4).map((app) => ({
       id: `app-${app.id}`,
       title: app.creatorSlug
-        ? `${app.creatorSlug} ${app.status === "RESPONDED" ? "responded to your request" : `application ${app.status.toLowerCase()}`}`
+        ? `${nameOf(app.creatorSlug)} ${app.status === "RESPONDED" ? "responded to your request" : `application ${app.status.toLowerCase()}`}`
         : `Application ${app.status.toLowerCase()}`,
       detail: app.requestBrand || app.opportunityLookingFor || "Collaboration request",
       when: relativeTime(app.createdAt),
@@ -405,7 +417,7 @@ export default async function BusinessHomePage() {
                     {task === "answer" ? "Answer a question" : "Review a response"}
                   </p>
                   <p className="text-xs text-muted">
-                    {app.note || app.requestBrand || "Invitation"} · {businessInvitationLabel(app, app.creatorSlug || "The influencer")}
+                    {app.note || app.requestBrand || "Invitation"} · {businessInvitationLabel(app, nameOf(app.creatorSlug, "The influencer"))}
                   </p>
                 </div>
                 <Link href={`/collaboration/applications/${app.id}`} className="rounded-full bg-[#6D4AFF] px-3 py-2 text-xs font-semibold text-white">
@@ -539,7 +551,7 @@ export default async function BusinessHomePage() {
             </Link>
             <div className="mt-1 flex flex-wrap justify-center gap-x-4 gap-y-1 sm:flex-col sm:items-center">
               <Link href="/discover" className="text-sm font-semibold text-violet hover:underline">
-                Discover Creators
+                Discover Influencers
               </Link>
               <Link href="/collaboration/team" className="text-sm font-semibold text-violet hover:underline">
                 Coordinated proposal
@@ -561,7 +573,7 @@ export default async function BusinessHomePage() {
         </Link>
         <Link href="#shortlist" className="block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-violet">
           <StatCard
-            label="Saved Creators"
+            label="Saved Influencers"
             value={String(workspace.shortlist.length)}
             note="On this workspace shortlist"
             tone="blue"
@@ -601,7 +613,7 @@ export default async function BusinessHomePage() {
             applicationsUnavailable
               ? "Applications could not be loaded. This is not zero."
               : responseRate === null
-                ? "Appears after creators apply to your requests"
+                ? "Appears after influencers apply to your requests"
                 : "Across applications on your requests"
           }
           tone="amber"
@@ -631,7 +643,7 @@ export default async function BusinessHomePage() {
                   <thead className="text-[11px] uppercase tracking-wide text-muted">
                     <tr>
                       <th className="pb-3 pr-3 font-semibold">Request</th>
-                      <th className="pb-3 pr-3 font-semibold">Creators</th>
+                      <th className="pb-3 pr-3 font-semibold">Influencers</th>
                       <th className="pb-3 pr-3 font-semibold">Budget</th>
                       <th className="pb-3 pr-3 font-semibold">Status</th>
                       <th className="pb-3 pr-3 font-semibold">Responses</th>
@@ -665,10 +677,10 @@ export default async function BusinessHomePage() {
                               {row.creators.map((slug) => (
                                 <span
                                   key={slug}
-                                  title={slug}
+                                  title={nameOf(slug)}
                                   className="inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#EDE7FF] text-[10px] font-bold text-violet"
                                 >
-                                  {slug.slice(0, 1).toUpperCase()}
+                                  {nameOf(slug).slice(0, 1).toUpperCase()}
                                 </span>
                               ))}
                               {row.moreCreators > 0 ? (
@@ -717,12 +729,12 @@ export default async function BusinessHomePage() {
             </Panel>
           ) : null}
 
-          <Panel title="Suggested Creators for You" action={<TextLink href="/discover">View more creators →</TextLink>}>
+          <Panel title="Suggested Influencers for You" action={<TextLink href="/discover">View more influencers →</TextLink>}>
             {hubResult.incident ? (
               <UnavailableNote label="Suggestions" incident={hubResult.incident} href="/business/home" />
             ) : suggestions.length === 0 ? (
               <p className="text-sm text-muted">
-                Suggestions appear after you save a brief. This list does not invent creators.
+                Suggestions appear after you save a brief.
               </p>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -835,7 +847,7 @@ export default async function BusinessHomePage() {
 
           <div id="shortlist">
           <Panel
-            title="Saved creators"
+            title="Saved influencers"
             action={
               workspace.shortlist.length >= 2 ? (
                 <TextLink
@@ -849,18 +861,18 @@ export default async function BusinessHomePage() {
                   Coordinated proposal →
                 </TextLink>
               ) : (
-                <TextLink href="/discover">Find creators →</TextLink>
+                <TextLink href="/discover">Find influencers →</TextLink>
               )
             }
           >
             {workspace.shortlist.length === 0 ? (
-              <p className="text-sm text-muted">No saved creators yet. This is not a failed load.</p>
+              <p className="text-sm text-muted">No saved influencers yet. This is not a failed load.</p>
             ) : (
               <ul className="space-y-2">
                 {workspace.shortlist.map((item) => (
                   <li key={item.creatorSlug}>
                     <Link href={`/creators/${item.creatorSlug}`} className="text-sm font-semibold text-indigo hover:text-violet hover:underline">
-                      {item.creatorSlug}
+                      {nameOf(item.creatorSlug)}
                     </Link>
                   </li>
                 ))}

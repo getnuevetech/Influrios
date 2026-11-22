@@ -368,7 +368,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
           status: "ROUTE_BLOCKED" as const,
           blockers: teamParties
             ? teamChecks.flatMap((check) => check.blockers)
-            : ["Every creator must accept before the contract opens."],
+            : ["Every influencer must accept before the contract opens."],
         };
   }
 
@@ -534,8 +534,8 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                 </ul>
                 <p className="mt-2 text-xs text-muted">
                   {teamParties
-                    ? "One funding instruction. Each milestone release pays every creator the share saved on the proposal."
-                    : "The contract opens after every creator accepts. A decline closes this proposal."}
+                    ? "One funding instruction. Each milestone release pays every influencer the share saved on the proposal."
+                    : "The contract opens after every influencer accepts. A decline closes this proposal."}
                 </p>
               </div>
             ) : (

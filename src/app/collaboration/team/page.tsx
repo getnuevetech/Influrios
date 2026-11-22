@@ -83,7 +83,7 @@ export default async function TeamProposalPage({ searchParams }: Props) {
           <h1 className="mt-2 font-display text-4xl font-bold">Coordinated proposals</h1>
           <p className="mt-3 max-w-2xl text-white/75">
             Invite two or more influencers to one proposal. Each influencer only sees their own invitation until
-            everyone accepts. Funding stays blocked until every accepted creator has a ready payout route.
+            everyone accepts. Funding stays blocked until every accepted influencer has a ready payout route.
           </p>
         </div>
       </section>
@@ -119,7 +119,7 @@ export default async function TeamProposalPage({ searchParams }: Props) {
                 <p className="text-sm text-muted sm:col-span-2">
                   No creators available yet.{" "}
                   <Link href="/discover" className="font-semibold text-violet hover:underline">
-                    Discover creators
+                    Discover influencers
                   </Link>{" "}
                   and save them to the shortlist.
                 </p>
@@ -151,7 +151,7 @@ export default async function TeamProposalPage({ searchParams }: Props) {
             <Link href="/login?next=/collaboration/team" className="font-semibold text-violet hover:underline">
               Sign in
             </Link>{" "}
-            with a business account to invite influencers. Influencer accounts do not see another creator’s invitation.
+            with a business account to invite influencers. Influencer accounts do not see another influencer’s invitation.
           </p>
         )}
 
@@ -194,7 +194,7 @@ export default async function TeamProposalPage({ searchParams }: Props) {
                 <ul className="mt-2 text-sm text-muted">
                   {proposal.members.map((member, index) => (
                     <li key={member.id}>
-                      {member.creatorSlug} · {member.role} · {member.status} · {(member.shareBps / 100).toFixed(2)}%
+                      {directory.find((row) => row.slug === member.creatorSlug)?.displayName || member.creatorSlug} · {member.role === "creator" ? "influencer" : member.role} · {member.status} · {(member.shareBps / 100).toFixed(2)}%
                       {checks[index] && !checks[index].ready ? " · payout route not ready" : ""}
                     </li>
                   ))}
