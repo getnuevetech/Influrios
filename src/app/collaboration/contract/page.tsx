@@ -147,15 +147,18 @@ export default async function ContractWizardPage({ searchParams }: Props) {
     paymentRoutes().catch(() => []),
     prisma.countryActivationCorridor.findMany({ orderBy: { countryCode: "asc" } }).catch(() => []),
   ]);
-  const payoutChoices = corridors.flatMap((row) =>
-    storedPayoutMethodList(row.payoutMethodsJson).map((method) => ({
-      countryCode: row.countryCode,
-      method,
-      label: (PAYOUT_METHODS as readonly string[]).includes(method)
-        ? PAYOUT_METHOD_LABELS[method as PayoutMethod]
-        : method,
-    })),
-  );
+  // Every payout method on every corridor; narrowed to the deal country once it is known (below).
+  const allPayoutChoices = corridors
+    .filter((row) => row.active !== false)
+    .flatMap((row) =>
+      storedPayoutMethodList(row.payoutMethodsJson).map((method) => ({
+        countryCode: row.countryCode,
+        method,
+        label: (PAYOUT_METHODS as readonly string[]).includes(method)
+          ? PAYOUT_METHOD_LABELS[method as PayoutMethod]
+          : method,
+      })),
+    );
 
   const collaborationId = (params.collaboration ?? "").trim();
   const requestedApplicationId = (params.application ?? "").trim();
@@ -234,6 +237,10 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   const scope = entered.scope;
   const commercial = entered.commercial;
   const jurisdictionCode = entered.jurisdictionCode;
+  // Only the deal country's payout methods, once each. A method from another country fails at funding.
+  const payoutChoices = allPayoutChoices
+    .filter((choice) => !jurisdictionCode || choice.countryCode === jurisdictionCode)
+    .filter((choice, index, list) => list.findIndex((other) => other.method === choice.method) === index);
   const serviceLevel = entered.serviceLevel;
   const grossRaw = entered.grossRaw;
   const grossCents = dollarsToCents(grossRaw);
@@ -869,6 +876,14 @@ export default async function ContractWizardPage({ searchParams }: Props) {
                       <dt className="text-muted">Collaboration service fee</dt>
                       <dd className="font-bold text-indigo">
                         {formatContractMoney(plan.businessCollaborationFeeCents, plan.contractCurrency)}
+                      </dd>
+                    </div>
+                  ) : null}
+                  {fundedTax && !fundedTax.ok ? (
+                    <div>
+                      <dt className="text-muted">Tax</dt>
+                      <dd className="font-bold text-amber-800">
+                        Not set up for {jurisdictionCode}. This agreement can&apos;t be sent until an admin adds the tax rule.
                       </dd>
                     </div>
                   ) : null}

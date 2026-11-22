@@ -96,6 +96,7 @@ export async function actionAdminSetCreatorKyc(formData: FormData) {
     await adminSetCreatorKyc({
       creatorSlug: String(formData.get("creatorSlug") ?? ""),
       decision,
+      countryCode: String(formData.get("countryCode") ?? ""),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not update creator KYC.";
