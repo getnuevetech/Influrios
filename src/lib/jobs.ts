@@ -206,8 +206,7 @@ async function runJob(kind: string, payload: unknown): Promise<{ externalId?: st
     return;
   }
   if (kind === "recurring_cycle_sweep") {
-    const { sweepDueRecurrences } = await import("@/lib/marketplace-ledger");
-    await sweepDueRecurrences();
+    // Recurring funding was removed. Rows queued before the release finish without doing anything.
     return;
   }
   if (kind === "short_link_schedule_sweep") {
@@ -441,7 +440,7 @@ export async function listJobs(limit = 50) {
 
 export async function listFundingSweepResults() {
   return prisma.job.findMany({
-    where: { kind: { in: ["milestone_auto_approval", "recurring_cycle_sweep"] } },
+    where: { kind: "milestone_auto_approval" },
     orderBy: { updatedAt: "desc" },
     take: 8,
   });

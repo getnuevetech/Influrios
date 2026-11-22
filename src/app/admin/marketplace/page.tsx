@@ -8,7 +8,6 @@ import { readShareSnapshot } from "@/lib/fx-share";
 import { CANCELLATION_REASON_LABELS, type CancellationReason } from "@/lib/cancellation-matrix";
 import { listPaymentRiskFundings } from "@/lib/collaboration-cancellation";
 import { readSettlementProposal } from "@/lib/cancellation-settlement";
-import { scheduleLabel } from "@/lib/schedule";
 import { formatMoney, formatStoredMoney } from "@/lib/money";
 import { ledgerMonthlyReport, ledgerTotals, listFundings } from "@/lib/marketplace-ledger";
 import { productSwitch } from "@/lib/product-switches";
@@ -145,7 +144,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         <div className="mt-4 rounded-2xl border border-[#E4EBFF] bg-white p-4">
           <h2 className="font-display text-lg font-bold text-indigo">Sweep results</h2>
           <p className="mt-1 text-xs text-muted">
-            Opening this page does not approve milestones or create a recurring prefund. Those run from the queued jobs below.
+            Opening this page does not approve milestones. Auto-approval runs from the queued jobs below.
           </p>
           <ul className="mt-2 space-y-1 text-xs text-muted">
             {sweeps.map((job) => (
@@ -154,15 +153,14 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                 {job.lastError ? ` · ${job.lastError}` : ""}
               </li>
             ))}
-            {sweeps.length === 0 ? <li>No auto-approval or recurring sweep has been queued yet.</li> : null}
+            {sweeps.length === 0 ? <li>No auto-approval sweep has been queued yet.</li> : null}
           </ul>
         </div>
         <p className="mt-1 max-w-2xl text-sm text-muted">
           A prefund stays unfunded until a signed provider webhook confirms it. A provider code named demo
           cannot confirm a hold. Cancelling before confirmation posts no ledger entry. Dispute decisions do not
           move the money the provider is holding.
-          Attribution is copied onto the prefund and is not rewritten when the source list changes. Staged or recurring
-          prefunds stay unfunded until each tranche has its own confirmation. Gross is entered in USD. A new prefund
+          Attribution is copied onto the prefund and is not rewritten when the source list changes. Gross is entered in USD. A new prefund
           uses the currency saved on that country corridor when one is saved, and otherwise the jurisdiction currency.
           A blank currency is not saved as USD. Revenue-share lines are written when the provider releases a
           milestone. They are not cash.
@@ -559,7 +557,6 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
               {formatMoney(funding.ledger.releasedCents, funding.currency)}
               {funding.attributionLabel ? ` · ${funding.attributionLabel}` : ""}
               {funding.repeatOf ? ` · repeat of ${funding.repeatOf.title}` : ""}
-              {scheduleLabel(funding) ? ` · ${scheduleLabel(funding)}` : ""}
               {funding.changeOrderCount > 0 ? ` · change orders ${funding.changeOrderCount} of ${funding.changeOrderLimit}` : ""}
               {shares ? ` · share ${shares.map((party) => `${party.label} ${party.shareBps / 100}%`).join(", ")}` : ""}
             </p>

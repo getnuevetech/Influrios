@@ -3,7 +3,6 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import {
   actionSaveAttributionPolicy,
-  actionSaveFundingSchedule,
   actionSaveAttributionSources,
   actionFileAttributionClaim,
   actionResolveAttributionClaim,
@@ -107,8 +106,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
           Provider setup, jurisdictions, exchange rates, templates, and catalogs. Prefunds and release actions stay on the ledger. A provider code named demo
           cannot confirm a hold. Cancelling before confirmation posts no ledger entry. Dispute decisions do not
           move the money the provider is holding.
-          Attribution is copied onto the prefund and is not rewritten when the source list changes. Staged or recurring
-          prefunds stay unfunded until each tranche has its own confirmation. Gross is entered in USD. A new prefund
+          Attribution is copied onto the prefund and is not rewritten when the source list changes. Gross is entered in USD. A new prefund
           uses the currency saved on that country corridor when one is saved, and otherwise the jurisdiction currency.
           A blank currency is not saved as USD. Revenue-share lines are written when the provider releases a
           milestone. They are not cash.
@@ -607,26 +605,6 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
             <label className="flex items-center gap-2 text-sm text-indigo">
               <input
                 type="checkbox"
-                name="stagedPrefundingEnabled"
-                defaultChecked={row.stagedPrefundingEnabled}
-                disabled={!canManage}
-                className="accent-violet"
-              />
-              Staged prefunding
-            </label>
-            <label className="flex items-center gap-2 text-sm text-indigo">
-              <input
-                type="checkbox"
-                name="recurringFundingEnabled"
-                defaultChecked={row.recurringFundingEnabled}
-                disabled={!canManage}
-                className="accent-violet"
-              />
-              Recurring funding
-            </label>
-            <label className="flex items-center gap-2 text-sm text-indigo">
-              <input
-                type="checkbox"
                 name="managedIntroductionEnabled"
                 defaultChecked={row.managedIntroductionEnabled}
                 disabled={!canManage}
@@ -761,14 +739,6 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
             <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="fullPrefundingEnabled" className="accent-violet" />
               Full prefunding
-            </label>
-            <label className="flex items-center gap-2 text-sm text-indigo">
-              <input type="checkbox" name="stagedPrefundingEnabled" className="accent-violet" />
-              Staged prefunding
-            </label>
-            <label className="flex items-center gap-2 text-sm text-indigo">
-              <input type="checkbox" name="recurringFundingEnabled" className="accent-violet" />
-              Recurring funding
             </label>
             <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="managedIntroductionEnabled" className="accent-violet" />
@@ -1223,69 +1193,6 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
         </ul>
       </AdminCollapse>
 
-      <AdminCollapse title="Funding schedule" subtitle="Recurring and staged">
-        <h2 className="sr-only">Funding schedule</h2>
-        <p className="mt-1 text-xs text-muted">
-          Staged deals split the gross into prefunds now. Recurring deals open only the first prefund. The next one
-          is created after the provider confirms the current one and the interval has passed. Neither posts a hold.
-        </p>
-        {canManage ? (
-          <form action={actionSaveFundingSchedule} className="mt-4 flex flex-wrap items-end gap-3">
-            <label className="flex items-center gap-2 text-sm text-indigo">
-              <input type="checkbox" name="stagedFundingEnabled" defaultChecked={config.stagedFundingEnabled} className="accent-violet" />
-              Staged
-            </label>
-            <label className="text-xs font-semibold text-muted">
-              Max stages
-              <input
-                name="maxStages"
-                type="number"
-                min={2}
-                max={12}
-                defaultValue={config.maxStages}
-                className="mt-1 w-24 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-              />
-            </label>
-            <label className="flex items-center gap-2 text-sm text-indigo">
-              <input type="checkbox" name="recurringFundingEnabled" defaultChecked={config.recurringFundingEnabled} className="accent-violet" />
-              Recurring
-            </label>
-            <label className="text-xs font-semibold text-muted">
-              Interval days
-              <input
-                name="recurringIntervalDays"
-                type="number"
-                min={1}
-                max={365}
-                defaultValue={config.recurringIntervalDays}
-                className="mt-1 w-28 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-              />
-            </label>
-            <label className="text-xs font-semibold text-muted">
-              Max occurrences
-              <input
-                name="maxRecurrences"
-                type="number"
-                min={2}
-                max={24}
-                defaultValue={config.maxRecurrences}
-                className="mt-1 w-28 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-              />
-            </label>
-            <button type="submit" className="btn-primary !py-2 text-sm">
-              Save schedule
-            </button>
-          </form>
-        ) : (
-          <p className="mt-3 text-sm text-indigo">
-            {config.stagedFundingEnabled ? `Staged up to ${config.maxStages}` : "Staged off"}
-            {" · "}
-            {config.recurringFundingEnabled
-              ? `Recurring every ${config.recurringIntervalDays} days, up to ${config.maxRecurrences}`
-              : "Recurring off"}
-          </p>
-        )}
-      </AdminCollapse>
 
 
     </div>

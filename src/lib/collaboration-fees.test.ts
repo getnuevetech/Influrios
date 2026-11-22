@@ -163,27 +163,27 @@ describe("collaboration fee matching", () => {
   });
 
   it("matches funding mode, relationship source, and promotion channel conditions", () => {
-    const stagedCtx: FeeResolveContext = {
+    const noneCtx: FeeResolveContext = {
       ...ctx,
       serviceLevel: "contracted",
-      fundingMode: "STAGED",
+      fundingMode: "NONE",
       relationshipSource: "referral",
       promotionChannel: "ambassador",
     };
-    assert.equal(matchesRule(rule({ fundingMode: "STAGED" }), stagedCtx, asOf), true);
-    assert.equal(matchesRule(rule({ fundingMode: "FULL" }), stagedCtx, asOf), false);
+    assert.equal(matchesRule(rule({ fundingMode: "NONE" }), noneCtx, asOf), true);
+    assert.equal(matchesRule(rule({ fundingMode: "FULL" }), noneCtx, asOf), false);
     const openCtx: FeeResolveContext = { ...ctx, serviceLevel: "contracted" };
     assert.equal(matchesRule(rule({ fundingMode: "FULL" }), openCtx, asOf), false);
     assert.equal(matchesRule(rule({ fundingMode: "FULL" }), { ...openCtx, fundingMode: "" }, asOf), false);
     assert.equal(matchesRule(rule({ fundingMode: "FULL" }), { ...openCtx, fundingMode: "FULL" }, asOf), true);
     assert.equal(matchesRule(rule({ fundingMode: "*" }), openCtx, asOf), true);
-    assert.equal(matchesRule(rule({ relationshipSource: "referral" }), stagedCtx, asOf), true);
-    assert.equal(matchesRule(rule({ relationshipSource: "organic" }), stagedCtx, asOf), false);
+    assert.equal(matchesRule(rule({ relationshipSource: "referral" }), noneCtx, asOf), true);
+    assert.equal(matchesRule(rule({ relationshipSource: "organic" }), noneCtx, asOf), false);
     assert.equal(matchesRule(rule({ relationshipSource: "organic" }), openCtx, asOf), false);
     assert.equal(matchesRule(rule({ relationshipSource: "organic" }), { ...openCtx, relationshipSource: "" }, asOf), false);
     assert.equal(matchesRule(rule({ relationshipSource: "organic" }), { ...openCtx, relationshipSource: "organic" }, asOf), true);
-    assert.equal(matchesRule(rule({ promotionChannel: "ambassador" }), stagedCtx, asOf), true);
-    assert.equal(matchesRule(rule({ promotionChannel: "sponsored" }), stagedCtx, asOf), false);
+    assert.equal(matchesRule(rule({ promotionChannel: "ambassador" }), noneCtx, asOf), true);
+    assert.equal(matchesRule(rule({ promotionChannel: "sponsored" }), noneCtx, asOf), false);
     assert.equal(matchesRule(rule({ promotionChannel: "none" }), openCtx, asOf), false);
     assert.equal(matchesRule(rule({ promotionChannel: "none" }), { ...openCtx, promotionChannel: "" }, asOf), false);
     assert.equal(matchesRule(rule({ promotionChannel: "none" }), { ...openCtx, promotionChannel: "none" }, asOf), true);
@@ -198,7 +198,7 @@ describe("collaboration fee matching", () => {
       ),
       true,
     );
-    assert.equal(ruleSpecificity(rule({ fundingMode: "STAGED", relationshipSource: "referral" })), 3);
+    assert.equal(ruleSpecificity(rule({ fundingMode: "NONE", relationshipSource: "referral" })), 3);
   });
 
   it("picks highest priority then most specific jurisdiction/service", () => {

@@ -24,7 +24,6 @@ export const DEFAULT_LAUNCH_APPROVALS: LaunchApprovals = {
 export type DeferredFundingSwitches = {
   crossBorderFundingEnabled: boolean;
   teamFundingEnabled: boolean;
-  stagedFundingEnabled: boolean;
   automaticMilestoneApprovalEnabled: boolean;
   automaticProviderSwitchingEnabled: boolean;
   allInBudgetEntryEnabled: boolean;
@@ -35,7 +34,6 @@ export type DeferredFundingSwitches = {
 export const DEFAULT_DEFERRED_FUNDING: DeferredFundingSwitches = {
   crossBorderFundingEnabled: false,
   teamFundingEnabled: false,
-  stagedFundingEnabled: false,
   automaticMilestoneApprovalEnabled: false,
   automaticProviderSwitchingEnabled: false,
   allInBudgetEntryEnabled: false,
@@ -352,16 +350,6 @@ export function domesticCollaborationGate(input: {
   }
   if (!input.payoutMethod.trim()) return { ok: false, error: "Choose a payout method." };
   return { ok: true };
-}
-
-export function launchMilestoneGate(
-  count: number,
-  options?: { stagedAllowed?: boolean; maxMilestones?: number },
-): { ok: true } | { ok: false; error: string } {
-  if (count === 1) return { ok: true };
-  const max = options?.maxMilestones ?? 4;
-  if (options?.stagedAllowed && Number.isInteger(count) && count > 1 && count <= max) return { ok: true };
-  return { ok: false, error: "Staged funding is off. This route allows one milestone until Payment settings turns it on." };
 }
 
 export function teamFundingGate(creatorCount: number, teamAllowed: boolean): { ok: true } | { ok: false; error: string } {

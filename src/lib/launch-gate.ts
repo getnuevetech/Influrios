@@ -36,7 +36,6 @@ export async function getLaunchGate(): Promise<LaunchGateRecord> {
     providerRouteApproved: row.providerRouteApproved,
     crossBorderFundingEnabled: row.crossBorderFundingEnabled,
     teamFundingEnabled: row.teamFundingEnabled,
-    stagedFundingEnabled: row.stagedFundingEnabled,
     automaticMilestoneApprovalEnabled: row.automaticMilestoneApprovalEnabled,
     automaticProviderSwitchingEnabled: row.automaticProviderSwitchingEnabled,
     allInBudgetEntryEnabled: row.allInBudgetEntryEnabled,
@@ -103,7 +102,6 @@ export async function saveDeferredFundingSwitches(input: {
       before: {
         crossBorderFundingEnabled: "crossBorderFundingEnabled" in before ? before.crossBorderFundingEnabled : false,
         teamFundingEnabled: "teamFundingEnabled" in before ? before.teamFundingEnabled : false,
-        stagedFundingEnabled: "stagedFundingEnabled" in before ? before.stagedFundingEnabled : false,
         automaticMilestoneApprovalEnabled:
           "automaticMilestoneApprovalEnabled" in before ? before.automaticMilestoneApprovalEnabled : false,
         automaticProviderSwitchingEnabled:

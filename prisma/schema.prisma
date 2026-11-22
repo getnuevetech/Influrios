@@ -1915,11 +1915,6 @@ model MarketplaceSettings {
   attributionWindowDays    Int      @default(90)
   repeatMinGrossCents      Int      @default(0)
   sourcesSeeded            Boolean  @default(false)
-  stagedFundingEnabled     Boolean  @default(true)
-  recurringFundingEnabled  Boolean  @default(true)
-  maxStages                Int      @default(4)
-  recurringIntervalDays    Int      @default(30)
-  maxRecurrences           Int      @default(6)
   fxSeeded                 Boolean  @default(false)
   sharesSeeded             Boolean  @default(false)
   maxRevisions             Int      @default(2)
@@ -1967,7 +1962,6 @@ model CollaborationLaunchGate {
   /// Off until an admin turns the path on. Live collection still needs the four approvals and a trace.
   crossBorderFundingEnabled            Boolean @default(false)
   teamFundingEnabled                   Boolean @default(false)
-  stagedFundingEnabled                 Boolean @default(false)
   automaticMilestoneApprovalEnabled    Boolean @default(false)
   automaticProviderSwitchingEnabled    Boolean @default(false)
   allInBudgetEntryEnabled              Boolean @default(false)
@@ -2014,8 +2008,6 @@ model CollaborationJurisdiction {
   escrowTermAllowed            Boolean   @default(false)
   /// Full one-shot prefunding (schedule kind "once").
   fullPrefundingEnabled        Boolean   @default(true)
-  stagedPrefundingEnabled      Boolean   @default(false)
-  recurringFundingEnabled      Boolean   @default(false)
   /// Managed introduction service level (managed_intro). Fee rules alone never authorize.
   managedIntroductionEnabled   Boolean   @default(false)
   /// Managed negotiation / campaign service level (managed_campaign).
@@ -2049,7 +2041,7 @@ model CollaborationFeeRule {
   serviceLevel  String   @default("contracted")
   /// Distinct commercial fee type (platform_service, collaboration, managed_intro, …) — Product Addendum §5.
   feeType       String   @default("collaboration")
-  /// W3.1 condition: FULL | STAGED | NONE | *
+  /// W3.1 condition: FULL | NONE | *
   fundingMode   String   @default("*")
   /// W3.1 condition: organic | platform_match | managed_intro | referral | pre_existing | *
   relationshipSource String @default("*")
@@ -2153,7 +2145,7 @@ model CollaborationFunding {
   attributionExpiresAt DateTime?
   scheduleId        String?
   scheduleKind      String   @default("once")
-  /// FULL | STAGED | RECURRING | NONE. Recurring series use scheduleKind=recurring.
+  /// FULL | NONE. Every collaboration is funded once, in full (scheduleKind=once).
   fundingMode       String   @default("FULL")
   trancheIndex      Int      @default(1)
   trancheCount      Int      @default(1)

@@ -43,14 +43,6 @@ export const PAYMENT_CHARGE_SWITCHES = [
     description: "Sends a collection instruction through the stored collection provider.",
   },
   {
-    key: "recurring_collection",
-    group: "Charges",
-    label: "Recurring tranche",
-    defaultEnabled: true,
-    stopped: "Nothing was charged.",
-    description: "Opens the next tranche of a recurring collaboration. Tranches already open stay as they are.",
-  },
-  {
     key: "milestone_payout",
     group: "Payments",
     label: "Milestone payout",

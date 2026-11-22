@@ -75,15 +75,7 @@ async function main() {
       update: { providerId: primary.id, active: true },
     });
   }
-  await prisma.collaborationLaunchGate.update({
-    where: { id: "default" },
-    data: { stagedFundingEnabled: true },
-  }).catch(() => null);
-  await prisma.collaborationJurisdiction.update({
-    where: { code: "US" },
-    data: { stagedPrefundingEnabled: true },
-  }).catch(() => null);
-  // Prefer two 50/50 milestones when staged funding is on
+  // Prefer two 50/50 milestones
   const templates = await prisma.milestoneTemplate.findMany({ orderBy: { sortOrder: "asc" } });
   if (templates.length >= 2) {
     await prisma.milestoneTemplate.update({ where: { id: templates[0]!.id }, data: { active: true, shareBps: 5000, title: "Kickoff" } });

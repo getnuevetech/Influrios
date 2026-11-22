@@ -18,7 +18,6 @@ import {
   approveFundingMilestone,
   requestChangeOrder,
   requestFundingRevision,
-  stopRecurringSeries,
 } from "@/lib/marketplace-ledger";
 import { addDisputeEvidence, cancelUnconfirmedFunding, openMilestoneDispute } from "@/lib/milestone-disputes";
 import {
@@ -436,27 +435,6 @@ export async function actionAddEvidence(formData: FormData) {
   revalidatePath("/dashboard");
   revalidatePath("/admin/trust");
   redirect("/payments?evidence=1");
-}
-
-export async function actionStopSeries(formData: FormData) {
-  const account = await requirePaymentsAccount();
-  if (!isBusinessRole(account.role)) fail("Only the business on this funding can do that.");
-  const scheduleId = String(formData.get("scheduleId") ?? "").trim();
-  if (!scheduleId) fail("Choose a schedule.");
-  const workspace = await prisma.businessWorkspace.findUnique({
-    where: { ownerUserId: account.id },
-    select: { id: true },
-  });
-  if (!workspace?.id) fail("You do not have access to that funding.");
-  const owned = await prisma.collaborationFunding.findFirst({
-    where: { scheduleId, workspaceId: workspace.id },
-    select: { id: true },
-  });
-  if (!owned) fail("You do not have access to that funding.");
-  const result = await stopRecurringSeries(scheduleId);
-  if (!result.ok) fail(result.error);
-  revalidatePath("/payments");
-  redirect("/payments?stopped=1");
 }
 
 /** Ambassador / unsigned follow-on prefunds stay closed on the public payments UI. */

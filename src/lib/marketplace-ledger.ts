@@ -1,4 +1,3 @@
-import { randomUUID } from "crypto";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { resolveFee } from "@/lib/collaboration-fees";
@@ -11,7 +10,7 @@ import {
   parseApprovedProviderIds,
 } from "@/lib/jurisdiction-capabilities";
 import { requireFundableServiceLevel } from "@/lib/matching-product-boundary";
-import { resolveFundingMode, stagedPhaseCanStart } from "@/lib/funding-modes";
+import { fundedWorkCanStart, resolveFundingMode } from "@/lib/funding-modes";
 import { rightsAfterAcceptance, rightsAfterPaymentRelease } from "@/lib/content-rights";
 import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
 import {
@@ -35,7 +34,7 @@ import {
   type LedgerMovement,
 } from "@/lib/ledger";
 import { resolveDealAttribution, serviceLevelForFeeResolution } from "@/lib/deal-attribution";
-import { planSchedule, recurrenceIsDue } from "@/lib/schedule";
+import { planSchedule } from "@/lib/schedule";
 import { convertFee, readFxSnapshot, readShareSnapshot, shareLines, storedMinorDigits } from "@/lib/fx-share";
 import { readSettlementProposal } from "@/lib/cancellation-settlement";
 import { ensureSettlementDefaults } from "@/lib/settlement";
@@ -195,8 +194,6 @@ export async function ensureMarketplaceDefaults() {
       protectedPaymentsEnabled: true,
       escrowTermAllowed: false,
       fullPrefundingEnabled: true,
-      stagedPrefundingEnabled: false,
-      recurringFundingEnabled: false,
       managedIntroductionEnabled: false,
       managedNegotiationEnabled: false,
       approvedProviderIds: "[]",
@@ -211,8 +208,6 @@ export async function ensureMarketplaceDefaults() {
       protectedPaymentsEnabled: true,
       escrowTermAllowed: false,
       fullPrefundingEnabled: true,
-      stagedPrefundingEnabled: false,
-      recurringFundingEnabled: false,
       managedIntroductionEnabled: false,
       managedNegotiationEnabled: false,
       approvedProviderIds: "[]",
@@ -227,8 +222,6 @@ export async function ensureMarketplaceDefaults() {
       protectedPaymentsEnabled: false,
       escrowTermAllowed: false,
       fullPrefundingEnabled: false,
-      stagedPrefundingEnabled: false,
-      recurringFundingEnabled: false,
       managedIntroductionEnabled: false,
       managedNegotiationEnabled: false,
       approvedProviderIds: "[]",
@@ -294,11 +287,6 @@ export async function marketplaceConfig() {
     killFeeFixedCents: settings?.killFeeFixedCents ?? 0,
     attributionWindowDays: settings?.attributionWindowDays ?? 90,
     repeatMinGrossCents: settings?.repeatMinGrossCents ?? 0,
-    stagedFundingEnabled: settings?.stagedFundingEnabled ?? true,
-    recurringFundingEnabled: settings?.recurringFundingEnabled ?? true,
-    maxStages: settings?.maxStages ?? 4,
-    recurringIntervalDays: settings?.recurringIntervalDays ?? 30,
-    maxRecurrences: settings?.maxRecurrences ?? 6,
     jurisdictions,
     templates,
     provider: {
@@ -396,8 +384,6 @@ export async function saveJurisdiction(input: {
   protectedPaymentsEnabled: boolean;
   escrowTermAllowed: boolean;
   fullPrefundingEnabled?: boolean;
-  stagedPrefundingEnabled?: boolean;
-  recurringFundingEnabled?: boolean;
   managedIntroductionEnabled?: boolean;
   managedNegotiationEnabled?: boolean;
   approvedProviderIds?: string[] | string;
@@ -456,8 +442,6 @@ export async function saveJurisdiction(input: {
     protectedPaymentsEnabled,
     escrowTermAllowed: input.escrowTermAllowed && protectedPaymentsEnabled,
     fullPrefundingEnabled: Boolean(input.fullPrefundingEnabled),
-    stagedPrefundingEnabled: Boolean(input.stagedPrefundingEnabled),
-    recurringFundingEnabled: Boolean(input.recurringFundingEnabled),
     managedIntroductionEnabled: Boolean(input.managedIntroductionEnabled),
     managedNegotiationEnabled: Boolean(input.managedNegotiationEnabled),
     approvedProviderIds,
@@ -544,38 +528,6 @@ export async function saveMarketplaceProvider(input: {
   });
 }
 
-export async function saveFundingSchedule(input: {
-  stagedFundingEnabled: boolean;
-  recurringFundingEnabled: boolean;
-  maxStages: number;
-  recurringIntervalDays: number;
-  maxRecurrences: number;
-}) {
-  await ensureMarketplaceDefaults();
-  const maxStages = Math.round(input.maxStages);
-  const intervalDays = Math.round(input.recurringIntervalDays);
-  const maxRecurrences = Math.round(input.maxRecurrences);
-  if (!Number.isFinite(maxStages) || maxStages < 2 || maxStages > 12) {
-    throw new Error("Staged deals must allow between 2 and 12 stages.");
-  }
-  if (!Number.isFinite(intervalDays) || intervalDays < 1 || intervalDays > 365) {
-    throw new Error("Recurring interval must be between 1 and 365 days.");
-  }
-  if (!Number.isFinite(maxRecurrences) || maxRecurrences < 2 || maxRecurrences > 24) {
-    throw new Error("Recurring deals must allow between 2 and 24 occurrences.");
-  }
-  return prisma.marketplaceSettings.update({
-    where: { id: "default" },
-    data: {
-      stagedFundingEnabled: input.stagedFundingEnabled,
-      recurringFundingEnabled: input.recurringFundingEnabled,
-      maxStages,
-      recurringIntervalDays: intervalDays,
-      maxRecurrences,
-    },
-  });
-}
-
 class TeamFundingReject extends Error {}
 class FundingLinkReject extends Error {
   constructor(readonly existingId: string | null) {
@@ -593,9 +545,6 @@ export async function requestPrefund(input: {
   serviceLevel: string;
   sourceId?: string | null;
   repeatOfId?: string | null;
-  scheduleKind?: string;
-  stageCount?: number;
-  occurrenceCount?: number;
   /** Collab OS P3 — optional custom milestone schedule (must sum to 100%). */
   customMilestones?: { title: string; shareBps: number }[] | null;
   /** Immutable financial plan snapshot embedded beside the fee freeze. */
@@ -737,7 +686,7 @@ export async function requestPrefund(input: {
   const serviceLevelGate = requireFundableServiceLevel(input.serviceLevel);
   if (!serviceLevelGate.ok) return serviceLevelGate;
   const serviceLevel = serviceLevelGate.serviceLevel.slice(0, 40);
-  const scheduleKind = (input.scheduleKind ?? "once").slice(0, 40);
+  const scheduleKind = "once";
   const capabilityGate = evaluatePrefundCapabilities({
     caps,
     serviceLevel,
@@ -781,21 +730,8 @@ export async function requestPrefund(input: {
     repeatOfId: input.repeatOfId,
   });
   if (!attribution.ok) return attribution;
-  const launchGate = await getLaunchGate().catch(() => null);
-  const schedule = planSchedule({
-    kind: scheduleKind,
-    grossCents: input.grossCents,
-    stageCount: input.stageCount,
-    occurrenceCount: input.occurrenceCount,
-    stagedEnabled:
-      launchGate?.stagedFundingEnabled === true &&
-      settings?.stagedFundingEnabled === true &&
-      Boolean(caps?.stagedPrefundingEnabled),
-    recurringEnabled: (settings?.recurringFundingEnabled ?? true) && Boolean(caps?.recurringFundingEnabled),
-    maxStages: settings?.maxStages ?? 4,
-    maxRecurrences: settings?.maxRecurrences ?? 6,
-    intervalDays: settings?.recurringIntervalDays ?? 30,
-  });
+  // Every collaboration is funded in full up front, once.
+  const schedule = planSchedule({ kind: scheduleKind, grossCents: input.grossCents });
   if (!schedule.ok) return schedule;
   const milestoneDefs =
     customRows && customRows.length > 0
@@ -811,7 +747,6 @@ export async function requestPrefund(input: {
   }
   const shares = milestoneDefs.map((row) => row.shareBps);
   const fundingMode = resolveFundingMode({
-    scheduleKind,
     protectedPaymentsEnabled: caps?.protectedPaymentsEnabled ?? Boolean(jurisdiction?.protectedPaymentsEnabled),
   });
   const planLifecycle = input.financialPlan as
@@ -911,7 +846,7 @@ export async function requestPrefund(input: {
     }).catch(() => null);
     prepared.push({ gross: fx.convertedMinor, fx, milestoneAmounts, quote });
   }
-  const scheduleId = schedule.kind === "once" ? null : randomUUID();
+  const scheduleId = null;
   let created: string[];
   try {
   created = await prisma.$transaction(async (tx) => {
@@ -924,12 +859,6 @@ export async function requestPrefund(input: {
         part.signedFeeCents != null
           ? "Signed commercial snapshot. The live fee matrix was not applied."
           : (quote?.explanation ?? "Fee rules were unavailable.");
-      const suffix =
-        schedule.kind === "staged"
-          ? ` · stage ${index + 1} of ${schedule.trancheCount}`
-          : schedule.kind === "recurring"
-            ? ` · ${index + 1} of ${schedule.trancheCount}`
-            : "";
       const row = await tx.collaborationFunding.create({
         data: {
           jurisdictionCode: code,
@@ -937,7 +866,7 @@ export async function requestPrefund(input: {
           workspaceId,
           collaborationId,
           creatorSlug,
-          title: `${baseTitle.slice(0, 160 - suffix.length)}${suffix}`,
+          title: baseTitle.slice(0, 160),
           currency: part.fx.currency,
           collectionProviderCode: corridorFacts.collectionProviderCode,
           payoutMethod: corridorFacts.payoutMethod,
@@ -1074,175 +1003,6 @@ export async function requestPrefund(input: {
     await notifyCollabFundingEvent({ fundingId: created[0], kind: "funding_required" });
   });
   return { ok: true as const, id: created[0], status: "awaiting_provider" as const };
-}
-
-/** Stop later tranches. Tranches already held or released stay in the ledger. */
-export async function stopRecurringSeries(scheduleId: string) {
-  const id = scheduleId.trim();
-  if (!id) return { ok: false as const, error: "Schedule id is required." };
-  const updated = await prisma.collaborationFunding.updateMany({
-    where: { scheduleId: id, scheduleKind: "recurring" },
-    data: { seriesStopped: true },
-  });
-  if (updated.count === 0) return { ok: false as const, error: "Recurring series not found." };
-  return { ok: true as const, stopped: updated.count };
-}
-
-/** Later recurring tranches keep the original fee ratio. The live fee matrix is not applied. */
-export function recurringTrancheFeeCents(input: {
-  sourceGrossCents: number;
-  sourceFeeCents: number;
-  nextGrossCents: number;
-}): { ok: true; feeCents: number } | { ok: false; error: string } {
-  const amounts = [input.sourceGrossCents, input.sourceFeeCents, input.nextGrossCents];
-  if (amounts.some((amount) => !Number.isInteger(amount) || amount < 0)) {
-    return { ok: false, error: "The stored tranche fee is missing." };
-  }
-  if (input.sourceGrossCents <= 0 || input.nextGrossCents <= 0) {
-    return { ok: false, error: "The stored tranche fee is missing." };
-  }
-  return {
-    ok: true,
-    feeCents: Math.round((input.sourceFeeCents * input.nextGrossCents) / input.sourceGrossCents),
-  };
-}
-
-export async function sweepDueRecurrences(now = new Date()) {
-  const { paymentChargeEnabled } = await import("@/lib/payment-charge-switches");
-  if (!(await paymentChargeEnabled("recurring_collection"))) return;
-  const confirmed = await prisma.collaborationFunding.findMany({
-    where: { scheduleKind: "recurring", status: { in: ["held", "completed", "refunded"] } },
-    include: { entries: { where: { kind: "hold" }, orderBy: { createdAt: "asc" }, take: 1 } },
-  });
-  const [templates, settings] = await Promise.all([
-    prisma.milestoneTemplate.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" } }),
-    prisma.marketplaceSettings.findUnique({ where: { id: "default" } }),
-  ]);
-  const shares = templates.map((row) => row.shareBps);
-  const changeOrderLimit = settings?.maxChangeOrders ?? 2;
-  for (const row of confirmed) {
-    if (row.seriesStopped) continue;
-    if (!row.scheduleId || row.trancheIndex >= row.trancheCount) continue;
-    const holdAt = row.entries[0]?.createdAt ?? null;
-    if (!recurrenceIsDue({ holdAt, intervalDays: row.intervalDays, now })) continue;
-    const nextIndex = row.trancheIndex + 1;
-    const existing = await prisma.collaborationFunding.findFirst({
-      where: { scheduleId: row.scheduleId, trancheIndex: nextIndex },
-    });
-    if (existing) continue;
-    const snapshot = readFxSnapshot(row.fxSnapshotJson);
-    const usdCents = snapshot?.usdCents ?? row.grossCents;
-    const cap = grossWithinCap({ grossCents: usdCents, maxGrossCents: activeGrossCap(settings?.maxGrossCents) });
-    if (!cap.ok) continue;
-    const currency = storedCurrencyCode(row.currency);
-    if (!currency) continue;
-    if (currency !== "USD") {
-      const allowed = await prisma.fxRate.findUnique({ where: { currency } });
-      if (!allowed?.active) continue;
-    }
-    const jurisdiction = await prisma.collaborationJurisdiction.findUnique({
-      where: { code: row.jurisdictionCode },
-    });
-    const planLifecycle = row.feeSnapshotJson as
-      | { financialPlan?: { reviewWindowHours?: number | null; revisionLimit?: number | null } }
-      | null;
-    const lifecycle = resolveLifecycleSnapshot({
-      planReviewWindowHours: planLifecycle?.financialPlan?.reviewWindowHours,
-      planRevisionLimit: planLifecycle?.financialPlan?.revisionLimit,
-      jurisdictionReviewWindowHours: jurisdiction?.reviewWindowHours,
-      jurisdictionMaxRevisions: jurisdiction?.maxRevisions,
-      settingsReviewWindowHours: settings?.reviewWindowHours ?? 72,
-      settingsMaxRevisions: settings?.maxRevisions ?? 2,
-    });
-    const windowHours = lifecycle.reviewWindowHours;
-    const revisionLimit = lifecycle.revisionLimit;
-    const minorDigits = storedMinorDigits(jurisdiction?.minorDigits);
-    if (minorDigits == null) continue;
-    const fx = await quoteWiseUserRate({
-      currency,
-      usdCents,
-      minorDigits,
-    });
-    if (!fx.ok) continue;
-    const milestoneAmounts = splitGross(fx.convertedMinor, shares);
-    if (!milestoneAmounts) continue;
-    const copiedFee = recurringTrancheFeeCents({
-      sourceGrossCents: row.grossCents,
-      sourceFeeCents: row.feeCents,
-      nextGrossCents: fx.convertedMinor,
-    });
-    if (!copiedFee.ok) continue;
-    const feeCents = copiedFee.feeCents;
-    const priorFee = row.feeSnapshotJson as {
-      ruleId?: string | null;
-      ruleName?: string | null;
-      ruleVersion?: number | null;
-      percentBps?: number | null;
-      fixedCents?: number | null;
-      feeType?: string | null;
-    } | null;
-    const shareSnapshot = readShareSnapshot(row.shareSnapshotJson) ?? [{ label: "Influencer", shareBps: 10_000 }];
-    const suffix = ` · ${nextIndex} of ${row.trancheCount}`;
-    const baseTitle = row.title.replace(/ · \d+ of \d+$/, "");
-    try {
-      await prisma.collaborationFunding.create({
-        data: {
-          jurisdictionCode: row.jurisdictionCode,
-          businessName: row.businessName,
-          creatorSlug: row.creatorSlug,
-          title: `${baseTitle.slice(0, 160 - suffix.length)}${suffix}`,
-          currency: fx.currency,
-          collectionProviderCode: row.collectionProviderCode,
-          routeSnapshotJson: row.routeSnapshotJson ?? undefined,
-          payoutMethod: row.payoutMethod,
-          grossCents: fx.convertedMinor,
-          feeCents,
-          serviceLevel: row.serviceLevel,
-          feeSnapshotJson: {
-            ruleId: priorFee?.ruleId ?? null,
-            ruleName: priorFee?.ruleName ?? null,
-            ruleVersion: priorFee?.ruleVersion ?? null,
-            percentBps: priorFee?.percentBps ?? null,
-            fixedCents: priorFee?.fixedCents ?? null,
-            feeCents,
-            feeType: priorFee?.feeType ?? "",
-            explanation: "Copied from the original tranche. The live fee matrix was not applied.",
-            capturedAt: now.toISOString(),
-          },
-          fxSnapshotJson: fxRecord(fx),
-          shareSnapshotJson: shareSnapshot,
-          status: "awaiting_provider",
-          providerCode: row.providerCode,
-          attributionLabel: row.attributionLabel,
-          attributionStatus: row.attributionStatus,
-          attributionExpiresAt: row.attributionExpiresAt,
-          repeatOfId: row.repeatOfId,
-          changeOrderLimit,
-          scheduleId: row.scheduleId,
-          scheduleKind: "recurring",
-          fundingMode: resolveFundingMode({
-            scheduleKind: "recurring",
-            protectedPaymentsEnabled: true,
-          }),
-          trancheIndex: nextIndex,
-          trancheCount: row.trancheCount,
-          intervalDays: row.intervalDays,
-          milestones: {
-            create: templates.map((template, index) => ({
-              title: template.title,
-              amountCents: milestoneAmounts[index],
-              sortOrder: template.sortOrder,
-              status: "pending",
-              reviewWindowHours: windowHours,
-              revisionLimit,
-            })),
-          },
-        },
-      });
-    } catch (error) {
-      if (!isUnique(error)) throw error;
-    }
-  }
 }
 
 /**
@@ -1682,12 +1442,7 @@ export async function submitFundingMilestone(fundingId: string, milestoneId: str
     include: { funding: true },
   });
   if (!milestone) return { ok: false as const, error: "Milestone not found." };
-  const phaseGate = stagedPhaseCanStart({
-    fundingMode: milestone.funding.fundingMode,
-    fundingStatus: milestone.funding.status,
-    trancheIndex: milestone.funding.trancheIndex,
-    scheduleKind: milestone.funding.scheduleKind,
-  });
+  const phaseGate = fundedWorkCanStart({ fundingStatus: milestone.funding.status });
   if (!phaseGate.ok) return phaseGate;
   const next = advanceMilestone(milestone.status as "pending", "submit");
   if (!next.ok) return next;

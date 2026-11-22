@@ -137,7 +137,7 @@ export function validateMilestoneShares(
   if (milestones.length > MAX_CUSTOM_MILESTONES) {
     return { ok: false, error: `At most ${MAX_CUSTOM_MILESTONES} milestones are allowed.` };
   }
-  // One milestone carries the whole amount (the only plan allowed while staged funding is off).
+  // One milestone carries the whole amount.
   // The 5–90% bounds apply when the amount is split across several milestones.
   const single = milestones.length === 1;
   for (const row of milestones) {

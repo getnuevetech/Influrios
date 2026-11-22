@@ -335,7 +335,7 @@ export type CollaborationFeeRule = {
   jurisdiction: string; // "*" = all
   serviceLevel: string; // discovery | platform_match | contracted | managed_intro | managed_campaign | *
   feeType: FeeType;
-  fundingMode: string; // FULL | STAGED | NONE | *
+  fundingMode: string; // FULL | NONE | *
   relationshipSource: string; // organic | platform_match | managed_intro | referral | pre_existing | *
   promotionChannel: string; // none | sponsored | ambassador | affiliate | *
   minGrossCents?: number;
@@ -382,7 +382,7 @@ export type FeeResolveContext = {
   promotionChannel?: string;
 };
 
-export const FUNDING_MODE_CONDITIONS = ["*", "FULL", "STAGED", "NONE"] as const;
+export const FUNDING_MODE_CONDITIONS = ["*", "FULL", "NONE"] as const;
 export const RELATIONSHIP_SOURCE_CONDITIONS = [
   "*",
   "organic",

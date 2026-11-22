@@ -10,8 +10,6 @@ export type JurisdictionCapabilities = {
   protectedPaymentsEnabled: boolean;
   escrowTermAllowed: boolean;
   fullPrefundingEnabled: boolean;
-  stagedPrefundingEnabled: boolean;
-  recurringFundingEnabled: boolean;
   managedIntroductionEnabled: boolean;
   managedNegotiationEnabled: boolean;
   /** Empty = any marketplace provider assigned on the jurisdiction row is fine. */
@@ -22,7 +20,7 @@ export type JurisdictionCapabilities = {
   capabilitiesEffectiveTo?: Date | string | null;
 };
 
-export type ScheduleKindCapability = "once" | "staged" | "recurring";
+export type ScheduleKindCapability = "once";
 
 export function asLegalReviewStatus(value: string | null | undefined): LegalReviewStatus {
   const raw = String(value ?? "").trim().toUpperCase();
@@ -205,8 +203,6 @@ export function scheduleKindAllowedByJurisdiction(
   caps: Pick<
     JurisdictionCapabilities,
     | "fullPrefundingEnabled"
-    | "stagedPrefundingEnabled"
-    | "recurringFundingEnabled"
     | "legalReviewStatus"
     | "capabilitiesEffectiveFrom"
     | "capabilitiesEffectiveTo"
@@ -223,19 +219,7 @@ export function scheduleKindAllowedByJurisdiction(
     }
     return { ok: true };
   }
-  if (schedule === "staged") {
-    if (!caps.stagedPrefundingEnabled) {
-      return { ok: false, error: "Staged prefunding is not enabled for this jurisdiction." };
-    }
-    return { ok: true };
-  }
-  if (schedule === "recurring") {
-    if (!caps.recurringFundingEnabled) {
-      return { ok: false, error: "Recurring funding is not enabled for this jurisdiction." };
-    }
-    return { ok: true };
-  }
-  return { ok: false, error: `Unknown funding schedule: ${schedule}.` };
+  return { ok: false, error: "Collaborations are funded in full up front. Staged and recurring funding are not offered." };
 }
 
 export function providerApprovedByJurisdiction(
@@ -299,8 +283,6 @@ export function capabilitiesFromJurisdictionRow(row: {
   protectedPaymentsEnabled: boolean;
   escrowTermAllowed: boolean;
   fullPrefundingEnabled?: boolean | null;
-  stagedPrefundingEnabled?: boolean | null;
-  recurringFundingEnabled?: boolean | null;
   managedIntroductionEnabled?: boolean | null;
   managedNegotiationEnabled?: boolean | null;
   approvedProviderIds?: string | null;
@@ -313,8 +295,6 @@ export function capabilitiesFromJurisdictionRow(row: {
     protectedPaymentsEnabled: Boolean(row.protectedPaymentsEnabled),
     escrowTermAllowed: Boolean(row.escrowTermAllowed),
     fullPrefundingEnabled: row.fullPrefundingEnabled !== false,
-    stagedPrefundingEnabled: Boolean(row.stagedPrefundingEnabled),
-    recurringFundingEnabled: Boolean(row.recurringFundingEnabled),
     managedIntroductionEnabled: Boolean(row.managedIntroductionEnabled),
     managedNegotiationEnabled: Boolean(row.managedNegotiationEnabled),
     approvedProviderIds: parseApprovedProviderIds(row.approvedProviderIds),
