@@ -43,3 +43,22 @@ export function composerSubmit(input: {
   }
   return { ok: false, error: "Save the draft, send invitations, or publish the request." };
 }
+
+export type RequestMarket = { code: string; name: string };
+
+/**
+ * The request's Market must be one of the markets enabled in the system (admin Country list).
+ * Empty means "not set". A value already saved on this request before the picker existed is kept as is.
+ */
+export function requestMarketChoice(
+  value: string | null | undefined,
+  markets: RequestMarket[],
+  savedValue = "",
+): { ok: true; name: string } | { ok: false; error: string } {
+  const raw = (value ?? "").trim();
+  if (!raw) return { ok: true, name: "" };
+  const match = markets.find((market) => market.name.toLowerCase() === raw.toLowerCase() || market.code.toLowerCase() === raw.toLowerCase());
+  if (match) return { ok: true, name: match.name };
+  if (savedValue.trim() && raw.toLowerCase() === savedValue.trim().toLowerCase()) return { ok: true, name: savedValue.trim() };
+  return { ok: false, error: "Choose a market from the list." };
+}
