@@ -104,6 +104,8 @@ export function BusinessCollaborations(props: {
       inviteCount: invites.length,
       applicationCount: inbound.length,
       acceptedCount: accepted.length,
+      questionCount: invites.filter((application) => application.task === "answer").length,
+      decisionCount: invites.filter((application) => application.task === "decide").length,
       updatedLabel: brief.createdAt.slice(0, 10),
     });
   });

@@ -123,3 +123,13 @@ describe("request status after private invitations", () => {
     assert.equal(draft.status, "Draft");
   });
 });
+
+describe("request row shows what the business owes", () => {
+  it("lists questions to answer and responses to review before the invite count", () => {
+    const row = requestQueueRow({
+      id: "b3", title: "Q", briefStatus: "active", published: false,
+      inviteCount: 3, applicationCount: 0, acceptedCount: 0, questionCount: 1, decisionCount: 2, updatedLabel: "today",
+    });
+    assert.equal(row.responses, "1 question to answer · 2 to review · 3 invited");
+  });
+});
