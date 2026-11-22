@@ -183,7 +183,10 @@ export function RequestEditor(props: {
           </label>
         </fieldset>
         <div>
-          <p className="text-sm font-semibold text-indigo">Selected ({chosen.length})</p>
+          <p className="text-sm font-semibold text-indigo">{mode === "public" ? `Also invite directly (${chosen.length})` : `Selected (${chosen.length})`}</p>
+          {mode === "public" ? (
+            <p className="mt-1 text-xs text-[#667085]">Optional. These influencers get a private invitation as well as seeing the public listing.</p>
+          ) : null}
           <div className="mt-2 flex flex-wrap gap-2">
             {chosen.map((creator) => (
               <button
@@ -264,11 +267,15 @@ export function RequestEditor(props: {
         <dl className="divide-y divide-[#EEF2F7] rounded-2xl border border-[#E7ECF5]">
           <div className="flex justify-between gap-3 px-4 py-3"><dt className="text-[#667085]">Brief</dt><dd className="font-semibold text-[#1B1464]">{title || "Untitled"}</dd></div>
           <div className="flex justify-between gap-3 px-4 py-3"><dt className="text-[#667085]">Visibility</dt><dd className="font-semibold text-[#1B1464]">{mode === "private" ? "Private invitations" : "Public opportunity"}</dd></div>
-          <div className="flex justify-between gap-3 px-4 py-3"><dt className="text-[#667085]">Recipients</dt><dd className="text-right font-semibold text-[#1B1464]">{chosen.length ? chosen.map((creator) => creator.name).join(", ") : "Open applications"}</dd></div>
+          <div className="flex justify-between gap-3 px-4 py-3"><dt className="text-[#667085]">{mode === "public" ? "Invited directly" : "Recipients"}</dt><dd className="text-right font-semibold text-[#1B1464]">{chosen.length ? chosen.map((creator) => creator.name).join(", ") : mode === "public" ? "No one (open applications only)" : "None yet"}</dd></div>
           <div className="flex justify-between gap-3 px-4 py-3"><dt className="text-[#667085]">Estimate</dt><dd className="font-semibold text-[#1B1464]">{budget ? `${props.currency} ${budget}` : "Not set"}</dd></div>
           <div className="flex justify-between gap-3 px-4 py-3"><dt className="text-[#667085]">Respond by</dt><dd className="font-semibold text-[#1B1464]">{deadline || "Not set"}</dd></div>
         </dl>
-        <p className="text-xs text-[#98A2B3]">Costs shown here are estimates. Sending creates one invitation per recipient and does not sign a contract.</p>
+        <p className="text-xs text-[#98A2B3]">
+          {mode === "public"
+            ? "Publishing lists this request in Opportunities for every eligible influencer. Anyone you chose above also gets a direct, private invitation. Nothing is signed or charged."
+            : "Costs shown here are estimates. Sending creates one invitation per recipient and does not sign a contract."}
+        </p>
       </div>
 
       <div className="sticky bottom-0 mt-6 flex flex-wrap justify-end gap-2 border-t border-[#E6ECF7] bg-white py-3">

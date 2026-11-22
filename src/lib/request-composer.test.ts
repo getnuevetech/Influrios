@@ -46,8 +46,12 @@ describe("request composer", () => {
     assert.match(editor, /Send invitations/);
     assert.match(editor, /Publish request/);
     assert.ok(workspace.indexOf("composerSubmit") < workspace.indexOf("inviteCreatorsIndependently"));
+    // Publishing invites only the influencers explicitly chosen on the Audience step, through the
+    // same direct-invitation path as Send invitations (never anyone else).
     const publish = workspace.slice(workspace.indexOf('decision.action === "publish"'));
     assert.equal(publish.includes("inviteCreatorsIndependently"), false);
+    assert.ok(publish.includes("sendDirectInvitations()"));
+    assert.ok(workspace.indexOf("const sendDirectInvitations") < workspace.indexOf('decision.action === "invite"'));
     assert.equal(workspace.includes("executeHeldCancellation"), false);
   });
 });
