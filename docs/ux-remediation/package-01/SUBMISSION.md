@@ -42,8 +42,9 @@ Visual approval: **given by Ola** (boards at `b1f3d64`).
 
 | Slice | Status | Code | Retest |
 |-------|--------|------|--------|
-| S1 | **Done** — turn tracking, §2.2b matrix (server-enforced), P1-D1 transition, popup = detail route, one waiting projection on home / inbox / hub / badges | `claude/vigilant-darwin-h4tha4` @ `bd65bb9` (migration `20261121120000_invitation_turn`) | #539 IPS-47: 36/36 S1 checks + team 6/6; INV-DC-001, INV-DC-015 Fail → Pass; INV-A-045 observation closed; INV-A-029 re-run Pass |
-| S2–S10 | Not started | — | — |
+| S1 | **Done** — turn tracking, §2.2b matrix (server-enforced), P1-D1 transition, popup = detail route, one waiting projection on home / inbox / hub / badges | `claude/vigilant-darwin-h4tha4` @ `d0351a3`, draft PR #541 (migration `20261121120000_invitation_turn`) | #539 IPS-47: 36/36 S1 checks + team 6/6; INV-DC-001, INV-DC-015 Fail → Pass; INV-A-045 observation closed; INV-A-029 re-run Pass |
+| S2 | **Done** — Respond-by expiry, withdrawal/expiry notices + emails (recorded reason), Action required follows the live task, team invitations in hub + inbox, closed proposals for every member | `claude/vigilant-darwin-h4tha4-s2` @ `d57e2fa` (on S1) | #539 IPS-48: 26/26; INV-DC-013, INV-DC-014, INV-A-048 Fail → Pass |
+| S3–S10 | Not started | — | — |
 
 Logged for later slices from the S1 run: `/creator` horizontal scroll at 390 px (S9); derived invitation notices in the inbox (S4); idempotency outcomes on retry (S3).
 
@@ -53,4 +54,4 @@ Request wizard (AUD-WIZ-01) → Pkg 2 · fee-label mismatch and discount rejecti
 
 ## 4. Audit position (unchanged by this submission)
 
-#539 matrix: **502 rows · 400 Pass · 38 Fail · 54 Blocked · 0 Not tested · 10 deferred** (after IPS-47). Every remaining Blocked row names its gate (deposits closed, R6, Stripe test subscription, AI provider). This is not a completed platform audit.
+#539 matrix: **502 rows · 403 Pass · 35 Fail · 54 Blocked · 0 Not tested · 10 deferred** (after IPS-48). Every remaining Blocked row names its gate (deposits closed, R6, Stripe test subscription, AI provider). This is not a completed platform audit.
