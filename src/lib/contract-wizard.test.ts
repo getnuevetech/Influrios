@@ -382,3 +382,15 @@ describe("contract wizard fields", () => {
     assert.match(contracts, /contractHrefFromCampaign/);
   });
 });
+
+describe("agreement milestones survive a wizard redirect", () => {
+  it("round-trips the milestones the business entered through the URL", () => {
+    const entered = [
+      { title: "Draft video", shareBps: 4000 },
+      { title: "Final video", shareBps: 6000 },
+    ];
+    assert.deepEqual(decodeMilestonesParam(encodeMilestonesParam(entered)), entered);
+    assert.equal(decodeMilestonesParam(""), null);
+    assert.equal(decodeMilestonesParam("A~abc"), null);
+  });
+});
