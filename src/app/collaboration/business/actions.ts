@@ -254,6 +254,9 @@ export async function actionWorkspaceRequest(formData: FormData) {
     if (!invited.ok) {
       redirect(`${saved}?step=${step}&error=${encodeURIComponent(invited.error)}`);
     }
+    // Invitations went out, so the request is live (invite-only), not a draft.
+    await activateBrief(brief.id, ws.businessId);
+    revalidateHub();
     redirect(`${saved}?saved=invites&sent=${invited.ids.length}`);
   }
   if (decision.action === "publish") {

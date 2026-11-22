@@ -53,7 +53,9 @@ export function requestQueueRow(input: {
       ? "Closed"
       : input.briefStatus === "cancelled"
         ? "Cancelled"
-        : input.briefStatus === "draft" && !input.published
+        : // A request that already sent invitations is live even if it was stored as a draft
+          // (requests sent before invitations activated the brief).
+          input.briefStatus === "draft" && !input.published && input.inviteCount === 0
           ? "Draft"
           : "Open";
   const visibility: RequestVisibilityLabel = input.published ? "Public" : "Invite only";

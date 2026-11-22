@@ -107,3 +107,19 @@ describe("business collaboration workspace", () => {
     assert.match(accepted?.href ?? "", /tab=active&deal=/);
   });
 });
+
+describe("request status after private invitations", () => {
+  it("a draft that already sent invitations shows as Open, invite only", () => {
+    const row = requestQueueRow({
+      id: "b1", title: "Claude Second Invite", briefStatus: "draft", published: false,
+      inviteCount: 3, applicationCount: 0, acceptedCount: 0, updatedLabel: "today",
+    });
+    assert.equal(row.status, "Open");
+    assert.equal(row.visibility, "Invite only");
+    const draft = requestQueueRow({
+      id: "b2", title: "Unsent", briefStatus: "draft", published: false,
+      inviteCount: 0, applicationCount: 0, acceptedCount: 0, updatedLabel: "today",
+    });
+    assert.equal(draft.status, "Draft");
+  });
+});
