@@ -126,6 +126,9 @@ export async function actionApproveAndRelease(formData: FormData) {
       },
     })
     .catch(() => undefined);
+  // The influencer was not told their work was approved (this path never notified).
+  const { notifyCollabFundingEvent } = await import("@/lib/jobs");
+  await notifyCollabFundingEvent({ fundingId: funding.id, kind: "milestone_approved", milestone: milestone.title }).catch(() => undefined);
   revalidatePath(`/collaboration/work/${funding.id}`);
   revalidatePath("/payments");
   redirect(`/collaboration/work/${funding.id}?tab=${workspaceTab(String(formData.get("tab") ?? ""))}&approved=1`);

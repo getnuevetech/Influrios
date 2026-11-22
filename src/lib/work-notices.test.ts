@@ -11,6 +11,7 @@ describe("work and money notices from the recorded local journey", () => {
     const body = jobs.slice(jobs.indexOf("export async function notifyCollabFundingEvent("));
     assert.ok(body.indexOf("recordCollabInAppNotice(input)") < body.indexOf("mailReady()"));
     assert.match(jobs, /milestone_approved: "both"/);
+    assert.match(read("src/app/payments/standard-actions.ts"), /kind: "milestone_approved"/);
   });
 
   it("treats approvals and completed payouts as information, submissions as tasks", () => {
