@@ -581,6 +581,58 @@ async function queueCollabNotices(input: {
  * W3.11 — enqueue Influencer-terminology collaboration emails for a funding event.
  * No-ops when SMTP is unset or no party emails resolve (tests stay quiet).
  */
+/** Work and money events members see in their notification centre, by who they concern. */
+const IN_APP_COLLAB_KINDS: Partial<Record<CollabNotificationKind, "business" | "influencer" | "both">> = {
+  funding_successful: "both",
+  milestone_submitted: "business",
+  revision_requested: "influencer",
+  milestone_approved: "both",
+  milestone_auto_approved: "both",
+  payout_completed: "influencer",
+  payout_failed: "influencer",
+  payout_returned: "both",
+  refund_completed: "business",
+  collaboration_cancelled: "both",
+  dispute_opened: "both",
+  dispute_resolved: "both",
+};
+
+async function recordCollabInAppNotice(input: { fundingId: string; kind: CollabNotificationKind; milestone?: string; detail?: string }) {
+  const audience = IN_APP_COLLAB_KINDS[input.kind];
+  if (!audience) return;
+  const funding = await prisma.collaborationFunding.findUnique({
+    where: { id: input.fundingId },
+    select: { id: true, title: true, businessName: true, creatorSlug: true, workspaceId: true },
+  });
+  if (!funding) return;
+  const [creator, workspace] = await Promise.all([
+    prisma.creator.findUnique({ where: { slug: funding.creatorSlug }, select: { userId: true, displayName: true } }),
+    funding.workspaceId
+      ? prisma.businessWorkspace.findUnique({ where: { id: funding.workspaceId }, select: { ownerUserId: true } })
+      : null,
+  ]);
+  const rendered = renderCollabNotification(input.kind, {
+    business: funding.businessName,
+    influencer: creator?.displayName || funding.creatorSlug,
+    title: funding.title,
+    milestone: input.milestone,
+    detail: input.detail,
+  });
+  const userIds = [
+    audience !== "business" ? creator?.userId : null,
+    audience !== "influencer" ? workspace?.ownerUserId : null,
+  ].filter((id): id is string => Boolean(id));
+  const sourceId = `${input.kind}:${funding.id}:${input.milestone ?? ""}`;
+  const detail = `${funding.title}${input.milestone ? ` · ${input.milestone}` : ""}`;
+  for (const userId of userIds) {
+    await prisma.accountNotice.upsert({
+      where: { userId_kind_sourceId: { userId, kind: input.kind, sourceId } },
+      create: { userId, kind: input.kind, sourceId, title: rendered.subject, detail, href: `/collaboration/work/${funding.id}` },
+      update: { title: rendered.subject, detail, readAt: null, createdAt: new Date() },
+    });
+  }
+}
+
 export async function notifyCollabFundingEvent(input: {
   fundingId: string;
   kind: CollabNotificationKind;
@@ -590,6 +642,8 @@ export async function notifyCollabFundingEvent(input: {
   extraEmails?: string[];
   processNow?: boolean;
 }) {
+  // In-app notices do not depend on email being configured (an approved milestone told nobody in-app).
+  await recordCollabInAppNotice(input).catch((error) => console.error("collab in-app notice", input.kind, error));
   const { mailReady } = await import("@/lib/mail");
   if (!(await mailReady())) return { queued: false, count: 0 };
 

@@ -671,7 +671,7 @@ export async function loadCreatorHub(input: {
         "agreements",
         prisma.contractDocument.findMany({
           where: { OR: contractWhere },
-          select: { id: true, applicationId: true, collaborationId: true, teamProposalId: true, fundingId: true, status: true },
+          select: { id: true, applicationId: true, collaborationId: true, teamProposalId: true, fundingId: true, status: true, title: true },
           orderBy: { updatedAt: "desc" },
         }),
         [],
@@ -753,9 +753,12 @@ export async function loadCreatorHub(input: {
       contractByApplication.get(application.id) ||
       (application.collaborationId ? contractByCollab.get(application.collaborationId) : undefined);
     const money = contractFunding(contractId);
+    // Private invitations have no public request: use the agreement title, the invitation title and
+    // the business's name instead of "Campaign invitation · Business".
+    const agreementTitle = contractId ? contractLinks.find((link) => link.id === contractId)?.title : undefined;
     pipeline.push({
       id: `application:${application.id}`,
-      title: application.requestBrand || application.opportunityLookingFor || "Campaign invitation",
+      title: agreementTitle || application.note?.trim() || application.requestBrand || application.opportunityLookingFor || "Campaign invitation",
       counterparty: application.requestBrand || "Business",
       stage: money.stage,
       stageIndex: PIPELINE_STAGES.indexOf(money.stage),
