@@ -399,9 +399,18 @@ export async function resolveCreatorIdentityVerified(input: {
 export async function adminSetCreatorKyc(input: {
   creatorSlug: string;
   decision: "verified" | "rejected";
+  countryCode?: string;
 }) {
   const slug = input.creatorSlug.trim();
   if (!slug) throw new Error("Choose a creator.");
+  const country = (input.countryCode ?? "").trim().toUpperCase();
+  if (country && !/^[A-Z]{2}$/.test(country)) throw new Error("Enter the verified country as a two-letter code, for example US.");
+  const existing = await prisma.creatorKycSubmission.findUnique({ where: { creatorSlug: slug }, select: { countryCode: true } });
+  const verifiedCountry = country || (existing?.countryCode ?? "").trim().toUpperCase();
+  // A verified influencer without a country can never be paid under an agreement (payout country gate).
+  if (input.decision === "verified" && !/^[A-Z]{2}$/.test(verifiedCountry)) {
+    throw new Error("Enter the verified country (two letters) before marking KYC verified.");
+  }
   const creator = await applyIdentityDecision({
     creatorId: null,
     creatorSlug: slug,
@@ -414,11 +423,12 @@ export async function adminSetCreatorKyc(input: {
       creatorId: creator.id,
       status: input.decision,
       kycModel: "government_id",
+      ...(verifiedCountry ? { countryCode: verifiedCountry } : {}),
     },
     create: {
       creatorSlug: slug,
       creatorId: creator.id,
-      countryCode: "",
+      countryCode: verifiedCountry,
       kycModel: "government_id",
       gatewaySessionId: "",
       gatewaySessionUrl: "",

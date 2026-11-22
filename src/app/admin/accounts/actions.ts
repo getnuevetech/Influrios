@@ -260,9 +260,11 @@ export async function actionSetInfluencerIdentityKyc(formData: FormData) {
   }
   try {
     const { adminSetCreatorKyc } = await import("@/lib/kyc-document");
-    await adminSetCreatorKyc({ creatorSlug, decision });
-  } catch {
-    redirect(withQuery(base, { error: "member", id: userId }));
+    await adminSetCreatorKyc({ creatorSlug, decision, countryCode: clean(formData.get("countryCode"), 4) });
+  } catch (error) {
+    // Say why (for example a missing verified country) instead of a generic error.
+    const message = error instanceof Error ? error.message : "member";
+    redirect(withQuery(base, { error: message, id: userId }));
   }
   await writeAudit({
     actor: session.email,

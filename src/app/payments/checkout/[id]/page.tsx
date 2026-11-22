@@ -1,3 +1,4 @@
+import { payoutProfileReady } from "@/lib/influencer-payout-ready";
 import { notFound, redirect } from "next/navigation";
 import { CheckoutPanel } from "@/app/payments/checkout/[id]/checkout-panel";
 import { isBusinessRole } from "@/lib/account-audience";
@@ -28,21 +29,24 @@ export default async function FundingCheckoutPage({ params, searchParams }: Prop
     include: { deposits: { orderBy: { createdAt: "desc" } } },
   });
   if (!funding) notFound();
-  const [contract, recipient, verification] = await Promise.all([
+  const [contract, recipient, verification, businessProfile] = await Promise.all([
     prisma.contractDocument.findFirst({ where: { fundingId: funding.id }, select: { status: true } }).catch(() => null),
     prisma.creator.findUnique({
       where: { slug: funding.creatorSlug },
-      select: { payoutProfile: { select: { primaryStatus: true } } },
+      select: { payoutProfile: { select: { primaryStatus: true, stripeConnectAccountId: true, providerConnectedAccountId: true } } },
     }).catch(() => null),
     prisma.paymentVerificationTask.findMany({
       where: { userId: account.id, role: "paying_business" },
       select: { checkKey: true, status: true },
     }).catch(() => []),
+    prisma.businessProfile.findUnique({ where: { userId: account.id }, select: { verifiedCountryCode: true } }).catch(() => null),
   ]);
   const businessChecks = verification.filter((row) => row.checkKey === "individual_identity" || row.checkKey === "entity" || row.checkKey === "authority");
+  // Agreements and funding rely on the admin-verified funding country; show the same thing here.
   const businessVerification = businessChecks.some((row) => row.status === "restricted")
     ? "blocked"
-    : businessChecks.length > 0 && businessChecks.every((row) => row.status === "verified")
+    : businessProfile?.verifiedCountryCode?.trim() ||
+        (businessChecks.length > 0 && businessChecks.every((row) => row.status === "verified"))
       ? "ready"
       : "unknown";
   return (
@@ -62,7 +66,7 @@ export default async function FundingCheckoutPage({ params, searchParams }: Prop
       readiness={{
         signatures: contract?.status === "signed",
         businessVerification,
-        recipientReady: recipient?.payoutProfile?.primaryStatus === "VERIFIED",
+        recipientReady: payoutProfileReady(recipient?.payoutProfile),
         routeRecorded: Boolean(funding.providerCode || funding.collectionProviderCode),
       }}
     />

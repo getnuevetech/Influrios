@@ -137,6 +137,9 @@ export async function actionSubmitContractWizard(formData: FormData) {
   qs.set("commercial", commercial);
   qs.set("jurisdiction", jurisdictionCode);
   qs.set("serviceLevel", serviceLevel);
+  // Keep the chosen payout method when the page reloads (Refresh preview cleared it before).
+  const payoutMethodEntered = String(formData.get("payoutMethod") ?? "").trim();
+  if (payoutMethodEntered) qs.set("payoutMethod", payoutMethodEntered);
   qs.set("gross", String(formData.get("grossUsd") ?? ""));
   const drafts = readDrafts(formData);
   // Keep what the business entered if the wizard redirects back.
@@ -531,6 +534,14 @@ export async function actionSubmitContractWizard(formData: FormData) {
     influencerFeeCents: influencerQuote?.ok ? influencerQuote.feeCents : 0,
     at: new Date().toISOString(),
   });
+  if (!fundedTax.ok) {
+    // An agreement signed with unresolved tax can be funded but never released. Stop before anyone signs.
+    qs.set("step", "preview");
+    redirectError(
+      `Tax for ${jurisdictionCode} is not set up, so this agreement could not be paid out after signing. An admin must add the ${jurisdictionCode} tax rule under Payment settings. Nothing was sent.`,
+      qs,
+    );
+  }
   const tax = fundedTax.ok
     ? {
         status: checkoutTaxLines(fundedTax).every((line) => line.amountCents === 0) ? "approved_zero" as const : "approved" as const,

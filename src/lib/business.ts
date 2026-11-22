@@ -594,6 +594,22 @@ function asCurrencyCode(value: string | undefined | null): string {
   return /^[A-Z]{3}$/.test(code) ? code : "USD";
 }
 
+/**
+ * A request budget is an amount: digits with optional thousands separators and up to two decimals
+ * ("1,000", "250.50"), optionally with "$", "K" or a range ("$5K – $10K"). Words such as
+ * "five hundred" were published as the budget before.
+ */
+const BUDGET_AMOUNT = String.raw`\$?\d[\d,]*(?:\.\d{1,2})?\s?[kK]?`;
+export const BUDGET_PATTERN = new RegExp(`^${BUDGET_AMOUNT}(?:\\s*[-–]\\s*${BUDGET_AMOUNT})?$`);
+export function normalizedBudget(raw: string | undefined | null): string {
+  const value = (raw ?? "").trim();
+  if (!value) return "";
+  if (!BUDGET_PATTERN.test(value) || !/[1-9]/.test(value)) {
+    throw new Error("Enter the budget as a number, for example 1,000.");
+  }
+  return value;
+}
+
 export function buildCampaignIntentFields(input: {
   title?: string;
   goal?: string;
@@ -623,7 +639,7 @@ export function buildCampaignIntentFields(input: {
     title,
     goal: (input.goal ?? "").trim(),
     specialty: (input.specialty ?? "").trim(),
-    budget: (input.budget ?? "").trim(),
+    budget: normalizedBudget(input.budget),
     budgetCurrency: asCurrencyCode(input.budgetCurrency),
     collabType: (input.collabType ?? "").trim(),
     timeframe: (input.timeframe ?? "").trim(),

@@ -1037,7 +1037,11 @@ function AccountDetailPanel({
                 Open KYC queue <IconArrowRight size={12} />
               </Link>
             ) : (
-              <p className="text-[12px] text-muted">KYC applies to influencer profiles.</p>
+              <p className="text-[12px] text-muted">
+                KYC applies to influencer profiles. Verified funding country:{" "}
+                <span className="font-semibold text-indigo">{row.verifiedCountryCode || "not verified"}</span>
+                {row.verifiedCountryCode ? null : " · agreements cannot be sent until it is set (Edit account)."}
+              </p>
             )}
             {canEdit && row.creatorSlug ? (
               <form action={actionSetInfluencerIdentityKyc} className="flex flex-wrap items-end gap-2">
@@ -1055,6 +1059,15 @@ function AccountDetailPanel({
                     <option value="verified">Mark verified</option>
                     <option value="rejected">Mark rejected</option>
                   </select>
+                </label>
+                <label className="text-[11px] font-bold uppercase text-muted">
+                  Verified country
+                  <input
+                    name="countryCode"
+                    maxLength={2}
+                    placeholder="US"
+                    className="mt-1 w-20 rounded-xl border border-border px-3 py-2 text-sm uppercase text-indigo"
+                  />
                 </label>
                 <button type="submit" className="rounded-xl border border-[#E4EBFF] px-3 py-2 text-[12px] font-semibold">
                   Update identity
@@ -1110,7 +1123,7 @@ function AccountDetailPanel({
               Cancel
             </button>
             {canEdit ? (
-              <button type="submit" form="account-edit-form" className="rounded-full bg-violet px-4 py-2 text-[13px] font-semibold text-white">
+              <button key="save-account" type="submit" form="account-edit-form" className="rounded-full bg-violet px-4 py-2 text-[13px] font-semibold text-white">
                 Save
               </button>
             ) : null}
@@ -1126,6 +1139,7 @@ function AccountDetailPanel({
             </button>
             {canEdit ? (
               <button
+                key="edit-account"
                 type="button"
                 onClick={() => setEditing(true)}
                 className="rounded-full bg-violet px-4 py-2 text-[13px] font-semibold text-white"
