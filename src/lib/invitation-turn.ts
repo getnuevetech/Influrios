@@ -40,10 +40,23 @@ export function invitationState(row: {
 }
 
 /** Past the Respond-by deadline counts as expired for every count and action, even before the sweep runs. */
+/**
+ * The moment a Respond-by deadline ends. A Respond-by *date* is stored as midnight UTC at the
+ * start of that day; it means the whole day, so it ends at the end of that UTC day.
+ * A deadline stored with a time of day is used as is.
+ */
+export function responseDeadlineEnd(responseDeadline: string | Date | null | undefined): Date | null {
+  if (!responseDeadline) return null;
+  const deadline = responseDeadline instanceof Date ? new Date(responseDeadline.getTime()) : new Date(responseDeadline);
+  if (Number.isNaN(deadline.getTime())) return null;
+  const dateOnly =
+    deadline.getUTCHours() === 0 && deadline.getUTCMinutes() === 0 && deadline.getUTCSeconds() === 0 && deadline.getUTCMilliseconds() === 0;
+  return dateOnly ? new Date(deadline.getTime() + 24 * 60 * 60 * 1000 - 1) : deadline;
+}
+
 export function invitationPastDeadline(responseDeadline: string | Date | null | undefined, now = new Date()): boolean {
-  if (!responseDeadline) return false;
-  const deadline = responseDeadline instanceof Date ? responseDeadline : new Date(responseDeadline);
-  return !Number.isNaN(deadline.getTime()) && deadline.getTime() < now.getTime();
+  const end = responseDeadlineEnd(responseDeadline);
+  return end !== null && end.getTime() < now.getTime();
 }
 
 export function invitationCase(

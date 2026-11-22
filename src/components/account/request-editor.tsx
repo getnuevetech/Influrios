@@ -256,7 +256,7 @@ export function RequestEditor(props: {
         </label>
         <label className="text-sm font-semibold text-indigo">
           Respond by
-          <input name="responseDeadline" required type="date" value={deadline} onChange={(event) => setDeadline(event.target.value)} className="mt-1 w-full rounded-xl border border-[#E4E9F5] px-3 py-2 font-normal" />
+          <input name="responseDeadline" required type="date" min={new Date().toISOString().slice(0, 10)} value={deadline} onChange={(event) => setDeadline(event.target.value)} className="mt-1 w-full rounded-xl border border-[#E4E9F5] px-3 py-2 font-normal" />
         </label>
       </div>
 

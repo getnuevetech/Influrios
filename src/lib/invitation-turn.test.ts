@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   businessInvitationActions,
+  invitationPastDeadline,
+  responseDeadlineEnd,
   invitationCase,
   invitationIsOpen,
   invitationWaitingForInvitee,
@@ -130,5 +132,20 @@ describe("invitation action matrix (master-spec §2.2b)", () => {
       assert.equal(invitationWaitingForInvitee(state), waiting);
       assert.equal(invitationIsOpen(state), true);
     }
+  });
+});
+
+describe("Respond-by date covers its whole day", () => {
+  it("a date-only deadline stays open until the end of that UTC day", () => {
+    const due = "2026-11-22T00:00:00.000Z"; // how a Respond-by date of 22 Nov is stored
+    const state = { status: "REQUESTED", turn: "invitee", interestRecorded: false, openQuestion: false, responseDeadline: due };
+    assert.equal(invitationWaitingForInvitee(state, new Date("2026-11-22T02:32:00Z")), true);
+    assert.equal(invitationWaitingForInvitee(state, new Date("2026-11-22T23:59:59Z")), true);
+    assert.equal(invitationWaitingForInvitee(state, new Date("2026-11-23T00:00:01Z")), false);
+    assert.equal(invitationPastDeadline("2026-11-22", new Date("2026-11-22T12:00:00Z")), false);
+  });
+  it("a deadline with a time of day is exact", () => {
+    assert.equal(invitationPastDeadline("2026-11-22T10:00:00.000Z", new Date("2026-11-22T10:00:01Z")), true);
+    assert.equal(responseDeadlineEnd(null), null);
   });
 });
