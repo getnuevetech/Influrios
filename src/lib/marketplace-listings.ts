@@ -3,7 +3,7 @@
  * persisted match records, and application state machine).
  */
 import { applicationLinkPlan } from "@/lib/collaboration-links";
-import { businessInvitationActions, invitationState, type InvitationTurn } from "@/lib/invitation-turn";
+import { businessInvitationActions, invitationPastDeadline, invitationState, type InvitationTurn } from "@/lib/invitation-turn";
 import { prisma } from "@/lib/db";
 import {
   BUSINESS_REQUESTS,
@@ -917,11 +917,8 @@ export function inviteeResponsePlan(input: {
     return { ok: false, error: "This invitation cannot be answered. Nothing was signed or funded." };
   }
   const now = input.now ?? new Date();
-  if (input.responseDeadline) {
-    const deadline = new Date(input.responseDeadline);
-    if (!Number.isNaN(deadline.getTime()) && deadline.getTime() < now.getTime()) {
-      return { ok: false, error: "This invitation has expired. Nothing was signed or funded." };
-    }
+  if (invitationPastDeadline(input.responseDeadline, now)) {
+    return { ok: false, error: "This invitation has expired. Nothing was signed or funded." };
   }
   if (
     input.status === "EXPIRED" ||
@@ -1370,13 +1367,20 @@ export function applicationIsStaleForExpire(input: {
 export async function sweepExpiredMarketplaceApplications(now = new Date()) {
   const { getCollabControlPlane } = await import("@/lib/collab-control-plane");
   // P1-AUD-03: an invitation expires at its own Respond-by date whatever the admin age rule says.
+  // A Respond-by date covers its whole day (responseDeadlineEnd), so look one day back and filter exactly.
   const pastDeadline = await prisma.marketplaceApplication.findMany({
-    where: { status: { in: AUTO_EXPIREABLE_STATUSES }, responseDeadline: { lt: now }, toSlug: { not: null }, fromSlug: null },
+    where: {
+      status: { in: AUTO_EXPIREABLE_STATUSES },
+      responseDeadline: { lt: new Date(now.getTime() - 24 * 60 * 60 * 1000 + 1) },
+      toSlug: { not: null },
+      fromSlug: null,
+    },
     take: 100,
     orderBy: { responseDeadline: "asc" },
   });
   let deadlineExpired = 0;
   for (const row of pastDeadline) {
+    if (!invitationPastDeadline(row.responseDeadline, now)) continue;
     if (!canTransitionApplication(row.status, "EXPIRED")) continue;
     await transitionMarketplaceApplication({ id: row.id, toStatus: "EXPIRED", note: "Expired at its Respond-by date." }).then(
       () => { deadlineExpired += 1; },
