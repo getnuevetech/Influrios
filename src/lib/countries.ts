@@ -78,3 +78,13 @@ export function requireCountry(value: string | null | undefined, label = "countr
   if (!country) return { ok: false, error: `Choose the ${label} from the list.` };
   return { ok: true, country };
 }
+
+/**
+ * The country of a stored location string ("Houston, Texas, United States", or just "United States").
+ * Business and agency profiles keep city, state and country together in one location field.
+ */
+export function countryFromLocationString(location: string | null | undefined): CountryOption | null {
+  const parts = (location ?? "").split(",").map((part) => part.trim()).filter(Boolean);
+  if (parts.length === 0) return null;
+  return resolveCountry(parts[parts.length - 1]) ?? resolveCountry(parts.join(", "));
+}

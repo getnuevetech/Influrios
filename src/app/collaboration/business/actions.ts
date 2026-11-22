@@ -1,5 +1,7 @@
 "use server";
 
+import { countryFromLocationString, resolveCountry } from "@/lib/countries";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
@@ -226,18 +228,26 @@ export async function actionWorkspaceRequest(formData: FormData) {
     if (slugs.length === 0) return [];
     const [gate, business, kycRows] = await Promise.all([
       getLaunchGate().catch(() => null),
-      prisma.businessProfile.findUnique({ where: { userId: account.id }, select: { verifiedCountryCode: true } }).catch(() => null),
+      prisma.businessProfile.findUnique({ where: { userId: account.id }, select: { verifiedCountryCode: true, geography: true } }).catch(() => null),
       prisma.creatorKycSubmission.findMany({
         where: { creatorSlug: { in: slugs }, status: "verified" },
-        select: { creatorSlug: true, countryCode: true },
+        select: { creatorSlug: true },
       }).catch(() => []),
     ]);
-    const businessCountry = verifiedDomesticCountry(business?.verifiedCountryCode);
+    // Countries come from profiles: the business's Company profile and each influencer's profile.
+    // Verification (business) and completed KYC (influencer) only say whether they are verified.
+    const profiles = await prisma.creator
+      .findMany({ where: { slug: { in: slugs } }, select: { slug: true, locationCountry: true } })
+      .catch(() => []);
+    const businessCountry = business?.verifiedCountryCode
+      ? verifiedDomesticCountry(countryFromLocationString(business.geography)?.code)
+      : null;
     for (const slug of slugs) {
-      const influencer = kycRows.find((row) => row.creatorSlug === slug);
+      const completedKyc = kycRows.some((row) => row.creatorSlug === slug);
+      const profileCountry = resolveCountry(profiles.find((row) => row.slug === slug)?.locationCountry)?.code;
       const country = domesticInviteDecision({
         businessCountry,
-        influencerCountry: verifiedDomesticCountry(influencer?.countryCode),
+        influencerCountry: completedKyc ? verifiedDomesticCountry(profileCountry) : null,
         selectedCountry: String(formData.get("locationCountry") ?? ""),
         crossBorderAllowed: gate?.crossBorderFundingEnabled === true,
       });

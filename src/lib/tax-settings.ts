@@ -1,12 +1,12 @@
 /**
  * Loads tax settings and runs a preview. A preview does not open a charge.
  */
+import { countryFromLocationString } from "@/lib/countries";
 import { State } from "country-state-city";
 import { BILLING_CATALOG, getProduct } from "@/lib/billing";
 import { corridorCountries } from "@/lib/corridor-countries";
 import { prisma } from "@/lib/db";
 import { calculateCountryTax, dedupeCountryRules, flagRuleConflicts, mapLegacyInclusivePrice, mapStoredPolicy, matchCountryRule, paidPlanAvailability, subscriptionOffers, type CountryTaxRule } from "@/lib/country-tax";
-import { countryCodeFromLocation } from "@/lib/contract-wizard";
 import {
   INFLUENCER_SERVICE_SUBJECTS,
   TAX_COPY,
@@ -187,11 +187,12 @@ export async function subscriptionTaxGates(
   return gates;
 }
 
-/** A profile country, or a verified billing country. Blank when the location is unknown. */
+/** The member's profile country (the one source of country). Blank when the profile has none. */
 export function memberBillingCountry(input: { location?: string | null; verifiedCountryCode?: string | null }) {
+  const profile = countryFromLocationString(input.location)?.code;
+  if (profile) return profile;
   const verified = (input.verifiedCountryCode ?? "").trim().toUpperCase();
-  if (/^[A-Z]{2}$/.test(verified)) return verified;
-  return countryCodeFromLocation(input.location) ?? "";
+  return /^[A-Z]{2}$/.test(verified) ? verified : "";
 }
 
 /** Country rules and the ids that match each plan. Card tax uses these with the interval price. */
