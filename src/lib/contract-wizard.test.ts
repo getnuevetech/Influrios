@@ -47,7 +47,10 @@ describe("contract wizard steps", () => {
 describe("milestone share validation", () => {
   it("requires 100% and non-empty titles", () => {
     assert.equal(validateMilestoneShares(standard).ok, true);
-    assert.equal(validateMilestoneShares([{ title: "Only", shareBps: 10_000 }]).ok, false);
+    // One milestone for the whole amount is valid (the plan while staged funding is off); it must be 100%.
+    assert.equal(validateMilestoneShares([{ title: "Only", shareBps: 10_000 }]).ok, true);
+    assert.equal(validateMilestoneShares([{ title: "Only", shareBps: 9_000 }]).ok, false);
+    assert.equal(validateMilestoneShares([{ title: "A", shareBps: 9_500 }, { title: "B", shareBps: 500 }]).ok, false);
     assert.equal(validateMilestoneShares([{ title: "A", shareBps: 5000 }, { title: "B", shareBps: 4000 }]).ok, false);
     assert.equal(validateMilestoneShares([{ title: "", shareBps: 5000 }, { title: "B", shareBps: 5000 }]).ok, false);
   });

@@ -137,9 +137,16 @@ export function validateMilestoneShares(
   if (milestones.length > MAX_CUSTOM_MILESTONES) {
     return { ok: false, error: `At most ${MAX_CUSTOM_MILESTONES} milestones are allowed.` };
   }
+  // One milestone carries the whole amount (the only plan allowed while staged funding is off).
+  // The 5–90% bounds apply when the amount is split across several milestones.
+  const single = milestones.length === 1;
   for (const row of milestones) {
     const title = row.title.trim();
     if (!title) return { ok: false, error: "Every milestone needs a title." };
+    if (single) {
+      if (row.shareBps !== 10_000) return { ok: false, error: "A single milestone covers 100% of the amount." };
+      continue;
+    }
     if (!Number.isInteger(row.shareBps) || row.shareBps < MIN_SHARE_BPS || row.shareBps > MAX_SHARE_BPS) {
       return { ok: false, error: "Each milestone share must be between 5% and 90%." };
     }

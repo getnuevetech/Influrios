@@ -1,3 +1,4 @@
+import { defaultMilestonePlan } from "@/lib/payment-engine";
 import Image from "next/image";
 import { ContractInfluencerField } from "@/components/contract-influencer-field";
 import { ContractMilestones } from "@/components/contract-milestones";
@@ -244,9 +245,11 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   const partyAccepted = params.accepted === "1";
   const feeDisclosureAccepted = params.feeDisclosure === "1";
 
-  const templates: MilestoneDraft[] = (config.templates ?? [])
-    .filter((row) => row.active)
-    .map((row) => ({ title: row.title, shareBps: row.shareBps }));
+  // One milestone for the whole amount unless staged funding is on (see defaultMilestonePlan).
+  const templates: MilestoneDraft[] = defaultMilestonePlan(
+    (config.templates ?? []).filter((row) => row.active),
+    fundingSwitches?.stagedFundingEnabled === true,
+  );
   const customBlank: MilestoneDraft[] = [
     { title: "", shareBps: 0 },
     { title: "", shareBps: 0 },

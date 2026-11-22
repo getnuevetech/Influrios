@@ -11,7 +11,7 @@ import { assertCollabOsV1 } from "@/lib/collab-os";
 import { resolveNewAgreementFees } from "@/lib/agreement-fee-engine";
 import { disclosureFromPartyQuote, resolveAllInBudget, resolvePartyPlatformFee } from "@/lib/dual-platform-fees";
 import { resolvePaidAgreementFee } from "@/lib/paid-agreement-fee";
-import { buildBusinessCommercialSnapshot, domesticCollaborationGate, launchMilestoneGate, teamFundingGate, verifiedDomesticCountry } from "@/lib/payment-engine";
+import { buildBusinessCommercialSnapshot, defaultMilestonePlan, domesticCollaborationGate, launchMilestoneGate, teamFundingGate, verifiedDomesticCountry } from "@/lib/payment-engine";
 import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
 import {
   buildFinancialPlan,
@@ -203,12 +203,13 @@ export async function actionSubmitContractWizard(formData: FormData) {
 
   await ensureMarketplaceDefaults();
   const config = await marketplaceConfig();
-  const templates: MilestoneDraft[] = (config.templates ?? [])
-    .filter((row) => row.active)
-    .map((row) => ({ title: row.title, shareBps: row.shareBps }));
-
   const { getLaunchGate } = await import("@/lib/launch-gate");
   const fundingSwitches = await getLaunchGate().catch(() => null);
+  // One milestone for the whole amount unless staged funding is on (see defaultMilestonePlan).
+  const templates: MilestoneDraft[] = defaultMilestonePlan(
+    (config.templates ?? []).filter((row) => row.active),
+    fundingSwitches?.stagedFundingEnabled === true,
+  );
   const drafts = readDrafts(formData, usingCustom, templates);
   const milestoneGate = customMilestonesGate({
     entitled: entitlements.customMilestones,
