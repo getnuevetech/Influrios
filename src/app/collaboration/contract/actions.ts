@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireBusinessSession } from "@/lib/account-audience";
-import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { closeBriefForContract, getWorkspace } from "@/lib/business";
 import { contractOfferReady } from "@/lib/campaign-contract";
 import { getMarketplaceApplication } from "@/lib/marketplace-listings";
@@ -11,14 +10,16 @@ import { assertCollabOsV1 } from "@/lib/collab-os";
 import { resolveNewAgreementFees } from "@/lib/agreement-fee-engine";
 import { disclosureFromPartyQuote, resolveAllInBudget, resolvePartyPlatformFee } from "@/lib/dual-platform-fees";
 import { resolvePaidAgreementFee } from "@/lib/paid-agreement-fee";
-import { buildBusinessCommercialSnapshot, domesticCollaborationGate, launchMilestoneGate, teamFundingGate, verifiedDomesticCountry } from "@/lib/payment-engine";
+import { buildBusinessCommercialSnapshot, domesticCollaborationGate, teamFundingGate, verifiedDomesticCountry } from "@/lib/payment-engine";
 import { resolveLifecycleSnapshot } from "@/lib/milestone-lifecycle";
 import {
   buildFinancialPlan,
   canFundContract,
   contractWizardFields,
   countryCodeFromLocation,
-  customMilestonesGate,
+  agreementMilestonesGate,
+  DEFAULT_AGREEMENT_MILESTONES,
+  encodeMilestonesParam,
   evaluatePreContractGates,
   lockFinancialPlan,
   marketplaceProviderGateMessage,
@@ -64,11 +65,12 @@ function redirectError(message: string, qs: URLSearchParams): never {
   redirect(`${BASE}?${qs.toString()}`);
 }
 
-function readDrafts(formData: FormData, usingCustom: boolean, templates: MilestoneDraft[]): MilestoneDraft[] {
-  if (!usingCustom) return templates;
+/** The milestones the business entered; one milestone for the whole amount when none were sent. */
+function readDrafts(formData: FormData): MilestoneDraft[] {
   const titles = formData.getAll("milestoneTitle").map((v) => String(v));
   const percents = formData.getAll("milestonePercent").map((v) => String(v));
-  return parseMilestoneDraftsFromForm({ titles, percents });
+  const drafts = parseMilestoneDraftsFromForm({ titles, percents });
+  return drafts.length ? drafts : DEFAULT_AGREEMENT_MILESTONES;
 }
 
 export async function actionFundSignedContract(formData: FormData) {
@@ -103,7 +105,6 @@ export async function actionSubmitContractWizard(formData: FormData) {
   }
 
   const ws = await getWorkspace(account.id);
-  const entitlements = await businessEntitlementsForPlan(ws.plan);
   const creatorSlug = String(formData.get("creatorSlug") ?? "").trim();
   const teamProposalId = String(formData.get("teamProposalId") ?? "").trim();
   const collaborationId = String(formData.get("collaborationId") ?? "").trim() || undefined;
@@ -118,8 +119,6 @@ export async function actionSubmitContractWizard(formData: FormData) {
     serviceLevel: String(formData.get("serviceLevel") ?? ""),
   }).serviceLevel;
   const grossCents = dollarsToCents(String(formData.get("grossUsd") ?? ""));
-  const usingCustom = formData.get("milestoneMode") === "custom";
-  const influencerAccepted = formData.get("influencerAccepted") === "on";
   const partyAccepted = formData.get("partyAccepted") === "on";
   const feeDisclosureAccepted = formData.get("feeDisclosureAccepted") === "on";
   const intent = String(formData.get("intent") ?? "preview");
@@ -139,8 +138,9 @@ export async function actionSubmitContractWizard(formData: FormData) {
   qs.set("jurisdiction", jurisdictionCode);
   qs.set("serviceLevel", serviceLevel);
   qs.set("gross", String(formData.get("grossUsd") ?? ""));
-  qs.set("mode", usingCustom ? "custom" : "template");
-  if (influencerAccepted) qs.set("influencerAccepted", "1");
+  const drafts = readDrafts(formData);
+  // Keep what the business entered if the wizard redirects back.
+  qs.set("milestones", encodeMilestonesParam(drafts));
   if (partyAccepted) qs.set("accepted", "1");
   if (feeDisclosureAccepted) qs.set("feeDisclosure", "1");
 
@@ -150,12 +150,8 @@ export async function actionSubmitContractWizard(formData: FormData) {
       redirectError("Open the signed agreement and start funding from that agreement.", qs);
     }
     const { fundSignedAgreement } = await import("@/lib/signed-funding-apply");
-    const customMilestones = usingCustom
-      ? parseMilestoneDraftsFromForm({
-          titles: formData.getAll("milestoneTitle").map((value) => String(value)),
-          percents: formData.getAll("milestonePercent").map((value) => String(value)),
-        })
-      : null;
+    // Funding compares what was submitted against the signed terms (submittedTermsDiffer).
+    const customMilestones = formData.getAll("milestoneTitle").length ? drafts : null;
     const funded = await fundSignedAgreement({
       documentId: contractDocumentIdEarly,
       workspaceId: ws.businessId,
@@ -203,20 +199,14 @@ export async function actionSubmitContractWizard(formData: FormData) {
 
   await ensureMarketplaceDefaults();
   const config = await marketplaceConfig();
-  const templates: MilestoneDraft[] = (config.templates ?? [])
-    .filter((row) => row.active)
-    .map((row) => ({ title: row.title, shareBps: row.shareBps }));
-
   const { getLaunchGate } = await import("@/lib/launch-gate");
   const fundingSwitches = await getLaunchGate().catch(() => null);
-  const drafts = readDrafts(formData, usingCustom, templates);
-  const milestoneGate = customMilestonesGate({
-    entitled: entitlements.customMilestones,
-    usingCustom,
-    milestones: drafts,
-    influencerAccepted,
-  });
-  if (!milestoneGate.ok) redirectError(milestoneGate.error, qs);
+  // The business sets the milestones (any plan); the instalment-funding switch does not limit them.
+  const milestoneGate = agreementMilestonesGate(drafts);
+  if (!milestoneGate.ok) {
+    qs.set("step", "milestones");
+    redirectError(milestoneGate.error, qs);
+  }
 
   const creatorCountry =
     countryCodeFromLocation(creator.locationCountry) ??
@@ -435,14 +425,6 @@ export async function actionSubmitContractWizard(formData: FormData) {
     qs.set("step", "preview");
     redirectError("That jurisdiction has no currency.", qs);
   }
-  const milestoneLaunch = launchMilestoneGate(drafts.length, {
-    stagedAllowed: fundingSwitches?.stagedFundingEnabled === true,
-    maxMilestones: config.maxStages,
-  });
-  if (!milestoneLaunch.ok) {
-    qs.set("step", "milestones");
-    redirectError(milestoneLaunch.error, qs);
-  }
   const verifiedBusinessCountry = verifiedDomesticCountry(businessProfile?.verifiedCountryCode);
   const kyc = dbCreator
     ? await prisma.creatorKycSubmission
@@ -603,7 +585,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
     creatorCountry: creatorCountry ?? jurisdictionCode,
     payoutCurrency: currency,
     milestones: drafts,
-    milestoneSource: usingCustom ? "custom" : "template",
+    milestoneSource: "custom",
     reviewWindowHours: lifecycle.reviewWindowHours,
     revisionLimit: lifecycle.revisionLimit,
   });

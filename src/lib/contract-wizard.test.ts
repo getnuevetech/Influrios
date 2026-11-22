@@ -7,7 +7,9 @@ import {
   CONTRACT_WIZARD_STEPS,
   contractWizardFields,
   countryCodeFromLocation,
-  customMilestonesGate,
+  agreementMilestonesGate,
+  decodeMilestonesParam,
+  encodeMilestonesParam,
   evaluatePreContractGates,
   feeRuleChangeAffectsPlan,
   isFinancialPlanLocked,
@@ -47,7 +49,10 @@ describe("contract wizard steps", () => {
 describe("milestone share validation", () => {
   it("requires 100% and non-empty titles", () => {
     assert.equal(validateMilestoneShares(standard).ok, true);
-    assert.equal(validateMilestoneShares([{ title: "Only", shareBps: 10_000 }]).ok, false);
+    // One milestone for the whole amount is valid (the plan while staged funding is off); it must be 100%.
+    assert.equal(validateMilestoneShares([{ title: "Only", shareBps: 10_000 }]).ok, true);
+    assert.equal(validateMilestoneShares([{ title: "Only", shareBps: 9_000 }]).ok, false);
+    assert.equal(validateMilestoneShares([{ title: "A", shareBps: 9_500 }, { title: "B", shareBps: 500 }]).ok, false);
     assert.equal(validateMilestoneShares([{ title: "A", shareBps: 5000 }, { title: "B", shareBps: 4000 }]).ok, false);
     assert.equal(validateMilestoneShares([{ title: "", shareBps: 5000 }, { title: "B", shareBps: 5000 }]).ok, false);
   });
@@ -61,45 +66,11 @@ describe("custom milestones entitlement gate", () => {
       { title: "Edit", shareBps: 2500 },
       { title: "Post", shareBps: 2500 },
     ];
-    assert.equal(
-      customMilestonesGate({
-        entitled: false,
-        usingCustom: true,
-        milestones: custom,
-        influencerAccepted: true,
-      }).ok,
-      false,
-    );
-    assert.equal(
-      customMilestonesGate({
-        entitled: true,
-        usingCustom: true,
-        milestones: custom,
-        influencerAccepted: false,
-      }).ok,
-      false,
-    );
-    assert.equal(
-      customMilestonesGate({
-        entitled: true,
-        usingCustom: true,
-        milestones: custom,
-        influencerAccepted: true,
-      }).ok,
-      true,
-    );
-  });
-
-  it("allows standard templates without influencer accept", () => {
-    assert.equal(
-      customMilestonesGate({
-        entitled: false,
-        usingCustom: false,
-        milestones: standard,
-        influencerAccepted: false,
-      }).ok,
-      true,
-    );
+    // Any business sets its own milestones; no plan entitlement and no separate influencer pre-accept.
+    assert.equal(agreementMilestonesGate(custom).ok, true);
+    assert.equal(agreementMilestonesGate([{ title: "Delivery", shareBps: 10_000 }]).ok, true);
+    assert.equal(agreementMilestonesGate([{ title: "A", shareBps: 6000 }, { title: "B", shareBps: 3000 }]).ok, false);
+    assert.equal(agreementMilestonesGate([]).ok, false);
   });
 });
 
@@ -221,12 +192,7 @@ describe("financial plan snapshot", () => {
       jurisdictionProtectedPayments: true,
       marketplaceProviderReady: true,
     });
-    const milestones = customMilestonesGate({
-      entitled: true,
-      usingCustom: false,
-      milestones: standard,
-      influencerAccepted: false,
-    });
+    const milestones = agreementMilestonesGate(standard);
     assert.equal(canFundContract({ gates, milestones, accepted: false }).ok, false);
     assert.equal(canFundContract({ gates, milestones, accepted: true }).ok, true);
   });
@@ -400,7 +366,7 @@ describe("contract wizard fields", () => {
     assert.equal(detail.includes("formatMoney("), false);
   });
 
-  it("fills a contract from the accepted request and locks admin milestone templates", () => {
+  it("fills a contract from the accepted request; the business sets the milestones", () => {
     const page = readFileSync("src/app/collaboration/contract/page.tsx", "utf8");
     const milestones = readFileSync("src/components/contract-milestones.tsx", "utf8");
     const contracts = readFileSync("src/app/collaboration/contracts/page.tsx", "utf8");
@@ -408,9 +374,23 @@ describe("contract wizard fields", () => {
     assert.match(page, /contractTermsFromRequest/);
     assert.equal(page.includes("Gross value (USD)"), false);
     assert.equal(page.includes('?? "USD"'), false);
-    assert.match(milestones, /readOnly=\{!custom\}/);
-    assert.match(milestones, /Choose Custom schedule before changing a milestone/);
+    // Milestones are always editable by the business: no locked admin templates, no plan gate.
+    assert.equal(milestones.includes("readOnly"), false);
+    assert.match(milestones, /\+ Add milestone/);
+    assert.match(milestones, /name="milestoneMode" value="custom"/);
     assert.equal(contracts.includes("/collaboration/contract?creator="), false);
     assert.match(contracts, /contractHrefFromCampaign/);
+  });
+});
+
+describe("agreement milestones survive a wizard redirect", () => {
+  it("round-trips the milestones the business entered through the URL", () => {
+    const entered = [
+      { title: "Draft video", shareBps: 4000 },
+      { title: "Final video", shareBps: 6000 },
+    ];
+    assert.deepEqual(decodeMilestonesParam(encodeMilestonesParam(entered)), entered);
+    assert.equal(decodeMilestonesParam(""), null);
+    assert.equal(decodeMilestonesParam("A~abc"), null);
   });
 });
