@@ -1,3 +1,4 @@
+import { businessInvitationLabel, businessInvitationTask, invitationConversation } from "@/lib/invitation-turn";
 import { redirect } from "next/navigation";
 import { BusinessCollaborations } from "@/components/account/business-collaborations";
 import { actionAcceptBusinessTerms } from "@/app/collaboration/business/actions";
@@ -170,6 +171,9 @@ export default async function BusinessCollaborationPage({ searchParams }: Props)
           contractId: contractByApplication.get(application.id)?.id ?? null,
           note: application.note ?? "",
           updatedAt: application.createdAt,
+          statusLabel: businessInvitationLabel(application, creator?.displayName || application.creatorSlug || "The influencer"),
+          task: !application.fromSlug && application.toSlug ? businessInvitationTask(application) : null,
+          question: invitationConversation(application.events).question,
         };
       })}
       creators={creators}

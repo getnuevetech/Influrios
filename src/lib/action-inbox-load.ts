@@ -98,13 +98,36 @@ export async function loadActionInbox(account: AccountSession): Promise<InboxLoa
           })
         : [];
       const pendingResponses = workspace.inquiries.filter((inquiry) => leadIsOpen(inquiry.status)).length;
+      // One task per invitation the business owes a reply or decision on.
+      const { listMarketplaceApplications, listWorkspaceBusinessRequests } = await import("@/lib/marketplace-listings");
+      const { businessInvitationTask } = await import("@/lib/invitation-turn");
+      const ownRequests = await listWorkspaceBusinessRequests(workspace.businessId).catch(() => []);
+      const ownApplications =
+        ownRequests.length || workspace.briefs.length
+          ? await listMarketplaceApplications({
+              businessRequestIds: ownRequests.map((row) => row.id),
+              briefIds: workspace.briefs.map((brief) => brief.id),
+              limit: 100,
+            }).catch(() => [])
+          : [];
+      const invitationTasks = ownApplications
+        .filter((row) => !row.fromSlug && row.toSlug)
+        .map((row) => ({ row, task: businessInvitationTask(row) }))
+        .filter((item) => item.task !== null)
+        .map(({ row, task }) => ({
+          id: `response:${row.id}`,
+          title: `${task === "answer" ? "Answer a question" : "Review a response"} · ${row.note || row.requestBrand || "Invitation"}`,
+          counterparty: row.toSlug || "Influencer",
+          href: `/collaboration/applications/${row.id}`,
+        }));
       const tasks = projectInboxTasks(
         inboxSourcesFromRecords({
           workspaceId: workspace.businessId || account.id,
           audience: "business",
           contracts: signatureTasks,
-          invitations:
-            pendingResponses > 0
+          invitations: [
+            ...invitationTasks,
+            ...(pendingResponses > 0
               ? [
                   {
                     id: "business-responses",
@@ -113,7 +136,8 @@ export async function loadActionInbox(account: AccountSession): Promise<InboxLoa
                     href: "/collaboration/business",
                   },
                 ]
-              : [],
+              : []),
+          ],
           funding: fundings.map((deal) => {
             const attention = fundingAttention(deal);
             return {

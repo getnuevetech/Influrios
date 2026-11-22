@@ -449,7 +449,7 @@ export async function loadCreatorHome(userId: string) {
     ...invitationRows.map((row) => ({
       id: `invitation:${row.id}`,
       title: row.requestBrand || row.opportunityLookingFor || row.note?.trim() || "Campaign invitation",
-      detail: row.status === "NEGOTIATING" ? `${row.requestBrand || "The business"} replied` : "Waiting for your reply",
+      detail: row.status === "NEGOTIATING" ? (row.requestBrand ? `${row.requestBrand} replied to your question` : "Replied to your question") : "Waiting for your reply",
       action: "Review invitation",
       href: `/collaboration/applications/${row.id}`,
       kind: "invitation" as const,

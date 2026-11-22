@@ -316,3 +316,57 @@ export function withdrawalFromNote(note: string | null | undefined): { reason: s
 export function withdrawalReasonFromNote(note: string | null | undefined): string | null {
   return withdrawalFromNote(note).reason;
 }
+
+/**
+ * What the business owes on its own open invitation (master-spec §2.2b, §3):
+ * "answer" an open question (cases 2, 5) or "decide" on recorded interest (cases 4, 6).
+ */
+export function businessInvitationTask(
+  row: { status: string; turn?: string | null; interestRecorded?: boolean | null; openQuestion?: boolean | null; responseDeadline?: string | Date | null },
+  now = new Date(),
+): "answer" | "decide" | null {
+  const kase = invitationCase(invitationState(row), { responseDeadline: row.responseDeadline, now });
+  if (kase === 2 || kase === 5) return "answer";
+  if (kase === 4 || kase === 6) return "decide";
+  return null;
+}
+
+/** Business-side label for any invitation status, open or closed (no raw status codes in the UI). */
+export function businessInvitationLabel(
+  row: {
+    status: string;
+    turn?: string | null;
+    interestRecorded?: boolean | null;
+    openQuestion?: boolean | null;
+    responseDeadline?: string | Date | null;
+    events?: { toStatus?: string; note: string | null }[];
+  },
+  influencer: string,
+  now = new Date(),
+): string {
+  const kase = invitationCase(invitationState(row), { responseDeadline: row.responseDeadline, now });
+  if (kase !== "closed") {
+    if (kase === 1) return row.status === "VIEWED" ? `Opened · waiting for ${influencer}` : `Sent · waiting for ${influencer}`;
+    if (kase === 2 || kase === 5) return `${influencer} asked a question`;
+    if (kase === 3) return `You answered · waiting for ${influencer}`;
+    return `${influencer} is interested`;
+  }
+  switch (row.status) {
+    case "ACCEPTED":
+      return "Accepted · agreement not sent";
+    case "COLLABORATION_DRAFTED":
+      return "Accepted · agreement in progress";
+    case "DECLINED":
+      return declinedByInvitee(row.events) ? `${influencer} declined` : "Not a fit";
+    case "WITHDRAWN":
+      return "Withdrawn";
+    default:
+      return "Expired";
+  }
+}
+
+/** The invitee's own decline is recorded with the note "Declined" (invitation-writes); a business "Not a fit" is not. */
+export function declinedByInvitee(events: { toStatus?: string; note: string | null }[] | undefined): boolean {
+  const decline = [...(events ?? [])].reverse().find((event) => event.toStatus === "DECLINED");
+  return Boolean(decline && /^Declined\b/.test(decline.note ?? ""));
+}

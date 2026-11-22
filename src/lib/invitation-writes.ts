@@ -90,7 +90,11 @@ export async function recordInviteeResponse(input: {
     throw new InvitationRejected("Write the question you want the business to see.");
   }
   const label = input.intent === "question" && from.interestRecorded ? "Follow-up question" : INTENT_NOTE[input.intent];
-  return persist(input.id, from, plan, input.actorUserId, text ? `${label}: ${text}` : label);
+  const saved = await persist(input.id, from, plan, input.actorUserId, text ? `${label}: ${text}` : label);
+  // The business hears about every response (in-app; its task follows the live invitation).
+  const { notifyBusinessOfResponse } = await import("@/lib/invitation-notices");
+  await notifyBusinessOfResponse(input.id, input.intent).catch((error) => console.error("response notice", error));
+  return saved;
 }
 
 /** Business answers the open question (§2.2b: case 2 → 3, case 5 → 6). */
@@ -102,5 +106,8 @@ export async function recordBusinessAnswer(input: { id: string; actorUserId: str
   if (!plan) throw new InvitationRejected("There's no open question to answer on this invitation.");
   const text = input.answer.trim().slice(0, 1000);
   if (text.length < 2) throw new InvitationRejected("Write your answer.");
-  return persist(input.id, from, plan, input.actorUserId, `Answer: ${text}`);
+  const saved = await persist(input.id, from, plan, input.actorUserId, `Answer: ${text}`);
+  const { notifyInviteeOfBusinessAction } = await import("@/lib/invitation-notices");
+  await notifyInviteeOfBusinessAction(input.id, "answered").catch((error) => console.error("answer notice", error));
+  return saved;
 }

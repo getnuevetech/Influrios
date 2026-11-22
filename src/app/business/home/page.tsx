@@ -1,3 +1,4 @@
+import { businessInvitationLabel, businessInvitationTask } from "@/lib/invitation-turn";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Panel, StatCard, StatusPill, TextLink } from "@/components/dashboard-ui";
@@ -163,7 +164,13 @@ export default async function BusinessHomePage() {
     ? null
     : dashboardOpenRequests({ briefs: workspace.briefs, requests: hub.ownRequests });
   const activeRequests = openRequests ? openRequests.count : null;
-  const pendingResponses = workspace.inquiries.filter((inquiry) => leadIsOpen(inquiry.status)).length;
+  const openInquiries = workspace.inquiries.filter((inquiry) => leadIsOpen(inquiry.status)).length;
+  // Invitation responses the business owes: an open question to answer, or interest to decide on.
+  const invitationTasks = applications
+    .filter((app) => !app.fromSlug && app.toSlug)
+    .map((app) => ({ app, task: businessInvitationTask(app) }))
+    .filter((row): row is { app: (typeof applications)[number]; task: "answer" | "decide" } => row.task !== null);
+  const pendingResponses = openInquiries + invitationTasks.length;
   const activeCollabs = fundingsUnavailable ? null : activeCollaborationIds(hub.pipeline).length;
   const contentInReview = fundingsUnavailable ? null : hub.pipeline.filter((item) => item.stage === "Review").length;
   const periodFunding = monthly.ok ? formatPeriodFunding(monthly.rows) : null;
@@ -363,10 +370,25 @@ export default async function BusinessHomePage() {
           )
         ) : (
           <ul className="mt-3 divide-y divide-[#EEF2F7]">
-            {pendingResponses > 0 ? (
+            {invitationTasks.slice(0, 3).map(({ app, task }) => (
+              <li key={`invite-${app.id}`} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-indigo">
+                    {task === "answer" ? "Answer a question" : "Review a response"}
+                  </p>
+                  <p className="text-xs text-muted">
+                    {app.note || app.requestBrand || "Invitation"} · {businessInvitationLabel(app, app.creatorSlug || "The influencer")}
+                  </p>
+                </div>
+                <Link href={`/collaboration/applications/${app.id}`} className="rounded-full bg-[#6D4AFF] px-3 py-2 text-xs font-semibold text-white">
+                  {task === "answer" ? "Answer" : "Review"}
+                </Link>
+              </li>
+            ))}
+            {openInquiries > 0 ? (
               <li className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div>
-                  <p className="text-sm font-semibold text-indigo">{pendingResponses} response{pendingResponses === 1 ? "" : "s"} to review</p>
+                  <p className="text-sm font-semibold text-indigo">{openInquiries} response{openInquiries === 1 ? "" : "s"} to review</p>
                   <p className="text-xs text-muted">Influencers have responded to your invites.</p>
                 </div>
                 <Link href="/collaboration/business" className="rounded-full bg-[#6D4AFF] px-3 py-2 text-xs font-semibold text-white">Review</Link>

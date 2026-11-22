@@ -2,7 +2,7 @@ import Link from "next/link";
 import { NoticeDialog } from "@/components/notice-dialog";
 import { listAccountNotices, markNoticeRead } from "@/lib/account-notices";
 import { prisma } from "@/lib/db";
-import { closedTaskNoticeIds } from "@/lib/notice-tasks";
+import { liveInvitationNotices, type LiveNotice } from "@/lib/notice-tasks";
 import {
   PAYOUT_RETURNED_NOTE,
   noticeActor,
@@ -39,8 +39,15 @@ export async function NotificationCentre({
   const destination = open ? await markNoticeRead(userId, open.id).catch(() => open.href) : null;
   // Action required follows the live task (P1-AUD-01); history and read state are untouched.
   const creator = await prisma.creator.findFirst({ where: { userId }, select: { slug: true } }).catch(() => null);
-  const closedTasks = await closedTaskNoticeIds(notices, creator?.slug ?? null).catch(() => new Set<string>());
-  const needsAction = (row: (typeof notices)[number]) => noticeNeedsAction(row.kind, row.title) && !closedTasks.has(row.id);
+  const live = await liveInvitationNotices(notices, creator?.slug ?? null).catch(() => new Map<string, LiveNotice>());
+  const needsAction = (row: (typeof notices)[number]) => noticeNeedsAction(row.kind, row.title) && live.get(row.id)?.open !== false;
+  // Invitation notices show the invitation's current state, never the text they were created with.
+  const detailOf = (row: (typeof notices)[number]) => {
+    const status = live.get(row.id)?.status;
+    if (!status) return row.detail;
+    const subject = row.detail.split(" · ")[0];
+    return subject && subject !== row.detail ? `${subject} · Now: ${status}` : `Now: ${status}`;
+  };
   const matches = (next: NoticeFilter, row: (typeof notices)[number]) =>
     next === "action" ? needsAction(row) : noticeMatchesFilter(next, row.kind, row.title);
   const rows = notices.filter((row) => matches(filter, row));
@@ -82,7 +89,7 @@ export async function NotificationCentre({
                   <span>
                     <span className="block text-[11px] font-semibold uppercase tracking-wide text-[#98A2B3]">{noticeActor(row.kind, row.detail)}</span>
                     <span className="block text-sm font-semibold text-[#1B1464]">{row.title}</span>
-                    <span className="text-xs text-[#667085]">{noticeEventLabel(row.kind, row.title)} · {row.detail}</span>
+                    <span className="text-xs text-[#667085]">{noticeEventLabel(row.kind, row.title)} · {detailOf(row)}</span>
                   </span>
                   <span className="text-right text-[11px] font-semibold">
                     <span className={`block ${read ? "text-[#98A2B3]" : "text-[#6D4AFF]"}`}>{read ? "Read" : "Unread"}</span>
@@ -101,7 +108,7 @@ export async function NotificationCentre({
       {open && destination ? (
         <NoticeDialog
           title={open.title}
-          detail={open.detail}
+          detail={detailOf(open)}
           note={noticeKeepsWorkApproved(open.kind) ? PAYOUT_RETURNED_NOTE : null}
           closeHref={href(filter)}
           destination={destination}
