@@ -1,3 +1,4 @@
+import { requestQueueRow } from "@/lib/business-collab-workspace";
 import { businessInvitationLabel, businessInvitationTask } from "@/lib/invitation-turn";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -216,38 +217,65 @@ export default async function BusinessHomePage() {
     responseLabel: string;
     updated: string;
     creators: string[];
+    moreCreators: number;
     href: string;
   };
 
+  // Same counts as the Collaborations list: invitations, applications and acceptances per request.
+  const appsForBrief = (briefId: string) =>
+    applications.filter((app) => (app.briefId || app.requestBriefId) === briefId);
+  const briefIdsWithRequests = new Set(marketplaceRequests.map((request) => request.briefId).filter(Boolean));
   const tableRows: TableRow[] = [
-    ...recentBriefs.map((brief) => ({
-      id: brief.id,
-      title: brief.title,
-      meta: [brief.specialty ? specialtyLabel(brief.specialty) : "", brief.platform, brief.collabType]
-        .filter(Boolean)
-        .join(" · "),
-      budget: brief.budget ? `${brief.budgetCurrency || "USD"} ${brief.budget}` : "—",
-      status: brief.status,
-      responseLabel: "—",
-      updated: relativeTime(brief.createdAt),
-      creators: [] as string[],
-      href: `/collaboration/business?intent=${encodeURIComponent(brief.id)}`,
-    })),
-    ...marketplaceRequests.slice(0, 5).map((request) => {
-      const apps = appsByRequest.get(request.id) ?? [];
-      const creatorSlugs = [...new Set(apps.map((app) => app.creatorSlug).filter(Boolean))] as string[];
+    ...recentBriefs.map((brief) => {
+      const related = appsForBrief(brief.id);
+      const invites = related.filter((app) => !app.fromSlug && Boolean(app.toSlug));
+      const inbound = related.filter((app) => !(!app.fromSlug && app.toSlug));
+      const accepted = related.filter((app) => app.status === "ACCEPTED" || app.status === "COLLABORATION_DRAFTED");
+      const queue = requestQueueRow({
+        id: brief.id,
+        title: brief.title,
+        briefStatus: brief.status,
+        published: briefIdsWithRequests.has(brief.id),
+        inviteCount: invites.length,
+        applicationCount: inbound.length,
+        acceptedCount: accepted.length,
+        updatedLabel: relativeTime(brief.createdAt),
+      });
+      const slugs = [...new Set(related.map((app) => app.creatorSlug || app.toSlug).filter(Boolean))] as string[];
       return {
-        id: request.id,
-        title: request.brand,
-        meta: [request.category, ...request.tags.slice(0, 2)].filter(Boolean).join(" · "),
-        budget: request.budget || "—",
-        status: request.status || "open",
-        responseLabel: apps.length ? `${apps.length}` : "0",
-        updated: "—",
-        creators: creatorSlugs.slice(0, 4),
-        href: "/collaboration/business#requests",
+        id: brief.id,
+        title: brief.title,
+        meta: [brief.specialty ? specialtyLabel(brief.specialty) : "", brief.platform, brief.collabType]
+          .filter(Boolean)
+          .join(" · "),
+        budget: brief.budget ? `${brief.budgetCurrency || "USD"} ${brief.budget}` : "—",
+        status: queue.status,
+        responseLabel: queue.responses,
+        updated: queue.updatedLabel,
+        creators: slugs.slice(0, 4),
+        moreCreators: Math.max(0, slugs.length - 4),
+        href: queue.actionHref,
       };
     }),
+    // Requests without a saved brief (older listings) still show their applications.
+    ...marketplaceRequests
+      .filter((request) => !request.briefId || !workspace.briefs.some((brief) => brief.id === request.briefId))
+      .map((request) => {
+        const apps = appsByRequest.get(request.id) ?? [];
+        const slugs = [...new Set(apps.map((app) => app.creatorSlug).filter(Boolean))] as string[];
+        return {
+          id: request.id,
+          title: request.brand,
+          meta: [request.category, ...request.tags.slice(0, 2)].filter(Boolean).join(" · "),
+          budget: request.budget || "—",
+          status: request.status || "open",
+          responseLabel: apps.length ? `${apps.length} application${apps.length === 1 ? "" : "s"}` : "No responses yet",
+          updated: "—",
+          creators: slugs.slice(0, 4),
+          moreCreators: Math.max(0, slugs.length - 4),
+          href: "/collaboration/business?tab=requests",
+        };
+      }),
   ].slice(0, 5);
 
   const activity = [
@@ -581,7 +609,7 @@ export default async function BusinessHomePage() {
         />
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(17.5rem,0.75fr)]">
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(17.5rem,0.75fr)]">
         <div className="space-y-4">
           <Panel
             title="Active work"
@@ -643,9 +671,9 @@ export default async function BusinessHomePage() {
                                   {slug.slice(0, 1).toUpperCase()}
                                 </span>
                               ))}
-                              {Number(row.responseLabel) > row.creators.length ? (
+                              {row.moreCreators > 0 ? (
                                 <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#EEF2FA] text-[10px] font-bold text-muted">
-                                  +{Number(row.responseLabel) - row.creators.length}
+                                  +{row.moreCreators}
                                 </span>
                               ) : null}
                             </div>

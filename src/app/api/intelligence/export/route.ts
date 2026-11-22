@@ -1,3 +1,4 @@
+import { clientIpFrom } from "@/lib/client-ip";
 import { NextRequest, NextResponse } from "next/server";
 import { isBusinessRole } from "@/lib/account-audience";
 import { getAccountSession } from "@/lib/accounts";
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Intelligence exports are for business accounts." }, { status: 403 });
   }
 
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const ip = clientIpFrom(req.headers);
   const locked = await lockoutMessage("intelligence-export", ip, account.id);
   if (locked) {
     return NextResponse.json({ error: AUTH_LOCKOUT_GENERIC_MESSAGE }, { status: 429 });

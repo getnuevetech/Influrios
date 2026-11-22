@@ -1,5 +1,6 @@
 "use server";
 
+import { clientIpFrom } from "@/lib/client-ip";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { registerAccount } from "@/lib/accounts";
@@ -7,7 +8,7 @@ import { ensureOwnedBusinessWorkspace } from "@/lib/business";
 import { prisma } from "@/lib/db";
 
 function clientIp(headerStore: Headers) {
-  return headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  return clientIpFrom(headerStore);
 }
 
 function back(error: string): never {

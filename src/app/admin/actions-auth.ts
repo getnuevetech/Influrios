@@ -1,5 +1,6 @@
 "use server";
 
+import { clientIpFrom } from "@/lib/client-ip";
 import { randomBytes } from "crypto";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -30,7 +31,7 @@ import { prisma } from "@/lib/db";
 import { sendMail } from "@/lib/mail";
 
 function clientIp(headerStore: Headers) {
-  return headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  return clientIpFrom(headerStore);
 }
 
 function safeAdminPath(raw: string | null | undefined, fallback: string) {

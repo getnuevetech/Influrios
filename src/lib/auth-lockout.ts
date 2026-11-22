@@ -27,6 +27,13 @@ export const AUTH_LOCK_WINDOW_MS = 15 * 60_000;
 export const AUTH_LOCK_MS = 15 * 60_000;
 /** Intelligence export: 20 downloads / 15 minutes per account. */
 export const EXPORT_LOCK_MAX_FAILS = 20;
+/**
+ * Failures per email / draft across every IP address. Stops guessing from many addresses
+ * (or a forged X-Forwarded-For) once the per-IP buckets stop being enough.
+ */
+export const AUTH_SUBJECT_MAX_FAILS = 20;
+/** Bucket "IP" that counts a subject's failures from all addresses. */
+const ANY_IP = "*any*";
 
 const GENERIC_FAIL = "Too many attempts. Try again later.";
 
@@ -53,8 +60,14 @@ function pruneMemory(now: number) {
   }
 }
 
-function maxFailsFor(scope: AuthLockScope) {
-  return scope === "intelligence-export" ? EXPORT_LOCK_MAX_FAILS : AUTH_LOCK_MAX_FAILS;
+function maxFailsFor(scope: AuthLockScope, ip = "") {
+  if (scope === "intelligence-export") return EXPORT_LOCK_MAX_FAILS;
+  return ip === ANY_IP ? AUTH_SUBJECT_MAX_FAILS : AUTH_LOCK_MAX_FAILS;
+}
+
+/** The per-IP bucket, plus a per-subject bucket for sign-in style scopes. */
+function ipsFor(scope: AuthLockScope, ip: string) {
+  return scope === "intelligence-export" ? [ip] : [ip, ANY_IP];
 }
 
 function memoryMessage(scope: AuthLockScope, ip: string, id: string, now: number): string | null {
@@ -69,7 +82,7 @@ function memoryFailure(scope: AuthLockScope, ip: string, id: string, now: number
   pruneMemory(now);
   const k = bucketKey(scope, ip, id);
   const current = buckets.get(k);
-  const max = maxFailsFor(scope);
+  const max = maxFailsFor(scope, ip);
   if (!current || now - current.windowStarted > AUTH_LOCK_WINDOW_MS) {
     buckets.set(k, { fails: 1, windowStarted: now, lockedUntil: 0 });
     return;
@@ -95,7 +108,7 @@ async function dbMessage(scope: AuthLockScope, ip: string, id: string, now: numb
 
 async function dbFailure(scope: AuthLockScope, ip: string, id: string, now: number) {
   const key = { scope, ip: ipOf(ip), subject: subjectOf(id) };
-  const max = maxFailsFor(scope);
+  const max = maxFailsFor(scope, ip);
   const existing = await prisma.authLockout.findUnique({ where: { scope_ip_subject: key } });
   if (!existing || now - existing.windowStarted.getTime() > AUTH_LOCK_WINDOW_MS) {
     await prisma.authLockout.upsert({
@@ -139,6 +152,14 @@ export async function lockoutMessage(
   id: string,
   now = Date.now(),
 ): Promise<string | null> {
+  for (const bucketIp of ipsFor(scope, ip)) {
+    const message = await lockoutMessageFor(scope, bucketIp, id, now);
+    if (message) return message;
+  }
+  return null;
+}
+
+async function lockoutMessageFor(scope: AuthLockScope, ip: string, id: string, now: number): Promise<string | null> {
   if (forceMemory) return memoryMessage(scope, ip, id, now);
   try {
     return await dbMessage(scope, ip, id, now);
@@ -148,6 +169,10 @@ export async function lockoutMessage(
 }
 
 export async function recordAuthFailure(scope: AuthLockScope, ip: string, id: string, now = Date.now()) {
+  for (const bucketIp of ipsFor(scope, ip)) await recordAuthFailureFor(scope, bucketIp, id, now);
+}
+
+async function recordAuthFailureFor(scope: AuthLockScope, ip: string, id: string, now: number) {
   if (forceMemory) {
     memoryFailure(scope, ip, id, now);
     return;
@@ -160,6 +185,10 @@ export async function recordAuthFailure(scope: AuthLockScope, ip: string, id: st
 }
 
 export async function recordAuthSuccess(scope: AuthLockScope, ip: string, id: string) {
+  for (const bucketIp of ipsFor(scope, ip)) await recordAuthSuccessFor(scope, bucketIp, id);
+}
+
+async function recordAuthSuccessFor(scope: AuthLockScope, ip: string, id: string) {
   if (forceMemory) {
     memorySuccess(scope, ip, id);
     return;

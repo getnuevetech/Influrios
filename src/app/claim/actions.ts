@@ -1,5 +1,6 @@
 "use server";
 
+import { clientIpFrom } from "@/lib/client-ip";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { safeNextPath } from "@/lib/account-policy";
@@ -23,7 +24,7 @@ import { acquisitionSource } from "@/lib/acquisition";
 import { normalizeProfileGender } from "@/lib/profile-media";
 
 function clientIp(headerStore: Headers) {
-  return headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  return clientIpFrom(headerStore);
 }
 
 export async function actionCreateDraft(formData: FormData) {
@@ -217,6 +218,9 @@ export async function actionUpdateProfileMedia(formData: FormData) {
     const { getDraft } = await import("@/lib/claim");
     const draft = await getDraft(draftId);
     if (!draft) throw new Error("Draft not found");
+    // Check ownership before any file is written.
+    const { assertCanMutateDraft } = await import("@/lib/claim");
+    await assertCanMutateDraft(draftId);
 
     if (intent === "avatar") {
       const file = formData.get("avatar");

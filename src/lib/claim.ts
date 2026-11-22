@@ -826,6 +826,9 @@ export async function claimDraft(input: {
   gender?: string;
   title?: string;
 }): Promise<ClaimDraft> {
+  // Only the visitor who made the draft (signed draft cookie) or its account may claim it.
+  // Knowing the draft id from a link is not enough.
+  await assertCanMutateDraft(input.draftId);
   const draft = await getDraft(input.draftId);
   if (!draft) throw new Error("Draft not found");
   const claimed = advanceClaimStage(draft.stage, "claim");
@@ -1222,8 +1225,12 @@ export function creatorSessionToken(draftId: string, exp = Date.now() + SESSION_
 export async function setCreatorSession(draftId: string) {
   const token = creatorSessionToken(draftId);
   const jar = await cookies();
+  const { headers } = await import("next/headers");
+  const { cookieIsSecure } = await import("@/lib/admin-auth");
+  const proto = (await headers()).get("x-forwarded-proto");
   jar.set(COOKIE_NAME, token, {
     httpOnly: true,
+    secure: cookieIsSecure(proto),
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_DAYS * 86400,

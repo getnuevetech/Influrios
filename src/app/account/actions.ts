@@ -1,5 +1,6 @@
 "use server";
 
+import { clientIpFrom } from "@/lib/client-ip";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { accountDestination } from "@/lib/account-nav";
@@ -36,7 +37,7 @@ function back(path: string, error: string, next?: string) {
 }
 
 function clientIp(headerStore: Headers) {
-  return headerStore.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  return clientIpFrom(headerStore);
 }
 
 export async function actionRegister(formData: FormData) {
