@@ -26,8 +26,13 @@ function friendlyProviderError(error: string | undefined, description: string | 
   if (blob.includes("invalid_request")) {
     return "TikTok rejected the login request before it started. Nothing was retried. Use Retry on Social accounts.";
   }
-  if (description?.trim()) return description.trim().slice(0, 300);
-  if (error?.trim()) return error.trim().slice(0, 300);
+  // Provider text from the URL is not shown: a crafted link could put any message on influrios.com.
+  if (blob.includes("access_denied") || blob.includes("user_denied") || blob.includes("cancel")) {
+    return "The connection was cancelled on the network's page. Nothing was connected.";
+  }
+  if (description?.trim() || error?.trim()) {
+    return "The network did not finish the connection. Nothing was connected. Try again from Social accounts.";
+  }
   return undefined;
 }
 

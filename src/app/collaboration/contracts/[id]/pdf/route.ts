@@ -57,7 +57,11 @@ export async function GET(_request: Request, { params }: Props) {
       },
     }),
   ]);
-  if (!document) return NextResponse.json({ error: "Contract not found." }, { status: 404 });
+  // Same answer for "no such contract" and "not yours", so ids cannot be probed while signed out.
+  if (!account && !admin) {
+    return NextResponse.json({ error: "Sign in as a party to download this PDF." }, { status: 401 });
+  }
+  if (!document) return NextResponse.json({ error: "Sign in as a party to download this PDF." }, { status: 401 });
   const matched = account ? resolveContractPartyForAccount(document.parties, account) : undefined;
   const party = matched && account ? await adoptUnboundContractParty(matched, account) : null;
   const isParty = Boolean(party);
