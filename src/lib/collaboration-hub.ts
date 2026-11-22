@@ -2,6 +2,7 @@
  * Collaboration OS P2 — creator hub data helpers (status counts, pipeline, saved matches).
  * P2b — business hub loaders (requests, suggestions, spend from ledger).
  */
+import { businessInvitationTask } from "@/lib/invitation-turn";
 import { activeCollaborationIds, newIncidentReference, type SectionState } from "@/lib/business-status";
 import { prisma } from "@/lib/db";
 import {
@@ -20,6 +21,7 @@ import { agreedFeeFromSources } from "@/lib/signed-funding";
 import { listFundingsForBusiness, listFundingsForCreator } from "@/lib/marketplace-ledger";
 import { findDirectoryMatchesFor, type CreatorMatch, type MatchBreakdown } from "@/lib/matching";
 import {
+  applicationIsInvitation,
   listPublishedBusinessRequests,
   listPublishedCreatorOpportunities,
   listMarketplaceApplications,
@@ -937,14 +939,15 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
   );
   const draftRequests = ws.briefs.filter((brief) => brief.status === "draft").length;
   const activeBriefs = ws.briefs.filter((brief) => brief.status === "active").length;
-  const pendingReview = ws.inquiries.filter((inquiry) => leadIsOpen(inquiry.status)).length;
+  const openInquiries = ws.inquiries.filter((inquiry) => leadIsOpen(inquiry.status)).length;
   const active = collaborations + activeBriefs;
   const completed = fundings.filter((row) => row.status === "completed").length;
 
+  // pendingReview is filled in once applications are loaded (invitation responses the business owes).
   const status: BusinessHubStatus = {
     active,
     draftRequests,
-    pendingReview,
+    pendingReview: openInquiries,
     completed,
   };
 
@@ -973,7 +976,7 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
         listMarketplaceApplications({
           businessRequestIds: ownRequestIds,
           briefIds: ownBriefIds,
-          limit: 20,
+          limit: 100,
         }),
         [],
         degraded,
@@ -981,6 +984,8 @@ export async function loadBusinessHub(input?: { intentBriefId?: string; userId?:
       )
     : [];
 
+  // Responses to review = open inquiries + invitations where the business owes an answer or a decision.
+  status.pendingReview = openInquiries + applications.filter((row) => applicationIsInvitation(row) && businessInvitationTask(row) !== null).length;
   const applicationIds = applications.map((row) => row.id);
   const contractedApplications = applicationIds.length
     ? await prisma.contractDocument

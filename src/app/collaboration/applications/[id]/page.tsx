@@ -27,6 +27,7 @@ import { actionAnswerInvitationQuestion, actionTransitionApplicationDetail } fro
 import { InvitationResponsePanel } from "@/components/account/invitation-review";
 import {
   businessCaseLabel,
+  businessInvitationLabel,
   invitationCase,
   invitationConversation,
   invitationState,
@@ -226,8 +227,12 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
                 ) : null}
               </p>
             </div>
-            <span className="rounded-full bg-[#EAE4FF] px-3 py-1 text-[11px] font-bold uppercase text-violet">
-              {application.status.replaceAll("_", " ")}
+            <span className="rounded-full bg-[#EAE4FF] px-3 py-1 text-[11px] font-bold text-violet">
+              {inviteeView
+                ? inviteeView.label
+                : isInvite && asBusiness
+                  ? businessInvitationLabel(application, counterpart?.displayName || application.creatorSlug || "The influencer")
+                  : application.status.replaceAll("_", " ")}
             </span>
           </div>
 

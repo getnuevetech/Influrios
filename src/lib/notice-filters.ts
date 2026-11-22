@@ -30,7 +30,7 @@ export function noticeNeedsAction(kind: string, title = "") {
   const text = `${kind} ${title}`.toLowerCase();
   if (noticeGroup(kind, title) === "updates") return false;
   // Withdrawal / expiry / closure notices tell the member something ended; there's nothing to do.
-  if (/withdrawn|expired|closed/.test(kind.toLowerCase())) return false;
+  if (/withdrawn|expired|closed|declined|accepted|not_selected/.test(kind.toLowerCase())) return false;
   if (/completed|successful|succeeded/.test(text) && !/returned|failed/.test(text)) return false;
   return true;
 }
@@ -61,6 +61,8 @@ export function noticeEventLabel(kind: string, title = "") {
 export function noticeActor(kind: string, detail: string) {
   const submission = detail.match(/^Submission from (.+)$/);
   if (submission?.[1]) return submission[1];
+  // Notices about what the influencer did, shown to the business.
+  if (kind === "invitation_response" || kind === "invitation_declined") return "Influencer";
   if (noticeGroup(kind, detail) === "invitations") {
     return /respond/.test(detail.toLowerCase()) ? "Influencer" : "Business";
   }

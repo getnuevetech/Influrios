@@ -34,6 +34,11 @@ export type WorkspaceApplication = {
   contractId?: string | null;
   note: string;
   updatedAt?: string;
+  /** Customer label for the invitation's current state (never a raw status code). */
+  statusLabel?: string;
+  /** What the business owes on this invitation, if anything. */
+  task?: "answer" | "decide" | null;
+  question?: string | null;
 };
 
 export type WorkspaceCreatorCard = {
@@ -437,9 +442,21 @@ export function BusinessCollaborations(props: {
                     </span>
                     <div>
                       <p className="font-bold text-[#1B1464]">{application.creatorName}</p>
-                      <p className="text-xs text-[#667085]">{application.status.replaceAll("_", " ")}</p>
+                      <p className={`text-xs ${application.task ? "font-semibold text-[#6D4AFF]" : "text-[#667085]"}`}>
+                        {application.statusLabel || application.status.replaceAll("_", " ")}
+                      </p>
+                      {application.task === "answer" && application.question ? (
+                        <p className="mt-1 max-w-md text-xs text-[#344054]">“{application.question}”</p>
+                      ) : null}
                     </div>
                   </div>
+                  <div className="flex flex-wrap gap-2">
+                  <Link
+                    href={`/collaboration/applications/${application.id}`}
+                    className={`rounded-full px-3 py-1.5 text-xs font-bold ${application.task ? "bg-[#6D4AFF] text-white" : "border border-[#E6ECF7] text-[#1B1464]"}`}
+                  >
+                    {application.task === "answer" ? "Answer question" : application.task === "decide" ? "Review response" : "Open"}
+                  </Link>
                   {application.status === "ACCEPTED" || application.status === "COLLABORATION_DRAFTED" || application.status === "REQUESTED" || application.status === "VIEWED" || application.status === "RESPONDED" || application.status === "NEGOTIATING" ? (
                     <Link
                       href={`${tabHref("requests", { request: selectedRequest.id, panel: "invitations", withdraw: application.id })}`}
@@ -449,6 +466,7 @@ export function BusinessCollaborations(props: {
                       Withdraw participation
                     </Link>
                   ) : null}
+                  </div>
                 </li>
               ))}
             </ul>
@@ -458,7 +476,7 @@ export function BusinessCollaborations(props: {
               <li>Request created · {selectedRequest.createdAt.slice(0, 10)}</li>
               {selectedRequestApps.map((application) => (
                 <li key={application.id}>
-                  {application.invitation ? "Invitation" : "Application"} · {application.creatorName} · {application.status.replaceAll("_", " ")}
+                  {application.invitation ? "Invitation" : "Application"} · {application.creatorName} · {application.statusLabel || application.status.replaceAll("_", " ")}
                 </li>
               ))}
               {selectedRequestApps.some((application) => application.hasContract) ? <li>Linked collaboration / agreement on record</li> : null}

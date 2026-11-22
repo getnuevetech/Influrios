@@ -54,3 +54,104 @@ export async function notifyInvitationClosed(input: { applicationId: string; out
     },
   }).catch(() => undefined);
 }
+
+type Parties = {
+  row: NonNullable<Awaited<ReturnType<typeof loadInvitation>>>;
+  influencerUserId: string | null;
+  influencerName: string;
+  businessUserId: string | null;
+  businessName: string;
+  campaign: string;
+};
+
+async function loadInvitation(applicationId: string) {
+  return prisma.marketplaceApplication.findUnique({
+    where: { id: applicationId },
+    include: { businessRequest: { select: { brand: true, workspace: { select: { name: true, ownerUserId: true } } } } },
+  });
+}
+
+async function parties(applicationId: string): Promise<Parties | null> {
+  const row = await loadInvitation(applicationId);
+  if (!row || !row.toSlug || row.fromSlug) return null;
+  const [creator, brief] = await Promise.all([
+    prisma.creator.findUnique({ where: { slug: row.toSlug }, select: { userId: true, displayName: true } }),
+    row.briefId
+      ? prisma.businessBrief.findUnique({ where: { id: row.briefId }, select: { title: true, workspace: { select: { name: true, ownerUserId: true } } } })
+      : null,
+  ]);
+  const workspace = row.businessRequest?.workspace ?? brief?.workspace ?? null;
+  return {
+    row,
+    influencerUserId: creator?.userId ?? null,
+    influencerName: creator?.displayName || row.toSlug,
+    businessUserId: workspace?.ownerUserId ?? null,
+    businessName: workspace?.name || row.businessRequest?.brand || "The business",
+    campaign: row.note?.trim() || brief?.title || row.businessRequest?.brand || "a collaboration",
+  };
+}
+
+async function upsertNotice(userId: string | null, kind: string, sourceId: string, title: string, detail: string, href: string) {
+  if (!userId) return;
+  await prisma.accountNotice
+    .upsert({
+      where: { userId_kind_sourceId: { userId, kind, sourceId } },
+      // A repeat event (e.g. a second answer) is a new, unread notice.
+      create: { userId, kind, sourceId, title, detail, href },
+      update: { title, detail, href, readAt: null, createdAt: new Date() },
+    })
+    .catch((error) => console.error("invitation notice", kind, error));
+}
+
+/** The invitee's in-app invitation notice, created when the invitation is sent (not only when home is opened). */
+export async function notifyInvitationSent(applicationId: string) {
+  const p = await parties(applicationId);
+  if (!p) return;
+  await upsertNotice(
+    p.influencerUserId,
+    "invitation",
+    `invitation:${p.row.id}`,
+    p.campaign,
+    `${p.businessName} invited you · Waiting for your reply`,
+    `/collaboration/applications/${p.row.id}`,
+  );
+}
+
+/** Tell the business what the influencer did (interest, question, decline). One live notice per invitation. */
+export async function notifyBusinessOfResponse(applicationId: string, intent: "interested" | "question" | "decline") {
+  const p = await parties(applicationId);
+  if (!p) return;
+  const title =
+    intent === "interested"
+      ? `${p.influencerName} is interested`
+      : intent === "question"
+        ? `${p.influencerName} asked a question`
+        : `${p.influencerName} declined your invitation`;
+  const detail =
+    intent === "decline"
+      ? `${p.campaign} · Nothing was signed or funded`
+      : intent === "question"
+        ? `${p.campaign} · Answer on the invitation`
+        : `${p.campaign} · Accept or decide it's not a fit`;
+  await upsertNotice(
+    p.businessUserId,
+    intent === "decline" ? "invitation_declined" : "invitation_response",
+    `response:${p.row.id}`,
+    title,
+    detail,
+    `/collaboration/applications/${p.row.id}`,
+  );
+}
+
+/** Tell the influencer what the business did (answered, accepted, not a fit). */
+export async function notifyInviteeOfBusinessAction(applicationId: string, action: "answered" | "accepted" | "not_a_fit") {
+  const p = await parties(applicationId);
+  if (!p) return;
+  const [kind, title, detail] =
+    action === "answered"
+      ? ["invitation_reply", `${p.businessName} replied`, `${p.campaign} · Read their answer on the invitation`]
+      : action === "accepted"
+        ? ["invitation_accepted", `${p.businessName} accepted you`, `${p.campaign} · They're preparing the agreement. You don't need to do anything yet`]
+        : ["invitation_not_selected", `${p.businessName} went with someone else`, `${p.campaign} · Nothing was signed or funded`];
+  await upsertNotice(p.influencerUserId, kind, `${kind}:${p.row.id}`, title, detail, `/collaboration/applications/${p.row.id}`);
+}

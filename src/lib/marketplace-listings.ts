@@ -632,6 +632,9 @@ export async function inviteCreatorsIndependently(input: {
     });
     ids.push(row.id);
   }
+  // The invitee's in-app notice exists as soon as the invitation is sent, not only after they open their dashboard.
+  const { notifyInvitationSent } = await import("@/lib/invitation-notices");
+  for (const id of ids) await notifyInvitationSent(id).catch((error) => console.error("invitation sent notice", error));
   const { deliverCatalogEmail, liveMailLinks } = await import("@/lib/email-live");
   const links = liveMailLinks();
   const workspace = await prisma.businessWorkspace.findUnique({ where: { id: workspaceId }, select: { name: true } });
@@ -746,6 +749,14 @@ export async function transitionMarketplaceApplication(input: {
       outcome: input.toStatus === "WITHDRAWN" ? "withdrawn" : "expired",
       note: input.note,
     }).catch((error) => console.error("invitation closed notice", error));
+  }
+  // Business decisions on an invitation reach the influencer in-app. (The invitee's own decline is
+  // recorded by invitation-writes, never through this function.)
+  if ((input.toStatus === "ACCEPTED" || input.toStatus === "DECLINED") && applicationIsInvitation(updated) && applicationIsOpenPipeline(row.status)) {
+    const { notifyInviteeOfBusinessAction } = await import("@/lib/invitation-notices");
+    await notifyInviteeOfBusinessAction(updated.id, input.toStatus === "ACCEPTED" ? "accepted" : "not_a_fit").catch((error) =>
+      console.error("business decision notice", error),
+    );
   }
   if (input.toStatus === "ACCEPTED" && applicationIsInvitation(updated)) {
     const { deliverCatalogEmail, liveMailLinks } = await import("@/lib/email-live");
