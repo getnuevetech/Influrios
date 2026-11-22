@@ -421,8 +421,14 @@ export async function loadCreatorHome(userId: string) {
     const current = dueByCollaboration.get(collaborationId);
     if (!current || due.getTime() < current.getTime()) dueByCollaboration.set(collaborationId, due);
   }
-  const activeCollaborations: HomePipelineItem[] = (hub?.pipeline ?? [])
+  // Work that is funded or underway first, so a new funded deal is not pushed off the first four.
+  const workFirst = (item: { href: string }) => (item.href.startsWith("/collaboration/work/") ? 0 : 1);
+  const currentCollaborations = (hub?.pipeline ?? [])
     .filter((item) => isCurrentCollaboration(item))
+    .map((item, index) => ({ item, index }))
+    .sort((a, b) => workFirst(a.item) - workFirst(b.item) || a.index - b.index)
+    .map((row) => row.item);
+  const activeCollaborations: HomePipelineItem[] = currentCollaborations
     .slice(0, 4)
     .map((item) => {
       const due = dueByCollaboration.get(item.id);
@@ -589,7 +595,8 @@ export async function loadCreatorHome(userId: string) {
     visitAllTime: visitEvents.length,
     visitSeries,
     visitDelta: visitDelta(visitSeries),
-    activeCollabs: activeCollaborations.length,
+    // The count is every current collaboration; the list below shows the first four.
+    activeCollabs: currentCollaborations.length,
     pendingInvitations,
     attention,
     monthCents: earnings.cents,

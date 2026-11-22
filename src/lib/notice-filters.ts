@@ -31,6 +31,8 @@ export function noticeNeedsAction(kind: string, title = "") {
   if (noticeGroup(kind, title) === "updates") return false;
   // Withdrawal / expiry / closure notices tell the member something ended; there's nothing to do.
   if (/withdrawn|expired|closed|declined|accepted|not_selected/.test(kind.toLowerCase())) return false;
+  // Something happened to the member's work or money; there is nothing for them to do.
+  if (/^(milestone_approved|milestone_auto_approved|funding_successful|payout_completed|refund_completed|dispute_resolved|collaboration_cancelled)$/.test(kind)) return false;
   if (/completed|successful|succeeded/.test(text) && !/returned|failed/.test(text)) return false;
   return true;
 }
