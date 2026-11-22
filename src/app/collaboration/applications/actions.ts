@@ -112,6 +112,11 @@ export async function actionTransitionApplicationDetail(formData: FormData) {
     );
   }
 
+  if (asBusiness && existing.fromSlug && (toStatus === "ACCEPTED" || toStatus === "DECLINED")) {
+    const { notifyApplicantOfDecision } = await import("@/lib/invitation-notices");
+    await notifyApplicantOfDecision(applicationId, toStatus === "ACCEPTED" ? "accepted" : "declined").catch(() => undefined);
+  }
+
   if (toStatus === "COLLABORATION_DRAFTED" && asBusiness && ws) {
     const creator = updated.toSlug || updated.fromSlug;
     const brief = updated.briefId ? ws.briefs.find((item) => item.id === updated.briefId) ?? null : null;

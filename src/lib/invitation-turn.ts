@@ -370,3 +370,24 @@ export function declinedByInvitee(events: { toStatus?: string; note: string | nu
   const decline = [...(events ?? [])].reverse().find((event) => event.toStatus === "DECLINED");
   return Boolean(decline && /^Declined\b/.test(decline.note ?? ""));
 }
+
+/**
+ * The business's label for an application an influencer sent to its public request.
+ * The invitation labels ("Sent · waiting for …") read the turn backwards for applications.
+ */
+export function businessApplicationLabel(row: { status: string }, influencer: string): string {
+  switch (row.status) {
+    case "ACCEPTED":
+      return "Accepted · agreement not sent";
+    case "COLLABORATION_DRAFTED":
+      return "Accepted · agreement in progress";
+    case "DECLINED":
+      return "Declined";
+    case "WITHDRAWN":
+      return `${influencer} withdrew`;
+    case "EXPIRED":
+      return "Expired";
+    default:
+      return `${influencer} applied · waiting for your decision`;
+  }
+}

@@ -20,7 +20,7 @@ import { proposalIsExpired } from "@/lib/team-proposal";
 type NoticeRef = { id: string; kind: string; sourceId: string };
 
 export type NoticeSource =
-  | { type: "application"; id: string; role: "invitee" | "invitee-reply" | "business" }
+  | { type: "application"; id: string; role: "invitee" | "invitee-reply" | "business" | "business-application" }
   | { type: "team"; id: string };
 
 export function invitationNoticeSource(notice: { kind: string; sourceId: string }): NoticeSource | null {
@@ -34,6 +34,10 @@ export function invitationNoticeSource(notice: { kind: string; sourceId: string 
     const app = /^invitation_reply:(.+)$/.exec(notice.sourceId);
     return app ? { type: "application", id: app[1], role: "invitee-reply" } : null;
   }
+  if (notice.kind === "application_received") {
+    const app = /^application_received:(.+)$/.exec(notice.sourceId);
+    return app ? { type: "application", id: app[1], role: "business-application" } : null;
+  }
   if (notice.kind === "invitation_response") {
     const app = /^response:(.+)$/.exec(notice.sourceId);
     return app ? { type: "application", id: app[1], role: "business" } : null;
@@ -46,6 +50,7 @@ export type LiveNotice = { open: boolean; status: string | null };
 /** Live state for every invitation notice in the list, keyed by notice id. */
 export async function liveInvitationNotices(notices: NoticeRef[], creatorSlug: string | null, now = new Date()): Promise<Map<string, LiveNotice>> {
   const live = new Map<string, LiveNotice>();
+  await liveAgreementNotices(notices, live).catch(() => undefined);
   const sources = notices
     .map((notice) => ({ notice, source: invitationNoticeSource(notice) }))
     .filter((row): row is { notice: NoticeRef; source: NoticeSource } => row.source !== null);
@@ -97,7 +102,18 @@ export async function liveInvitationNotices(notices: NoticeRef[], creatorSlug: s
         live.set(notice.id, { open: false, status: null });
         continue;
       }
-      if (source.role === "business") {
+      if (source.role === "business-application") {
+        // An application to a public request waits on the business until it accepts or declines.
+        const open = ["REQUESTED", "VIEWED", "RESPONDED", "NEGOTIATING"].includes(app.status);
+        const status = app.status === "ACCEPTED" || app.status === "COLLABORATION_DRAFTED"
+          ? "Accepted"
+          : app.status === "DECLINED"
+            ? "Declined"
+            : app.status === "WITHDRAWN"
+              ? "Withdrawn by the influencer"
+              : "Waiting for your decision";
+        live.set(notice.id, { open, status });
+      } else if (source.role === "business") {
         live.set(notice.id, { open: businessInvitationTask(app, now) !== null, status: businessInvitationLabel(app, influencerName(app), now) });
       } else {
         const view = inviteeInvitationView(app, businessName(app), now);
@@ -118,6 +134,32 @@ export async function liveInvitationNotices(notices: NoticeRef[], creatorSlug: s
     }
   }
   return live;
+}
+
+/**
+ * "Your signature is needed" notices follow the agreement: once it is fully signed (or ended) the
+ * notice leaves Action required. Before, a signed agreement kept asking for a signature.
+ */
+async function liveAgreementNotices(notices: NoticeRef[], live: Map<string, LiveNotice>) {
+  const rows = notices
+    .filter((notice) => notice.kind === "agreement")
+    .map((notice) => ({ notice, documentId: notice.sourceId.replace(/^agreement:/, "") }));
+  if (!rows.length) return;
+  const documents = await prisma.contractDocument.findMany({
+    where: { id: { in: [...new Set(rows.map((row) => row.documentId))] } },
+    select: { id: true, status: true },
+  });
+  const byId = new Map(documents.map((row) => [row.id, row.status]));
+  for (const { notice, documentId } of rows) {
+    const status = byId.get(documentId);
+    if (!status) {
+      live.set(notice.id, { open: false, status: null });
+    } else if (status === "signed") {
+      live.set(notice.id, { open: false, status: "Fully signed" });
+    } else if (status === "void" || status === "voided" || status === "cancelled" || status === "declined") {
+      live.set(notice.id, { open: false, status: "No longer active" });
+    }
+  }
 }
 
 /** Ids of invitation notices whose task is no longer open for this member. */

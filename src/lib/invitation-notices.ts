@@ -155,3 +155,51 @@ export async function notifyInviteeOfBusinessAction(applicationId: string, actio
         : ["invitation_not_selected", `${p.businessName} went with someone else`, `${p.campaign} · Nothing was signed or funded`];
   await upsertNotice(p.influencerUserId, kind, `${kind}:${p.row.id}`, title, detail, `/collaboration/applications/${p.row.id}`);
 }
+
+/** Parties of an application an influencer sent to a business's public request (fromSlug = applicant). */
+async function applicationParties(applicationId: string) {
+  const row = await loadInvitation(applicationId);
+  if (!row || !row.fromSlug) return null;
+  const creator = await prisma.creator.findUnique({ where: { slug: row.fromSlug }, select: { userId: true, displayName: true } });
+  const workspace = row.businessRequest?.workspace ?? null;
+  return {
+    row,
+    influencerUserId: creator?.userId ?? row.fromUserId ?? null,
+    influencerName: creator?.displayName || row.fromSlug,
+    businessUserId: workspace?.ownerUserId ?? null,
+    businessName: workspace?.name || row.businessRequest?.brand || "The business",
+    campaign: row.businessRequest?.brand || "your request",
+  };
+}
+
+/** The business hears about a new application the moment it arrives (it saw nothing before). */
+export async function notifyBusinessOfApplication(applicationId: string) {
+  const p = await applicationParties(applicationId);
+  if (!p) return;
+  await upsertNotice(
+    p.businessUserId,
+    "application_received",
+    `application_received:${p.row.id}`,
+    `${p.influencerName} applied`,
+    `${p.campaign} · Review the application and accept or decline`,
+    `/collaboration/applications/${p.row.id}`,
+  );
+}
+
+/** The applicant hears the business's decision. */
+export async function notifyApplicantOfDecision(applicationId: string, outcome: "accepted" | "declined") {
+  const p = await applicationParties(applicationId);
+  if (!p) return;
+  const [title, detail] =
+    outcome === "accepted"
+      ? [`${p.businessName} accepted your application`, `${p.campaign} · They're preparing the agreement. You don't need to do anything yet`]
+      : [`${p.businessName} went with someone else`, `${p.campaign} · Nothing was signed or funded`];
+  await upsertNotice(
+    p.influencerUserId,
+    outcome === "accepted" ? "application_accepted" : "application_declined",
+    `application_${outcome}:${p.row.id}`,
+    title,
+    detail,
+    `/collaboration/applications/${p.row.id}`,
+  );
+}

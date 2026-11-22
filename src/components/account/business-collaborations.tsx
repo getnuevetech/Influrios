@@ -378,7 +378,8 @@ export function BusinessCollaborations(props: {
           <div className="flex flex-wrap gap-4 border-b border-[#EEF2F7] text-sm font-semibold">
             {[
               ["overview", "Overview"],
-              ["invitations", `Invitations (${selectedRequestApps.filter((row) => row.invitation).length})`],
+              // Invitations and applications together: applications had no place in this panel.
+              ["invitations", `Responses (${selectedRequestApps.length})`],
               ["activity", "Activity"],
             ].map(([id, label]) => (
               <Link
@@ -429,10 +430,10 @@ export function BusinessCollaborations(props: {
           ) : null}
           {requestPanel === "invitations" ? (
             <ul className="mt-4 divide-y divide-[#EEF2F7]">
-              {selectedRequestApps.filter((row) => row.invitation).length === 0 ? (
-                <li className="py-6 text-sm text-[#667085]">No invitations yet.</li>
+              {selectedRequestApps.length === 0 ? (
+                <li className="py-6 text-sm text-[#667085]">No invitations or applications yet.</li>
               ) : null}
-              {selectedRequestApps.filter((row) => row.invitation).map((application) => (
+              {selectedRequestApps.map((application) => (
                 <li key={application.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                   <div className="flex items-center gap-3">
                     <span className="relative h-10 w-10 overflow-hidden rounded-full bg-[#F4F7FF]">
@@ -457,9 +458,15 @@ export function BusinessCollaborations(props: {
                     href={`/collaboration/applications/${application.id}`}
                     className={`rounded-full px-3 py-1.5 text-xs font-bold ${application.task ? "bg-[#6D4AFF] text-white" : "border border-[#E6ECF7] text-[#1B1464]"}`}
                   >
-                    {application.task === "answer" ? "Answer question" : application.task === "decide" ? "Review response" : "Open"}
+                    {application.task === "answer"
+                      ? "Answer question"
+                      : application.task === "decide"
+                        ? "Review response"
+                        : !application.invitation && ["REQUESTED", "VIEWED", "RESPONDED", "NEGOTIATING"].includes(application.status)
+                          ? "Review application"
+                          : "Open"}
                   </Link>
-                  {application.status === "ACCEPTED" || application.status === "COLLABORATION_DRAFTED" || application.status === "REQUESTED" || application.status === "VIEWED" || application.status === "RESPONDED" || application.status === "NEGOTIATING" ? (
+                  {application.invitation && (application.status === "ACCEPTED" || application.status === "COLLABORATION_DRAFTED" || application.status === "REQUESTED" || application.status === "VIEWED" || application.status === "RESPONDED" || application.status === "NEGOTIATING") ? (
                     <Link
                       href={`${tabHref("requests", { request: selectedRequest.id, panel: "invitations", withdraw: application.id })}`}
                       scroll={false}
