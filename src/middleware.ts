@@ -36,6 +36,12 @@ export async function middleware(req: NextRequest) {
     requestHeaders.set(SHORT_RESOLVE_PATH_HEADER, pathname);
     return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   }
+  // One public origin: www.influrios.com served a second copy of the site with its own cookies.
+  if ((host ?? "").toLowerCase().split(":")[0] === "www.influrios.com") {
+    const target = new URL(req.nextUrl.pathname + req.nextUrl.search, "https://influrios.com");
+    return NextResponse.redirect(target, 308);
+  }
+  const secureCookie = (req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "")).split(",")[0].trim() === "https";
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-pathname", pathname);
   requestHeaders.set("x-search", req.nextUrl.search);
@@ -68,6 +74,7 @@ export async function middleware(req: NextRequest) {
   if (minted && !pathname.startsWith("/admin")) {
     response.cookies.set(GUEST_COOKIE, guest, {
       httpOnly: true,
+      secure: secureCookie,
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 180,
@@ -77,6 +84,7 @@ export async function middleware(req: NextRequest) {
   if (referral && !pathname.startsWith("/admin")) {
     response.cookies.set(REFERRAL_COOKIE, referral, {
       httpOnly: true,
+      secure: secureCookie,
       sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 30,

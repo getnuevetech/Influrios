@@ -3,7 +3,39 @@ import type { NextConfig } from "next";
 /** Set in the Dockerfile builder stage. CI still runs lint + tsc separately. */
 const dockerBuild = process.env.DOCKER_BUILD === "1";
 
+/**
+ * Browser security headers (the live site sent none). CSP starts report-only so nothing
+ * breaks while the allowed sources are confirmed; frame-ancestors is enforced by X-Frame-Options.
+ */
+const SECURITY_HEADERS = [
+  { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(self)" },
+  {
+    key: "Content-Security-Policy-Report-Only",
+    value: [
+      "default-src 'self'",
+      "img-src 'self' data: blob: https:",
+      "script-src 'self' 'unsafe-inline' https://js.stripe.com",
+      "style-src 'self' 'unsafe-inline'",
+      "font-src 'self' data:",
+      "connect-src 'self' https://api.stripe.com",
+      "frame-src https://js.stripe.com https://hooks.stripe.com",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self' https:",
+    ].join("; "),
+  },
+];
+
 const nextConfig: NextConfig = {
+  // Do not advertise the framework (X-Powered-By: Next.js).
+  poweredByHeader: false,
+  async headers() {
+    return [{ source: "/:path*", headers: SECURITY_HEADERS }];
+  },
   // Required for lean Docker image (copies .next/standalone)
   output: "standalone",
   // CI runs `npm run lint`. Skipping eslint here keeps the Lightsail image
