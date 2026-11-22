@@ -60,13 +60,19 @@ export async function actionApplyToBusinessRequest(formData: FormData) {
     );
   }
   try {
-    await createMarketplaceApplication({
+    const created = await createMarketplaceApplication({
       kind: "business_request",
       businessRequestId: requestId,
       fromUserId: account.id,
       fromSlug: draft.slug,
       note: enteredNote(note),
     });
+    // The business saw nothing when an influencer applied (no notice, no task).
+    const createdId = (created as { id?: string } | null)?.id;
+    if (createdId) {
+      const { notifyBusinessOfApplication } = await import("@/lib/invitation-notices");
+      await notifyBusinessOfApplication(createdId).catch(() => undefined);
+    }
   } catch (error) {
     redirect(
       `${returnTo ?? HUB}?error=${encodeURIComponent(error instanceof Error ? error.message : "Apply failed.")}${

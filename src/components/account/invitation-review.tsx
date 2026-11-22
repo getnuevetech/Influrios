@@ -49,14 +49,14 @@ function intentCopy(view: InviteeInvitationView, brand: string) {
     case 1:
       return `${brand} invited you. Tell them if you're interested, ask a question, or decline.`;
     case 2:
-      return `${brand}'s answer will appear here and in Messages.`;
+      return `${brand} has been notified. Their answer will appear here, and you'll get a notification.`;
     case 3:
       return `Let ${brand} know how you'd like to continue.`;
     case 4:
     case 6:
       return `You told ${brand} you're interested. This isn't an agreement yet. They'll send one if they choose you.`;
     case 5:
-      return `${brand} still decides on the invitation. Their answer will appear here and in Messages.`;
+      return `${brand} still decides on the invitation. Their answer will appear here, and you'll get a notification.`;
     default:
       if (view.closedAs === "accepted") return `${brand} accepted you and is preparing the agreement. You don't need to do anything yet.`;
       if (view.closedAs === "declined") return "You declined this invitation. Nothing was signed or funded.";

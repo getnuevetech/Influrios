@@ -54,6 +54,9 @@ function relativeTime(iso: string) {
   return weeks === 1 ? "1 week ago" : `${weeks} weeks ago`;
 }
 
+/** Application statuses where the business still has to decide. */
+const APPLICATION_OPEN_FOR_BUSINESS = ["REQUESTED", "VIEWED", "RESPONDED", "NEGOTIATING"];
+
 function requestStatusTone(status: string): "success" | "info" | "warn" | "neutral" | "violet" {
   const value = status.toLowerCase();
   if (value === "active" || value === "open" || value === "published") return "success";
@@ -171,7 +174,11 @@ export default async function BusinessHomePage() {
     .filter((app) => !app.fromSlug && app.toSlug)
     .map((app) => ({ app, task: businessInvitationTask(app) }))
     .filter((row): row is { app: (typeof applications)[number]; task: "answer" | "decide" } => row.task !== null);
-  const pendingResponses = openInquiries + invitationTasks.length;
+  // Applications to the business's public requests that still wait on its decision.
+  const applicationTasks = applications.filter(
+    (app) => Boolean(app.fromSlug) && APPLICATION_OPEN_FOR_BUSINESS.includes(app.status),
+  );
+  const pendingResponses = openInquiries + invitationTasks.length + applicationTasks.length;
   const activeCollabs = fundingsUnavailable ? null : activeCollaborationIds(hub.pipeline).length;
   const contentInReview = fundingsUnavailable ? null : hub.pipeline.filter((item) => item.stage === "Review").length;
   const periodFunding = monthly.ok ? formatPeriodFunding(monthly.rows) : null;
@@ -410,6 +417,19 @@ export default async function BusinessHomePage() {
           )
         ) : (
           <ul className="mt-3 divide-y divide-[#EEF2F7]">
+            {applicationTasks.slice(0, 3).map((app) => (
+              <li key={`application-${app.id}`} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-indigo">Review an application</p>
+                  <p className="text-xs text-muted">
+                    {app.requestBrand || "Public request"} · {nameOf(app.creatorSlug)} applied
+                  </p>
+                </div>
+                <Link href={`/collaboration/applications/${app.id}`} className="rounded-full bg-[#6D4AFF] px-3 py-2 text-xs font-semibold text-white">
+                  Review
+                </Link>
+              </li>
+            ))}
             {invitationTasks.slice(0, 3).map(({ app, task }) => (
               <li key={`invite-${app.id}`} className="flex flex-wrap items-center justify-between gap-3 py-3">
                 <div>

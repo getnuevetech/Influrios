@@ -45,6 +45,10 @@ export function requestQueueRow(input: {
   inviteCount: number;
   applicationCount: number;
   acceptedCount: number;
+  /** Invitations on this request where the business owes an answer to a question. */
+  questionCount?: number;
+  /** Invitations on this request where the business owes a decision on interest. */
+  decisionCount?: number;
   updatedLabel: string;
   linkedFundingId?: string | null;
 }): RequestQueueRow {
@@ -76,7 +80,11 @@ export function requestQueueRow(input: {
     responseParts.push(`${input.applicationCount} application${input.applicationCount === 1 ? "" : "s"}`);
     if (input.acceptedCount > 0) responseParts.push(`${input.acceptedCount} accepted`);
   }
-  const responses = responseParts.length > 0 ? responseParts.join(" · ") : "No invitations";
+  // What the business owes comes first, so a waiting question is visible in the list itself.
+  const owed: string[] = [];
+  if (input.questionCount) owed.push(`${input.questionCount} question${input.questionCount === 1 ? "" : "s"} to answer`);
+  if (input.decisionCount) owed.push(`${input.decisionCount} to review`);
+  const responses = [...owed, ...responseParts].join(" · ") || "No invitations";
 
   const parts: string[] = [];
   if (input.inviteCount > 0) parts.push(`${input.inviteCount} invite${input.inviteCount === 1 ? "" : "s"} sent`);

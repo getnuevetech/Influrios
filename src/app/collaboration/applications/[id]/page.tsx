@@ -132,7 +132,11 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
     : creatorRole
       ? creatorApplicationTransitions(application.status, creatorRole)
       : []
-  ).filter((status) => status !== "COLLABORATION_DRAFTED");
+  )
+    .filter((status) => status !== "COLLABORATION_DRAFTED")
+    // On an application to its public request the business only decides: accept or decline.
+    // "Mark responded", "Enter negotiation", "Mark expired" and "Withdraw" were internal states.
+    .filter((status) => !(asBusiness && !isInvite) || status === "ACCEPTED" || status === "DECLINED");
 
   const counterpartSlug =
     asBusiness
@@ -429,7 +433,9 @@ export default async function ApplicationDetailPage({ params, searchParams }: Pr
             ) : null}
             {accepted && !asBusiness ? (
               <p className="text-sm text-muted">
-                You accepted. The business can open the agreement from Active collaborations.
+                {isInvite
+                  ? "You accepted. The business can open the agreement from Active collaborations."
+                  : "The business accepted your application. They're preparing the agreement; you'll be asked to sign it."}
               </p>
             ) : null}
 
