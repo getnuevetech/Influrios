@@ -1,5 +1,6 @@
 "use server";
 
+import { resolveCountry } from "@/lib/countries";
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
 import { updateOwnedBusinessProfile } from "@/lib/business";
@@ -12,7 +13,11 @@ export async function actionSaveBusinessProfile(formData: FormData) {
   }
   const city = String(formData.get("city") ?? "").trim();
   const state = String(formData.get("state") ?? "").trim();
-  const country = String(formData.get("country") ?? "").trim();
+  const countryRaw = String(formData.get("country") ?? "").trim();
+  const country = countryRaw ? resolveCountry(countryRaw)?.name ?? "" : "";
+  if (countryRaw && !country) {
+    redirect(`/business/profile?error=${encodeURIComponent("Choose the country from the list.")}`);
+  }
   const geography = [city, state, country].filter(Boolean).join(", ");
   try {
     await updateOwnedBusinessProfile(account.id, {

@@ -1,3 +1,4 @@
+import { CountrySelect } from "@/components/country-select";
 import { actionSaveRouteDraft } from "@/app/admin/payment-standard/actions";
 
 export function RouteDraftForm() {
@@ -6,7 +7,7 @@ export function RouteDraftForm() {
       <h2 className="font-display text-xl font-bold text-indigo">New route version</h2>
       <p className="text-sm text-muted">This creates a draft. It does not reroute held money. Webhooks, refunds, and reconciliation stay available when collections are off.</p>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-sm">Country<input name="countryCode" defaultValue="US" className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
+        <label className="text-sm">Country<CountrySelect name="countryCode" valueKind="code" defaultValue="US" required className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
         <label className="text-sm">Currency<input name="currency" defaultValue="USD" className="mt-1 w-full rounded-xl border px-3 py-2" /></label>
         <label className="text-sm">Environment
           <select name="environment" className="mt-1 w-full rounded-xl border px-3 py-2">

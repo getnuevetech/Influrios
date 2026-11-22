@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { samePlace } from "@/lib/place-names";
+import { COUNTRIES, resolveCountry } from "@/lib/countries";
 
 type PlaceHit = { name: string; country: string; state?: string };
 
@@ -54,11 +55,12 @@ export function PlaceFields({
 }) {
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
-  const [country, setCountry] = useState(shown(defaultCountry));
+  // Stored values may be codes or old spellings ("USA"); show the catalog name in the dropdown.
+  const initialCountry = resolveCountry(shown(defaultCountry))?.name ?? "";
+  const [country, setCountry] = useState(initialCountry);
   const [stateValue, setStateValue] = useState(shown(defaultState));
   const [city, setCity] = useState(shown(defaultCity));
-  const [countryPicked, setCountryPicked] = useState(Boolean(shown(defaultCountry)));
-  const [countryHits, setCountryHits] = useState<PlaceHit[]>([]);
+  const [countryPicked, setCountryPicked] = useState(Boolean(initialCountry));
   const [stateHits, setStateHits] = useState<PlaceHit[]>([]);
   const [cityHits, setCityHits] = useState<PlaceHit[]>([]);
   const [open, setOpen] = useState<"country" | "state" | "city" | null>(null);
@@ -70,23 +72,6 @@ export function PlaceFields({
     document.addEventListener("mousedown", onPointer);
     return () => document.removeEventListener("mousedown", onPointer);
   }, []);
-
-  useEffect(() => {
-    if (open !== "country" || country.trim().length < 1) {
-      setCountryHits([]);
-      return;
-    }
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      suggest("country", country, "", controller.signal)
-        .then(setCountryHits)
-        .catch(() => undefined);
-    }, 160);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [country, open]);
 
   useEffect(() => {
     if (!stateName || open !== "state" || !countryPicked || !country.trim()) {
@@ -127,7 +112,6 @@ export function PlaceFields({
     const changed = !samePlace(name, country);
     setCountry(name);
     setCountryPicked(true);
-    setCountryHits([]);
     setOpen(null);
     if (changed) {
       setStateValue("");
@@ -159,47 +143,22 @@ export function PlaceFields({
     <div ref={rootRef} className={className}>
       <label className="relative block text-sm">
         <span className="font-semibold text-indigo">{countryLabel}</span>
-        {lockCountry ? <input type="hidden" name={countryName} value={shown(defaultCountry)} /> : null}
-        <input
+        {/* Country is always chosen from the shared list; it is never typed. */}
+        {lockCountry ? <input type="hidden" name={countryName} value={initialCountry} /> : null}
+        <select
           name={lockCountry ? undefined : countryName}
-          value={lockCountry ? shown(defaultCountry) : country}
-          readOnly={lockCountry}
-          autoComplete="off"
-          role="combobox"
-          aria-expanded={lockCountry ? false : open === "country"}
-          aria-controls={`${listId}-country`}
-          placeholder="Search countries"
-          onChange={(event) => {
-            if (lockCountry) return;
-            setCountry(event.target.value);
-            setCountryPicked(false);
-            setOpen("country");
-          }}
-          onFocus={() => {
-            if (!lockCountry) setOpen("country");
-          }}
+          value={lockCountry ? initialCountry : country}
+          disabled={lockCountry}
+          onChange={(event) => pickCountry(event.target.value)}
           className={inputClass}
-        />
-        {open === "country" && countryHits.length > 0 ? (
-          <ul
-            id={`${listId}-country`}
-            role="listbox"
-            className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-border bg-white py-1 shadow-lg"
-          >
-            {countryHits.map((hit) => (
-              <li key={hit.name}>
-                <button
-                  type="button"
-                  className="block w-full px-3 py-2 text-left text-sm text-indigo hover:bg-[#F4F0FF]"
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => pickCountry(hit.name)}
-                >
-                  {hit.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
+        >
+          <option value="">Choose a country</option>
+          {COUNTRIES.map((option) => (
+            <option key={option.code} value={option.name}>
+              {option.name}
+            </option>
+          ))}
+        </select>
       </label>
       {stateName ? (
         <label className="relative block text-sm">

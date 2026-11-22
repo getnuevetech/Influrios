@@ -1,10 +1,10 @@
+import { resolveCountry } from "@/lib/countries";
 /**
  * Collab OS P3 — Contract & milestone wizard.
  * Pure gates + financial plan snapshot; funding still goes through marketplace-ledger.
  */
 import { allocateByLargestRemainder } from "@/lib/agreement-fee-engine";
 import { SERVICE_LEVELS } from "@/lib/collaboration-fees";
-import { corridorCountries } from "@/lib/corridor-countries";
 import type { FeeReservation } from "@/lib/dual-platform-fees";
 import { splitGross } from "@/lib/ledger";
 
@@ -502,27 +502,7 @@ export function contractWizardFields(input: {
   return { title, scope, commercial, jurisdictionCode, serviceLevel, grossRaw };
 }
 
+/** A stored profile country (code, name or alias) as its ISO code, from the shared country list. */
 export function countryCodeFromLocation(locationCountry: string | null | undefined): string | null {
-  if (!locationCountry) return null;
-  const raw = locationCountry.trim();
-  if (/^[A-Za-z]{2}$/.test(raw)) return raw.toUpperCase();
-  const map: Record<string, string> = {
-    USA: "US",
-    "UNITED STATES": "US",
-    "UNITED STATES OF AMERICA": "US",
-    UK: "GB",
-    "UNITED KINGDOM": "GB",
-    "GREAT BRITAIN": "GB",
-    NIGERIA: "NG",
-    CANADA: "CA",
-    GERMANY: "DE",
-    FRANCE: "FR",
-    AUSTRALIA: "AU",
-    KENYA: "KE",
-    GHANA: "GH",
-  };
-  const alias = map[raw.toUpperCase()];
-  if (alias) return alias;
-  const named = corridorCountries().find((row) => row.name.toUpperCase() === raw.toUpperCase());
-  return named?.code ?? null;
+  return resolveCountry(locationCountry)?.code ?? null;
 }

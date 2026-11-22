@@ -192,19 +192,9 @@ export default async function AdminKycPage({ searchParams }: Props) {
                 <option value="rejected">Mark rejected</option>
               </select>
             </label>
-            <label className="text-xs font-semibold text-muted">
-              Verified country
-              <input
-                name="countryCode"
-                maxLength={2}
-                placeholder="US"
-                className={`${selectClass} uppercase`}
-                aria-describedby="kyc-country-hint"
-              />
-            </label>
-            <p id="kyc-country-hint" className="basis-full text-xs text-muted">
-              Required to mark verified: the two-letter country on the influencer&apos;s ID. Agreements can only pay an
-              influencer whose verified country is recorded here.
+            <p className="basis-full text-xs text-muted">
+              The KYC country comes from the influencer&apos;s profile country, and the KYC method from what is configured
+              for that country on Country routes. Set the country on the influencer&apos;s profile, not here.
             </p>
             <button type="submit" className="btn-primary !px-4 !py-2 text-xs">
               Update account KYC

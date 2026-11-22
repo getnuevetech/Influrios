@@ -302,13 +302,18 @@ export async function actionSaveCountry(formData: FormData) {
   const session = await getAccountSession();
   if (!session) redirect("/login?next=/account?tab=account");
   const country = String(formData.get("country") ?? "").trim();
-  if (!country) redirect(`/account?tab=account&error=${encodeURIComponent("Enter a country.")}`);
+  if (!country) redirect(`/account?tab=account&error=${encodeURIComponent("Choose a country.")}`);
   const { getCreatorSessionDraft, updateDraftProfile } = await import("@/lib/claim");
   const draft = await getCreatorSessionDraft().catch(() => null);
   if (!draft) {
     redirect(`/account?tab=account&error=${encodeURIComponent("Create your Influencer Card before changing country.")}`);
   }
-  const saved = await updateDraftProfile(draft.id, { locationCountry: country });
+  let saved: Awaited<ReturnType<typeof updateDraftProfile>>;
+  try {
+    saved = await updateDraftProfile(draft.id, { locationCountry: country });
+  } catch (error) {
+    redirect(`/account?tab=account&error=${encodeURIComponent(error instanceof Error ? error.message : "Could not save the country.")}`);
+  }
   if (saved.countryReview) redirect("/account?tab=account&country=review");
   redirect("/account?tab=account&saved=country");
 }
