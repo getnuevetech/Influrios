@@ -4,7 +4,6 @@ import { resolveCountry } from "@/lib/countries";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdminSession } from "@/lib/admin-auth";
-import { recordedVerifiedCountry } from "@/lib/payment-engine";
 import { assignablePlanCodes } from "@/lib/entitlements-db";
 import { clampPasswordMin, DEFAULT_SITE_CONFIG, invalidateSiteConfigCache } from "@/lib/site-config";
 
@@ -95,14 +94,13 @@ export async function actionSaveMember(formData: FormData) {
 
   const suspended = formData.get("suspended") === "1";
   const phone = clean(formData.get("phone"), 40);
+  // A business or agency is verified, or not. Its country is its profile country, chosen in the
+  // location fields of this same form; verification records that country, it never picks one.
+  const verifiedTicked = role !== "CREATOR" && formData.get("countryVerified") === "1";
+  const profileCountryCode = resolveCountry(clean(formData.get("country"), 80))?.code ?? null;
+  if (verifiedTicked && !profileCountryCode) redirect(withQuery(base, { error: "country", view: id }));
   const verifiedCountry =
-    role === "CREATOR"
-      ? null
-      : recordedVerifiedCountry({
-          verified: formData.get("countryVerified") === "1",
-          countryCode: clean(formData.get("verifiedCountryCode"), 8),
-        });
-  if (verifiedCountry && !verifiedCountry.ok) redirect(withQuery(base, { error: "country", view: id }));
+    role === "CREATOR" ? null : { ok: true as const, country: verifiedTicked ? profileCountryCode : null };
   const before = {
     role: current.role,
     planTier: current.planTier,

@@ -195,9 +195,8 @@ export async function openCreatorConnectedAccount(input: { userId: string; email
   if (!creator) {
     return { ok: false, error: "Create your Influencer Card before opening payout setup. Nothing was opened." };
   }
-  const fallback = (creator.payoutProfile?.primaryCountryCode ?? "").trim().toUpperCase();
-  const country =
-    countryCodeFromLocation(creator.locationCountry) || (/^[A-Z]{2}$/.test(fallback) ? fallback : null);
+  // The payout country is the influencer's profile country.
+  const country = countryCodeFromLocation(creator.locationCountry);
   const corridor = country
     ? await prisma.countryActivationCorridor.findUnique({ where: { countryCode: country } })
     : null;

@@ -1,4 +1,3 @@
-import { resolveCountry } from "@/lib/countries";
 import { randomBytes } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
@@ -331,14 +330,9 @@ export async function reviewDocumentKyc(input: {
     creatorSlug: submission.creatorSlug,
     decision: input.decision,
   });
-  // A submission saved before the profile had a recognised country takes it from the profile now.
-  const profile = submission.countryCode
-    ? null
-    : await prisma.creator.findUnique({ where: { slug: submission.creatorSlug }, select: { locationCountry: true } });
-  const countryCode = submission.countryCode || resolveCountry(profile?.locationCountry)?.code || "";
   await prisma.creatorKycSubmission.update({
     where: { id: submission.id },
-    data: { status: input.decision, creatorId: creator?.id ?? submission.creatorId, countryCode },
+    data: { status: input.decision, creatorId: creator?.id ?? submission.creatorId },
   });
 }
 
@@ -408,13 +402,8 @@ export async function adminSetCreatorKyc(input: {
 }) {
   const slug = input.creatorSlug.trim();
   if (!slug) throw new Error("Choose a creator.");
-  // The KYC country is the influencer's own profile country, not something an admin types.
-  // The KYC method for that country is configured on the country route.
-  const profile = await prisma.creator.findUnique({ where: { slug }, select: { locationCountry: true } });
-  const verifiedCountry = resolveCountry(profile?.locationCountry)?.code ?? "";
-  if (input.decision === "verified" && !verifiedCountry) {
-    throw new Error("This influencer has no country on their profile. Set it on the profile first; the KYC country follows it.");
-  }
+  // KYC records only whether the influencer completed KYC. Their country is the profile country,
+  // and the KYC method is the one configured for that country; KYC never sets or approves a country.
   const creator = await applyIdentityDecision({
     creatorId: null,
     creatorSlug: slug,
@@ -427,12 +416,11 @@ export async function adminSetCreatorKyc(input: {
       creatorId: creator.id,
       status: input.decision,
       kycModel: "government_id",
-      ...(verifiedCountry ? { countryCode: verifiedCountry } : {}),
     },
     create: {
       creatorSlug: slug,
       creatorId: creator.id,
-      countryCode: verifiedCountry,
+      countryCode: "",
       kycModel: "government_id",
       gatewaySessionId: "",
       gatewaySessionUrl: "",

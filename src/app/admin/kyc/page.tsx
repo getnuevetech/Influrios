@@ -42,6 +42,14 @@ export default async function AdminKycPage({ searchParams }: Props) {
       .catch(() => []),
     listPendingCountryReviews().catch(() => []),
   ]);
+  // KYC is a log of who completed it. Which KYC type applies is configured per country on Country routes.
+  const nameOf = (slug: string) => creators.find((row) => row.slug === slug)?.displayName || slug;
+  const kycLog = (submission: { status: string; updatedAt: Date }) =>
+    submission.status === "verified"
+      ? `Completed ${submission.updatedAt.toISOString().slice(0, 10)}`
+      : submission.status === "rejected"
+        ? `Rejected ${submission.updatedAt.toISOString().slice(0, 10)}`
+        : `In progress · last update ${submission.updatedAt.toISOString().slice(0, 10)}`;
   const gatewayId = settings?.gatewayProviderId ?? "";
   const gateway = providers.find((provider) => provider.id === gatewayId);
 
@@ -193,8 +201,8 @@ export default async function AdminKycPage({ searchParams }: Props) {
               </select>
             </label>
             <p className="basis-full text-xs text-muted">
-              The KYC country comes from the influencer&apos;s profile country, and the KYC method from what is configured
-              for that country on Country routes. Set the country on the influencer&apos;s profile, not here.
+              KYC records only that the influencer completed it. Which KYC type applies is set per country on Country
+              routes, and follows the influencer&apos;s profile country. Once completed, KYC is not repeated.
             </p>
             <button type="submit" className="btn-primary !px-4 !py-2 text-xs">
               Update account KYC
@@ -219,13 +227,8 @@ export default async function AdminKycPage({ searchParams }: Props) {
               return (
                 <li key={submission.id}>
                   <AdminCollapse
-                    title={`${submission.creatorSlug} · ${submission.status}`}
-                    subtitle={`${
-                      submission.countryCode ||
-                      (submission.status === "verified" ? "No country: agreements cannot pay this influencer until one is set" : "no country")
-                    } · ${
-                      submission.kycModel === "government_id" ? "Document upload" : "Gateway"
-                    }`}
+                    title={nameOf(submission.creatorSlug)}
+                    subtitle={kycLog(submission)}
                   >
                     {Object.keys(details).length > 0 ? (
                       <ul className="space-y-1 text-xs text-indigo">

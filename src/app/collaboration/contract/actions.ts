@@ -1,5 +1,6 @@
 "use server";
 
+import { countryFromLocationString } from "@/lib/countries";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireBusinessSession } from "@/lib/account-audience";
@@ -221,7 +222,7 @@ export async function actionSubmitContractWizard(formData: FormData) {
 
   const [dbCreator, businessProfile] = await Promise.all([
     prisma.creator.findUnique({ where: { slug: creatorSlug } }).catch(() => null),
-    prisma.businessProfile.findUnique({ where: { userId: account.id }, select: { verifiedCountryCode: true } }).catch(() => null),
+    prisma.businessProfile.findUnique({ where: { userId: account.id }, select: { verifiedCountryCode: true, geography: true } }).catch(() => null),
   ]);
   const identityVerified = dbCreator
     ? await resolveCreatorIdentityVerified({
@@ -428,18 +429,36 @@ export async function actionSubmitContractWizard(formData: FormData) {
     qs.set("step", "preview");
     redirectError("That jurisdiction has no currency.", qs);
   }
-  const verifiedBusinessCountry = verifiedDomesticCountry(businessProfile?.verifiedCountryCode);
+  // The business's country is its Company profile country (the same for agency accounts). Admin
+  // verification only marks the business as verified; it does not set a country.
+  const businessCountry = countryFromLocationString(businessProfile?.geography)?.code ?? null;
+  if (!businessCountry) {
+    qs.set("step", "payment_readiness");
+    redirectError("Set your business country on Company profile before sending an agreement. Nothing was sent.", qs);
+  }
+  if (!businessProfile?.verifiedCountryCode) {
+    qs.set("step", "payment_readiness");
+    redirectError("Your business is not verified yet. Influrios verifies the business before agreements can be sent. Nothing was sent.", qs);
+  }
+  const verifiedBusinessCountry = verifiedDomesticCountry(businessCountry);
   const kyc = dbCreator
     ? await prisma.creatorKycSubmission
-        .findUnique({ where: { creatorSlug: dbCreator.slug }, select: { countryCode: true, status: true } })
+        .findUnique({ where: { creatorSlug: dbCreator.slug }, select: { status: true } })
         .catch(() => null)
     : null;
-  // KYC follows the influencer's profile country. Verified KYC saved without a country (manual admin
-  // decisions before the country lists were unified) uses the profile country instead of blocking.
-  const verifiedInfluencerCountry =
-    kyc?.status === "verified"
-      ? verifiedDomesticCountry(kyc.countryCode || countryCodeFromLocation(dbCreator?.locationCountry) || "")
-      : null;
+  // The influencer's country is their profile country — the one source of truth. KYC only says
+  // whether the influencer completed the KYC configured for that country; it never holds a country.
+  const influencerCountry = countryCodeFromLocation(dbCreator?.locationCountry);
+  if (!influencerCountry) {
+    qs.set("step", "payment_readiness");
+    redirectError("The influencer has not set their country on their profile yet. Nothing was sent.", qs);
+  }
+  const kycCompleted = kyc?.status === "verified";
+  if (!kycCompleted) {
+    qs.set("step", "payment_readiness");
+    redirectError("The influencer has not completed KYC for their country yet. Nothing was sent.", qs);
+  }
+  const verifiedInfluencerCountry = verifiedDomesticCountry(influencerCountry);
   const domestic = domesticCollaborationGate({
     businessCountry: verifiedBusinessCountry ?? "",
     influencerCountry: verifiedInfluencerCountry ?? "",
