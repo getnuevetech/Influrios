@@ -1,4 +1,3 @@
-import { defaultMilestonePlan } from "@/lib/payment-engine";
 import Image from "next/image";
 import { ContractInfluencerField } from "@/components/contract-influencer-field";
 import { ContractMilestones } from "@/components/contract-milestones";
@@ -10,7 +9,6 @@ import { QuoteDiscountBox } from "@/components/quote-discount-box";
 import { collaborationCheckout } from "@/lib/country-tax";
 import { loadCountryRules } from "@/lib/tax-settings";
 import { requireBusinessSession } from "@/lib/account-audience";
-import { businessEntitlementsForPlan } from "@/lib/entitlements-db";
 import { getWorkspace, type CampaignBrief } from "@/lib/business";
 import { contractTermsFromRequest, preferContractField } from "@/lib/campaign-contract";
 import { collabOsV1Enabled } from "@/lib/collab-os";
@@ -24,7 +22,10 @@ import {
   CONTRACT_WIZARD_STEPS,
   contractWizardFields,
   countryCodeFromLocation,
-  customMilestonesGate,
+  agreementMilestonesGate,
+  DEFAULT_AGREEMENT_MILESTONES,
+  decodeMilestonesParam,
+  MAX_AGREEMENT_MILESTONES,
   evaluatePreContractGates,
   isContractWizardStep,
   marketplaceProviderGateMessage,
@@ -88,7 +89,7 @@ type Props = {
     currency?: string;
     serviceLevel?: string;
     mode?: string;
-    influencerAccepted?: string;
+    milestones?: string;
     accepted?: string;
     feeDisclosure?: string;
     contractDocument?: string;
@@ -139,7 +140,6 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   const stepIndex = CONTRACT_WIZARD_STEPS.indexOf(step);
 
   const ws = await getWorkspace(account.id);
-  const entitlements = await businessEntitlementsForPlan(ws.plan);
   await ensureMarketplaceDefaults();
   const [config, creators, routes, corridors] = await Promise.all([
     marketplaceConfig(),
@@ -240,23 +240,12 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   const fundingSwitches = await getLaunchGate().catch(() => null);
   const allInAllowed = fundingSwitches?.allInBudgetEntryEnabled === true;
   const amountMode = allInAllowed && params.amountMode === "all_in" ? "all_in" : "gross";
-  const usingCustom = params.mode === "custom" && entitlements.customMilestones;
-  const influencerAccepted = params.influencerAccepted === "1";
   const partyAccepted = params.accepted === "1";
   const feeDisclosureAccepted = params.feeDisclosure === "1";
 
-  // One milestone for the whole amount unless staged funding is on (see defaultMilestonePlan).
-  const templates: MilestoneDraft[] = defaultMilestonePlan(
-    (config.templates ?? []).filter((row) => row.active),
-    fundingSwitches?.stagedFundingEnabled === true,
-  );
-  const customBlank: MilestoneDraft[] = [
-    { title: "", shareBps: 0 },
-    { title: "", shareBps: 0 },
-    { title: "", shareBps: 0 },
-    { title: "", shareBps: 0 },
-  ];
-  const drafts = usingCustom ? customBlank : templates;
+  // The business sets the milestones; it starts with one for the whole amount. Values entered
+  // before a redirect come back in ?milestones=.
+  const drafts: MilestoneDraft[] = decodeMilestonesParam(params.milestones) ?? DEFAULT_AGREEMENT_MILESTONES;
 
   const creatorCountry =
     countryCodeFromLocation(creator?.locationCountry) ??
@@ -377,12 +366,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
   }
 
   const enteredMilestones = drafts.filter((row) => row.title.trim().length > 0 || row.shareBps > 0);
-  const milestoneGate = customMilestonesGate({
-    entitled: entitlements.customMilestones,
-    usingCustom,
-    milestones: enteredMilestones,
-    influencerAccepted,
-  });
+  const milestoneGate = agreementMilestonesGate(enteredMilestones);
 
   const feeBoundary = resolvePaidAgreementFee({
     statedServiceLevel: effectiveServiceLevel || serviceLevel,
@@ -454,7 +438,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
           creatorCountry: creatorCountry ?? jurisdictionCode,
           payoutCurrency: jurisdiction?.currency,
           milestones: enteredMilestones,
-          milestoneSource: usingCustom ? "custom" : "template",
+          milestoneSource: "custom",
         })
       : null;
 
@@ -478,7 +462,7 @@ export default async function ContractWizardPage({ searchParams }: Props) {
           <h1 className="mt-1 font-display text-3xl font-bold text-indigo">Form the collaboration</h1>
           <p className="mt-2 text-sm text-muted">
             Parties → scope → commercial → milestones → payment readiness → preview → accept → funding.
-            Custom milestones need Business Pro/Agency and influencer accept.
+            You set the milestones; the influencer agrees to them by signing.
           </p>
           <Link href="/collaboration/business" className="mt-2 inline-flex text-xs font-bold text-violet hover:underline">
             ← Business Hub
@@ -753,23 +737,9 @@ export default async function ContractWizardPage({ searchParams }: Props) {
 
           <section id="milestones">
             <h2 className="font-display text-xl font-bold text-indigo">4. Milestones</h2>
-            <ContractMilestones
-              templates={
-                fundingSwitches?.stagedFundingEnabled === true
-                  ? templates
-                  : [{ title: "Delivery", shareBps: 10_000 }]
-              }
-              customEnabled={entitlements.customMilestones && fundingSwitches?.stagedFundingEnabled === true}
-              initialCustom={usingCustom && fundingSwitches?.stagedFundingEnabled === true}
-              initialAccepted={influencerAccepted}
-            />
-            {!milestoneGate.ok ? (
+            <ContractMilestones initial={drafts} max={MAX_AGREEMENT_MILESTONES} />
+            {!milestoneGate.ok && params.milestones ? (
               <p className="mt-3 text-sm font-semibold text-amber-800">{milestoneGate.error}</p>
-            ) : null}
-            {fundingSwitches?.stagedFundingEnabled !== true && enteredMilestones.length > 1 ? (
-              <p className="mt-3 text-sm font-semibold text-amber-800">
-                Staged funding is off. This agreement uses one milestone.
-              </p>
             ) : null}
             {creatorCountry && jurisdictionCode && creatorCountry !== jurisdictionCode ? (
               <p className="mt-3 text-sm font-semibold text-amber-800">

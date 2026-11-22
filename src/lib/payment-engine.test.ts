@@ -16,7 +16,6 @@ import {
   recordedVerifiedCountry,
   verifiedDomesticCountry,
   earnPlatformFees,
-  defaultMilestonePlan,
   launchMilestoneGate,
   teamFundingGate,
   ordinaryDealShareSnapshot,
@@ -1020,21 +1019,3 @@ describe("payment engine acceptance", () => {
   });
 });
 
-describe("default milestone plan follows the staged-funding switch", () => {
-  const seeded = [
-    { title: "Kickoff", shareBps: 3400 },
-    { title: "Draft delivery", shareBps: 3300 },
-    { title: "Published work", shareBps: 3300 },
-  ];
-  it("is one milestone for the whole amount while staged funding is off, so it passes the gate", () => {
-    const plan = defaultMilestonePlan(seeded, false);
-    assert.deepEqual(plan, [{ title: "Delivery", shareBps: 10000 }]);
-    assert.equal(launchMilestoneGate(plan.length, { stagedAllowed: false }).ok, true);
-    assert.equal(launchMilestoneGate(seeded.length, { stagedAllowed: false }).ok, false);
-  });
-  it("uses the templates when staged funding is on", () => {
-    assert.deepEqual(defaultMilestonePlan(seeded, true), seeded);
-    assert.deepEqual(defaultMilestonePlan([], true), [{ title: "Delivery", shareBps: 10000 }]);
-    assert.deepEqual(defaultMilestonePlan([{ title: "Final video", shareBps: 6000 }], false), [{ title: "Final video", shareBps: 10000 }]);
-  });
-});

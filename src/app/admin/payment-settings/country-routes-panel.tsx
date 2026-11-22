@@ -139,7 +139,7 @@ export async function CountryRoutesPanel({
           <form action={actionSaveDeferredFunding} className="mt-3 grid gap-2 text-sm">
             <label className="flex gap-2"><input type="checkbox" name="crossBorderFundingEnabled" defaultChecked={launchGate?.crossBorderFundingEnabled} /> Cross-border funding</label>
             <label className="flex gap-2"><input type="checkbox" name="teamFundingEnabled" defaultChecked={launchGate?.teamFundingEnabled} /> Team funding</label>
-            <label className="flex gap-2"><input type="checkbox" name="stagedFundingEnabled" defaultChecked={launchGate?.stagedFundingEnabled} /> Staged funding</label>
+            <label className="flex gap-2"><input type="checkbox" name="stagedFundingEnabled" defaultChecked={launchGate?.stagedFundingEnabled} /> Instalment funding (business pays per stage instead of the full budget up front). Does not limit milestones.</label>
             <label className="flex gap-2"><input type="checkbox" name="automaticMilestoneApprovalEnabled" defaultChecked={launchGate?.automaticMilestoneApprovalEnabled} /> Automatic milestone approval</label>
             <label className="flex gap-2"><input type="checkbox" name="automaticProviderSwitchingEnabled" defaultChecked={launchGate?.automaticProviderSwitchingEnabled} /> Automatic provider switching</label>
             <label className="flex gap-2"><input type="checkbox" name="allInBudgetEntryEnabled" defaultChecked={launchGate?.allInBudgetEntryEnabled} /> All-in budget entry</label>

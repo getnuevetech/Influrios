@@ -354,20 +354,6 @@ export function domesticCollaborationGate(input: {
   return { ok: true };
 }
 
-/**
- * The milestone plan an agreement starts with. The seeded templates (Kickoff / Draft delivery /
- * Published work) are a staged plan; while staged funding is off that plan could never pass
- * launchMilestoneGate, so the default becomes one milestone for the whole amount.
- */
-export function defaultMilestonePlan<T extends { title: string; shareBps: number }>(
-  templates: T[],
-  stagedAllowed: boolean,
-): { title: string; shareBps: number }[] {
-  if (stagedAllowed && templates.length > 0) return templates.map((row) => ({ title: row.title, shareBps: row.shareBps }));
-  if (templates.length === 1) return [{ title: templates[0].title, shareBps: 10000 }];
-  return [{ title: "Delivery", shareBps: 10000 }];
-}
-
 export function launchMilestoneGate(
   count: number,
   options?: { stagedAllowed?: boolean; maxMilestones?: number },

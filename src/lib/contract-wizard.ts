@@ -159,29 +159,33 @@ export function validateMilestoneShares(
 }
 
 /**
- * Custom schedules need plan entitlement, 100% validation, and influencer accept.
- * Standard templates skip the accept flag.
+ * The business sets the agreement's milestones: one or more, named, shares adding up to 100%
+ * (master milestone model: the full budget is funded up front and released milestone by
+ * milestone, each release carrying its own platform fee). No plan entitlement and no separate
+ * influencer pre-acceptance: the influencer approves the milestones by signing the agreement.
  */
-export function customMilestonesGate(input: {
-  entitled: boolean;
-  usingCustom: boolean;
-  milestones: MilestoneDraft[];
-  influencerAccepted: boolean;
-}): { ok: true } | { ok: false; error: string } {
-  if (!input.usingCustom) {
-    const check = validateMilestoneShares(input.milestones);
-    return check;
-  }
-  if (!input.entitled) {
-    return { ok: false, error: "Custom milestones require Business Pro or Agency." };
-  }
-  const check = validateMilestoneShares(input.milestones);
-  if (!check.ok) return check;
-  if (!input.influencerAccepted) {
-    return { ok: false, error: "The influencer must accept the custom milestone schedule before funding." };
-  }
-  return { ok: true };
+export function agreementMilestonesGate(milestones: MilestoneDraft[]): { ok: true } | { ok: false; error: string } {
+  return validateMilestoneShares(milestones);
 }
+
+/** Milestones carried in the wizard URL after a redirect, as "title~bps|title~bps". */
+export function encodeMilestonesParam(milestones: MilestoneDraft[]): string {
+  return milestones.map((row) => `${row.title.replace(/[|~]/g, " ").trim()}~${row.shareBps}`).join("|");
+}
+
+export function decodeMilestonesParam(value: string | null | undefined): MilestoneDraft[] | null {
+  const raw = (value ?? "").trim();
+  if (!raw) return null;
+  const rows = raw.split("|").map((part) => {
+    const [title, bps] = part.split("~");
+    return { title: (title ?? "").trim(), shareBps: Number(bps) };
+  });
+  if (!rows.length || rows.length > MAX_CUSTOM_MILESTONES || rows.some((row) => !Number.isInteger(row.shareBps))) return null;
+  return rows;
+}
+
+export const DEFAULT_AGREEMENT_MILESTONES: MilestoneDraft[] = [{ title: "Delivery", shareBps: 10_000 }];
+export { MAX_CUSTOM_MILESTONES as MAX_AGREEMENT_MILESTONES };
 
 /** Pre-contract gates: identity, payout country, payment route, protected payments provider. */
 export function evaluatePreContractGates(input: PreContractGateInput): {
@@ -253,7 +257,7 @@ export function marketplaceProviderGateMessage(provider: {
 
 export function canFundContract(input: {
   gates: ReturnType<typeof evaluatePreContractGates>;
-  milestones: ReturnType<typeof customMilestonesGate>;
+  milestones: ReturnType<typeof agreementMilestonesGate>;
   accepted: boolean;
 }): { ok: true } | { ok: false; error: string } {
   if (!input.gates.ok) {
