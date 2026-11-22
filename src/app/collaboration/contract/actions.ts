@@ -434,7 +434,12 @@ export async function actionSubmitContractWizard(formData: FormData) {
         .findUnique({ where: { creatorSlug: dbCreator.slug }, select: { countryCode: true, status: true } })
         .catch(() => null)
     : null;
-  const verifiedInfluencerCountry = kyc?.status === "verified" ? verifiedDomesticCountry(kyc.countryCode) : null;
+  // KYC follows the influencer's profile country. Verified KYC saved without a country (manual admin
+  // decisions before the country lists were unified) uses the profile country instead of blocking.
+  const verifiedInfluencerCountry =
+    kyc?.status === "verified"
+      ? verifiedDomesticCountry(kyc.countryCode || countryCodeFromLocation(dbCreator?.locationCountry) || "")
+      : null;
   const domestic = domesticCollaborationGate({
     businessCountry: verifiedBusinessCountry ?? "",
     influencerCountry: verifiedInfluencerCountry ?? "",

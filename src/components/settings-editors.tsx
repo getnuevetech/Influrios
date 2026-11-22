@@ -1,5 +1,7 @@
 "use client";
 
+import { CountrySelect } from "@/components/country-select";
+
 import { useState, type ReactNode } from "react";
 
 type Editor = "details" | "email" | "country";
@@ -131,7 +133,7 @@ export function SettingsEditors({
                 </p>
                 <label className="block text-sm font-semibold text-indigo">
                   Country
-                  <input name="country" defaultValue={country} required className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
+                  <CountrySelect name="country" defaultValue={country} required className="mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal" />
                 </label>
                 <div className="flex justify-end gap-2 pt-2">
                   <button type="button" onClick={() => setOpen(null)} className="btn-secondary !py-2 text-sm">

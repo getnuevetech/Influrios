@@ -14,6 +14,7 @@ import {
 import { AccountPolicyForm } from "@/app/admin/accounts/account-section";
 import { ContactAddressFields } from "@/components/contact-address-fields";
 import { PlaceFields } from "@/components/place-fields";
+import { CountrySelect } from "@/components/country-select";
 import type {
   AccountDetailExtras,
   AccountKpis,
@@ -956,15 +957,9 @@ function AccountDetailPanel({
                       </label>
                       <label className="block text-[11px] font-bold uppercase tracking-wide text-muted">
                         Verified funding country
-                        <input
-                          name="verifiedCountryCode"
-                          defaultValue={row.verifiedCountryCode || ""}
-                          maxLength={2}
-                          placeholder="US"
-                          className="mt-1 w-full rounded-xl border border-border px-3 py-2 text-sm font-normal uppercase text-indigo"
-                        />
+                        <CountrySelect name="verifiedCountryCode" valueKind="code" defaultValue={row.verifiedCountryCode || ""} />
                       </label>
-                      <p className="text-[11px] text-muted">The mailing country is not used for funding. Enter the two-letter country only after it is verified.</p>
+                      <p className="text-[11px] text-muted">The mailing country is not used for funding. Choose the funding country only after it is verified.</p>
                     </>
                   ) : null}
                 </>
@@ -1060,15 +1055,9 @@ function AccountDetailPanel({
                     <option value="rejected">Mark rejected</option>
                   </select>
                 </label>
-                <label className="text-[11px] font-bold uppercase text-muted">
-                  Verified country
-                  <input
-                    name="countryCode"
-                    maxLength={2}
-                    placeholder="US"
-                    className="mt-1 w-20 rounded-xl border border-border px-3 py-2 text-sm uppercase text-indigo"
-                  />
-                </label>
+                <p className="basis-full text-[11px] text-muted">
+                  The KYC country is the influencer&apos;s profile country: {row.country || "not set on the profile"}.
+                </p>
                 <button type="submit" className="rounded-xl border border-[#E4EBFF] px-3 py-2 text-[12px] font-semibold">
                   Update identity
                 </button>

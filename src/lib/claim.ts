@@ -1099,6 +1099,14 @@ export async function updateDraftProfile(
   >,
 ): Promise<ClaimDraft & { countryReview: string | null }> {
   await assertCanMutateDraft(draftId);
+  // Countries are stored as the catalog name from the shared list; typed text is refused, so the
+  // KYC method, payout route and tax all read the same country.
+  if (typeof patch.locationCountry === "string" && patch.locationCountry.trim()) {
+    const { resolveCountry } = await import("@/lib/countries");
+    const country = resolveCountry(patch.locationCountry);
+    if (!country) throw new Error("Choose your country from the list.");
+    patch = { ...patch, locationCountry: country.name };
+  }
   if (draftId.startsWith("creator_")) {
     const creator = await prisma.creator.findUnique({
       where: { id: draftId.slice("creator_".length) },

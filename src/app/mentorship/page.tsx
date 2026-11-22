@@ -1,3 +1,4 @@
+import { CountrySelect } from "@/components/country-select";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -124,10 +125,10 @@ export default async function MentorshipPage({ searchParams }: Props) {
               placeholder="Niche"
               className="rounded-xl border border-border px-3 py-2 text-sm"
             />
-            <input
+            <CountrySelect
               name="country"
               defaultValue={params.country}
-              placeholder="Country"
+              placeholder="Any country"
               className="rounded-xl border border-border px-3 py-2 text-sm"
             />
             <button type="submit" className="btn-primary !px-4 !py-2 text-xs">

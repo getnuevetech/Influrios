@@ -1,5 +1,6 @@
 "use server";
 
+import { resolveCountry } from "@/lib/countries";
 import { clientIpFrom } from "@/lib/client-ip";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -40,6 +41,8 @@ export async function actionRegisterBusiness(formData: FormData) {
   if (!businessName) back("Business name is required.");
   if (!email) back("Business email is required.");
   if (!country) back("Country is required.");
+  const knownCountry = resolveCountry(country);
+  if (!knownCountry) back("Choose the country from the list.");
   if (password !== confirmPassword) back("Passwords do not match.");
   if (!contactName) back("Contact person's full name is required.");
   if (!contactPhone) back("Contact person's mobile is required.");
@@ -69,7 +72,7 @@ export async function actionRegisterBusiness(formData: FormData) {
       name: businessName,
       industry: businessType,
     });
-    const geography = [city, state, country].filter(Boolean).join(", ");
+    const geography = [city, state, knownCountry?.name ?? country].filter(Boolean).join(", ");
     await prisma.businessProfile.update({
       where: { userId },
       data: {

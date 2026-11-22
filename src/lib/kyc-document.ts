@@ -1,3 +1,4 @@
+import { resolveCountry } from "@/lib/countries";
 import { randomBytes } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
@@ -330,9 +331,14 @@ export async function reviewDocumentKyc(input: {
     creatorSlug: submission.creatorSlug,
     decision: input.decision,
   });
+  // A submission saved before the profile had a recognised country takes it from the profile now.
+  const profile = submission.countryCode
+    ? null
+    : await prisma.creator.findUnique({ where: { slug: submission.creatorSlug }, select: { locationCountry: true } });
+  const countryCode = submission.countryCode || resolveCountry(profile?.locationCountry)?.code || "";
   await prisma.creatorKycSubmission.update({
     where: { id: submission.id },
-    data: { status: input.decision, creatorId: creator?.id ?? submission.creatorId },
+    data: { status: input.decision, creatorId: creator?.id ?? submission.creatorId, countryCode },
   });
 }
 
@@ -399,17 +405,15 @@ export async function resolveCreatorIdentityVerified(input: {
 export async function adminSetCreatorKyc(input: {
   creatorSlug: string;
   decision: "verified" | "rejected";
-  countryCode?: string;
 }) {
   const slug = input.creatorSlug.trim();
   if (!slug) throw new Error("Choose a creator.");
-  const country = (input.countryCode ?? "").trim().toUpperCase();
-  if (country && !/^[A-Z]{2}$/.test(country)) throw new Error("Enter the verified country as a two-letter code, for example US.");
-  const existing = await prisma.creatorKycSubmission.findUnique({ where: { creatorSlug: slug }, select: { countryCode: true } });
-  const verifiedCountry = country || (existing?.countryCode ?? "").trim().toUpperCase();
-  // A verified influencer without a country can never be paid under an agreement (payout country gate).
-  if (input.decision === "verified" && !/^[A-Z]{2}$/.test(verifiedCountry)) {
-    throw new Error("Enter the verified country (two letters) before marking KYC verified.");
+  // The KYC country is the influencer's own profile country, not something an admin types.
+  // The KYC method for that country is configured on the country route.
+  const profile = await prisma.creator.findUnique({ where: { slug }, select: { locationCountry: true } });
+  const verifiedCountry = resolveCountry(profile?.locationCountry)?.code ?? "";
+  if (input.decision === "verified" && !verifiedCountry) {
+    throw new Error("This influencer has no country on their profile. Set it on the profile first; the KYC country follows it.");
   }
   const creator = await applyIdentityDecision({
     creatorId: null,

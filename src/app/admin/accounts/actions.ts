@@ -1,5 +1,6 @@
 "use server";
 
+import { resolveCountry } from "@/lib/countries";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireAdminSession } from "@/lib/admin-auth";
@@ -121,7 +122,9 @@ export async function actionSaveMember(formData: FormData) {
   const postalCode = clean(formData.get("postalCode"), 20) || null;
   const city = clean(formData.get("city"), 80);
   const state = clean(formData.get("state"), 80);
-  const country = clean(formData.get("country"), 80);
+  const countryRaw = clean(formData.get("country"), 80);
+  const country = countryRaw ? resolveCountry(countryRaw)?.name ?? "" : "";
+  if (countryRaw && !country) redirect(withQuery(base, { error: "country", view: id }));
   const geography = [city, state, country].filter(Boolean).join(", ") || null;
   if (role === "CREATOR") {
     await prisma.creator.updateMany({
@@ -260,7 +263,7 @@ export async function actionSetInfluencerIdentityKyc(formData: FormData) {
   }
   try {
     const { adminSetCreatorKyc } = await import("@/lib/kyc-document");
-    await adminSetCreatorKyc({ creatorSlug, decision, countryCode: clean(formData.get("countryCode"), 4) });
+    await adminSetCreatorKyc({ creatorSlug, decision });
   } catch (error) {
     // Say why (for example a missing verified country) instead of a generic error.
     const message = error instanceof Error ? error.message : "member";
