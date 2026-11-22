@@ -35,6 +35,8 @@ type Props = {
     saved?: string;
     applied?: string;
     error?: string;
+    invitation?: string;
+    responded?: string;
   }>;
 };
 
@@ -143,6 +145,14 @@ export default async function CollaborationHubPage({ searchParams }: Props) {
         tab={params.tab}
         query={params.q?.trim() ?? ""}
         page={Math.max(1, Number(params.page) || 1)}
+        openInvitationId={params.invitation ?? null}
+        notice={
+          params.error
+            ? { kind: "error", text: params.error }
+            : params.responded
+              ? { kind: "success", text: params.responded === "decline" ? "You declined this invitation." : params.responded === "question" ? "Your question was sent." : "We let the business know you're interested." }
+              : null
+        }
         savedMatches={hub.saved.map((row) => ({
           id: row.saveId,
           title: `${bySlug.get(row.partyASlug)?.displayName || row.partyASlug} × ${bySlug.get(row.partyBSlug)?.displayName || row.partyBSlug}`,

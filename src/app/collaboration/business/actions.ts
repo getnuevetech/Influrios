@@ -28,7 +28,7 @@ import { getLaunchGate } from "@/lib/launch-gate";
 import { prisma } from "@/lib/db";
 import { contractHrefFromCampaign } from "@/lib/campaign-contract";
 import {
-  businessApplicationTransitions,
+  businessTransitionsFor,
   businessOwnsApplication,
   getMarketplaceApplication,
   inviteCreatorsIndependently,
@@ -578,7 +578,7 @@ export async function actionTransitionMarketplaceApplication(formData: FormData)
       `${HUB}?error=${encodeURIComponent("You can only manage applications on your published requests.")}#applicants`,
     );
   }
-  const allowed = businessApplicationTransitions(existing.status);
+  const allowed = businessTransitionsFor(existing);
   if (!allowed.includes(toStatus)) {
     redirect(
       `/collaboration/applications/${applicationId}?error=${encodeURIComponent(

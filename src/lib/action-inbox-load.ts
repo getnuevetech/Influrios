@@ -12,7 +12,8 @@ import { contractNeedsSignature } from "@/lib/creator-home";
 import { listContractsForUser } from "@/lib/contract-document";
 import { prisma } from "@/lib/db";
 import { listFundingsForBusiness, listFundingsForCreator } from "@/lib/marketplace-ledger";
-import { applicationIsInvitation, applicationIsOpenPipeline } from "@/lib/marketplace-listings";
+import { applicationIsInvitation } from "@/lib/marketplace-listings";
+import { invitationWaitingForInvitee } from "@/lib/invitation-turn";
 import { paymentStages } from "@/lib/payment-stages";
 
 export type InboxNotice = {
@@ -161,6 +162,10 @@ export async function loadActionInbox(account: AccountSession): Promise<InboxLoa
               fromSlug: true,
               toSlug: true,
               status: true,
+              turn: true,
+              interestRecorded: true,
+              openQuestion: true,
+              responseDeadline: true,
               businessRequest: { select: { brand: true } },
             },
           })
@@ -173,7 +178,7 @@ export async function loadActionInbox(account: AccountSession): Promise<InboxLoa
         audience: "influencer",
         contracts: signatureTasks,
         invitations: applications
-          .filter((row) => applicationIsInvitation(row) && applicationIsOpenPipeline(row.status))
+          .filter((row) => applicationIsInvitation(row) && invitationWaitingForInvitee(row))
           .map((row) => ({
             id: row.id,
             title: "Campaign invitation",
