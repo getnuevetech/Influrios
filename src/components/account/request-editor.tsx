@@ -86,6 +86,10 @@ export function RequestEditor(props: {
       setBlock("Add the proposed gross and a response deadline.");
       return;
     }
+    if (step === 2 && !/^\$?\d[\d,]*(\.\d{1,2})?\s?[kK]?(\s*[-–]\s*\$?\d[\d,]*(\.\d{1,2})?\s?[kK]?)?$/.test(budget.trim())) {
+      setBlock("Enter the budget as a number, for example 1,000.");
+      return;
+    }
     setBlock("");
     setStep((current) => Math.min(STEPS.length - 1, current + 1));
   }

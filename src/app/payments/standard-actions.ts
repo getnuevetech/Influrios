@@ -1,5 +1,6 @@
 "use server";
 
+import { payoutProfileReady } from "@/lib/influencer-payout-ready";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
@@ -74,9 +75,7 @@ export async function actionApproveAndRelease(formData: FormData) {
     where: { slug: funding.creatorSlug },
     select: { payoutProfile: { select: { stripeConnectAccountId: true, providerConnectedAccountId: true, primaryStatus: true } } },
   });
-  const payoutReady =
-    Boolean(creator?.payoutProfile?.stripeConnectAccountId || creator?.payoutProfile?.providerConnectedAccountId) &&
-    creator?.payoutProfile?.primaryStatus !== "UNVERIFIED";
+  const payoutReady = payoutProfileReady(creator?.payoutProfile);
   if (!payoutReady) {
     fail(funding.id, "Work was not approved. Payout setup still needs attention, so release stays blocked.");
   }

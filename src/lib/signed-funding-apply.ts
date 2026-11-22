@@ -184,6 +184,19 @@ export async function fundSignedAgreement(input: {
 
   const serviceLevel = signedAgreementFundingLevel(terms.serviceLevel);
   const primary = terms.creators[0];
+  // Do not hold the business's money for someone who cannot be paid. Approval would be blocked later anyway.
+  for (const party of terms.creators) {
+    const { influencerPayoutReady, notifyPayoutSetupNeeded } = await import("@/lib/influencer-payout-ready");
+    const payout = await influencerPayoutReady(party.slug);
+    if (!payout.ready) {
+      await notifyPayoutSetupNeeded({ creatorSlug: party.slug, businessName: terms.businessName, title: terms.title, documentId });
+      return {
+        ok: false as const,
+        error: `${payout.name} hasn't finished payout setup, so this collaboration can't be funded yet. They have been asked to finish it. Nothing was charged.`,
+        payoutSetupPending: party.slug,
+      };
+    }
+  }
   const result = await requestPrefund({
     jurisdictionCode: terms.jurisdictionCode,
     businessName: terms.businessName,

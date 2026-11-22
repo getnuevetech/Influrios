@@ -192,6 +192,20 @@ export default async function AdminKycPage({ searchParams }: Props) {
                 <option value="rejected">Mark rejected</option>
               </select>
             </label>
+            <label className="text-xs font-semibold text-muted">
+              Verified country
+              <input
+                name="countryCode"
+                maxLength={2}
+                placeholder="US"
+                className={`${selectClass} uppercase`}
+                aria-describedby="kyc-country-hint"
+              />
+            </label>
+            <p id="kyc-country-hint" className="basis-full text-xs text-muted">
+              Required to mark verified: the two-letter country on the influencer&apos;s ID. Agreements can only pay an
+              influencer whose verified country is recorded here.
+            </p>
             <button type="submit" className="btn-primary !px-4 !py-2 text-xs">
               Update account KYC
             </button>
@@ -216,7 +230,10 @@ export default async function AdminKycPage({ searchParams }: Props) {
                 <li key={submission.id}>
                   <AdminCollapse
                     title={`${submission.creatorSlug} · ${submission.status}`}
-                    subtitle={`${submission.countryCode || "no country"} · ${
+                    subtitle={`${
+                      submission.countryCode ||
+                      (submission.status === "verified" ? "No country: agreements cannot pay this influencer until one is set" : "no country")
+                    } · ${
                       submission.kycModel === "government_id" ? "Document upload" : "Gateway"
                     }`}
                   >
