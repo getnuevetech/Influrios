@@ -1056,7 +1056,7 @@ function AccountDetailPanel({
                   </select>
                 </label>
                 <p className="basis-full text-[11px] text-muted">
-                  The KYC country is the influencer&apos;s profile country: {row.country || "not set on the profile"}.
+                  Country (from the profile): {row.country || "not set"}. KYC only records completion; it does not set a country.
                 </p>
                 <button type="submit" className="rounded-xl border border-[#E4EBFF] px-3 py-2 text-[12px] font-semibold">
                   Update identity

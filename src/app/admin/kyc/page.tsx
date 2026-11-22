@@ -1,3 +1,5 @@
+import { kycTypeByCode } from "@/lib/kyc-types";
+import { resolveCountry } from "@/lib/countries";
 import Link from "next/link";
 import {
   actionAddKycRequirement,
@@ -26,7 +28,7 @@ export default async function AdminKycPage({ searchParams }: Props) {
   const session = await requireAdminPage("collab_finance");
   const canManage = hasPermission(session, "collab_finance.manage");
   const params = await searchParams;
-  const [settings, requirements, providers, submissions, creators, countryReviews] = await Promise.all([
+  const [settings, requirements, providers, submissions, creators, countryReviews, corridors] = await Promise.all([
     loadKycSettings().catch(() => null),
     listKycRequirements().catch(() => []),
     listProviders("payment").catch(() => []),
@@ -36,12 +38,21 @@ export default async function AdminKycPage({ searchParams }: Props) {
     prisma.creator
       .findMany({
         orderBy: { slug: "asc" },
-        select: { slug: true, displayName: true, identityVerified: true },
+        select: { slug: true, displayName: true, identityVerified: true, locationCountry: true },
         take: 500,
       })
       .catch(() => []),
     listPendingCountryReviews().catch(() => []),
+    prisma.countryActivationCorridor.findMany({ select: { countryCode: true, kycModel: true } }).catch(() => []),
   ]);
+  // The influencer's country is their profile country; the KYC type is the one configured for it.
+  const profileCountry = (slug: string) => resolveCountry(creators.find((row) => row.slug === slug)?.locationCountry);
+  const kycFor = (slug: string) => {
+    const country = profileCountry(slug);
+    if (!country) return "No country on the profile";
+    const type = kycTypeByCode(corridors.find((row) => row.countryCode === country.code)?.kycModel);
+    return `${country.name} · ${type?.label ?? "no KYC type configured for this country"}`;
+  };
   const gatewayId = settings?.gatewayProviderId ?? "";
   const gateway = providers.find((provider) => provider.id === gatewayId);
 
@@ -193,8 +204,8 @@ export default async function AdminKycPage({ searchParams }: Props) {
               </select>
             </label>
             <p className="basis-full text-xs text-muted">
-              The KYC country comes from the influencer&apos;s profile country, and the KYC method from what is configured
-              for that country on Country routes. Set the country on the influencer&apos;s profile, not here.
+              KYC records only whether the influencer completed it. Their country is the one on their profile, and the
+              KYC type is the one configured for that country on Country routes. Once completed, KYC is not repeated.
             </p>
             <button type="submit" className="btn-primary !px-4 !py-2 text-xs">
               Update account KYC
@@ -220,12 +231,7 @@ export default async function AdminKycPage({ searchParams }: Props) {
                 <li key={submission.id}>
                   <AdminCollapse
                     title={`${submission.creatorSlug} · ${submission.status}`}
-                    subtitle={`${
-                      submission.countryCode ||
-                      (submission.status === "verified" ? "No country: agreements cannot pay this influencer until one is set" : "no country")
-                    } · ${
-                      submission.kycModel === "government_id" ? "Document upload" : "Gateway"
-                    }`}
+                    subtitle={kycFor(submission.creatorSlug)}
                   >
                     {Object.keys(details).length > 0 ? (
                       <ul className="space-y-1 text-xs text-indigo">

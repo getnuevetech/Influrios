@@ -43,7 +43,10 @@ describe("one country list for the whole app", () => {
     assert.match(read("src/app/admin/accounts/actions.ts"), /resolveCountry\(countryRaw\)/);
   });
 
-  it("lets verified KYC without a stored country use the profile country for agreements", () => {
-    assert.match(read("src/app/collaboration/contract/actions.ts"), /kyc\.countryCode \|\| countryCodeFromLocation\(dbCreator\?\.locationCountry\)/);
+  it("uses the profile country for agreements and KYC only for completion", () => {
+    const actions = read("src/app/collaboration/contract/actions.ts");
+    assert.match(actions, /const influencerCountry = countryCodeFromLocation\(dbCreator\?\.locationCountry\)/);
+    assert.match(actions, /select: \{ status: true \}/);
+    assert.equal(/kyc\.countryCode/.test(actions), false);
   });
 });

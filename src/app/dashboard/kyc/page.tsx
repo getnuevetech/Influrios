@@ -124,7 +124,14 @@ export default async function DashboardKycPage({ searchParams }: Props) {
       {params.saved ? <p className="text-sm font-semibold text-emerald-700">Saved ({params.saved}).</p> : null}
       {params.error ? <p className="text-sm font-semibold text-amber-800">{params.error}</p> : null}
 
-      {!kyc ? (
+      {submission?.status === "verified" ? (
+        // KYC is done once. It is not asked for again, even if the KYC type configured for the
+        // influencer's country changes later.
+        <article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+          <h2 className="font-display text-lg font-bold text-emerald-900">KYC completed</h2>
+          <p className="mt-1 text-sm text-emerald-900">Your identity check is complete. You do not need to do it again.</p>
+        </article>
+      ) : !kyc ? (
         <p className="text-sm text-muted">This country does not have a KYC type yet.</p>
       ) : kyc.code === "gateway" ? (
         <article className="rounded-2xl border border-[#E4EBFF] bg-white p-4">

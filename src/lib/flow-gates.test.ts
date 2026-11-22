@@ -46,11 +46,12 @@ describe("agreement and money gates (recorded journey breaks)", () => {
     assert.match(page, /findIndex\(\(other\) => other\.method === choice\.method\) === index/);
   });
 
-  it("takes the KYC country from the influencer's profile, never from an admin field", () => {
+  it("never sets or approves a country through KYC; completed KYC is not asked for again", () => {
     const kyc = read("src/lib/kyc-document.ts");
-    assert.match(kyc, /This influencer has no country on their profile/);
+    assert.equal(/This influencer has no country on their profile/.test(kyc), false);
     assert.equal(/name="countryCode"/.test(read("src/app/admin/kyc/page.tsx")), false);
     assert.equal(/name="countryCode"/.test(read("src/components/admin-accounts-ui.tsx")), false);
+    assert.match(read("src/app/dashboard/kyc/page.tsx"), /You do not need to do it again/);
   });
 
   it("does not submit the account form when an admin presses Edit account", () => {

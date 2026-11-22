@@ -431,15 +431,22 @@ export async function actionSubmitContractWizard(formData: FormData) {
   const verifiedBusinessCountry = verifiedDomesticCountry(businessProfile?.verifiedCountryCode);
   const kyc = dbCreator
     ? await prisma.creatorKycSubmission
-        .findUnique({ where: { creatorSlug: dbCreator.slug }, select: { countryCode: true, status: true } })
+        .findUnique({ where: { creatorSlug: dbCreator.slug }, select: { status: true } })
         .catch(() => null)
     : null;
-  // KYC follows the influencer's profile country. Verified KYC saved without a country (manual admin
-  // decisions before the country lists were unified) uses the profile country instead of blocking.
-  const verifiedInfluencerCountry =
-    kyc?.status === "verified"
-      ? verifiedDomesticCountry(kyc.countryCode || countryCodeFromLocation(dbCreator?.locationCountry) || "")
-      : null;
+  // The influencer's country is their profile country — the one source of truth. KYC only says
+  // whether the influencer completed the KYC configured for that country; it never holds a country.
+  const influencerCountry = countryCodeFromLocation(dbCreator?.locationCountry);
+  if (!influencerCountry) {
+    qs.set("step", "payment_readiness");
+    redirectError("The influencer has not set their country on their profile yet. Nothing was sent.", qs);
+  }
+  const kycCompleted = kyc?.status === "verified";
+  if (!kycCompleted) {
+    qs.set("step", "payment_readiness");
+    redirectError("The influencer has not completed KYC for their country yet. Nothing was sent.", qs);
+  }
+  const verifiedInfluencerCountry = verifiedDomesticCountry(influencerCountry);
   const domestic = domesticCollaborationGate({
     businessCountry: verifiedBusinessCountry ?? "",
     influencerCountry: verifiedInfluencerCountry ?? "",
