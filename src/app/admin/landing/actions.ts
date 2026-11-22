@@ -27,7 +27,11 @@ function lines(value: FormDataEntryValue | null): string[] {
 }
 
 async function uploadedPageImage(formData: FormData): Promise<string> {
-  const uploaded = await saveUploadedImage(formData.get("file"));
+  // The editors hold more than one upload field named "file" in one form; use the one that has a file.
+  const chosen =
+    formData.getAll("file").find((value) => typeof value === "object" && value !== null && "size" in value && (value as File).size > 0) ??
+    formData.get("file");
+  const uploaded = await saveUploadedImage(chosen);
   if (!uploaded) throw new Error("Choose an image file.");
   return uploaded;
 }

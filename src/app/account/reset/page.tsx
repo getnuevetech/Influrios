@@ -22,7 +22,7 @@ export default async function ResetPasswordPage({ searchParams }: Props) {
       <p className="mt-2 text-sm text-muted">
         {screen === "choose-password"
           ? "Choose a new password. This link came from the reset email."
-          : "If that account has a password, the reset link is emailed when SMTP is configured. The link is not shown on this page."}
+          : "Enter your email and we'll send a reset link if an account exists."}
       </p>
       {expired ? (
         <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -52,7 +52,7 @@ export default async function ResetPasswordPage({ searchParams }: Props) {
           </button>
           {params.sent ? (
             <p className="text-sm text-muted">
-              If that email has a password and SMTP is configured, the reset link was sent.
+              If an account exists for that email, we&apos;ve sent a reset link. Check your inbox and spam folder.
             </p>
           ) : null}
         </form>

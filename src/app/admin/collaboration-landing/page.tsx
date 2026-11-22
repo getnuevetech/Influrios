@@ -149,6 +149,7 @@ export default async function AdminCollaborationLandingPage({ searchParams }: Pr
               These photos are the collaboration page collage. Upload them here. A page with no images leaves that area empty.
             </p>
             <AdminUploadedImages
+              nested
               images={landing.hero.images}
               uploadAction={actionUploadCollaborationHeroImage}
               removeAction={actionRemoveCollaborationHeroImage}

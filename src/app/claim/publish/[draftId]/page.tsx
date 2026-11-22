@@ -59,7 +59,7 @@ export default async function ClaimPublishPage({ params, searchParams }: Props) 
               Open live card →
             </Link>
             <Link href="/creator" className="btn-secondary flex w-full">
-              Creator dashboard
+              Influencer dashboard
             </Link>
           </>
         ) : (

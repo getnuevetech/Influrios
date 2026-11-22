@@ -105,6 +105,14 @@ export function isBrandDefaultBanner(path: string | null | undefined): boolean {
  * Remote http(s) URLs are rejected: Next image optimization only serves local app paths.
  * Prefer an explicit gender; otherwise leave unspecified → branded lifestyle still.
  */
+/**
+ * Social avatar proxies that no longer return an image. unavatar.io's Facebook lookup answers
+ * 400 through the image optimizer, which left broken images on profiles, Intelligence and admin.
+ */
+export function isDeadSocialAvatar(url: string | null | undefined): boolean {
+  return /^https:\/\/unavatar\.io\/facebook\//i.test((url ?? "").trim());
+}
+
 export function resolveDefaultAvatar(input: {
   gender?: ProfileGender | null;
   socialImage?: string | null;

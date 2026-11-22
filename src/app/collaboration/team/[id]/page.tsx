@@ -41,6 +41,11 @@ export default async function TeamProposalDetailPage({ params, searchParams }: P
     .findFirst({ where: { userId: account.id }, select: { slug: true } })
     .catch(() => null);
   const ws = await getWorkspace(account.id).catch(() => null);
+  const memberNames = new Map(
+    (await prisma.creator
+      .findMany({ where: { slug: { in: proposal.members.map((member) => member.creatorSlug) } }, select: { slug: true, displayName: true } })
+      .catch(() => [])).map((row) => [row.slug, row.displayName || row.slug]),
+  );
   const ownsAsBusiness = Boolean(ws && ws.businessId !== "public" && ws.businessId === proposal.workspaceId);
   const myMember = creator
     ? proposal.members.find((member) => member.creatorSlug === creator.slug)
@@ -139,7 +144,7 @@ export default async function TeamProposalDetailPage({ params, searchParams }: P
                 className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#E8EDF8] bg-[#F8F6FF] px-3 py-2 text-sm"
               >
                 <span className="font-semibold text-indigo">
-                  {member.creatorSlug}
+                  {memberNames.get(member.creatorSlug) || member.creatorSlug}
                   {creator && member.creatorSlug === creator.slug ? " (you)" : ""}
                   {member.role ? <span className="font-normal text-muted"> · {member.role}</span> : null}
                 </span>
@@ -205,7 +210,7 @@ export default async function TeamProposalDetailPage({ params, searchParams }: P
             <p className="text-sm text-muted">This invitation is closed. Send a new invitation to change who is included.</p>
           ) : ownsAsBusiness ? (
             <p className="text-sm text-muted">
-              Track member responses above. The contract opens only after every creator accepts.
+              Track member responses above. The contract opens only after every influencer accepts.
             </p>
           ) : (
             <p className="text-sm text-muted">No further action needed from you on this invitation.</p>

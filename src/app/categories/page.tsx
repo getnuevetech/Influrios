@@ -120,7 +120,7 @@ export default async function CategoriesPage() {
                       href={`/discover?specialty=${encodeURIComponent(parent.slug)}`}
                       className="text-[11px] font-semibold text-violet hover:underline"
                     >
-                      View creators →
+                      View influencers →
                     </Link>
                   </div>
                 )}

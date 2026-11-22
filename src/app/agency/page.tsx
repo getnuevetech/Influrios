@@ -132,7 +132,7 @@ export default async function AgencyPage({ searchParams }: Props) {
           </p>
           <h1 className="mt-2 font-display text-4xl font-bold">{store.name}</h1>
           <p className="mt-3 max-w-2xl text-white/75">
-            Multi-creator roster, client campaigns, and joint portfolio case studies — Agency plan
+            Multi-influencer roster, client campaigns, and joint portfolio case studies — Agency plan
             unlocks full workspace tools.
           </p>
           <p className="mt-4 inline-flex rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
@@ -218,7 +218,7 @@ export default async function AgencyPage({ searchParams }: Props) {
               <p className="mt-1 text-sm text-muted">
                 {seatsOn
                   ? "Named seats are on. Accept an invite for your signed-in email, or ask an admin to invite you."
-                  : `Current plan is ${ws.plan}. Agency adds roster, multi-creator casting, and joint portfolios.`}
+                  : `Current plan is ${ws.plan}. Agency adds roster, multi-influencer casting, and joint portfolios.`}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -328,7 +328,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                 />
               </label>
               <button type="submit" className="btn-primary sm:col-span-2 !py-2.5 text-sm">
-                Add creator →
+                Add influencer →
               </button>
             </form>
           ) : null}
@@ -487,7 +487,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                 Joint portfolios
               </h2>
               <p className="mt-1 text-sm text-muted">
-                Joint portfolios for complementary creator pairs on this agency workspace.
+                Joint portfolios for complementary influencer pairs on this agency workspace.
               </p>
             </div>
             <Link
