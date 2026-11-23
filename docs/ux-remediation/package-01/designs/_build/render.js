@@ -1,3 +1,5 @@
+/* Docs build helper (Node script, not app code): renders the HTML boards to PNG. */
+/* eslint-disable @typescript-eslint/no-require-imports */
 // node render.js <designsDir> <mediaDir> [board ...]  — renders full board + #desktop/#mobile frames at 2x
 const { chromium } = require('playwright');
 const path = require('path'); const fs = require('fs');
