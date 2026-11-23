@@ -49,7 +49,7 @@ export default async function DashboardKycPage({ searchParams }: Props) {
     documents: { requirementId: string }[];
   } | null;
   let creator = null as { id: string } | null;
-  let gateway = null as { name: string; enabled: boolean } | null;
+  let gateway = null as { name: string; enabled: boolean; code: string } | null;
   let loadError: string | null = null;
 
   try {
@@ -82,7 +82,7 @@ export default async function DashboardKycPage({ searchParams }: Props) {
       ? await prisma.integrationProvider
           .findFirst({
             where: { id: settings.gatewayProviderId, kind: "payment" },
-            select: { name: true, enabled: true },
+            select: { name: true, enabled: true, code: true },
           })
           .catch(() => null)
       : null;
@@ -136,7 +136,18 @@ export default async function DashboardKycPage({ searchParams }: Props) {
       ) : kyc.code === "gateway" ? (
         <article className="rounded-2xl border border-[#E4EBFF] bg-white p-4">
           <h2 className="font-display text-lg font-bold text-indigo">{kyc.label}</h2>
-          {gateway?.enabled ? (
+          {gateway?.enabled && gateway.code === "stripe" ? (
+            // Stripe checks identity during payout setup, so there is one check, not two.
+            <>
+              <p className="mt-2 text-sm text-muted">
+                Stripe checks your identity when you set up payouts. Finish Stripe payout setup and your KYC is marked
+                complete automatically. You only do this once.
+              </p>
+              <Link href="/creator/earnings#payouts" className="btn-primary mt-4 inline-flex !px-4 !py-2 text-sm">
+                Set up payouts with Stripe
+              </Link>
+            </>
+          ) : gateway?.enabled ? (
             <>
               <p className="mt-2 text-sm text-muted">
                 Your KYC is completed with {gateway.name}. Identity stays unverified until {gateway.name} reports KYC

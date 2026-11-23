@@ -728,6 +728,7 @@ export async function startCheckout(input: {
       if (!reserved.ok) return { ok: false, error: reserved.reason };
       const openedAttempt = await openStripeCheckout({
         secret: creds.secret,
+        collectionAccountId: await subscriptionCollectionAccount(),
         mode: creds.mode,
         priceId,
         interval,
@@ -771,6 +772,7 @@ export async function startCheckout(input: {
     }
     const opened = await openStripeCheckout({
       secret: creds.secret,
+      collectionAccountId: await subscriptionCollectionAccount(),
       mode: creds.mode,
       priceId,
       interval,
@@ -973,4 +975,13 @@ export async function markWebhookReceived() {
     create: { key: LAST_WEBHOOK_KEY, value: at },
     update: { value: at },
   });
+}
+
+/** The Collection sub-account subscriptions are routed to, when one is saved. */
+async function subscriptionCollectionAccount() {
+  const row = await prisma.marketplaceSettings
+    .findUnique({ where: { id: "default" }, select: { collectionStripeAccountId: true } })
+    .catch(() => null);
+  const id = row?.collectionStripeAccountId?.trim() ?? "";
+  return /^acct_[A-Za-z0-9]+$/.test(id) ? id : null;
 }

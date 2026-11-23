@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/db";
 
 /**
- * An influencer can be paid when a payout account is connected and its primary check is not unverified.
+ * An influencer can be paid when a payout account is connected and its primary check passed.
+ * A Stripe account counts only once Stripe reports it verified (payouts enabled, nothing outstanding).
  * Funding and milestone approval both use this, so a deal is never funded for someone who cannot be paid.
  */
 export function payoutProfileReady(profile: {
@@ -9,7 +10,9 @@ export function payoutProfileReady(profile: {
   providerConnectedAccountId?: string | null;
   primaryStatus?: string | null;
 } | null | undefined): boolean {
-  return Boolean(profile?.stripeConnectAccountId || profile?.providerConnectedAccountId) && profile?.primaryStatus !== "UNVERIFIED";
+  if (profile?.providerConnectedAccountId) return profile.primaryStatus !== "UNVERIFIED";
+  if (profile?.stripeConnectAccountId) return profile.primaryStatus === "VERIFIED";
+  return false;
 }
 
 export async function influencerPayoutReady(creatorSlug: string): Promise<{ ready: boolean; name: string }> {

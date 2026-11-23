@@ -36,6 +36,9 @@ describe("milestone release on Stripe", () => {
     const transfers: { destination: string; amount: number; key: string }[] = [];
     setStripeTransportForTests(async (url, init) => {
       const href = String(url);
+      if (href.includes("/v1/accounts/")) {
+        return new Response(JSON.stringify({ id: "acct_influencerTest", payouts_enabled: true, details_submitted: true, requirements: { currently_due: [] } }), { status: 200 });
+      }
       if (href.includes("/v1/checkout/sessions/")) {
         return new Response(JSON.stringify({ id: "cs_test_rel", payment_intent: { id: "pi_1", latest_charge: "ch_rel1" } }), { status: 200 });
       }

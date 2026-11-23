@@ -1907,6 +1907,8 @@ model MarketplaceSettings {
   teamProposalLifeDays       Int      @default(14)
   /// Influrios-owned Stripe connected account (acct_) that receives each milestone's fees.
   operationsStripeAccountId  String   @default("")
+  /// Influrios-owned Stripe connected account (acct_) that receives subscription payments.
+  collectionStripeAccountId  String   @default("")
   updatedAt                  DateTime @updatedAt
 }
 
