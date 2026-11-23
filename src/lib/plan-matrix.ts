@@ -63,8 +63,16 @@ function asFeatures(
   }));
 }
 
-function decorate(audience: "creator" | "business", plans: Omit<PlanColumn, "highlights" | "recommended">[]): PlanMatrix {
-  const keys = KEYS[audience];
+/** Agency is deferred: its plan and the "Agency workspace" row are not offered publicly. */
+export const AGENCY_DEFERRED = true;
+const HIDDEN_PLAN_CODES = new Set(AGENCY_DEFERRED ? ["AGENCY"] : []);
+const HIDDEN_FEATURE_KEYS = new Set<string>(AGENCY_DEFERRED ? ["business.agency_workspace"] : []);
+
+function decorate(audience: "creator" | "business", allPlans: Omit<PlanColumn, "highlights" | "recommended">[]): PlanMatrix {
+  const plans = allPlans
+    .filter((plan) => !HIDDEN_PLAN_CODES.has(plan.code))
+    .map((plan) => ({ ...plan, features: plan.features.filter((row) => !HIDDEN_FEATURE_KEYS.has(row.featureKey)) }));
+  const keys = (KEYS[audience] as readonly string[]).filter((key) => !HIDDEN_FEATURE_KEYS.has(key)) as unknown as (typeof KEYS)[typeof audience];
   const recommended = recommendedPlanCode(plans);
   const columns: PlanColumn[] = plans.map((plan) => ({
     ...plan,
