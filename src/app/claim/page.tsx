@@ -47,7 +47,7 @@ export default async function ClaimPage({ searchParams }: Props) {
   };
 
   return (
-    <AccountAccessFrame actionHref="/login?next=/creator" actionLabel="Log in">
+    <AccountAccessFrame>
       <div className="order-2 lg:order-1">
           <div className="mx-auto max-w-sm rounded-[28px] bg-gradient-to-br from-[#5B4DFF] to-[#8B5CF6] p-6 text-center text-white shadow-lg">
             <span className="mx-auto inline-flex h-28 w-28 overflow-hidden rounded-full border-4 border-white/70 bg-white/20">

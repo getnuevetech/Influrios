@@ -109,7 +109,7 @@ export function VersionReview({
             <input type="hidden" name="dealId" value={dealId} />
             <input type="hidden" name="milestoneId" value={milestoneId} />
             <input type="hidden" name="versionNumber" value={selected.version} />
-            <textarea name="note" required minLength={8} rows={2} placeholder="What should change" className="w-full rounded-xl border border-[#E4E9F5] px-3 py-2 text-sm" />
+            <textarea name="note" required minLength={8} rows={2} placeholder="What should change" className="w-full rounded-xl border border-[#E4E9F5] px-3 py-2 text-sm" aria-label="What should change" />
             <button type="submit" className="rounded-full border border-[#E4E9F5] px-4 py-2 text-sm font-semibold text-[#1B1464]">
               Request changes
             </button>

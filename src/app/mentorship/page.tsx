@@ -123,7 +123,7 @@ export default async function MentorshipPage({ searchParams }: Props) {
               name="niche"
               defaultValue={params.niche}
               placeholder="Niche"
-              className="rounded-xl border border-border px-3 py-2 text-sm"
+              className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Niche"
             />
             <CountrySelect
               name="country"
@@ -174,7 +174,7 @@ export default async function MentorshipPage({ searchParams }: Props) {
                       name="message"
                       rows={2}
                       placeholder="What do you want help with?"
-                      className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                      className="w-full rounded-xl border border-border px-3 py-2 text-sm" aria-label="What do you want help with?"
                     />
                     {paidOn ? (
                       <label className="flex items-center gap-2 text-xs text-indigo">
@@ -339,7 +339,7 @@ export default async function MentorshipPage({ searchParams }: Props) {
                             <input
                               name="responseNote"
                               placeholder="Optional note"
-                              className="rounded-lg border border-border px-2 py-1 text-[11px]"
+                              className="rounded-lg border border-border px-2 py-1 text-[11px]" aria-label="Optional note"
                             />
                             <button type="submit" className="btn-secondary !px-3 !py-1.5 text-[11px]">
                               Decline

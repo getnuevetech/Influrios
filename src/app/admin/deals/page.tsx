@@ -49,7 +49,7 @@ export default async function AdminDealsPage({ searchParams }: Props) {
           name="q"
           defaultValue={q}
           placeholder="Title, party, or id"
-          className="w-full max-w-md rounded-xl border border-border px-3 py-2 text-sm"
+          className="w-full max-w-md rounded-xl border border-border px-3 py-2 text-sm" aria-label="Title, party, or id"
         />
         <button type="submit" className="btn-secondary !py-2 text-sm">
           Search

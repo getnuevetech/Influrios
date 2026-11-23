@@ -130,7 +130,7 @@ export default async function AdminCardsPage({ searchParams }: Props) {
             <input
               name="creatorSlug"
               placeholder="Profile slug"
-              className="min-w-48 flex-1 rounded-xl border border-border px-3 py-2"
+              className="min-w-48 flex-1 rounded-xl border border-border px-3 py-2" aria-label="Profile slug"
             />
             <button type="submit" className="btn-primary !py-2 text-sm">
               Add placement

@@ -232,6 +232,7 @@ export async function MemberFrame({
                 <IconSearch size={16} />
               </span>
               <input
+                aria-label="Search"
                 name="q"
                 placeholder={searchPlaceholder}
                 className="w-full rounded-full border border-[#E6ECF7] bg-[#F7F9FD] py-2.5 pl-10 pr-4 text-sm outline-none focus:border-violet"

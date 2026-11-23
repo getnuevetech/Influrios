@@ -133,7 +133,7 @@ export function LinksManagementPanel({
                           <input
                             name="slug"
                             defaultValue={shortLink.slug}
-                            className="w-full max-w-xs rounded-xl border border-border px-3 py-2"
+                            className="w-full max-w-xs rounded-xl border border-border px-3 py-2" aria-label="Slug"
                           />
                           <button type="submit" className="btn-secondary !py-1.5 text-xs">
                             Update short link
@@ -161,7 +161,7 @@ export function LinksManagementPanel({
                           name="destination"
                           defaultValue={shortLink.destination}
                           placeholder={`/c/${draft.slug} or https://influrios.com/...`}
-                          className="w-full max-w-md rounded-xl border border-border px-3 py-2"
+                          className="w-full max-w-md rounded-xl border border-border px-3 py-2" aria-label="Destination"
                         />
                         <button type="submit" className="btn-secondary !py-1.5 text-xs">
                           Update destination
@@ -193,7 +193,7 @@ export function LinksManagementPanel({
                         <input
                           name="destination"
                           placeholder={`/c/${draft.slug} or https://influrios.com/...`}
-                          className="w-full max-w-md rounded-xl border border-border px-3 py-2"
+                          className="w-full max-w-md rounded-xl border border-border px-3 py-2" aria-label="Destination"
                         />
                         <ScheduleStartsField />
                         <button type="submit" className="btn-secondary !py-1.5 text-xs">
@@ -250,17 +250,17 @@ export function LinksManagementPanel({
                         <input
                           name="code"
                           placeholder="spring-launch"
-                          className="w-full max-w-xs rounded-xl border border-border px-3 py-2"
+                          className="w-full max-w-xs rounded-xl border border-border px-3 py-2" aria-label="spring-launch"
                         />
                         <input
                           name="label"
                           placeholder="Spring launch"
-                          className="w-full max-w-md rounded-xl border border-border px-3 py-2"
+                          className="w-full max-w-md rounded-xl border border-border px-3 py-2" aria-label="Spring launch"
                         />
                         <input
                           name="destination"
                           placeholder={`/c/${draft.slug} or https://influrios.com/...`}
-                          className="w-full max-w-md rounded-xl border border-border px-3 py-2"
+                          className="w-full max-w-md rounded-xl border border-border px-3 py-2" aria-label="Destination"
                         />
                         <button type="submit" className="btn-secondary !py-1.5 text-xs">
                           Add campaign link

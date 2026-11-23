@@ -82,8 +82,8 @@ export default async function AdminContractsPage({ searchParams }: Props) {
       {params.deleted ? <p className="mt-3 text-sm font-semibold text-emerald-700">Draft deleted.</p> : null}
       {params.voided ? <p className="mt-3 text-sm font-semibold text-emerald-700">Agreement voided.</p> : null}
       <form className="mt-4 flex flex-wrap gap-2" action="/admin/contracts">
-        <input name="q" defaultValue={q} placeholder="Title, email, or id" className="rounded-xl border border-border px-3 py-2 text-sm" />
-        <select name="status" defaultValue={status} className="rounded-xl border border-border px-3 py-2 text-sm">
+        <input name="q" defaultValue={q} placeholder="Title, email, or id" className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Title, email, or id" />
+        <select name="status" defaultValue={status} className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Status">
           <option value="">All statuses</option>
           {["draft", "sent", "signed", "declined", "voided"].map((value) => (
             <option key={value} value={value}>
@@ -240,7 +240,7 @@ function ContractAdminList({
               {canDelete && contractMayBeVoided(document.status, document.fundingId) ? (
                 <form action={actionVoidContractDocument} className="text-right">
                   <input type="hidden" name="id" value={document.id} />
-                  <input name="reason" required minLength={8} placeholder="Void reason" className="w-36 rounded border border-border px-1 py-1 text-[11px]" />
+                  <input name="reason" required minLength={8} placeholder="Void reason" className="w-36 rounded border border-border px-1 py-1 text-[11px]" aria-label="Void reason" />
                   <button type="submit" className="mt-1 block text-[11px] font-semibold text-rose-700">
                     Void agreement
                   </button>

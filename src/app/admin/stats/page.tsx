@@ -168,18 +168,18 @@ export default async function AdminStatsPage({
         <fieldset className="rounded-2xl border border-dashed border-[#C9D4FF] bg-white p-4">
           <p className="text-sm font-semibold text-indigo">Add a counter</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <input name="newValue" placeholder="25K+" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2" />
-            <input name="newLabel" placeholder="Label" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2" />
-            <input name="newSource" placeholder="Source (required to publish)" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2 sm:col-span-2" />
-            <input name="newAsOf" type="date" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2" />
-            <select name="newIcon" defaultValue="user" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2">
+            <input name="newValue" placeholder="25K+" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2" aria-label="Value" />
+            <input name="newLabel" placeholder="Label" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2" aria-label="Label" />
+            <input name="newSource" placeholder="Source (required to publish)" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2 sm:col-span-2" aria-label="Source (required to publish)" />
+            <input name="newAsOf" type="date" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2" aria-label="As of" />
+            <select name="newIcon" defaultValue="user" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2" aria-label="Icon">
               {ICONS.map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
               ))}
             </select>
-            <select name="newTone" defaultValue="violet" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2">
+            <select name="newTone" defaultValue="violet" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2" aria-label="Tone">
               {TONES.map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}

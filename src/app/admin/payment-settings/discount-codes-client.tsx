@@ -103,7 +103,7 @@ export function DiscountCodesClient({
         ) : (
           <p className="text-sm text-muted">You can view codes. Issuing or pausing them is a separate permission.</p>
         )}
-        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search codes..." className="h-11 min-w-56 flex-1 rounded-full border border-border px-4 text-sm" />
+        <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search codes..." className="h-11 min-w-56 flex-1 rounded-full border border-border px-4 text-sm" aria-label="Search codes" />
         <label className="text-sm text-muted">
           Status
           <select value={status} onChange={(event) => setStatus(event.target.value as DiscountStatus | "all")} className="ml-2 h-11 rounded-full border border-border bg-white px-3">

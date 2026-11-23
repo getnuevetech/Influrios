@@ -1,7 +1,6 @@
 /** @jsxRuntime automatic */
 /** @jsxImportSource react */
 import Link from "next/link";
-import { MarketingHeader } from "@/components/marketing-header";
 import { CompareFeatures } from "@/components/plans/compare-features";
 import { PlanCheckout } from "@/components/plans/plan-checkout";
 import { intervalTaxLine } from "@/lib/admin-subscription-view";
@@ -14,7 +13,6 @@ import { formatUsd, type PlanTaxGate } from "@/lib/tax-configuration";
 export function PublicPlanPage({
   audience,
   signedIn,
-  accountRole,
   currentCode,
   currentAmountCents,
   matrix,
@@ -45,13 +43,15 @@ export function PublicPlanPage({
   const basePath = creator ? "/pricing" : "/business/plans";
   return (
     <div className="bg-[#F6F8FC] text-indigo">
-      <MarketingHeader
-        active={creator ? "influencer" : "business"}
-        signedIn={signedIn}
-        accountRole={accountRole}
-        planInterval={interval}
-      />
-      <section className="mx-auto max-w-[90rem] px-4 pb-16 pt-10 sm:px-6 lg:px-10">
+      <nav aria-label="Plans" className="mx-auto flex max-w-[90rem] justify-center gap-2 px-4 pt-8 text-sm font-semibold sm:px-6 lg:px-10">
+        <Link href={`/pricing${interval === "year" ? "?interval=year" : ""}`} aria-current={creator ? "page" : undefined} className={creator ? "rounded-full bg-indigo px-4 py-2 text-white" : "rounded-full px-4 py-2 text-[#5C657F] hover:text-indigo"}>
+          Influencer plans
+        </Link>
+        <Link href={`/business/plans${interval === "year" ? "?interval=year" : ""}`} aria-current={creator ? undefined : "page"} className={creator ? "rounded-full px-4 py-2 text-[#5C657F] hover:text-indigo" : "rounded-full bg-indigo px-4 py-2 text-white"}>
+          Business plans
+        </Link>
+      </nav>
+      <section className="mx-auto max-w-[90rem] px-4 pb-16 pt-6 sm:px-6 lg:px-10">
         <div className="text-center">
           <h1 className="font-display text-4xl font-bold">{creator ? "Influencer plans" : "Business plans"}</h1>
           <IntervalLinks basePath={basePath} interval={interval} />
@@ -180,7 +180,7 @@ function PlanCard({
       ) : state === "unpublished" ? (
         <Link href={audience === "business" ? "/business/plans" : "/pricing"} className="btn-secondary mt-6 w-full !py-2.5 text-sm">View monthly</Link>
       ) : plan.amountCents <= 0 ? (
-        <Link href={audience === "creator" ? "/claim" : "/login?next=/business/home"} className="btn-secondary mt-6 w-full !py-2.5 text-sm">{label}</Link>
+        <Link href={audience === "creator" ? "/signup" : "/signup?role=business"} className="btn-secondary mt-6 w-full !py-2.5 text-sm">{label}</Link>
       ) : taxGate?.kind === "unavailable" ? (
         <p className="mt-6 text-sm text-amber-900">This plan is temporarily unavailable.</p>
       ) : (
@@ -235,7 +235,7 @@ export function PlanAction({
     );
   }
   if (!plan.checkout || plan.amountCents <= 0) {
-    const href = audience === "creator" ? "/claim" : "/login?next=/business/home";
+    const href = audience === "creator" ? "/signup" : "/signup?role=business";
     return (
       <div className="mt-6">
         <Link href={href} className={emphasized ? "btn-primary w-full !py-2.5 text-sm" : "btn-secondary w-full !py-2.5 text-sm"}>

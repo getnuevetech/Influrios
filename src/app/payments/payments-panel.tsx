@@ -199,7 +199,7 @@ export async function PaymentsScreen({ searchParams }: { searchParams: Promise<S
       <form className="flex flex-wrap gap-2" action="/payments">
         <input type="hidden" name="currency" value={currency} />
         {status !== "all" ? <input type="hidden" name="status" value={status} /> : null}
-        <input name="q" defaultValue={params.q ?? ""} placeholder="Search collaborations, influencers, or references" className="h-11 min-w-0 flex-1 rounded-xl border border-border px-3 text-sm" />
+        <input name="q" defaultValue={params.q ?? ""} placeholder="Search collaborations, influencers, or references" className="h-11 min-w-0 flex-1 rounded-xl border border-border px-3 text-sm" aria-label="Search collaborations, influencers, or references" />
         <label className="text-xs font-semibold text-muted">
           From
           <input name="from" type="date" defaultValue={params.from ?? ""} className="ml-2 h-11 rounded-xl border border-border px-3 text-sm" />

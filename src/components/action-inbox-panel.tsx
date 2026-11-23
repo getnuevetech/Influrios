@@ -82,9 +82,9 @@ export function ActionInboxPanel({
             name="q"
             defaultValue={query}
             placeholder="Search"
-            className="h-11 min-w-0 flex-1 rounded-xl border border-[#E4E9F5] px-3 text-sm"
+            className="h-11 min-w-0 flex-1 rounded-xl border border-[#E4E9F5] px-3 text-sm" aria-label="Search"
           />
-          <select name="type" defaultValue={selectedType} className="h-11 rounded-xl border border-[#E4E9F5] px-3 text-sm">
+          <select name="type" defaultValue={selectedType} className="h-11 rounded-xl border border-[#E4E9F5] px-3 text-sm" aria-label="Type">
             {TYPES.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.label}

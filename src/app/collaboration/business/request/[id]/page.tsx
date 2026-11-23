@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { RequestEditor } from "@/components/account/request-editor";
+import { CopyTextButton } from "@/components/copy-text-button";
+import { appOrigin } from "@/lib/creator-og";
+import { getPublishedBusinessRequest } from "@/lib/marketplace-listings";
 import { getAccountSession } from "@/lib/accounts";
 import { getWorkspace, parseLocationParts } from "@/lib/business";
 import { campaignEditLocked } from "@/lib/campaign-contract";
@@ -60,6 +63,7 @@ export default async function RequestEditorPage({ params, searchParams }: Props)
         select: { id: true },
       }).catch(() => null)
     : null;
+  const listingPreview = listing && applications.length === 0 ? await getPublishedBusinessRequest(listing.id).catch(() => null) : null;
 
   // After sending or publishing, show the outcome — never reopen the editor at step 1 (AUD-WIZ-01).
   const sentOrPublished = query.saved === "invites" || query.saved === "published";
@@ -108,12 +112,28 @@ export default async function RequestEditorPage({ params, searchParams }: Props)
           </ul>
         ) : null}
         {visibility === "public" && listing && applications.length === 0 ? (
-          <p className="mb-3 rounded-2xl bg-white px-4 py-3 text-sm text-[#667085]">
-            No applications yet.{" "}
-            <Link href={`/collaboration/requests/${listing.id}`} className="font-bold text-[#6D4AFF]">
-              Share the public listing
-            </Link>
-          </p>
+          <div className="mb-3 space-y-3 rounded-2xl bg-white px-4 py-3 text-sm text-[#667085]">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p>No applications yet. Share the listing link with influencers.</p>
+              <CopyTextButton value={`${appOrigin()}/collaboration/requests/${listing.id}`} label="Copy listing link" />
+            </div>
+            {listingPreview ? (
+              <details className="rounded-xl border border-[#E6ECF7] px-3 py-2">
+                <summary className="cursor-pointer font-semibold text-[#1B1464]">Preview what influencers see</summary>
+                <div className="mt-2 space-y-2">
+                  <p className="font-display text-lg font-bold text-[#1B1464]">{listingPreview.brand}</p>
+                  <p>{[listingPreview.category, listingPreview.location, listingPreview.budget].filter(Boolean).join(" · ")}</p>
+                  <p className="whitespace-pre-wrap text-[#4E5872]">{listingPreview.summary || "No summary provided."}</p>
+                  {listingPreview.lookingFor ? (
+                    <p className="whitespace-pre-wrap text-[#4E5872]">
+                      <span className="font-semibold text-[#1B1464]">Looking for: </span>
+                      {listingPreview.lookingFor}
+                    </p>
+                  ) : null}
+                </div>
+              </details>
+            ) : null}
+          </div>
         ) : null}
         {sentOrPublished ? null : (
         <RequestEditor

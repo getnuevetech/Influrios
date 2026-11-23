@@ -260,8 +260,8 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
         </ul>
         {canEdit ? (
           <form action={actionReserveSlug} className="mt-4 flex flex-wrap gap-2">
-            <input name="slug" placeholder="slug" className="rounded-xl border border-border px-3 py-2 text-sm" />
-            <input name="reason" placeholder="reason" className="rounded-xl border border-border px-3 py-2 text-sm" />
+            <input name="slug" placeholder="slug" className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="slug" />
+            <input name="reason" placeholder="reason" className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="reason" />
             <button type="submit" className="btn-secondary text-sm">
               Reserve
             </button>
@@ -317,7 +317,7 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
                   {link.dynamic ? (
                     <form action={actionAdminDestination} className="flex gap-2">
                       <input type="hidden" name="id" value={link.id} />
-                      <input name="destination" placeholder="/c/slug or https://influrios.com/..." className="rounded-lg border border-border px-2 py-1 text-xs" />
+                      <input name="destination" placeholder="/c/slug or https://influrios.com/..." className="rounded-lg border border-border px-2 py-1 text-xs" aria-label="/c/slug or https://influrios.com/" />
                       <button type="submit" className="btn-secondary !py-1 text-xs">
                         Update destination
                       </button>
@@ -366,8 +366,8 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
         </ul>
         {canEdit ? (
           <form action={actionOpenAbuse} className="mt-4 flex flex-wrap gap-2">
-            <input name="slug" placeholder="slug" className="rounded-xl border border-border px-3 py-2 text-sm" />
-            <input name="note" placeholder="abuse note" className="min-w-48 flex-1 rounded-xl border border-border px-3 py-2 text-sm" />
+            <input name="slug" placeholder="slug" className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="slug" />
+            <input name="note" placeholder="abuse note" className="min-w-48 flex-1 rounded-xl border border-border px-3 py-2 text-sm" aria-label="abuse note" />
             <button type="submit" className="btn-secondary text-sm">
               Open case
             </button>

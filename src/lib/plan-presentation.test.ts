@@ -131,8 +131,8 @@ describe("plan presentation", () => {
   });
 
   it("hides the marketing header on plan pages and signed-in account screens", () => {
-    assert.equal(hidesMarketingChrome("/pricing"), true);
-    assert.equal(hidesMarketingChrome("/business/plans"), true);
+    assert.equal(hidesMarketingChrome("/pricing"), false);
+    assert.equal(hidesMarketingChrome("/business/plans"), false);
     assert.equal(hidesMarketingChrome("/billing"), true);
     assert.equal(hidesMarketingChrome("/billing/success"), true);
     assert.equal(hidesMarketingChrome("/creator"), true);
@@ -148,10 +148,10 @@ describe("plan presentation", () => {
     assert.equal(hidesMarketingChrome("/admin"), true);
     assert.equal(hidesMarketingChrome("/admin/login"), true);
     assert.equal(hidesMarketingChrome("/admin/marketplace"), true);
-    assert.equal(hidesMarketingChrome("/login"), true);
-    assert.equal(hidesMarketingChrome("/signup"), true);
-    assert.equal(hidesMarketingChrome("/claim"), true);
-    assert.equal(hidesMarketingChrome("/register"), true);
+    assert.equal(hidesMarketingChrome("/login"), false);
+    assert.equal(hidesMarketingChrome("/signup"), false);
+    assert.equal(hidesMarketingChrome("/claim"), false);
+    assert.equal(hidesMarketingChrome("/register"), false);
     const layout = readFileSync("src/app/layout.tsx", "utf8");
     const frame = readFileSync("src/components/chrome-frame.tsx", "utf8");
     assert.match(layout, /ChromeFrame/);

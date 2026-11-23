@@ -413,7 +413,7 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
                       <input
                         name="note"
                         placeholder="Note (optional)"
-                        className="min-w-[10rem] flex-1 rounded-lg border border-border px-2 py-1 text-sm"
+                        className="min-w-[10rem] flex-1 rounded-lg border border-border px-2 py-1 text-sm" aria-label="Note (optional)"
                       />
                       <button type="submit" className="btn-secondary !px-3 !py-1.5 text-xs">
                         Update status
@@ -485,13 +485,13 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
                   name="niches"
                   defaultValue={(opt?.niches ?? []).join(",")}
                   className="mt-3 w-full rounded-lg border border-border px-2 py-1.5 text-xs"
-                  placeholder="niches"
+                  placeholder="niches" aria-label="niches"
                 />
                 <input
                   name="targetingNotes"
                   defaultValue={opt?.targetingNotes ?? ""}
                   className="mt-2 w-full rounded-lg border border-border px-2 py-1.5 text-xs"
-                  placeholder="Targeting notes"
+                  placeholder="Targeting notes" aria-label="Targeting notes"
                 />
                 <button type="submit" className="btn-secondary mt-2 !py-1.5 text-xs">
                   Save

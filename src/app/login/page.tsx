@@ -20,7 +20,7 @@ export default async function LoginPage({ searchParams }: Props) {
   const requestedNext = Boolean(params.next?.trim());
   if (account && !requestedNext) redirect(homePathForRole(account.role));
   return (
-    <AccountAccessFrame actionHref={`/signup?next=${encodeURIComponent(next)}`} actionLabel="Create an account">
+    <AccountAccessFrame>
       <div className="relative hidden min-h-[28rem] overflow-hidden rounded-[32px] bg-[#F4EFFF] lg:block">
         <p className="px-8 pt-10 font-display text-4xl font-bold leading-tight text-[#1B1464]">
           Welcome back

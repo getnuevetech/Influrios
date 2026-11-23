@@ -119,7 +119,7 @@ export function BillingActivity({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search by account or reference..."
-              className="w-full rounded-full border border-[#E4EBFF] py-2 pl-9 pr-3 text-sm text-indigo"
+              className="w-full rounded-full border border-[#E4EBFF] py-2 pl-9 pr-3 text-sm text-indigo" aria-label="Search by account or reference"
             />
           </div>
           <select

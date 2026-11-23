@@ -214,24 +214,30 @@ export async function actionUpdateProfileMedia(formData: FormData) {
   const draftId = String(formData.get("draftId") ?? "");
   const intent = String(formData.get("intent") ?? "");
   try {
-    const { saveAvatarUpload, saveCoverUpload } = await import("@/lib/profile-uploads");
+    const { saveAvatarUpload, saveCoverUpload, removeProfileUpload } = await import("@/lib/profile-uploads");
     const { getDraft } = await import("@/lib/claim");
     const draft = await getDraft(draftId);
     if (!draft) throw new Error("Draft not found");
     // Check ownership before any file is written.
     const { assertCanMutateDraft } = await import("@/lib/claim");
     await assertCanMutateDraft(draftId);
+    const { allowMediaUpload } = await import("@/lib/upload-limits");
+    if (!allowMediaUpload([`draft:${draftId}`, `ip:${clientIpFrom(await headers())}`])) {
+      throw new Error("Too many image uploads. Try again in a few minutes.");
+    }
 
     if (intent === "avatar") {
       const file = formData.get("avatar");
       if (!(file instanceof File) || file.size <= 0) throw new Error("Choose a profile photo.");
       const image = await saveAvatarUpload(file);
       await updateDraftProfile(draftId, { image });
+      if (draft.image && draft.image !== image) await removeProfileUpload(draft.image);
     } else if (intent === "cover") {
       const file = formData.get("cover");
       if (!(file instanceof File) || file.size <= 0) throw new Error("Choose a banner image.");
       const coverImage = await saveCoverUpload(file);
       await updateDraftProfile(draftId, { coverImage });
+      if (draft.coverImage && draft.coverImage !== coverImage) await removeProfileUpload(draft.coverImage);
     } else {
       throw new Error("Unknown media action.");
     }

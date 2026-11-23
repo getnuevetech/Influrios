@@ -101,7 +101,7 @@ export default async function ProfileDetailsPage({ searchParams }: Props) {
                 type="file"
                 name="avatar"
                 accept="image/jpeg,image/png,image/webp,image/gif"
-                className="block w-full text-xs text-muted file:mr-2 file:rounded-lg file:border-0 file:bg-lavender file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-indigo"
+                className="block w-full text-xs text-muted file:mr-2 file:rounded-lg file:border-0 file:bg-lavender file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-indigo" aria-label="Avatar"
               />
               <button type="submit" className="btn-primary w-full !py-2 text-xs">
                 Upload photo
@@ -119,7 +119,7 @@ export default async function ProfileDetailsPage({ searchParams }: Props) {
                 type="file"
                 name="cover"
                 accept="image/jpeg,image/png,image/webp,image/gif"
-                className="block w-full text-xs text-muted file:mr-2 file:rounded-lg file:border-0 file:bg-lavender file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-indigo"
+                className="block w-full text-xs text-muted file:mr-2 file:rounded-lg file:border-0 file:bg-lavender file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-indigo" aria-label="Cover"
               />
               <button type="submit" className="btn-primary w-full !py-2 text-xs">
                 Upload banner

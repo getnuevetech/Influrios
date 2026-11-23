@@ -210,19 +210,19 @@ export default async function DiscoverPage({ searchParams }: Props) {
           {first(params.contentStyle) ? <input type="hidden" name="contentStyle" value={first(params.contentStyle)} /> : null}
           {first(params.commercialMode) ? <input type="hidden" name="commercialMode" value={first(params.commercialMode)} /> : null}
           <div className="flex flex-wrap items-center gap-2">
-            <select name="specialty" defaultValue={specialties[0] ?? ""} className="h-11 rounded-xl border border-[#E4E9F5] bg-white px-3 text-sm">
+            <select name="specialty" defaultValue={specialties[0] ?? ""} className="h-11 rounded-xl border border-[#E4E9F5] bg-white px-3 text-sm" aria-label="Specialty">
               <option value="">Specialty</option>
               {categoryOptions.map((item) => (
                 <option key={item.value} value={item.value}>{item.label}</option>
               ))}
             </select>
-            <select name="country" defaultValue={first(params.country)} className="h-11 rounded-xl border border-[#E4E9F5] bg-white px-3 text-sm">
+            <select name="country" defaultValue={first(params.country)} className="h-11 rounded-xl border border-[#E4E9F5] bg-white px-3 text-sm" aria-label="Country">
               <option value="">Country</option>
               {countryNames.map((name) => (
                 <option key={name} value={name}>{name}</option>
               ))}
             </select>
-            <select name="platform" defaultValue={platforms[0] ?? ""} className="h-11 rounded-xl border border-[#E4E9F5] bg-white px-3 text-sm">
+            <select name="platform" defaultValue={platforms[0] ?? ""} className="h-11 rounded-xl border border-[#E4E9F5] bg-white px-3 text-sm" aria-label="Platform">
               <option value="">Platform</option>
               {platformOptions.map((item) => (
                 <option key={item.value} value={item.value}>{item.label}</option>

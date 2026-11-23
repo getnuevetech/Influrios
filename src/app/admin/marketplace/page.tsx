@@ -504,8 +504,8 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       <section className="space-y-3">
         <h2 className="font-display text-lg font-bold text-indigo">Funding records</h2>
         <form className="flex flex-wrap gap-2" action="/admin/marketplace">
-          <input name="q" defaultValue={params.q ?? ""} placeholder="Business, creator, title, or id" className="rounded-xl border border-border px-3 py-2 text-sm" />
-          <select name="status" defaultValue={params.status ?? ""} className="rounded-xl border border-border px-3 py-2 text-sm">
+          <input name="q" defaultValue={params.q ?? ""} placeholder="Business, creator, title, or id" className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Business, creator, title, or id" />
+          <select name="status" defaultValue={params.status ?? ""} className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Status">
             <option value="">All statuses</option>
             {["awaiting_provider", "held", "completed", "refunded", "payment_risk", "cancelled"].map((value) => (
               <option key={value} value={value}>{value.replaceAll("_", " ")}</option>
