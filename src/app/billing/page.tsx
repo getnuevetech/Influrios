@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { listCustomerInvoices } from "@/lib/stripe-admin";
 import { redirect } from "next/navigation";
 import { MemberPlanPage } from "@/components/plans/member-plan-page";
 import { getAccountSession } from "@/lib/accounts";
@@ -101,6 +102,7 @@ export default async function BillingPage({ searchParams }: Props) {
         name: names.get(row.sku) ?? row.sku,
         status: row.status,
       }))}
+      invoices={identity?.stripeCustomerId ? await listCustomerInvoices(identity.stripeCustomerId).catch(() => []) : []}
       portalOn={portalOn}
       hasCustomer={Boolean(identity?.stripeCustomerId)}
       subscriptionStatus={subscription?.status ?? null}

@@ -8,6 +8,7 @@ import { visibleSubmissions } from "@/lib/milestone-delivery";
 import { formatContractMoney } from "@/lib/money";
 import { readSignedDealMoney } from "@/lib/payment-engine";
 import { prisma } from "@/lib/db";
+import { listDisputeReasons } from "@/lib/milestone-disputes";
 import {
   milestoneAmountColumnLabel,
   orderedByAgreement,
@@ -43,11 +44,15 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
         },
       },
       entries: { where: { kind: "release" }, select: { milestoneId: true, kind: true } },
-      disputes: { where: { status: { in: OPEN_DISPUTE } } },
+      disputes: {
+        where: { status: { in: OPEN_DISPUTE } },
+        orderBy: { createdAt: "asc" },
+        include: { notes: { orderBy: { createdAt: "asc" } } },
+      },
     },
   });
   if (!funding) notFound();
-  const [contract, creator, settlements] = await Promise.all([
+  const [contract, creator, settlements, reasons] = await Promise.all([
     prisma.contractDocument.findFirst({
       where: { fundingId: funding.id },
       select: { id: true, sourceJson: true },
@@ -62,6 +67,7 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
       where: { fundingId: funding.id },
       select: { milestoneId: true, payoutState: true },
     }).catch(() => []),
+    listDisputeReasons().catch(() => []),
   ]);
   const business = access.audience === "business";
   const plan = (funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
@@ -99,6 +105,8 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
     query.revised ? { tone: "ok" as const, text: "Revision requested on that version." } : null,
     query.approved ? { tone: "ok" as const, text: "That version was approved. Bank payout stays unconfirmed." } : null,
     query.sent ? { tone: "ok" as const, text: "Message sent. It does not move money." } : null,
+    query.disputed ? { tone: "ok" as const, text: "Problem reported. That milestone's payout is held until Influrios reviews it." } : null,
+    query.evidence ? { tone: "ok" as const, text: "Evidence added to the dispute." } : null,
     // Inline popup errors keep focus; only surface page chrome errors when the dialog is closed.
     query.error && !query.focus && !query.release ? { tone: "error" as const, text: query.error } : null,
   ].filter((notice): notice is { tone: "ok" | "error"; text: string } => Boolean(notice));
@@ -156,6 +164,37 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
         milestone.files.map((file) => ({ id: file.id, fileName: file.fileName, milestoneTitle: milestone.title })),
       )}
       briefScope={readScope(contract?.sourceJson)}
+      problems={{
+        canOpen: funding.status === "held",
+        openable: ordered
+          .filter(
+            (milestone) =>
+              milestone.status !== "released" &&
+              milestone.status !== "refunded" &&
+              !funding.disputes.some((row) => row.milestoneId === milestone.id),
+          )
+          .map((milestone) => ({ id: milestone.id, title: milestone.title })),
+        reasons: reasons.filter((row) => row.active).map((row) => ({ id: row.id, label: row.label })),
+        settlementHref: `/payments?deal=${encodeURIComponent(funding.id)}&tab=settlement`,
+        disputes: funding.disputes.map((dispute) => {
+          const own = business ? "business" : "creator";
+          return {
+            id: dispute.id,
+            milestoneTitle: ordered.find((row) => row.id === dispute.milestoneId)?.title ?? "Whole collaboration",
+            reason: dispute.reasonLabel,
+            status: dispute.status,
+            openedByYou: dispute.openedBy === own,
+            evidenceUsed: dispute.notes.length,
+            evidenceLimit: dispute.evidenceLimit,
+            notes: dispute.notes.map((note) => ({
+              author: note.author === own ? "You" : note.author === "ops" ? "Influrios" : business ? "Influencer" : "Business",
+              body: note.body,
+              url: note.url || null,
+              at: new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "America/Chicago" }).format(note.createdAt),
+            })),
+          };
+        }),
+      }}
       query={{ ...query, tab: workspaceTab(query.tab) }}
       notices={notices}
     />

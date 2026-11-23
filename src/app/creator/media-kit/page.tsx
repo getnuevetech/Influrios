@@ -76,6 +76,11 @@ export default async function CreatorMediaKitPage() {
           <Link href={cardHref} className="btn-primary !py-2 text-sm">
             View media kit
           </Link>
+          {slug ? (
+            <Link href="/creator/media-kit/print" className="btn-secondary !py-2 text-sm">
+              Download media kit (PDF)
+            </Link>
+          ) : null}
           <Link href="/dashboard" className="btn-secondary !py-2 text-sm">
             Edit profile photos
           </Link>

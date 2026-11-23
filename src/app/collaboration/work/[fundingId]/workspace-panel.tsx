@@ -1,6 +1,7 @@
 import { actionAddDeliverableFiles, actionRequestRevision, actionSubmitMilestone } from "@/app/payments/actions";
 import { FocusDialog } from "@/app/collaboration/work/[fundingId]/focus-dialog";
 import { WorkspaceMessages } from "@/app/collaboration/work/[fundingId]/messages-panel";
+import { ProblemPanel, type ProblemDispute } from "@/app/collaboration/work/[fundingId]/problem-panel";
 import { ReleaseStep } from "@/app/collaboration/work/[fundingId]/release-step";
 import { WorkspaceScroll } from "@/app/collaboration/work/[fundingId]/workspace-scroll";
 import { WorkspaceDialogBody, WorkspaceFrame, WorkspaceMilestoneTable, WorkspaceTabs } from "@/components/workspace-milestones";
@@ -39,6 +40,7 @@ export function WorkspacePanel({
   milestones,
   files,
   briefScope,
+  problems,
   query,
   notices,
 }: {
@@ -53,6 +55,13 @@ export function WorkspacePanel({
   milestones: PanelMilestone[];
   files: { id: string; fileName: string; milestoneTitle: string }[];
   briefScope: string | null;
+  problems?: {
+    canOpen: boolean;
+    openable: { id: string; title: string }[];
+    reasons: { id: string; label: string }[];
+    disputes: ProblemDispute[];
+    settlementHref: string;
+  };
   query: Record<string, string | undefined>;
   notices: Notice[];
 }) {
@@ -174,6 +183,9 @@ export function WorkspacePanel({
                 }))}
               />
             </section>
+            {problems && (funding.status === "held" || problems.disputes.length > 0) ? (
+              <ProblemPanel fundingId={funding.id} {...problems} />
+            ) : null}
           </div>
         ) : null}
         {tab === "files" ? (
