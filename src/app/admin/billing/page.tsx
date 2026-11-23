@@ -3,7 +3,7 @@ import { SubscriptionsShell } from "@/app/admin/subscriptions/shell";
 import { requireAdminPage } from "@/app/admin/guard";
 import { canAccessModule, hasPermission } from "@/lib/admin-auth";
 import { presentCheckoutSession } from "@/lib/admin-subscription-view";
-import { BILLING_CATALOG, getBillingStore, getProduct, listAnnualOffers, listBillingPriceIds } from "@/lib/billing";
+import { BILLING_CATALOG, getBillingStore, getProduct, listAnnualOffers, listBillingPriceIds, planMonthlyPriceId } from "@/lib/billing";
 import { annualCodesMissingPrice, annualOfferViews, dollarInputFromCents } from "@/lib/billing-interval";
 import { prisma } from "@/lib/db";
 import { listDiscountOffers } from "@/lib/discount-store";
@@ -31,6 +31,12 @@ export default async function AdminBillingPage({ searchParams }: Props) {
     listAnnualOffers().catch(() => ({})),
     listDiscountOffers().catch(() => ({ ok: false as const, offers: [] })),
   ]);
+  // Monthly price per catalog plan: the price created from the plan amount, else the older saved mapping.
+  for (const product of BILLING_CATALOG) {
+    const code = product.creatorPlan ?? product.businessPlan;
+    const auto = code ? await planMonthlyPriceId(product.sku, product.stripePriceEnv, code).catch(() => "") : "";
+    if (auto) prices[product.sku] = auto;
+  }
   const views = annualOfferViews(annual);
   const unpricedAnnualCodes = annualCodesMissingPrice({
     offers: discounts.offers.map((offer) => ({
