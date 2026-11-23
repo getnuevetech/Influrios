@@ -213,7 +213,7 @@ export async function actionSaveMarketplaceProvider(formData: FormData) {
     redirect(`/admin/marketplace?error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/marketplace");
-  revalidatePath("/admin/gateways");
+  revalidatePath("/admin/payment-settings");
   const savedCode = code.trim().toLowerCase();
   redirect(
     `/admin/marketplace?saved=provider${savedCode ? `&code=${encodeURIComponent(savedCode)}` : ""}`,

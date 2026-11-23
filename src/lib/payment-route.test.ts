@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   decidePaymentRoute,
@@ -116,8 +116,8 @@ describe("payment route decision", () => {
     assert.match(checkout, /storedRoute\?\.collectionProvider \|\| funding.collectionProviderCode/);
     assert.match(checkout, /newCheckoutAllowed/);
     assert.match(ledger, /freezeRouteAccounts/);
-    const groups = readFileSync("src/lib/payment-country-groups.ts", "utf8");
-    assert.equal(groups.includes("setCountryGateway"), false);
+    // Reference-only payment country groups were removed; only Country routes choose a gateway.
+    assert.equal(existsSync("src/lib/payment-country-groups.ts"), false);
     assert.match(readFileSync("src/lib/providers/airwallex-runtime.ts", "utf8"), /holdingAccountForCollection/);
     assert.match(readFileSync("src/lib/providers/airwallex-runtime.ts", "utf8"), /payoutAccountForCollection/);
     const storedPayout = payoutAccountForCollection({

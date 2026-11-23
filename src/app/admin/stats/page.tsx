@@ -38,7 +38,7 @@ export default async function AdminStatsPage({
       </Link>
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Site stats</h1>
       <p className="mt-2 text-sm text-muted">
-        Public footer counters require a source and as-of date (Dev Addendum §23.8). Unverified or stale rows stay
+        Public footer counters require a source and as-of date. Unverified or stale rows stay
         hidden — placeholder 50K+/12K+ values are never shown as factual scale.
       </p>
       {params.saved ? <p className="mt-4 text-sm font-semibold text-emerald-700">Saved.</p> : null}

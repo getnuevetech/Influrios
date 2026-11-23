@@ -51,8 +51,7 @@ export default async function AdminFundingTransactionPage({ params, searchParams
         </Link>
         <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Transaction</h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Unified admin view for one prefund — parties, milestones, provider, frozen fee rule, funds, and audit
-          (Product §16 / Dev §19).
+          Unified admin view for one prefund — parties, milestones, provider, frozen fee rule, funds, and audit.
         </p>
       </div>
 

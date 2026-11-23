@@ -192,7 +192,9 @@ export async function CountryRoutesPanel({
             <tr>
               <th className="px-4 py-3">Country</th>
               <th className="px-4 py-3">Currency</th>
-              <th className="px-4 py-3">Provider</th>
+              <th className="px-4 py-3">Collection</th>
+              <th className="px-4 py-3">Holding</th>
+              <th className="px-4 py-3">Payout gateway</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Action</th>
             </tr>
@@ -208,6 +210,8 @@ export async function CountryRoutesPanel({
                   </td>
                   <td className="px-4 py-3">{row.currency ?? "Not configured"}</td>
                   <td className="px-4 py-3">{row.collectionProvider ?? "Not configured"}</td>
+                  <td className="px-4 py-3">{jurisdictionByCode.get(row.countryCode)?.providerCode ?? "Not configured"}</td>
+                  <td className="px-4 py-3">{routeByCode.get(row.countryCode)?.provider.name ?? "Not configured"}</td>
                   <td className="px-4 py-3 text-xs">{row.blockedReason ?? "Enabled"}</td>
                   <td className="px-4 py-3">
                     <a href={`#route-${row.countryCode}`} className="text-xs font-semibold text-violet hover:underline">
@@ -219,7 +223,7 @@ export async function CountryRoutesPanel({
             })}
             {decisions.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-muted">
+                <td colSpan={7} className="px-4 py-6 text-muted">
                   No corridors, jurisdictions, or gateway routes are saved.
                 </td>
               </tr>
@@ -231,9 +235,10 @@ export async function CountryRoutesPanel({
         <h2 className="font-display text-xl font-bold text-indigo">Edit a country route</h2>
         {codes.map((code) => {
           const corridor = corridorByCode.get(code);
-          const jurisdiction = jurisdictionByCode.get(code);
+          // A country without a jurisdiction row yet gets one when its route is saved.
+          const jurisdiction = jurisdictionByCode.get(code) ?? { minorDigits: 2, providerCode: "primary" };
           const route = routeByCode.get(code);
-          if (!corridor || !jurisdiction) return null;
+          if (!corridor) return null;
           return (
             <ReviewBeforeSave
               key={code}
@@ -270,7 +275,7 @@ export async function CountryRoutesPanel({
                   </select>
                 </label>
                 <label className="text-xs font-semibold text-muted">
-                  Primary marketplace
+                  Holding
                   <select name="holdingProviderCode" defaultValue={jurisdiction.providerCode.toLowerCase()} disabled={!canEdit} className="mt-1 w-full rounded-lg border border-border px-2 py-2 text-sm">
                     {channelOptions.map((provider) => (
                       <option key={provider.code} value={provider.code}>{provider.name}</option>

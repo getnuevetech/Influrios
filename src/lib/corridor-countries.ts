@@ -45,8 +45,21 @@ export function countriesAvailableForCorridor(existingCodes: string[]): Corridor
 }
 
 /** Currency letters an admin can choose. Includes a stored code that is not on the catalog. */
+/** ISO 4217 codes the runtime knows; the country data includes a few that are not real currencies (e.g. AAD). */
+const ISO_CURRENCIES: Set<string> | null = (() => {
+  try {
+    return new Set((Intl as unknown as { supportedValuesOf(key: string): string[] }).supportedValuesOf("currency"));
+  } catch {
+    return null;
+  }
+})();
+
 export function corridorCurrencyOptions(extra?: string | null): string[] {
-  const codes = new Set(corridorCountries().map((row) => row.currency));
+  const codes = new Set(
+    corridorCountries()
+      .map((row) => row.currency)
+      .filter((code) => !ISO_CURRENCIES || ISO_CURRENCIES.has(code)),
+  );
   const more = (extra ?? "").trim().toUpperCase();
   if (/^[A-Z]{3}$/.test(more)) codes.add(more);
   return [...codes].sort();

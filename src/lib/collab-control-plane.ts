@@ -320,6 +320,12 @@ export async function createCorridor(input: {
       notes: "",
     },
   });
+  // One step adds a country: its jurisdiction is created with protected payments off and legal review pending.
+  await prisma.collaborationJurisdiction.upsert({
+    where: { code: country.code },
+    update: {},
+    create: { code: country.code, label: country.name, currency: country.currency, minorDigits: 2, providerCode: "primary" },
+  });
   await prisma.auditLog.create({
     data: {
       actor: input.actor.slice(0, 120),

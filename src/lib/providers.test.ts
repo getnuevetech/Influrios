@@ -158,7 +158,6 @@ describe("entered provider names", () => {
     assert.match(page, /name="code"/);
     assert.match(page, /name="enabled"/);
     assert.match(page, /Webhook signing secret/);
-    assert.match(page, /Choose a provider/);
     assert.match(page, /providerFormDefault/);
     assert.match(ledger, /ensureMarketplaceProviderForCode/);
     assert.equal(ledger.includes("(input.code || PROVIDER_CODE)"), false);
