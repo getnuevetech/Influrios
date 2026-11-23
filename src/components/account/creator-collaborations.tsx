@@ -1,3 +1,4 @@
+import { payoutStateView } from "@/lib/payout-state";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { InvitationReview } from "@/components/account/invitation-review";
@@ -102,8 +103,7 @@ export function CreatorCollaborations({
   );
   const invitationCount = invitations.length + openProposals.length + teamWaitingOnOthers.length + hub.status.pending;
   const waitingCount = waitingInvitations.length + openProposals.length + hub.status.pending;
-  const payoutAccountOnFile = Boolean(hub.payout.readiness?.accountOnFile || hub.payout.readiness?.hasVerifiedMethod);
-  const payoutReady = Boolean(hub.payout.readiness?.globalPayoutReady);
+  const payoutView = payoutStateView(hub.payout.readiness?.state ?? "status_unavailable", { country: hub.payout.readiness?.countryCode });
   const matches = (text: string) => !q || text.toLowerCase().includes(q);
   const visibleActive = active.filter((row) => matches(`${row.title} ${names[row.counterparty] || row.counterparty}`));
   const pageSize = 8;
@@ -337,27 +337,22 @@ export function CreatorCollaborations({
             <Panel
               title="Payment readiness"
               extra={
-                payoutReady ? (
-                  <span className="text-xs font-semibold text-[#178A45]">Ready</span>
-                ) : (
-                  <span className="text-xs font-semibold text-[#D14343]">Not ready</span>
-                )
+                <span
+                  className={`text-xs font-semibold ${
+                    payoutView.state === "ready" ? "text-[#178A45]" : payoutView.needsAction ? "text-[#D14343]" : "text-[#667085]"
+                  }`}
+                >
+                  {payoutView.label}
+                </span>
               }
             >
-              <p className="text-sm text-[#667085]">
-                {payoutReady
-                  ? "Identity, payout region, and payout account are ready. This is not a payment that has already been sent."
-                  : payoutAccountOnFile
-                    ? hub.payout.readiness?.blockers[0] ||
-                      "A payout account is on file. Releases stay blocked until identity and your payout region are cleared."
-                    : hub.payout.readiness?.blockers[0] || "Connect a payout account before a release can be sent."}
-              </p>
+              <p className="text-sm text-[#667085]">{payoutView.message}</p>
               <div className="mt-3 flex flex-wrap gap-2">
-                {payoutAccountOnFile ? null : (
-                  <Link href="/creator/earnings#payouts" className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
-                    Set up payouts
+                {payoutView.action ? (
+                  <Link href={payoutView.action.href} className="rounded-full bg-[#6D4AFF] px-4 py-2 text-sm font-semibold text-white">
+                    {payoutView.action.label}
                   </Link>
-                )}
+                ) : null}
                 <Link href="/creator/earnings" className="rounded-full border border-[#E7ECF5] px-4 py-2 text-sm font-semibold text-[#6D4AFF]">
                   View earnings →
                 </Link>

@@ -20,6 +20,7 @@ import { resolveCreatorIdentityVerified } from "@/lib/kyc-document";
 import { kycTypeByCode } from "@/lib/kyc-types";
 import { formatMoney } from "@/lib/money";
 import { resolvePayoutOnboardingRail } from "@/lib/payout-readiness";
+import { payoutStateView } from "@/lib/payout-state";
 import { loadAirwallexConfig } from "@/lib/providers/airwallex-config";
 import {
   buildReceivePaymentsView,
@@ -230,7 +231,8 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
       })
     : null;
 
-  const payoutReady = receiveView?.status === "ready";
+  // One payout state shared with home, hub and the sidebar badge; no reading means "Status unavailable".
+  const payoutView = payoutStateView(hub?.payout.readiness?.state ?? "status_unavailable", { country: hub?.payout.readiness?.countryCode });
 
   const payoutId = params.payout;
   const agreement = await loadPendingAgreement(account.id, account.email);
@@ -292,14 +294,9 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
         />
         <StatCard
           label="Payout setup"
-          value={payoutReady ? (receiveView?.statusLabel ?? "Ready") : "Awaiting payout setup"}
-          note={
-            receiveView?.summary ??
-            (payoutReady ? "Identity and payout method on file" : "Finish setup to receive funds")
-          }
-          tone={
-            receiveView?.status === "ready" ? "violet" : receiveView?.status === "unavailable" ? "amber" : "blue"
-          }
+          value={payoutView.label}
+          note={payoutView.state === "setup_required" ? receiveView?.summary ?? payoutView.message : payoutView.message}
+          tone={payoutView.state === "ready" ? "violet" : payoutView.needsAction ? "blue" : "amber"}
           icon={<IconWallet size={16} />}
         />
       </section>

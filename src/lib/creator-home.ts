@@ -505,6 +505,8 @@ export async function loadCreatorHome(userId: string) {
     creator?.payoutProfile?.secondaryStatus === "VERIFIED" ||
     creator?.payoutProfile?.secondaryStatus === "PENDING";
   const payoutReady = Boolean(hub?.payout.readiness?.globalPayoutReady);
+  // No readiness reading means "Status unavailable", never Ready or Setup required.
+  const payoutState = hub?.payout.readiness?.state ?? "status_unavailable";
   const payoutBlocker = hub?.payout.readiness?.blockers[0] ?? "";
   const identityDone = Boolean(hub?.payout.readiness?.identityVerified || creator?.identityVerified === "VERIFIED");
   const published = creator?.card?.published === true || draft?.stage === "published";
@@ -586,6 +588,7 @@ export async function loadCreatorHome(userId: string) {
     pipeline,
     contracts,
     payoutReady,
+    payoutState,
     identityDone,
     checklist,
     checklistDone: checklist.filter((item) => item.done).length,

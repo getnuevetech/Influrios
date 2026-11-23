@@ -85,7 +85,8 @@ describe("payout setup label", () => {
     assert.notEqual(dashboardEarningsLabel(true), "Payouts processing");
     assert.notEqual(dashboardEarningsLabel(true), "Awaiting payout setup");
     const earnings = readFileSync("src/app/creator/earnings/page.tsx", "utf8");
-    assert.match(earnings, /Awaiting payout setup/);
+    // The payout card shows the shared six-state label (master-spec 2.1), not a bespoke one.
+    assert.match(earnings, /payoutStateView\(/);
     assert.match(earnings, /showHeadline=\{false\}/);
     assert.match(earnings, /showSummaryCards=\{false\}/);
     assert.match(earnings, /Billing &amp; plan/);
