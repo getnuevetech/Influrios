@@ -287,6 +287,8 @@ export async function openStripeCheckout(input: {
   automaticTax?: boolean;
   taxRateId?: string;
   couponId?: string;
+  /** Influrios Collection sub-account (acct_). Every invoice of this subscription is transferred there. */
+  collectionAccountId?: string | null;
 }) {
   const interval = input.interval === "year" ? "year" : "month";
   if (interval === "year" && !input.priceId) {
@@ -300,6 +302,9 @@ export async function openStripeCheckout(input: {
   });
   body.set("metadata[billingInterval]", interval);
   body.set("subscription_data[metadata][billingInterval]", interval);
+  if (input.collectionAccountId && /^acct_[A-Za-z0-9]+$/.test(input.collectionAccountId)) {
+    body.set("subscription_data[transfer_data][destination]", input.collectionAccountId);
+  }
   if (input.priceId) {
     body.set("line_items[0][price]", input.priceId);
   } else {
@@ -676,9 +681,11 @@ export async function stripeConnectReady() {
   return (await stripeCredentials()).ok;
 }
 
-export async function createStripeExpressAccount(input: { secret: string; email?: string }) {
-  const body = new URLSearchParams({ type: "express", "capabilities[transfers][requested]": "true" });
+export async function createStripeExpressAccount(input: { secret: string; email?: string; country?: string | null }) {
+  const body = new URLSearchParams({ type: "express", "capabilities[transfers][requested]": "true", business_type: "individual" });
   if (input.email) body.set("email", input.email);
+  // The influencer's profile country decides which identity checks Stripe runs.
+  if (input.country && /^[A-Z]{2}$/.test(input.country)) body.set("country", input.country);
   try {
     const payload = await stripeCall("POST", "/v1/accounts", input.secret, body);
     const id = typeof payload?.id === "string" ? stripeAccountId(payload.id) : null;
@@ -709,7 +716,12 @@ export async function openCreatorConnectOnboarding(input: {
   if (!accountId) {
     const secret = await connectSecret();
     if (!secret) return { ok: false as const, error: "Stripe Connect is not ready. Nothing was opened." };
-    const created = await createStripeExpressAccount({ secret, email: input.email });
+    const { countryCodeFromLocation } = await import("@/lib/contract-wizard");
+    const created = await createStripeExpressAccount({
+      secret,
+      email: input.email,
+      country: countryCodeFromLocation(creator.locationCountry),
+    });
     if (!created.ok) return created;
     accountId = created.accountId;
     await prisma.influencerPayoutProfile.upsert({

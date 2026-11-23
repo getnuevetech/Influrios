@@ -103,6 +103,25 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
   if (!account) redirect("/login?next=/creator/earnings");
   const params = await searchParams;
 
+  // Stripe decides identity and payout readiness; read it before showing status.
+  const stripeNote = await (async () => {
+    const own = await prisma.creator
+      .findUnique({ where: { userId: account.id }, select: { id: true, payoutProfile: { select: { stripeConnectAccountId: true, primaryStatus: true } } } })
+      .catch(() => null);
+    if (!own?.payoutProfile?.stripeConnectAccountId) return undefined;
+    if (own.payoutProfile.primaryStatus === "VERIFIED" && !params.connected) return undefined;
+    const { refreshCreatorConnectStatus, requirementLabels } = await import("@/lib/stripe-connect-status");
+    const reading = await refreshCreatorConnectStatus(own.id).catch(() => null);
+    if (!reading?.ok) return undefined;
+    if (reading.status === "VERIFIED") return "Stripe verified your identity and bank. You can be paid.";
+    const needs = requirementLabels(reading.currentlyDue);
+    if (reading.status === "REJECTED") return "Stripe could not verify this payout account. Contact support.";
+    if (reading.status === "PENDING") {
+      return needs.length ? `Stripe is reviewing your details. Still needed: ${needs.join(", ")}.` : "Stripe is reviewing your details.";
+    }
+    return needs.length ? `Finish Stripe payout setup. Still needed: ${needs.join(", ")}.` : "Finish Stripe payout setup.";
+  })();
+
   const [creator, draft, identity, connectReady, airwallexConfig] = await Promise.all([
     prisma.creator.findUnique({ where: { userId: account.id }, select: { slug: true, displayName: true } }).catch(() => null),
     getCreatorSessionDraft().catch(() => null),
@@ -306,7 +325,7 @@ export default async function CreatorEarningsPage({ searchParams }: Props) {
         <CreatorPayoutMethodsPanel
           view={receiveView}
           error={memberFacingPayoutError(params.error)}
-          notice={params.connected ? "Payout account saved." : undefined}
+          notice={stripeNote ?? (params.connected ? "Payout account saved." : undefined)}
         />
       ) : (
         <section id="payouts" className="rounded-3xl border border-[#E6ECF7] bg-white p-5 shadow-sm">

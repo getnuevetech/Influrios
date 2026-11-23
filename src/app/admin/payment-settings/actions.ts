@@ -193,8 +193,19 @@ export async function actionRecordProviderTrace(formData: FormData) {
 }
 
 export async function actionSaveOperationsAccount(formData: FormData) {
+  return saveSubAccount(formData, "operations");
+}
+
+export async function actionSaveCollectionAccount(formData: FormData) {
+  return saveSubAccount(formData, "collection");
+}
+
+/** Save an Influrios-owned Stripe sub-account after Stripe confirms it is a connected account of this platform. */
+async function saveSubAccount(formData: FormData, role: "operations" | "collection") {
   const session = await requireAdminAction("collab_finance.manage");
-  const accountId = String(formData.get("operationsStripeAccountId") ?? "").trim();
+  const field = role === "operations" ? "operationsStripeAccountId" : "collectionStripeAccountId";
+  const label = role === "operations" ? "Operations" : "Collection";
+  const accountId = String(formData.get(field) ?? "").trim();
   try {
     if (accountId && !/^acct_[A-Za-z0-9]+$/.test(accountId)) throw new Error("Enter a Stripe account id that starts with acct_.");
     if (accountId) {
@@ -205,26 +216,26 @@ export async function actionSaveOperationsAccount(formData: FormData) {
       if (!read.ok) throw new Error(`Stripe did not find that connected account: ${read.error} Nothing was saved.`);
     }
     const { prisma } = await import("@/lib/db");
-    const before = await prisma.marketplaceSettings.findUnique({ where: { id: "default" }, select: { operationsStripeAccountId: true } });
+    const before = await prisma.marketplaceSettings.findUnique({ where: { id: "default" } });
     await prisma.marketplaceSettings.upsert({
       where: { id: "default" },
-      update: { operationsStripeAccountId: accountId },
-      create: { id: "default", reviewWindowHours: 72, operationsStripeAccountId: accountId },
+      update: { [field]: accountId },
+      create: { id: "default", reviewWindowHours: 72, [field]: accountId },
     });
     await prisma.auditLog.create({
       data: {
         actor: session.email,
-        action: "operations_stripe_account.saved",
+        action: `${role}_stripe_account.saved`,
         objectType: "MarketplaceSettings",
         objectId: "default",
-        before: { operationsStripeAccountId: before?.operationsStripeAccountId ?? "" },
-        after: { operationsStripeAccountId: accountId },
+        before: { [field]: before?.[field] ?? "" },
+        after: { [field]: accountId },
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not save the Operations account.";
+    const message = error instanceof Error ? error.message : `Could not save the ${label} account.`;
     redirect(`/admin/payment-settings?section=roles&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/payment-settings");
-  redirect("/admin/payment-settings?section=roles&saved=operations-account");
+  redirect(`/admin/payment-settings?section=roles&saved=${role}-account`);
 }

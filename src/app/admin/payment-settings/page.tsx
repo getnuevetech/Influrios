@@ -87,9 +87,9 @@ export default async function PaymentSettingsPage({
           {typeof params.error === "string" ? (
             <p className="mx-auto max-w-5xl rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{params.error}</p>
           ) : null}
-          {params.saved === "operations-account" ? (
+          {params.saved === "operations-account" || params.saved === "collection-account" ? (
             <p className="mx-auto max-w-5xl rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-              Operations account saved.
+              {params.saved === "operations-account" ? "Operations" : "Collection"} account saved.
             </p>
           ) : null}
           <AccountRolesPanel />

@@ -21,7 +21,9 @@ describe("agreement and money gates (recorded journey breaks)", () => {
     assert.equal(payoutProfileReady(null), false);
     assert.equal(payoutProfileReady({ providerConnectedAccountId: "acct_1", primaryStatus: "UNVERIFIED" }), false);
     assert.equal(payoutProfileReady({ providerConnectedAccountId: "acct_1", primaryStatus: "VERIFIED" }), true);
-    assert.equal(payoutProfileReady({ stripeConnectAccountId: "acct_2", primaryStatus: "PENDING" }), true);
+    // A Stripe account is ready only once Stripe has verified it.
+    assert.equal(payoutProfileReady({ stripeConnectAccountId: "acct_2", primaryStatus: "PENDING" }), false);
+    assert.equal(payoutProfileReady({ stripeConnectAccountId: "acct_2", primaryStatus: "VERIFIED" }), true);
   });
 
   it("refuses to fund a signed agreement for an influencer who cannot be paid, and tells them", () => {

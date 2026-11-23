@@ -1,4 +1,4 @@
-import { actionSaveOperationsAccount } from "@/app/admin/payment-settings/actions";
+import { actionSaveCollectionAccount, actionSaveOperationsAccount } from "@/app/admin/payment-settings/actions";
 import { verifyCollaborationCollectionAccess } from "@/lib/collaboration-collection-access";
 import { prisma } from "@/lib/db";
 import { maskAccountId, resolveSandboxDeploymentHost, stripeCapabilityStatus } from "@/lib/payment-account-routing";
@@ -26,9 +26,10 @@ export async function AccountRolesPanel() {
     checkedAt: access.checkedAt,
   });
   const settings = await prisma.marketplaceSettings
-    .findUnique({ where: { id: "default" }, select: { operationsStripeAccountId: true } })
+    .findUnique({ where: { id: "default" }, select: { operationsStripeAccountId: true, collectionStripeAccountId: true } })
     .catch(() => null);
   const operationsAccount = settings?.operationsStripeAccountId ?? "";
+  const collectionAccount = settings?.collectionStripeAccountId ?? "";
   const [connections, accounts, routes] = await Promise.all([
     prisma.providerConnection.findMany({ orderBy: { updatedAt: "desc" }, take: 40 }).catch(() => []),
     prisma.providerAccount.findMany({ orderBy: { updatedAt: "desc" }, take: 40, include: { connection: true } }).catch(() => []),
@@ -44,7 +45,11 @@ export async function AccountRolesPanel() {
         </p>
       </div>
       <div className="rounded-2xl border border-border bg-white p-5 text-sm">
-        <h3 className="font-display text-lg font-bold text-indigo">How collaboration money moves</h3>
+        <h3 className="font-display text-lg font-bold text-indigo">How money moves</h3>
+        <p className="mt-1 text-muted">
+          One Stripe account (the Collaborations account) with two Influrios-owned sub-accounts: Collection for subscriptions and
+          Operations for earned fees.
+        </p>
         <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted">
           <li>The business pays the full collaboration amount into the Influrios Stripe account (the Collaborations account).</li>
           <li>
@@ -70,6 +75,24 @@ export async function AccountRolesPanel() {
         </form>
         <p className="mt-1 text-xs text-muted">
           An Influrios-owned connected account in this Stripe platform. Saving checks with Stripe that the account exists.
+        </p>
+        <p className="mt-4 font-semibold text-indigo">
+          Collection account (subscriptions): {collectionAccount ? maskAccountId(collectionAccount) || collectionAccount : "not set — subscriptions stay in the main account"}
+        </p>
+        <form action={actionSaveCollectionAccount} className="mt-2 flex flex-wrap items-center gap-2">
+          <input
+            name="collectionStripeAccountId"
+            defaultValue={collectionAccount}
+            placeholder="acct_…"
+            aria-label="Collection Stripe account id"
+            className="w-64 rounded-lg border border-border px-3 py-2 text-sm"
+          />
+          <button type="submit" className="rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">
+            Save Collection account
+          </button>
+        </form>
+        <p className="mt-1 text-xs text-muted">
+          New plan checkouts send every invoice, renewals included, to this sub-account. Subscriptions started before it was set stay where they are.
         </p>
       </div>
       <div className="rounded-2xl border border-border bg-white p-5 text-sm">

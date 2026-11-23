@@ -147,11 +147,21 @@ export async function releaseMilestoneOnStripe(input: { fundingId: string; miles
   if (!funding) return { ok: false as const, error: "Funding not found.", configured: true as const };
   const creator = await prisma.creator.findUnique({
     where: { slug: funding.creatorSlug },
-    select: { payoutProfile: { select: { stripeConnectAccountId: true } } },
+    select: { id: true, payoutProfile: { select: { stripeConnectAccountId: true } } },
   });
   const influencerAccount = creator?.payoutProfile?.stripeConnectAccountId?.trim() ?? "";
-  if (!ACCOUNT.test(influencerAccount)) {
+  if (!creator || !ACCOUNT.test(influencerAccount)) {
     return { ok: false as const, error: "The influencer has not finished Stripe payout setup.", configured: true as const };
+  }
+  // Stripe must report the influencer verified with payouts enabled before any money moves to them.
+  const { refreshCreatorConnectStatus } = await import("@/lib/stripe-connect-status");
+  const reading = await refreshCreatorConnectStatus(creator.id);
+  if (!reading.ok || reading.status !== "VERIFIED") {
+    return {
+      ok: false as const,
+      error: "Stripe has not verified the influencer's payout account yet. Nothing was transferred.",
+      configured: true as const,
+    };
   }
   const charge = await chargeForFunding(funding.id, config.secret);
   if (!charge.ok) return { ...charge, configured: true as const };

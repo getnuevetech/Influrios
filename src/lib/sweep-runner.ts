@@ -18,7 +18,10 @@ export async function runSweepTick(): Promise<SweepTickResult> {
       if (!row?.locked) return { ran: false };
       const enqueued = await enqueueDueSweeps();
       const processed = await processDueJobs(32);
-      return { ran: true, enqueued, processed };
+      // Pick up Stripe's identity and payout decisions for influencers still in review.
+      const { refreshPendingConnectAccounts } = await import("@/lib/stripe-connect-status");
+      const connect = await refreshPendingConnectAccounts().catch(() => null);
+      return { ran: true, enqueued, processed, connect };
     },
     { timeout: 4 * 60_000, maxWait: 10_000 },
   );
