@@ -72,7 +72,13 @@ export type PayoutReadiness = {
   accountOnFile: boolean;
   globalPayoutReady: boolean;
   blockers: string[];
+  /** One of six customer-facing states, shared by home, hub, Earnings and the sidebar badge. */
+  state: PayoutState;
 };
+
+export { payoutStateFrom, payoutStateView, type PayoutState, type PayoutStateView } from "@/lib/payout-state";
+import type { PayoutState } from "@/lib/payout-state";
+import { payoutStateFrom } from "@/lib/payout-state";
 
 /** Exact fee/FX quote shown before payout confirmation (Collab OS §9.2). */
 export type PayoutFeeFxQuote = {
@@ -329,6 +335,9 @@ export async function setInfluencerPayoutMethodStatus(input: {
 export async function computePayoutReadiness(input: {
   creatorId: string;
   identityVerified: boolean;
+  /** Identity documents submitted and under review. */
+  identitySubmitted?: boolean;
+  identityRejected?: boolean;
   locationCountry?: string | null;
 }): Promise<PayoutReadiness> {
   await ensureCountryActivationCorridors();
@@ -344,9 +353,10 @@ export async function computePayoutReadiness(input: {
   const gateway = countryCode ? routes.find((row) => row.countryCode === countryCode) ?? null : null;
 
   const collection = (corridor?.collectionProviderCode ?? "").trim().toLowerCase();
+  // A saved Stripe account is not Ready: Stripe must report it verified (mirrored in primaryStatus).
   const connectedAccountReady =
     collection === "stripe"
-      ? Boolean(profile.stripeConnectAccountId?.trim())
+      ? Boolean(profile.stripeConnectAccountId?.trim()) && profile.primaryStatus === "VERIFIED"
       : isConnectedAccountCollectionProvider(collection)
         ? Boolean(profile.providerConnectedAccountId?.trim())
         : false;
@@ -412,6 +422,20 @@ export async function computePayoutReadiness(input: {
     accountOnFile,
     globalPayoutReady,
     blockers,
+    state: globalPayoutReady
+      ? "ready"
+      : payoutStateFrom({
+          countryCode,
+          corridorActive: Boolean(corridor?.active),
+          routeReady: Boolean(gateway?.ready),
+          identityVerified: input.identityVerified,
+          identitySubmitted: input.identitySubmitted,
+          identityRejected: input.identityRejected,
+          primaryStatus: profile.primaryStatus,
+          secondaryStatus: profile.secondaryStatus,
+          accountOnFile,
+          payoutVerified: hasVerifiedMethod,
+        }),
   };
 }
 

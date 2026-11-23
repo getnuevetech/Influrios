@@ -137,7 +137,8 @@ export async function MemberFrame({
       invitations: home ? attention.filter((item) => item.kind === "invitation").length : 0,
       signatures: home ? attention.filter((item) => item.kind === "agreement").length : pending,
       work: attention.filter((item) => item.kind === "deliverable").length,
-      payments: home && !home.payoutReady && home.activeCollabs > 0 ? 1 : 0,
+      // Only states that need the influencer to act, and only while collaborations are active.
+      payments: home && (home.payoutState === "setup_required" || home.payoutState === "action_required") && home.activeCollabs > 0 ? 1 : 0,
     });
   }
   if (audience === "business" && account) {

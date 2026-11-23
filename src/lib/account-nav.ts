@@ -1,3 +1,4 @@
+import { payoutStateView, type PayoutState } from "@/lib/payout-state";
 import { homePathForRole } from "@/lib/accounts";
 import { isDefaultMemberHome, safeNextPath } from "@/lib/account-policy";
 
@@ -39,6 +40,8 @@ export function openSetupReminders(input: {
   published: boolean;
   socialConnected: boolean;
   payoutReady: boolean;
+  /** Six-state payout status; only setup required and action required ask for something. */
+  payoutState?: PayoutState;
 }): SetupReminder[] {
   const reminders: SetupReminder[] = [];
   if (!input.emailVerified) {
@@ -68,13 +71,15 @@ export function openSetupReminders(input: {
       action: "Continue",
     });
   }
-  if (!input.payoutReady) {
+  const state = input.payoutState ?? (input.payoutReady ? "ready" : "setup_required");
+  if (state === "setup_required" || state === "action_required") {
+    const view = payoutStateView(state);
     reminders.push({
       id: "payout",
-      title: "Complete payout setup",
-      detail: "Finish your payout details to receive earnings.",
-      href: "/creator/earnings#payouts",
-      action: "Continue",
+      title: state === "action_required" ? "Payout action required" : "Set up payouts",
+      detail: view.message,
+      href: view.action?.href ?? "/creator/earnings#payouts",
+      action: view.action?.label ?? "Continue",
     });
   }
   return reminders;

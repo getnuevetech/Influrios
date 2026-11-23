@@ -116,6 +116,7 @@ export default async function CreatorHomePage({
         published: home.published,
         socialConnected: connected > 0 || Boolean(params.welcome),
         payoutReady: home.payoutReady,
+        payoutState: home.payoutState,
       }).map((reminder) => (
         <section
           key={reminder.id}

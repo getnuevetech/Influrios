@@ -586,9 +586,14 @@ export async function loadCreatorHub(input: {
       creatorSlug: dbCreator.slug,
       identityVerified: dbCreator.identityVerified,
     }).catch(() => dbCreator.identityVerified === "VERIFIED");
+    const kyc = await prisma.creatorKycSubmission
+      .findUnique({ where: { creatorSlug: dbCreator.slug }, select: { status: true } })
+      .catch(() => null);
     const readiness = await computePayoutReadiness({
       creatorId: dbCreator.id,
       identityVerified,
+      identitySubmitted: kyc?.status === "submitted" || kyc?.status === "pending_gateway",
+      identityRejected: kyc?.status === "rejected",
       locationCountry: dbCreator.locationCountry,
     }).catch(() => null);
     payout = { readiness };
