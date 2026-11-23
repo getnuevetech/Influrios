@@ -13,6 +13,20 @@ const deal = {
 };
 
 describe("taxed collection", () => {
+  it("charges a tax-inclusive quote as signed, with the influencer tax withheld from their net", () => {
+    const live = {
+      businessPaysCents: 55_125,
+      influencerReceivesCents: 48_687,
+      businessPlatformFeeCents: 2_500,
+      influencerPlatformFeeCents: 1_250,
+      businessTaxCents: 2_625,
+      influencerTaxCents: 63,
+    };
+    assert.equal(signedCollectCents(live), 55_125);
+    const base = { policyApproved: true, finalPayout: false, alreadyEarned: false, alreadyReturned: false };
+    assert.equal(signedDealMoneyEvents({ ...base, deal: live, eventType: "funding.held", amountCents: 55_125 }).ok, true);
+  });
+
   it("charges the signed amount plus business tax exactly once", () => {
     assert.equal(signedCollectCents(deal), 55_125);
     assert.equal(signedCollectCents({ ...deal, businessPaysCents: 55_125 }), 55_125);
