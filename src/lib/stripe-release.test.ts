@@ -227,7 +227,8 @@ describe("milestone release on Stripe", () => {
         },
       });
       const { runScheduledReleaseSweep } = await import("./jobs");
-      await runScheduledReleaseSweep(new Date(), first.id);
+      const swept = await runScheduledReleaseSweep(new Date(), first.id);
+      assert.equal(swept.requested, 1, "a payout Stripe completed counts as sent");
 
       assert.deepEqual(
         transfers.map((row) => [row.destination, row.amount]),
