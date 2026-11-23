@@ -407,7 +407,7 @@ export function liveFundingBlockReason(
     gate?.approvals,
     taxStatus ? { status: taxStatus, lines: [] } : undefined,
   );
-  if (!gate?.traceReady) blockers.push("The provider staging trace is not recorded.");
+  if (!gate?.traceReady) blockers.push("The provider test transaction (one funded payout and one refund) is not recorded.");
   if (blockers.length === 0) return null;
   return `${blockers.join(" ")} ${LIVE_FUNDING_OFF}`;
 }

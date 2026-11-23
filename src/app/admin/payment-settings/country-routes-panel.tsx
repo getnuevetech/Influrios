@@ -152,7 +152,7 @@ export async function CountryRoutesPanel({
         {canApprove ? (
           <form action={actionRecordProviderTrace} className="mt-4 grid gap-2 border-t border-[#E4EBFF] pt-4 text-sm sm:grid-cols-2">
             <p className="sm:col-span-2 text-xs text-muted">
-              Enter the staging amounts and redacted provider references from one funded payout and one confirmed refund.
+              Enter the amounts and redacted provider references from one test deal that was funded, paid out and refunded.
               The trace is stored only when collection equals the payout plus fees plus tax.
             </p>
             <input name="currency" required placeholder="Currency" className="rounded-lg border px-3 py-2" aria-label="Currency" />
@@ -165,7 +165,7 @@ export async function CountryRoutesPanel({
             <input name="releaseRef" required minLength={4} placeholder="Release reference" className="rounded-lg border px-3 py-2" aria-label="Release reference" />
             <input name="payoutRef" required minLength={4} placeholder="Confirmed payout reference" className="rounded-lg border px-3 py-2" aria-label="Confirmed payout reference" />
             <input name="refundRef" required minLength={4} placeholder="Confirmed refund reference" className="rounded-lg border px-3 py-2 sm:col-span-2" aria-label="Confirmed refund reference" />
-            <button className="w-fit rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">Record staging trace</button>
+            <button className="w-fit rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">Record test transaction</button>
           </form>
         ) : null}
       </section>

@@ -168,7 +168,7 @@ export async function actionRecordProviderTrace(formData: FormData) {
       refundRef: String(formData.get("refundRef") ?? ""),
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "The staging trace was not recorded.";
+    const message = error instanceof Error ? error.message : "The test transaction was not recorded.";
     redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/payment-settings");

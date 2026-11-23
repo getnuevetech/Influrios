@@ -907,7 +907,7 @@ describe("payment engine acceptance", () => {
     assert.match(signedQuoteExpired({ signedQuote: snapshot }, new Date("2026-02-01T00:00:00.000Z")) ?? "", /expired/);
   });
 
-  it("records a staging trace only when the payout and the refund reconcile", () => {
+  it("records a test transaction only when the payout and the refund reconcile", () => {
     const shared = {
       currency: "USD",
       businessPaysCents: 375_000,
@@ -939,7 +939,7 @@ describe("payment engine acceptance", () => {
       feeReservation: { status: "reserved" },
       signedQuote: { taxStatus: "approved_zero" },
     };
-    assert.match(liveFundingBlockReason(plan, { approvals: open, traceReady: false }) ?? "", /staging trace/);
+    assert.match(liveFundingBlockReason(plan, { approvals: open, traceReady: false }) ?? "", /test transaction/);
     assert.equal(liveFundingBlockReason(plan, { approvals: open, traceReady: true }), null);
     const taxed = buildBusinessCommercialSnapshot({
       quote: {
