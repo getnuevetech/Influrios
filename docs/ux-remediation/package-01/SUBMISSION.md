@@ -1,0 +1,57 @@
+# Package 1 — submission for final visual approval and focused implementation
+
+**Submitted:** 2026-11-21 · **Branch:** `cursor/ux-pkg1-design-boards-9268` (PR #540)
+**Asks Ola for:** (1) final visual approval of the boards below; (2) go-ahead to start the focused implementation slices. Nothing is implemented yet.
+
+## 1. What to approve
+
+| Board | Desktop | Mobile | Notes |
+|-------|---------|--------|-------|
+| [Influencer home](./designs/influencer-home.html) | [PNG](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/influencer-home-desktop.png) | [PNG](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/influencer-home-mobile.png) | Original card; counts; §2.2c states |
+| [Collaborations hub](./designs/collaborations-hub.html) | [PNG](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/collaborations-hub-desktop.png) | [PNG](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/collaborations-hub-mobile.png) | Includes team invitation |
+| [Payout readiness](./designs/earnings-payout.html) | [PNG](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/earnings-payout-desktop.png) | [PNG](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/earnings-payout-mobile.png) | Six states + no history |
+| [Invitation transitions](./designs/team-invite-respond.html) | [PNG](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/team-invite-respond-desktop.png) | [PNG](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/team-invite-respond-mobile.png) | Matrix cases, timeout outcomes, post-acceptance |
+| [Notifications](./designs/notifications.html) | [PNG](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/notifications-desktop.png) | [PNG](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/notifications-mobile.png) | |
+| [Business dashboard](./designs/business-dashboard.html) | [PNG](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/business-dashboard-desktop.png) · [popup](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/business-dashboard-desktop-popup.png) | [PNG](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/business-dashboard-mobile.png) · [sheet](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/business-dashboard-mobile-popup.png) | |
+| [Action inbox](./designs/action-inbox.html) | [PNG](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/action-inbox-desktop.png) | [PNG](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/action-inbox-mobile.png) | |
+| [Mobile navigation](./designs/mobile-auth-nav.html) | — | [influencer](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/mobile-auth-nav-mobile.png) · [business](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/mobile-auth-nav-mobile-business.png) · [320](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/mobile-auth-nav-mobile-320.png) · [430](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/mobile-auth-nav-mobile-430.png) | Static widths only; keyboard/focus are runtime |
+| [Sidebar badges](./designs/sidebar-badges.html) · [States](./designs/states.html) · [Admin note](./designs/admin-shared-note.html) | full boards | [states](https://github.com/getnuevetech/Influrios/blob/cursor/ux-pkg1-design-boards-9268/media/ux-remediation/package-01/states-mobile.png) | |
+
+Review record: [visual-review.md](./visual-review.md). Rules: [master-spec](../master-spec.md) §0–§9 (+ §12–§13 for Package 5 / R6 boundaries). Flows: [flows.md](./flows.md).
+
+## 2. Focused implementation — proposed slices (after approval)
+
+**Start condition:** S1 begins only after Ola's visual approval on #540. Each slice ships behind its acceptance anchors and is retested on the isolated host with the #539 harness (`scripts/e2e-audit/r5-iso/`). No slice touches live deposits or the release path; provider blockers stay separate, and MS1–MS8 (influencer payment **and** its platform-fee movement) remain open payment acceptance requirements outside Package 1.
+
+| Slice | Backlog | Acceptance | Retest rows (#539) |
+|-------|---------|------------|--------------------|
+| S1 Invitation projections + turn tracking + action matrix | P1-T1, P1-T4, P1-D1, P1-AUD-10 | DB1, DB4, DB4a–d | INV-DC-001, INV-DC-015, INV-A-045, INV-A-029 — **retest both the hub popup and the direct `/collaboration/applications/[id]` route** (same actions per matrix case), persistence after reload, permissions (other influencer, other business, signed-out → refused, server-side), and cross-screen counts (home, hub, badge, inbox, notifications; desktop + mobile) |
+| S2 Invitation lifecycle: deadline expiry, withdrawal/expiry notices, team listing, closed proposals | P1-AUD-01…05 | AUD1, DB1, DB4 | INV-DC-013, INV-DC-014, INV-A-048 |
+| S3 Response reliability (idempotency, timeout outcomes) | P1-T5 | DB4b | new timeout checks |
+| S4 Notices + inbox: in-app notice per action-required event, dedupe, subject names, stale bell | P1-T6, P1-T12, P1-AUD-06/07/12 | DB5, INB1 | INV-N-015T, INV-N-017T, INV-P-019 |
+| S5 Payout readiness six states | P1-T2, P1-T11 | DB2, DB2a–e | INV-DC-002, INV-C-014, INV-N-004 |
+| S6 Approval separate from release | P1-AUD-08 | AUD2 | INV-N-016T (approval half) |
+| S7 Next steps after acceptance/signature | P1-AUD-11 | DB8 | INV-A-045, INV-N-010T (next-step half) |
+| S8 Business dashboard + badges + accept-then-prepare | P1-T9, P1-AUD-09, P1-T17 | DB7, DB10 | INV-N-013T badge |
+| S9 Shell: mobile nav, terminology, card, visual parity, signed-out return | P1-T8, P1-T13–T15, P1-T18, P1-T19 | MOB1 (incl. runtime keyboard/focus across 320–430), TERM1, CARD1, VIS1 | INV-DC-030–033 |
+| S10 Active count + stability regression on the shared example records | P1-T3, P1-T7, P1-T10, P1-T16 | DB3, DB6, DB9 | INV-DC-006 |
+
+### Implementation status
+
+Visual approval: **given by Ola** (boards at `b1f3d64`).
+
+| Slice | Status | Code | Retest |
+|-------|--------|------|--------|
+| S1 | **Done** — turn tracking, §2.2b matrix (server-enforced), P1-D1 transition, popup = detail route, one waiting projection on home / inbox / hub / badges | `claude/vigilant-darwin-h4tha4` @ `d0351a3`, draft PR #541 (migration `20261121120000_invitation_turn`) | #539 IPS-47: 36/36 S1 checks + team 6/6; INV-DC-001, INV-DC-015 Fail → Pass; INV-A-045 observation closed; INV-A-029 re-run Pass |
+| S2 | **Done** — Respond-by expiry, withdrawal/expiry notices + emails (recorded reason), Action required follows the live task, team invitations in hub + inbox, closed proposals for every member | `claude/vigilant-darwin-h4tha4-s2` @ `d57e2fa` (on S1) | #539 IPS-48: 26/26; INV-DC-013, INV-DC-014, INV-A-048 Fail → Pass |
+| S3–S10 | Not started | — | — |
+
+Logged for later slices from the S1 run: `/creator` horizontal scroll at 390 px (S9); derived invitation notices in the inbox (S4); idempotency outcomes on retry (S3).
+
+## 3. Not in Package 1 (owners in #539 remediation plan, defect register)
+
+Request wizard (AUD-WIZ-01) → Pkg 2 · fee-label mismatch and discount rejection (AUD-FEE-01/02) → Pkg 3 + Pkg 4 · unreachable actions and missing entry points (AUD-R2-01a–d, AUD-R2-03) → Pkg 2 / Pkg 5 · media kit export, opening redirect (AUD-R2-04, AUD-R2-08) → Pkg 4 · admin invitation/opening forms (AUD-INV-01, AUD-ADM-01) → Pkg 5 · release, ledger, reconciliation (MS1–MS8) → R6 / Pkg 5.
+
+## 4. Audit position (unchanged by this submission)
+
+#539 matrix: **502 rows · 403 Pass · 35 Fail · 54 Blocked · 0 Not tested · 10 deferred** (after IPS-48). Every remaining Blocked row names its gate (deposits closed, R6, Stripe test subscription, AI provider). This is not a completed platform audit.
