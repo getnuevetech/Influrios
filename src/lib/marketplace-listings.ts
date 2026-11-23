@@ -655,7 +655,7 @@ export async function inviteCreatorsIndependently(input: {
         campaign_name: application.note?.trim() || "a private campaign",
         collaboration_name: application.note?.trim() || "a private campaign",
         expires_at: application.responseDeadline ? application.responseDeadline.toISOString().slice(0, 10) : "—",
-        action_url: `${links.origin}/collaboration/hub`,
+        action_url: `${links.origin}/collaboration/applications/${application.id}`,
       },
     }).catch(() => undefined);
   }
@@ -779,7 +779,7 @@ export async function transitionMarketplaceApplication(input: {
         vars: {
           influencer_name: influencer?.displayName || application?.toSlug || "An influencer",
           collaboration_name: application?.note?.trim() || "your collaboration",
-          action_url: `${links.origin}/collaboration/hub`,
+          action_url: application?.id ? `${links.origin}/collaboration/applications/${application.id}` : `${links.origin}/collaboration/business`,
         },
       }).catch(() => undefined);
     }

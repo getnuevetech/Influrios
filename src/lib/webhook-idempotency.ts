@@ -149,11 +149,11 @@ export async function applyPlanOnce(input: {
       await syncCreatorSearch(input.creatorSlug);
     }
     if (input.userId) {
-      const user = await prisma.user.findUnique({ where: { id: input.userId }, select: { email: true } });
+      const user = await prisma.user.findUnique({ where: { id: input.userId }, select: { email: true, role: true } });
       if (user?.email) {
         const { sendBillingNotice } = await import("@/lib/email-live");
         const templateId = status === "past_due" ? "billing.failed" : status === "canceled" ? "billing.ended" : "billing.paid";
-        await sendBillingNotice({ email: user.email, templateId, planName: input.sku }).catch(() => undefined);
+        await sendBillingNotice({ email: user.email, templateId, planName: input.sku, business: user.role === "BUSINESS" }).catch(() => undefined);
       }
     }
     return { applied: true };

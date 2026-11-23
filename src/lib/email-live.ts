@@ -432,6 +432,17 @@ export async function catalogCollabMessage(input: {
   if (!templateId) return null;
   const template = emailCatalogTemplate(templateId);
   if (!template) return null;
+  // Each email opens the page that answers it (receipt, checkout, milestone), not a generic list.
+  if (input.vars.funding_id) {
+    const { collabEmailPath } = await import("@/lib/collab-email-links");
+    input = {
+      ...input,
+      vars: {
+        ...input.vars,
+        action_url: `${liveMailLinks().origin}${collabEmailPath(templateId, { fundingId: input.vars.funding_id, milestoneId: input.vars.milestone_id })}`,
+      },
+    };
+  }
   if (!(await emailCategoryEnabled(template.group))) return null;
   if (await emailTemplatePause(templateId)) return { paused: true as const };
   const preference = await emailPreference(input.to);
@@ -464,6 +475,7 @@ export function collabCatalogVars(input: {
     business_name: input.business?.trim() || "the business",
     influencer_name: input.influencer?.trim() || "the Influencer",
     action_url: `${links.origin}${path}`,
+    ...(input.fundingId ? { funding_id: input.fundingId } : {}),
     public_reference: input.detail?.slice(0, 120) || "—",
     case_reference: input.fundingId || "—",
     case_owner: "Finance",
@@ -488,7 +500,7 @@ export async function sendWelcome(user: { email: string; name: string; role: str
   return deliverCatalogEmail({
     templateId,
     to: user.email,
-    vars: { first_name: first, action_url: `${links.origin}${user.role === "BUSINESS" ? "/collaboration" : "/creator"}` },
+    vars: { first_name: first, action_url: `${links.origin}${user.role === "BUSINESS" ? "/business/home" : "/creator"}` },
   });
 }
 
@@ -497,7 +509,7 @@ export async function sendPayoutReady(input: { email: string; countryName: strin
   return deliverCatalogEmail({
     templateId: "payout.ready",
     to: input.email,
-    vars: { country_name: input.countryName || "your country", action_url: `${links.origin}/account` },
+    vars: { country_name: input.countryName || "your country", action_url: `${links.origin}/creator/earnings` },
   });
 }
 
@@ -505,6 +517,8 @@ export async function sendBillingNotice(input: {
   email: string;
   templateId: "billing.paid" | "billing.failed" | "billing.ended" | "billing.cancel_scheduled";
   planName: string;
+  /** Business accounts manage plans on /business/billing; influencers on the account billing tab. */
+  business?: boolean;
 }) {
   const links = liveMailLinks();
   return deliverCatalogEmail({
@@ -520,7 +534,7 @@ export async function sendBillingNotice(input: {
       subscription_access_text: "Open Billing to see whether access is still available.",
       current_plan_text: "Open your account to see the current plan.",
       plan_end_at: "—",
-      action_url: `${links.origin}/account`,
+      action_url: `${links.origin}${input.business ? "/business/billing" : "/account?tab=billing"}`,
       failure_reason: "The subscription payment did not complete.",
       next_attempt_date: "—",
       period_end: "—",
