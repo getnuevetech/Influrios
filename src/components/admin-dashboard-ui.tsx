@@ -317,10 +317,14 @@ export function AdminPlatformOverview({
               <p className="mt-3 text-[12px] font-semibold text-muted">{kpi.label}</p>
               <p className="mt-1 font-display text-2xl font-bold text-indigo">{kpi.value}</p>
               <div className="mt-1 flex items-center justify-between gap-2">
-                <p className={`text-[11px] font-semibold ${trend.className}`}>
-                  {trend.text}
-                  <span className="ml-1 font-medium text-muted">vs. previous 30 days</span>
-                </p>
+                {kpi.note ? (
+                  <p className="text-[11px] font-medium text-muted">{kpi.note}</p>
+                ) : (
+                  <p className={`text-[11px] font-semibold ${trend.className}`}>
+                    {trend.text}
+                    <span className="ml-1 font-medium text-muted">vs. previous 30 days</span>
+                  </p>
+                )}
               </div>
               <div className="mt-2">
                 <Sparkline values={kpi.spark} stroke={stroke} />

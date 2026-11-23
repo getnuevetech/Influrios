@@ -73,8 +73,11 @@ export default async function PayoutReceiptPage({ params }: Props) {
         <Link href={`/collaboration/work/${facts.fundingId}`} className="inline-flex h-11 items-center rounded-full bg-violet px-4 text-sm font-semibold text-white">
           Open the collaboration
         </Link>
-        <Link href="/faq" className="inline-flex h-11 items-center rounded-full border border-border px-4 text-sm font-semibold text-indigo">
-          Help and FAQ
+        <Link
+          href={`/support?topic=${encodeURIComponent("Payments and payouts")}&ref=${encodeURIComponent(facts.transferRef || `Payout ${facts.title}`)}`}
+          className="inline-flex h-11 items-center rounded-full border border-border px-4 text-sm font-semibold text-indigo"
+        >
+          Contact support
         </Link>
       </div>
     </div>

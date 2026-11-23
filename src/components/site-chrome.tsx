@@ -216,6 +216,9 @@ export async function SiteFooter() {
               <Link href="/faq">FAQ</Link>
             </li>
             <li>
+              <Link href="/support">Contact support</Link>
+            </li>
+            <li>
               <Link href="/card">Pricing</Link>
             </li>
             <li>

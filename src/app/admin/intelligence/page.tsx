@@ -61,8 +61,8 @@ export default async function AdminIntelligencePage() {
       </div>
 
       <section className="card-surface p-6">
-        <h2 className="font-display text-xl font-bold text-indigo">Store notes</h2>
-        <p className="mt-2 text-sm text-muted">{store.notes}</p>
+        <h2 className="font-display text-xl font-bold text-indigo">Notes</h2>
+        {store.notes ? <p className="mt-2 text-sm text-muted">{store.notes}</p> : null}
         <p className="mt-2 text-xs text-muted">
           Watched specialties: {store.watchedSpecialties.join(", ")}
           {store.lastExportAt ? ` · Last export ${new Date(store.lastExportAt).toLocaleString()}` : ""}
