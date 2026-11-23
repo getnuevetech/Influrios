@@ -211,6 +211,21 @@ describe("milestone release on Stripe", () => {
           idempotencyKey: `settle-${stamp}`,
         },
       });
+      // Approval also recorded the release command, with the older net-plus-fees total and nothing sent.
+      const { providerOperationKey } = await import("./provider-outbox");
+      await prisma.providerCommand.create({
+        data: {
+          operationKey: providerOperationKey({ agreementVersion: 1, fundingId: funding.id, milestoneId: first.id, operation: "release" }),
+          fundingId: funding.id,
+          milestoneId: first.id,
+          agreementVersion: 1,
+          operation: "release",
+          amountCents: 40_000,
+          currency: "USD",
+          status: "pending",
+          attemptCount: 0,
+        },
+      });
       const { runScheduledReleaseSweep } = await import("./jobs");
       await runScheduledReleaseSweep(new Date(), first.id);
 
