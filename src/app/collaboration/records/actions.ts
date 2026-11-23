@@ -2,11 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
-import { canReadCollaboration } from "@/lib/collaboration-access";
 import { getCreatorSessionDraft } from "@/lib/claim";
-import { advanceCollaboration, getCollaboration, isCollaborationStatus } from "@/lib/collaborations";
+import { advanceCollaboration, isCollaborationStatus } from "@/lib/collaborations";
 import { prisma } from "@/lib/db";
-import { queueSignatureRequest } from "@/lib/providers";
 
 async function actorForAccount(userId: string) {
   const [draft, creator] = await Promise.all([
@@ -38,22 +36,3 @@ export async function actionAdvanceCollaboration(formData: FormData) {
   redirect(back);
 }
 
-export async function actionQueueSignature(formData: FormData) {
-  const id = String(formData.get("id") ?? "");
-  const back = `/collaboration/records/${id}`;
-  const account = await getAccountSession();
-  if (!account) redirect(`/login?next=${encodeURIComponent(back)}&gate=proposal`);
-  const record = await getCollaboration(id).catch(() => null);
-  if (!record) redirect(`${back}?error=${encodeURIComponent("That proposal was not found.")}`);
-  const actor = await actorForAccount(account.id);
-  if (!canReadCollaboration(record, actor)) {
-    redirect(`${back}?error=${encodeURIComponent("You cannot update this proposal.")}`);
-  }
-  const result = await queueSignatureRequest({
-    collaborationId: record.id,
-    collaborationStatus: record.status,
-    title: record.title,
-  });
-  if (!result.ok) redirect(`${back}?error=${encodeURIComponent(result.error)}`);
-  redirect(back);
-}
