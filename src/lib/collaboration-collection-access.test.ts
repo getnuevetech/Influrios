@@ -47,93 +47,48 @@ describe("collaboration collection routing", () => {
     assert.equal(isSandboxLedgerHoldRouteEnabled({}), false);
   });
 
-  it("opens labelled sandbox ledger-hold only when gates pass (sk_test)", () => {
-    const route = resolveCollaborationCollectionRoute({
-      environment: "sandbox",
-      stripeKeyMode: "sandbox",
-      originOrHost: "http://127.0.0.1:3000",
-      probe: noCaps,
-      ...sandboxGates,
-    });
-    assert.equal(route.ok, true);
-    if (!route.ok) return;
-    assert.equal(route.topology, "sandbox_ledger_hold");
-    assert.equal(route.simulation, true);
-    assert.equal(route.providerE2eComplete, false);
-    assert.match(String(route.limitation), /not complete/i);
+  it("opens standard Stripe collection with test keys, on any host, labelled as test mode", () => {
+    for (const host of ["http://127.0.0.1:3000", "https://influrios.com"]) {
+      const route = resolveCollaborationCollectionRoute({
+        environment: "sandbox",
+        stripeKeyMode: "sandbox",
+        originOrHost: host,
+        probe: noCaps,
+        trustedDeployment: false,
+        sandboxRouteEnabled: false,
+      });
+      assert.equal(route.ok, true);
+      if (!route.ok) return;
+      assert.equal(route.topology, "stripe_charges_and_transfers");
+      assert.equal(route.simulation, true);
+      assert.equal(route.simulationLabel, "Stripe test mode");
+    }
   });
 
-  it("does not enable live collection or providerE2eComplete from capability probes", () => {
-    const liveWithCaps = resolveCollaborationCollectionRoute({
+  it("opens standard Stripe collection with live keys; who may fund is gated by launch approvals", () => {
+    const live = resolveCollaborationCollectionRoute({
       environment: "live",
       stripeKeyMode: "live",
       originOrHost: "https://influrios.com",
-      probe: { status: "checked", allocatedFunds: true, treasury: true, reason: "detected" },
+      probe: noCaps,
       ...sandboxGates,
     });
-    assert.equal(liveWithCaps.ok, false);
-    if (!liveWithCaps.ok) {
-      assert.equal(liveWithCaps.refuseKind, "live_closed");
-      assert.equal(liveWithCaps.providerE2eComplete, false);
-    }
-
-    const sandboxWithCaps = resolveCollaborationCollectionRoute({
-      environment: "sandbox",
-      stripeKeyMode: "sandbox",
-      originOrHost: "http://127.0.0.1:3000",
-      probe: { status: "checked", allocatedFunds: true, treasury: false, reason: "detected" },
-      ...sandboxGates,
-    });
-    assert.equal(sandboxWithCaps.ok, true);
-    if (!sandboxWithCaps.ok) return;
-    assert.equal(sandboxWithCaps.topology, "sandbox_ledger_hold");
-    assert.equal(sandboxWithCaps.providerE2eComplete, false);
-    assert.equal(sandboxWithCaps.simulation, true);
+    assert.equal(live.ok, true);
+    if (!live.ok) return;
+    assert.equal(live.topology, "stripe_charges_and_transfers");
+    assert.equal(live.simulation, false);
+    assert.equal(live.simulationLabel, null);
   });
 
-  it("refuses empty host, prod host, missing enable, and untrusted deployment", () => {
-    assert.equal(
-      resolveCollaborationCollectionRoute({
-        environment: "sandbox",
-        stripeKeyMode: "sandbox",
-        originOrHost: "",
-        probe: noCaps,
-        ...sandboxGates,
-      }).ok,
-      false,
-    );
-    assert.equal(
-      resolveCollaborationCollectionRoute({
-        environment: "sandbox",
-        stripeKeyMode: "sandbox",
-        originOrHost: "https://influrios.com",
-        probe: noCaps,
-        ...sandboxGates,
-      }).ok,
-      false,
-    );
-    assert.equal(
-      resolveCollaborationCollectionRoute({
-        environment: "sandbox",
-        stripeKeyMode: "sandbox",
-        originOrHost: "http://127.0.0.1:3000",
-        probe: noCaps,
-        trustedDeployment: false,
-        sandboxRouteEnabled: true,
-      }).ok,
-      false,
-    );
-    assert.equal(
-      resolveCollaborationCollectionRoute({
-        environment: "sandbox",
-        stripeKeyMode: "sandbox",
-        originOrHost: "http://127.0.0.1:3000",
-        probe: noCaps,
-        trustedDeployment: true,
-        sandboxRouteEnabled: false,
-      }).ok,
-      false,
-    );
+  it("refuses without a valid Stripe key", () => {
+    const none = resolveCollaborationCollectionRoute({
+      environment: "sandbox",
+      stripeKeyMode: null,
+      originOrHost: "https://influrios.com",
+      probe: noCaps,
+      ...sandboxGates,
+    });
+    assert.equal(none.ok, false);
   });
 
   it("treats failed probes as verification_failed, not sandbox_ledger_hold", () => {
@@ -205,52 +160,35 @@ describe("collaboration collection routing", () => {
 });
 
 describe("collaboration collection live refusal (verify + transport)", () => {
-  it("classifies sk_live and refuses even when capability flags are returned", async () => {
+  it("opens real collection for sk_live (launch approvals gate who may fund)", async () => {
     assert.equal(classifyStripeKey("sk_live_examplekey"), "live");
     const previous = process.env.STRIPE_SECRET_KEY;
     process.env.STRIPE_SECRET_KEY = "sk_live_examplekey";
-    setStripeTransportForTests(async () =>
-      jsonResponse(200, {
-        id: "acct_liveprobe",
-        capabilities: { card_payments: "active", allocated_funds: "active" },
-        allocated_funds: "active",
-      }),
-    );
-    const access = await verifyCollaborationCollectionAccess({
-      originOrHost: "http://127.0.0.1:3000",
-      environment: "live",
-      env: { COLLABORATION_SANDBOX_LEDGER_HOLD: "1", NODE_ENV: "test" },
-    });
+    setStripeTransportForTests(async () => jsonResponse(200, { id: "acct_liveprobe", capabilities: { card_payments: "active" } }));
+    const access = await verifyCollaborationCollectionAccess({ originOrHost: "https://influrios.com", environment: "live", env: { NODE_ENV: "production" } });
     process.env.STRIPE_SECRET_KEY = previous;
     setStripeTransportForTests(null);
-    assert.equal(access.ok, false);
-    assert.equal(access.providerE2eComplete, false);
-    if (!access.ok) assert.equal(access.refuseKind, "live_closed");
+    assert.equal(access.ok, true);
+    assert.equal(access.topology, "stripe_charges_and_transfers");
+    assert.equal(access.simulation, false);
   });
 
-  it("opens sandbox ledger-hold for sk_test when gates pass and capabilities are unsupported", async () => {
+  it("opens real collection for sk_test on the production host, labelled as test mode", async () => {
     const previous = process.env.STRIPE_SECRET_KEY;
     process.env.STRIPE_SECRET_KEY = "sk_test_examplekey";
     setStripeTransportForTests(async (input) => {
       const url = String(input);
       if (url.includes("/v1/account")) {
-        return jsonResponse(200, {
-          id: "acct_testprobe",
-          capabilities: { card_payments: "active", transfers: "active" },
-        });
+        return jsonResponse(200, { id: "acct_testprobe", capabilities: { card_payments: "active", transfers: "active" } });
       }
       return jsonResponse(400, { error: { message: "no treasury" } });
     });
-    const access = await verifyCollaborationCollectionAccess({
-      originOrHost: "http://127.0.0.1:3000",
-      environment: "sandbox",
-      env: { COLLABORATION_SANDBOX_LEDGER_HOLD: "1", NODE_ENV: "test" },
-    });
+    const access = await verifyCollaborationCollectionAccess({ originOrHost: "https://influrios.com", environment: "sandbox", env: { NODE_ENV: "production" } });
     process.env.STRIPE_SECRET_KEY = previous;
     setStripeTransportForTests(null);
     assert.equal(access.ok, true);
-    assert.equal(access.topology, "sandbox_ledger_hold");
-    assert.equal(access.providerE2eComplete, false);
+    assert.equal(access.topology, "stripe_charges_and_transfers");
+    assert.equal(access.simulation, true);
     assert.equal(access.probe.status, "checked");
   });
 
@@ -268,38 +206,6 @@ describe("collaboration collection live refusal (verify + transport)", () => {
     assert.equal(access.ok, false);
     assert.equal(access.probe.status, "failed");
     if (!access.ok) assert.equal(access.refuseKind, "verification_failed");
-  });
-
-  it("refuses production host and missing sandbox route enable even with a good probe", async () => {
-    const previous = process.env.STRIPE_SECRET_KEY;
-    process.env.STRIPE_SECRET_KEY = "sk_test_examplekey";
-    setStripeTransportForTests(async () =>
-      jsonResponse(200, { id: "acct_testprobe", capabilities: { card_payments: "active" } }),
-    );
-
-    const prodHost = await verifyCollaborationCollectionAccess({
-      originOrHost: "https://influrios.com",
-      environment: "sandbox",
-      env: { COLLABORATION_SANDBOX_LEDGER_HOLD: "1", NODE_ENV: "test" },
-    });
-    assert.equal(prodHost.ok, false);
-
-    const disabled = await verifyCollaborationCollectionAccess({
-      originOrHost: "http://127.0.0.1:3000",
-      environment: "sandbox",
-      env: { COLLABORATION_SANDBOX_LEDGER_HOLD: "0", NODE_ENV: "test" },
-    });
-    assert.equal(disabled.ok, false);
-
-    const emptyHost = await verifyCollaborationCollectionAccess({
-      originOrHost: "",
-      environment: "sandbox",
-      env: { COLLABORATION_SANDBOX_LEDGER_HOLD: "1", NODE_ENV: "test" },
-    });
-    assert.equal(emptyHost.ok, false);
-
-    process.env.STRIPE_SECRET_KEY = previous;
-    setStripeTransportForTests(null);
   });
 });
 
