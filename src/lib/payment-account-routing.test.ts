@@ -94,8 +94,6 @@ describe("payment account routing", () => {
       stripeKeyMode: "live",
       originOrHost: "https://influrios.com",
       probe: { status: "checked", allocatedFunds: true, treasury: true, reason: "flags" },
-      trustedDeployment: true,
-      sandboxRouteEnabled: true,
     });
     assert.equal(liveRoute.ok && liveRoute.topology, "stripe_charges_and_transfers");
     assert.equal(isLiveProductCollectionHost("https://influrios.com"), true);

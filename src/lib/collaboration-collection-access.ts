@@ -6,9 +6,7 @@
  */
 import {
   interpretStripeAccountPayload,
-  isSandboxLedgerHoldRouteEnabled,
   isStripeAccountRetrievePayload,
-  isTrustedSandboxDeployment,
   resolveCollaborationCollectionRoute,
   type CollaborationCapabilityProbe,
   type CollaborationCollectionDecision,
@@ -20,8 +18,6 @@ export type CollaborationCollectionAccess = CollaborationCollectionDecision & {
   environment: "sandbox" | "live";
   probe: CollaborationCapabilityProbe;
   checkedAt: string;
-  trustedDeployment: boolean;
-  sandboxRouteEnabled: boolean;
 };
 
 async function probeCollaborationCapabilities(secret: string): Promise<CollaborationCapabilityProbe> {
@@ -88,8 +84,7 @@ async function probeCollaborationCapabilities(secret: string): Promise<Collabora
 
 /**
  * Probe Stripe and resolve sandbox vs live collaboration collection.
- * Live stays closed. Failed probes refuse (not sandbox_ledger_hold).
- * Sandbox ledger-hold requires trusted deployment + explicit enable + host context.
+ * Failed probes refuse.
  */
 export async function verifyCollaborationCollectionAccess(input?: {
   originOrHost?: string;
@@ -97,9 +92,6 @@ export async function verifyCollaborationCollectionAccess(input?: {
   env?: Record<string, string | undefined>;
 }): Promise<CollaborationCollectionAccess> {
   const checkedAt = new Date().toISOString();
-  const env = input?.env ?? (process.env as Record<string, string | undefined>);
-  const trustedDeployment = isTrustedSandboxDeployment(env);
-  const sandboxRouteEnabled = isSandboxLedgerHoldRouteEnabled(env);
   const originOrHost = input?.originOrHost ?? "";
 
   const creds = await stripeCredentials();
@@ -115,8 +107,6 @@ export async function verifyCollaborationCollectionAccess(input?: {
       stripeKeyMode: null,
       originOrHost,
       probe,
-      trustedDeployment,
-      sandboxRouteEnabled,
     });
     return {
       ...refused,
@@ -124,8 +114,6 @@ export async function verifyCollaborationCollectionAccess(input?: {
       environment: input?.environment ?? "sandbox",
       probe,
       checkedAt,
-      trustedDeployment,
-      sandboxRouteEnabled,
     };
   }
 
@@ -136,8 +124,6 @@ export async function verifyCollaborationCollectionAccess(input?: {
     stripeKeyMode: creds.mode,
     originOrHost,
     probe,
-    trustedDeployment,
-    sandboxRouteEnabled,
   });
 
   return {
@@ -146,7 +132,5 @@ export async function verifyCollaborationCollectionAccess(input?: {
     environment,
     probe,
     checkedAt,
-    trustedDeployment,
-    sandboxRouteEnabled,
   };
 }

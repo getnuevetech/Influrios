@@ -252,10 +252,7 @@ export async function startFundingDeposit(
     }
   }
   const { verifyCollaborationCollectionAccess } = await import("@/lib/collaboration-collection-access");
-  const {
-    buildSandboxCollectionProvenance,
-    mergeSandboxCollectionProvenance,
-  } = await import("@/lib/payment-account-routing");
+  const { mergeCollectionProvenance } = await import("@/lib/payment-account-routing");
   const verifyAccess = deps.verifyAccess ?? verifyCollaborationCollectionAccess;
 
   const findOpenGatewayDeposit =
@@ -304,7 +301,7 @@ export async function startFundingDeposit(
       // Authorize BEFORE returning an existing unpaid Checkout URL (prod host / no flag must refuse).
       const resumeAccess = await verifyAccess({ originOrHost: input.origin, env: deps.env });
       if (!resumeAccess.ok) return { ok: false, error: resumeAccess.error || "Sandbox collection is not authorized. Nothing was charged." };
-      if (!(resumeAccess.topology === "stripe_charges_and_transfers" || resumeAccess.topology === "sandbox_ledger_hold")) {
+      if (resumeAccess.topology !== "stripe_charges_and_transfers") {
         return {
           ok: false,
           error:
@@ -327,7 +324,7 @@ export async function startFundingDeposit(
     };
   }
   // Standard Stripe Checkout into the Influrios platform balance (the Collaborations account).
-  if (collection.topology !== "stripe_charges_and_transfers" && collection.topology !== "sandbox_ledger_hold") {
+  if (collection.topology !== "stripe_charges_and_transfers") {
     return {
       ok: false,
       error:
@@ -336,30 +333,19 @@ export async function startFundingDeposit(
   }
   const creds = await stripeCredentials();
   if (!creds.ok) return { ok: false, error: stripeCredentialError(creds.reason, "charged") };
-  const provenance =
-    collection.topology === "sandbox_ledger_hold"
-      ? buildSandboxCollectionProvenance({
-          originOrHost: input.origin,
-          allocatedFundsDetected: collection.allocatedFunds === true,
-          treasuryDetected: collection.treasury === true,
-          openedAt: collection.checkedAt,
-        })
-      : {
-          topology: "stripe_charges_and_transfers" as const,
-          stripeKeyModeAtOpen: creds.mode,
-          testMode: creds.mode === "sandbox",
-          originHost: input.origin,
-          openedAt: collection.checkedAt ?? new Date().toISOString(),
-        };
+  const provenance = {
+    topology: "stripe_charges_and_transfers" as const,
+    stripeKeyModeAtOpen: creds.mode,
+    testMode: creds.mode === "sandbox",
+    originHost: input.origin,
+    openedAt: collection.checkedAt ?? new Date().toISOString(),
+  };
   const fundingRow = await prisma.collaborationFunding.findUnique({
     where: { id: funding.id },
     select: { routeSnapshotJson: true },
   });
   if (!fundingRow) return { ok: false, error: "That funding was not found. Nothing was charged." };
-  const routeSnapshotJson = mergeSandboxCollectionProvenance(
-    fundingRow.routeSnapshotJson,
-    provenance as Parameters<typeof mergeSandboxCollectionProvenance>[1],
-  );
+  const routeSnapshotJson = mergeCollectionProvenance(fundingRow.routeSnapshotJson, provenance);
   const deposit = await prisma.fundingDeposit.create({
     data: {
       fundingId: funding.id,
