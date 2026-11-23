@@ -1,3 +1,4 @@
+import { payoutProfileReady } from "@/lib/influencer-payout-ready";
 import { notFound, redirect } from "next/navigation";
 import { WorkspacePanel } from "@/app/collaboration/work/[fundingId]/workspace-panel";
 import { getAccountSession } from "@/lib/accounts";
@@ -51,7 +52,12 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
       where: { fundingId: funding.id },
       select: { id: true, sourceJson: true },
     }).catch(() => null),
-    prisma.creator.findUnique({ where: { slug: funding.creatorSlug }, select: { displayName: true } }).catch(() => null),
+    prisma.creator
+      .findUnique({
+        where: { slug: funding.creatorSlug },
+        select: { displayName: true, payoutProfile: { select: { stripeConnectAccountId: true, providerConnectedAccountId: true, primaryStatus: true } } },
+      })
+      .catch(() => null),
     prisma.milestoneSettlementV4.findMany({
       where: { fundingId: funding.id },
       select: { milestoneId: true, payoutState: true },
@@ -122,6 +128,7 @@ export default async function CollaborationWorkPage({ params, searchParams }: Pr
           disputeOpen: Boolean(openDispute),
           payoutConfirmed: funding.entries.some((entry) => entry.milestoneId === milestone.id),
           bankPayoutConfirmed: settlements.some((row) => row.milestoneId === milestone.id && row.payoutState === "paid"),
+          payoutSetupPending: !payoutProfileReady(creator?.payoutProfile),
           submissions: visible.map((row) => ({
             version: row.version,
             status: row.status,

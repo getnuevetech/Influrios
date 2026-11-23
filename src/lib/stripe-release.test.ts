@@ -51,7 +51,7 @@ describe("milestone release on Stripe", () => {
       return new Response(JSON.stringify({ error: { message: "unexpected" } }), { status: 404 });
     });
     const creator = await prisma.creator.create({ data: { slug: `rel-${stamp}`, displayName: "Release Test" } as never });
-    await prisma.influencerPayoutProfile.create({ data: { creatorId: creator.id, stripeConnectAccountId: "acct_influencerTest" } as never });
+    await prisma.influencerPayoutProfile.create({ data: { creatorId: creator.id, stripeConnectAccountId: "acct_influencerTest", primaryStatus: "VERIFIED" } as never });
     await prisma.marketplaceSettings.upsert({
       where: { id: "default" },
       update: { operationsStripeAccountId: "acct_operationsTest" },
@@ -151,7 +151,7 @@ describe("milestone release on Stripe", () => {
       return new Response(JSON.stringify({ error: { message: "unexpected" } }), { status: 404 });
     });
     const creator = await prisma.creator.create({ data: { slug: `rel-${stamp}`, displayName: "Release Test" } as never });
-    await prisma.influencerPayoutProfile.create({ data: { creatorId: creator.id, stripeConnectAccountId: "acct_influencerTest" } as never });
+    await prisma.influencerPayoutProfile.create({ data: { creatorId: creator.id, stripeConnectAccountId: "acct_influencerTest", primaryStatus: "VERIFIED" } as never });
     await prisma.marketplaceSettings.upsert({
       where: { id: "default" },
       update: { operationsStripeAccountId: "acct_operationsTest" },
@@ -227,6 +227,16 @@ describe("milestone release on Stripe", () => {
         },
       });
       const { runScheduledReleaseSweep } = await import("./jobs");
+      // Payout setup not finished: the sweep waits, sends nothing and keeps its retries.
+      await prisma.influencerPayoutProfile.update({ where: { creatorId: creator.id }, data: { primaryStatus: "PENDING" } as never });
+      const waiting = await runScheduledReleaseSweep(new Date(), first.id);
+      assert.equal(waiting.requested, 0);
+      assert.equal(transfers.length, 0);
+      const pendingCommand = await prisma.providerCommand.findFirst({ where: { milestoneId: first.id, operation: "release" } });
+      assert.equal(pendingCommand?.attemptCount, 0, "waiting for payout setup does not use a send attempt");
+      const note = await prisma.auditLog.findFirst({ where: { action: "milestone_release_skipped", objectId: first.id }, orderBy: { createdAt: "desc" } });
+      assert.match(String((note?.after as { error?: string } | null)?.error), /finish payout setup/);
+      await prisma.influencerPayoutProfile.update({ where: { creatorId: creator.id }, data: { primaryStatus: "VERIFIED" } as never });
       const swept = await runScheduledReleaseSweep(new Date(), first.id);
       assert.equal(swept.requested, 1, "a payout Stripe completed counts as sent");
 
