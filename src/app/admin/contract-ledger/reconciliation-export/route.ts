@@ -34,6 +34,7 @@ export async function GET(request: Request) {
     ["Paid to influencers", money(result.paidCents)],
     ["Processing costs", money(result.costsCents)],
     ["Refunded", money(result.refundedCents)],
+    ["Platform top-ups", money(result.topupsCents)],
     ["Ledger cash", money(result.ledgerCashCents)],
     ["Combined cash (provider + bank)", money(result.combinedCents)],
     ["Unexplained difference", money(result.unexplainedCents)],
