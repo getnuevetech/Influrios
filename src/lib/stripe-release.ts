@@ -70,7 +70,7 @@ export async function unsettledFeeCents(fundingId: string) {
 
 async function chargeForFunding(fundingId: string, secret: string) {
   const deposit = await prisma.fundingDeposit.findFirst({
-    where: { fundingId, status: "confirmed", method: { in: ["card", "ach_online"] } },
+    where: { fundingId, status: "confirmed", method: { in: ["card", "ach_online", "bank_transfer"] } },
     orderBy: { confirmedAt: "desc" },
     select: { reference: true },
   });

@@ -24,7 +24,7 @@ export const PAYMENT_CHARGE_SWITCHES = [
     label: "Wire deposit",
     defaultEnabled: true,
     stopped: "Nothing was charged.",
-    description: "Records a wire instruction. Finance still confirms the arrival before the hold.",
+    description: "Opens a Stripe wire or bank transfer checkout for a large USD deposit. Funds are held when Stripe confirms the transfer arrived.",
   },
   {
     key: "check_collection",
@@ -126,7 +126,7 @@ export function paymentChargeSpec(key: PaymentChargeKey) {
 export function paymentChargeKeyForDeposit(method: string): PaymentChargeKey | null {
   if (method === "card") return "card_collection";
   if (method === "ach_online") return "ach_collection";
-  if (method === "ach_wire") return "wire_collection";
+  if (method === "ach_wire" || method === "bank_transfer") return "wire_collection";
   if (method === "check") return "check_collection";
   return null;
 }

@@ -1299,6 +1299,31 @@ export async function enqueueFundingReconciliationSweep() {
  * Dev §8 / §16 — due release_scheduled milestones → provider release instruction + release_requested.
  * Ledger still moves only on signed payout.released.
  */
+/** Shown in the admin release log so a payout that did not go out says why. */
+async function logReleaseFailure(milestoneId: string, fundingId: string, error: unknown) {
+  const message = typeof error === "string" && error.trim() ? error.trim().slice(0, 300) : "The provider did not accept the payout.";
+  await prisma.auditLog
+    .create({
+      data: {
+        actor: "system",
+        action: "milestone_release_skipped",
+        objectType: "FundingMilestone",
+        objectId: milestoneId,
+        after: { fundingId, error: message },
+      },
+    })
+    .catch(() => undefined);
+}
+
+/** Admin "Send again": clears the retry count on a failed release so the next send can try once more. */
+export async function resetFailedReleaseCommand(milestoneId: string) {
+  const reset = await prisma.providerCommand.updateMany({
+    where: { milestoneId, operation: "release", status: { in: ["failed", "unknown"] } },
+    data: { status: "failed", attemptCount: 0 },
+  });
+  return reset.count;
+}
+
 export async function runScheduledReleaseSweep(now = new Date(), onlyMilestoneId?: string) {
   const { markUnknownProviderCommands } = await import("@/lib/provider-outbox");
   await markUnknownProviderCommands(now);
@@ -1457,10 +1482,12 @@ export async function runScheduledReleaseSweep(now = new Date(), onlyMilestoneId
       });
     } catch {
       await recordProviderCommandResult({ commandId: claim.commandId, ok: false });
+      await logReleaseFailure(milestone.id, milestone.fundingId, "The provider could not be reached.");
       continue;
     }
     if (!instruction.ok) {
       await recordProviderCommandResult({ commandId: claim.commandId, ok: false });
+      await logReleaseFailure(milestone.id, milestone.fundingId, instruction.error);
       continue;
     }
     if (instruction.execution === "external") {

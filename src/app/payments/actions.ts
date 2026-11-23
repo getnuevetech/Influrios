@@ -12,7 +12,7 @@ import { reviewVersionDecision } from "@/lib/version-review";
 import { recordsDisagree, workspaceMutationAllowed, workspaceTab, type WorkspaceMilestoneState } from "@/lib/workspace-decision";
 import { assertFundingAccess, requireBusinessFundingAccess } from "@/lib/funding-access";
 import { openFundingCollection } from "@/lib/provider-collection";
-import { parseDepositMethod, startFundingDeposit } from "@/lib/funding-checkout";
+import { abandonOpenGatewayDeposit, parseDepositMethod, startFundingDeposit } from "@/lib/funding-checkout";
 import { prisma } from "@/lib/db";
 import {
   approveFundingMilestone,
@@ -185,7 +185,7 @@ export async function actionStartFundingDeposit(formData: FormData) {
   const method = parseDepositMethod(String(formData.get("method") ?? ""));
   if (!method) {
     redirect(
-      `/payments/checkout/${access.funding.id}?error=${encodeURIComponent("Choose card, online ACH, ACH wire, or check. Nothing was charged.")}`,
+      `/payments/checkout/${access.funding.id}?error=${encodeURIComponent("Choose a payment method. Nothing was charged.")}`,
     );
   }
   const origin = (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -203,6 +203,18 @@ export async function actionStartFundingDeposit(formData: FormData) {
   revalidatePath(`/payments/checkout/${access.funding.id}`);
   if (started.kind === "gateway") redirect(started.url);
   redirect(`/payments/checkout/${access.funding.id}?recorded=1`);
+}
+
+/** Close the open Stripe checkout so the business can choose another method. */
+export async function actionChangeFundingMethod(formData: FormData) {
+  const account = await requirePaymentsAccount();
+  const fundingId = String(formData.get("fundingId") ?? "").trim();
+  const access = requireBusinessFundingAccess(await assertFundingAccess(account, fundingId));
+  if (!access.ok) fail(access.error);
+  const result = await abandonOpenGatewayDeposit({ fundingId: access.funding.id, actor: account.id });
+  if (!result.ok) redirect(`/payments/checkout/${access.funding.id}?error=${encodeURIComponent(result.error)}`);
+  revalidatePath(`/payments/checkout/${access.funding.id}`);
+  redirect(`/payments/checkout/${access.funding.id}`);
 }
 
 export async function actionRequestChangeOrder(formData: FormData) {

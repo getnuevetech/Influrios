@@ -6,6 +6,8 @@ import { getAccountSession } from "@/lib/accounts";
 import { prisma } from "@/lib/db";
 import { assertFundingAccess } from "@/lib/funding-access";
 import { syncOpenGatewayDeposits } from "@/lib/funding-checkout";
+import { depositMethodsForAmount, getDepositBands } from "@/lib/deposit-method-policy";
+import { readSignedDealMoney, signedCollectCents } from "@/lib/payment-engine";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Fund collaboration" };
@@ -41,6 +43,9 @@ export default async function FundingCheckoutPage({ params, searchParams }: Prop
     }).catch(() => []),
     prisma.businessProfile.findUnique({ where: { userId: account.id }, select: { verifiedCountryCode: true } }).catch(() => null),
   ]);
+  const signed = readSignedDealMoney((funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan);
+  const chargeCents = signed ? signedCollectCents(signed) : funding.grossCents;
+  const methodChoice = depositMethodsForAmount(chargeCents, funding.currency, await getDepositBands());
   const businessChecks = verification.filter((row) => row.checkKey === "individual_identity" || row.checkKey === "entity" || row.checkKey === "authority");
   // Agreements and funding rely on the admin-verified funding country; show the same thing here.
   const businessVerification = businessChecks.some((row) => row.status === "restricted")
@@ -63,6 +68,7 @@ export default async function FundingCheckoutPage({ params, searchParams }: Prop
       recorded={query.recorded}
       returned={query.returned}
       cancelled={query.cancelled}
+      methodChoice={methodChoice}
       readiness={{
         signatures: contract?.status === "signed",
         businessVerification,
