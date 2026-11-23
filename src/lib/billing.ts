@@ -346,6 +346,19 @@ export function isStripeConfigured(): boolean {
 
 const PRICE_ID = /^price_[A-Za-z0-9]+$/;
 
+/**
+ * Monthly Stripe price for a plan. The price created automatically from the admin plan amount wins;
+ * the older hand-entered billing setting and env var are fallbacks for plans saved before that.
+ */
+export async function planMonthlyPriceId(sku: BillingSku, envName: string, planCode?: string | null) {
+  if (planCode) {
+    const { findActivePlan } = await import("@/lib/entitlements-db");
+    const saved = await findActivePlan(planCode).catch(() => null);
+    if (saved?.stripePriceId && PRICE_ID.test(saved.stripePriceId)) return saved.stripePriceId;
+  }
+  return billingPriceId(sku, envName);
+}
+
 export async function billingPriceId(sku: BillingSku, envName: string) {
   const row = await prisma.platformSetting.findUnique({ where: { key: "billing.prices" } }).catch(() => null);
   const stored =
@@ -417,7 +430,7 @@ async function monthlyPriceIdsForAnnual(planOrSku: string, formMonthlyPriceId: s
   if (!isBillingSku(key)) return ids;
   const product = getProduct(key);
   if (!product) return ids;
-  const checkoutId = await billingPriceId(product.sku, product.stripePriceEnv);
+  const checkoutId = await planMonthlyPriceId(product.sku, product.stripePriceEnv, product.creatorPlan ?? product.businessPlan);
   if (checkoutId && !ids.includes(checkoutId)) ids.push(checkoutId);
   return ids;
 }
@@ -471,7 +484,7 @@ export async function recurringOfferFor(sku: string, interval: BillingInterval) 
   const planCode = product?.creatorPlan ?? product?.businessPlan ?? sku;
   const saved = planCode ? await findActivePlan(planCode) : null;
   const monthlyAmount = saved ? saved.amountCents : product?.amountCents ?? 0;
-  const monthlyPrice = product ? await billingPriceId(product.sku, product.stripePriceEnv) : saved?.stripePriceId ?? "";
+  const monthlyPrice = product ? await planMonthlyPriceId(product.sku, product.stripePriceEnv, planCode) : saved?.stripePriceId ?? "";
   const offers = await listAnnualOffers();
   const annualKey = annualOfferKey(product?.sku ?? planCode);
   const annual = annualKey ? offers[annualKey] ?? null : null;
@@ -635,7 +648,7 @@ export async function startCheckout(input: {
   }
   const customPrice = custom?.stripePriceId && /^price_[A-Za-z0-9]+$/.test(custom.stripePriceId) ? custom.stripePriceId : "";
   if (custom && !customPrice) {
-    return { ok: false, error: "Save a Stripe price id on this plan before checkout." };
+    return { ok: false, error: "This plan's price is not set up yet. An admin saves the plan price to set it up. Nothing was charged." };
   }
 
   // P8: telemetry only — SKUs stay creator_* for Stripe metadata compatibility.
@@ -676,7 +689,12 @@ export async function startCheckout(input: {
     if (interval === "year" && resolved.offer.priceId === "") {
       return { ok: false, error: "Annual billing is not available for this plan. Nothing was charged." };
     }
-    const priceId = interval === "year" ? resolved.offer.priceId : product ? await billingPriceId(product.sku, product.stripePriceEnv) : customPrice;
+    const priceId =
+      interval === "year"
+        ? resolved.offer.priceId
+        : product
+          ? await planMonthlyPriceId(product.sku, product.stripePriceEnv, product.creatorPlan ?? product.businessPlan)
+          : customPrice;
     const amountCents = resolved.offer.amountCents;
     const origin = getAppOrigin();
     let taxRateId = "";

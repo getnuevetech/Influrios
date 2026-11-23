@@ -249,8 +249,10 @@ describe("admin plan dollar prices", () => {
     assert.equal(form.includes('name="amountCents"'), false);
     assert.match(form, /name="monthlyPrice"/);
     assert.match(form, /name="annualPrice"/);
-    assert.match(form, /name="stripePriceId"/);
-    assert.match(form, /name="annualStripePriceId"/);
+    // Stripe price ids are created from the amounts automatically; admins never paste them.
+    assert.equal(form.includes('name="stripePriceId"'), false);
+    assert.equal(form.includes('name="annualStripePriceId"'), false);
+    assert.match(actions, /syncPlanStripePrices/);
     assert.match(form, /<PlanPriceFields \/>/);
     assert.match(form, /monthlyDollars=\{editingPlan\.monthlyDollars\}/);
     assert.equal(form.includes('from "@/lib/billing"'), false);

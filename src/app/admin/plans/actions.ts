@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
 import { savePlanAnnualOffer, validatePlanAnnualOffer } from "@/lib/billing";
-import { centsFromMonthlyDollarInput } from "@/lib/billing-interval";
+import { centsFromMonthlyDollarInput, parseAnnualOfferInput } from "@/lib/billing-interval";
 import { normalizePlanCode } from "@/lib/entitlements";
 import {
   createEntitlementPlan,
@@ -40,14 +40,31 @@ function revalidatePlanPrices() {
   revalidatePath("/card");
 }
 
-function planPriceInput(formData: FormData) {
+/**
+ * Admin enters the Influrios monthly and yearly prices only. The matching Stripe prices are created or
+ * reused automatically (stripe-plan-prices.ts); nobody pastes Stripe price ids.
+ */
+async function planPriceInput(formData: FormData, code: string) {
   const monthly = centsFromMonthlyDollarInput(String(formData.get("monthlyPrice") ?? ""));
   if (!monthly.ok) throw new Error(monthly.error);
+  const annualAmount = String(formData.get("annualPrice") ?? "").trim();
+  const annual = annualAmount ? parseAnnualOfferInput({ amount: annualAmount, priceId: "" }) : { ok: true as const, offer: null };
+  if (!annual.ok) throw new Error(annual.error);
+  const annualCents = annual.offer?.amountCents ?? null;
+  const { syncPlanStripePrices } = await import("@/lib/stripe-plan-prices");
+  const synced = await syncPlanStripePrices({
+    code: normalizePlanCode(code) || code,
+    name: String(formData.get("name") ?? "") || code,
+    description: String(formData.get("description") ?? ""),
+    monthlyCents: monthly.cents,
+    annualCents,
+  });
+  if (!synced.ok) throw new Error(synced.error);
   return {
     amountCents: monthly.cents,
-    annualAmount: String(formData.get("annualPrice") ?? ""),
-    annualPriceId: String(formData.get("annualStripePriceId") ?? ""),
-    stripePriceId: String(formData.get("stripePriceId") ?? ""),
+    annualAmount,
+    annualPriceId: synced.annualPriceId,
+    stripePriceId: synced.monthlyPriceId,
   };
 }
 
@@ -100,7 +117,7 @@ export async function actionCreatePlan(formData: FormData) {
   const audience = String(formData.get("audience") ?? "") === "business" ? "business" : "creator";
   const code = String(formData.get("code") ?? "");
   try {
-    const prices = planPriceInput(formData);
+    const prices = await planPriceInput(formData, code);
     await validatePlanAnnualOffer({
       planCode: code,
       amount: prices.annualAmount,
@@ -136,7 +153,7 @@ export async function actionUpdatePlanMeta(formData: FormData) {
   const session = await requireAdminAction("plans.edit");
   const code = String(formData.get("code") ?? "");
   try {
-    const prices = planPriceInput(formData);
+    const prices = await planPriceInput(formData, code);
     await validatePlanAnnualOffer({
       planCode: code,
       amount: prices.annualAmount,

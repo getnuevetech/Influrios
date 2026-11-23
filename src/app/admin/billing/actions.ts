@@ -35,6 +35,22 @@ export async function actionPauseAnnualCode(formData: FormData) {
   redirect("/admin/billing?saved=pause");
 }
 
+/** Create or reuse Stripe prices for every plan from the Influrios amounts set on Plans & features. */
+export async function actionSyncPlanPrices() {
+  const session = await requireAdminAction("plans.edit");
+  const { syncAllPlanStripePrices } = await import("@/lib/stripe-plan-prices");
+  const results = await syncAllPlanStripePrices(session.email);
+  const failed = results.filter((row) => !row.ok);
+  revalidatePath("/admin/billing");
+  revalidatePath("/admin/plans");
+  revalidatePath("/pricing");
+  revalidatePath("/business/plans");
+  if (failed.length) {
+    redirect(`/admin/billing?error=${encodeURIComponent(failed.map((row) => `${row.code}: ${row.error}`).join(" · "))}`);
+  }
+  redirect("/admin/billing?saved=prices");
+}
+
 export async function actionSaveBillingPrices(formData: FormData) {
   await requireAdminAction("gateways.edit");
   const prices: Partial<Record<BillingSku, string>> = {};
