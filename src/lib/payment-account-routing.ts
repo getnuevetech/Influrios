@@ -111,13 +111,12 @@ export function stripeCapabilityStatus(input?: {
         : ("unavailable" as const)
       : ("unproven" as const);
   const decision = input?.collectionDecision;
-  const sandboxHold = decision?.ok === true && (decision.topology === "sandbox_ledger_hold" || decision.topology === "stripe_charges_and_transfers");
-  // Capability flags never enable live / provider collection in this PR.
-  const newCollaborationFunding: "disabled" | "sandbox_ledger_hold" = sandboxHold ? "sandbox_ledger_hold" : "disabled";
+  const open = decision?.ok === true && decision.topology === "stripe_charges_and_transfers";
+  const newCollaborationFunding: "disabled" | "stripe_checkout" = open ? "stripe_checkout" : "disabled";
   const reason = probeFailed
     ? "Stripe capability verification failed. Collaboration funding stays disabled until a successful probe."
-    : sandboxHold
-      ? "Sandbox ledger-hold is open for test credentials only. Capability detection is not a proven payment flow — not provider E2E."
+    : open
+      ? "Businesses pay through Stripe Checkout into the Collaborations balance; milestone releases transfer to the influencer and to Operations."
       : secretPresent
         ? "A Stripe secret is present. Capability availability is not an implemented/proven collection flow. Live collaboration funding stays disabled."
         : "No Stripe secret is configured, and neither Connect allocated funds nor Treasury was retrieved for the Influrios account. New collaboration funding stays disabled.";
@@ -130,8 +129,8 @@ export function stripeCapabilityStatus(input?: {
     unproven: unprovenStripeCapabilities(),
     reason,
     limitation: decision && "limitation" in decision ? decision.limitation : null,
-    simulation: sandboxHold,
-    providerE2eComplete: false as const,
+    simulation: open && decision?.ok === true && decision.simulation,
+    providerE2eComplete: open,
   };
 }
 
@@ -268,7 +267,7 @@ export function isLiveProductCollectionHost(originOrHost: string): boolean {
 
 /**
  * Probe outcome. `checked` means Stripe answered; flags may still be unsupported.
- * `failed` means 401/timeout/invalid — never treat as sandbox_ledger_hold.
+ * `failed` means 401/timeout/invalid.
  */
 export type CollaborationCapabilityProbe = {
   status: "checked" | "failed";
@@ -279,8 +278,8 @@ export type CollaborationCapabilityProbe = {
   httpStatus?: number | null;
 };
 
-/** Topologies for collaboration collection. `sandbox_ledger_hold` is simulation-labelled, not Payment Standard topology. */
-export type CollaborationCollectionTopology = "stripe_charges_and_transfers" | "sandbox_ledger_hold" | "unavailable";
+/** Topologies for collaboration collection. */
+export type CollaborationCollectionTopology = "stripe_charges_and_transfers" | "unavailable";
 
 export type CollaborationCollectionDecision =
   | {
@@ -299,17 +298,6 @@ export type CollaborationCollectionDecision =
       limitation: null;
     }
   | {
-      ok: true;
-      topology: "sandbox_ledger_hold";
-      allocatedFunds: boolean;
-      treasury: boolean;
-      /** Always false in this PR — capability detection is not a proven provider flow. */
-      providerE2eComplete: false;
-      simulation: true;
-      simulationLabel: string;
-      limitation: string;
-    }
-  | {
       ok: false;
       topology: "unavailable";
       allocatedFunds: boolean;
@@ -323,50 +311,17 @@ export type CollaborationCollectionDecision =
       refuseKind?: "verification_failed" | "live_closed" | "missing_context" | "policy";
     };
 
-export type SandboxCollectionProvenance = {
-  topology: "sandbox_ledger_hold";
-  simulation: true;
-  simulationLabel: string;
-  providerE2eComplete: false;
-  stripeKeyModeAtOpen: "sandbox";
-  environment: "sandbox";
+/** Recorded on the funding when its Stripe Checkout opens. */
+export type CollectionProvenance = {
+  topology: "stripe_charges_and_transfers";
+  stripeKeyModeAtOpen: "sandbox" | "live";
+  testMode: boolean;
   originHost: string;
   openedAt: string;
-  limitation: string;
-  allocatedFundsDetected: boolean;
-  treasuryDetected: boolean;
 };
 
 const CAPABILITY_LIMITATION =
   "Stripe allocated funds and/or Treasury may be missing or unproven on this account. Capability detection is not an implemented collection flow. Provider collaboration E2E (allocated/Treasury hold → release → payout) is not complete.";
-
-const LIVE_CLOSED_LIMITATION =
-  "Live collaboration collection stays closed in this change. Capability availability is not a proven payment flow.";
-
-export const SANDBOX_LEDGER_HOLD_ENV = "COLLABORATION_SANDBOX_LEDGER_HOLD";
-export const SANDBOX_TRANSFER_REF_PREFIX = "sim_sandbox_ledger_hold:";
-
-export function isSandboxLedgerHoldTransferRef(ref: string): boolean {
-  return ref.trim().startsWith(SANDBOX_TRANSFER_REF_PREFIX);
-}
-
-/** Trusted non-production deployment only (never NODE_ENV/VERCEL_ENV production; empty env is not trusted). */
-export function isTrustedSandboxDeployment(
-  env: Record<string, string | undefined> = process.env as Record<string, string | undefined>,
-): boolean {
-  const nodeEnv = (env.NODE_ENV ?? "").trim().toLowerCase();
-  const vercelEnv = (env.VERCEL_ENV ?? "").trim().toLowerCase();
-  if (nodeEnv === "production" || vercelEnv === "production") return false;
-  return nodeEnv === "development" || nodeEnv === "test" || vercelEnv === "preview" || vercelEnv === "development";
-}
-
-/** Explicit opt-in for the labelled sandbox ledger-hold route. */
-export function isSandboxLedgerHoldRouteEnabled(
-  env: Record<string, string | undefined> = process.env as Record<string, string | undefined>,
-): boolean {
-  const raw = (env.COLLABORATION_SANDBOX_LEDGER_HOLD ?? "").trim().toLowerCase();
-  return raw === "1" || raw === "true" || raw === "yes";
-}
 
 /** Deployment host from env (NEXT_PUBLIC_APP_URL / APP_URL). Never invent 127.0.0.1. */
 export function resolveSandboxDeploymentHost(
@@ -381,69 +336,6 @@ export function resolveSandboxDeploymentHost(
   return "";
 }
 
-/**
- * Central auth for sandbox ledger-hold mutations (settlement + release adapter).
- * Requires trusted deployment, explicit enable, frozen funding provenance, and a
- * non-production **current** deployment host.
- *
- * Explicit `originOrHost` and saved funding provenance host are for provenance /
- * audit only — they must NOT skip validating where execution happens now.
- * Missing current host or production current host (e.g. influrios.com) refuses
- * even when NODE_ENV=test, the sandbox flag is on, and saved funding host is localhost
- * (background-job shape with no explicit host). NODE_ENV=production refuse stays.
- */
-export function authorizeSandboxLedgerHoldRelease(input: {
-  env?: Record<string, string | undefined>;
-  originOrHost?: string;
-  routeSnapshotJson: unknown;
-}): { ok: true; provenance: SandboxCollectionProvenance; host: string } | { ok: false; error: string } {
-  const env = input.env ?? (process.env as Record<string, string | undefined>);
-  if (!isTrustedSandboxDeployment(env)) {
-    return {
-      ok: false,
-      error: "Sandbox settlement simulation is only allowed on a trusted non-production deployment. Nothing was transferred.",
-    };
-  }
-  if (!isSandboxLedgerHoldRouteEnabled(env)) {
-    return {
-      ok: false,
-      error: `Sandbox settlement simulation requires ${SANDBOX_LEDGER_HOLD_ENV}=1. Nothing was transferred.`,
-    };
-  }
-  const provenance = readSandboxCollectionProvenance(input.routeSnapshotJson);
-  if (!provenance) {
-    return {
-      ok: false,
-      error:
-        "Sandbox settlement simulation needs persisted sandbox_ledger_hold provenance on the funding. Live distribution stays blocked. Nothing was transferred.",
-    };
-  }
-  // Independent of explicit request host and saved funding host: where we run now.
-  const currentHost = resolveSandboxDeploymentHost(env);
-  if (!currentHost) {
-    return {
-      ok: false,
-      error:
-        "Sandbox settlement simulation needs the current trusted deployment host (NEXT_PUBLIC_APP_URL / APP_URL). Nothing was transferred.",
-    };
-  }
-  if (isLiveProductCollectionHost(currentHost)) {
-    return {
-      ok: false,
-      error: "Sandbox settlement simulation cannot run on the live product host. Nothing was transferred.",
-    };
-  }
-  // Explicit host is provenance/request context only — still refuse if the caller named prod.
-  const explicitHost = collectionRequestHost(input.originOrHost ?? "");
-  if (explicitHost && isLiveProductCollectionHost(explicitHost)) {
-    return {
-      ok: false,
-      error: "Sandbox settlement simulation cannot run on the live product host. Nothing was transferred.",
-    };
-  }
-  return { ok: true, provenance, host: currentHost };
-}
-
 /** Stripe GET /v1/account must return an account object with acct_ id — not {}, [], or a list. */
 export function isStripeAccountRetrievePayload(payload: unknown): payload is Record<string, unknown> & { id: string } {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
@@ -453,59 +345,8 @@ export function isStripeAccountRetrievePayload(payload: unknown): payload is Rec
   return /^acct_[A-Za-z0-9]+$/.test(id);
 }
 
-export function readSandboxCollectionProvenance(value: unknown): SandboxCollectionProvenance | null {
-  if (!value || typeof value !== "object") return null;
-  const root = value as Record<string, unknown>;
-  const row =
-    root.collaborationCollection && typeof root.collaborationCollection === "object"
-      ? (root.collaborationCollection as Record<string, unknown>)
-      : root;
-  if (row.topology !== "sandbox_ledger_hold" || row.simulation !== true) return null;
-  if (row.providerE2eComplete === true) return null;
-  if (row.stripeKeyModeAtOpen !== "sandbox" || row.environment !== "sandbox") return null;
-  const originHost = String(row.originHost ?? "").trim();
-  const openedAt = String(row.openedAt ?? "").trim();
-  const simulationLabel = String(row.simulationLabel ?? "").trim();
-  const limitation = String(row.limitation ?? "").trim();
-  if (!originHost || !openedAt || !simulationLabel) return null;
-  return {
-    topology: "sandbox_ledger_hold",
-    simulation: true,
-    simulationLabel,
-    providerE2eComplete: false,
-    stripeKeyModeAtOpen: "sandbox",
-    environment: "sandbox",
-    originHost,
-    openedAt,
-    limitation: limitation || CAPABILITY_LIMITATION,
-    allocatedFundsDetected: row.allocatedFundsDetected === true,
-    treasuryDetected: row.treasuryDetected === true,
-  };
-}
-
-export function buildSandboxCollectionProvenance(input: {
-  originOrHost: string;
-  allocatedFundsDetected: boolean;
-  treasuryDetected: boolean;
-  openedAt?: string;
-}): SandboxCollectionProvenance {
-  return {
-    topology: "sandbox_ledger_hold",
-    simulation: true,
-    simulationLabel: "SIMULATION: sandbox_ledger_hold",
-    providerE2eComplete: false,
-    stripeKeyModeAtOpen: "sandbox",
-    environment: "sandbox",
-    originHost: collectionRequestHost(input.originOrHost),
-    openedAt: input.openedAt ?? new Date().toISOString(),
-    limitation: CAPABILITY_LIMITATION,
-    allocatedFundsDetected: input.allocatedFundsDetected,
-    treasuryDetected: input.treasuryDetected,
-  };
-}
-
 /** Merge provenance onto an existing route snapshot without dropping frozen route fields. */
-export function mergeSandboxCollectionProvenance(existing: unknown, provenance: SandboxCollectionProvenance) {
+export function mergeCollectionProvenance(existing: unknown, provenance: CollectionProvenance) {
   const base = existing && typeof existing === "object" && !Array.isArray(existing) ? { ...(existing as object) } : {};
   return { ...base, collaborationCollection: provenance };
 }
@@ -533,22 +374,17 @@ function refuseCollaborationCollection(input: {
 
 /**
  * Environment-specific collaboration collection routing.
- * Live stays closed in this PR — capability flags never open live collection or set providerE2eComplete.
- * Sandbox may open labelled ledger-hold only when: trusted deployment, explicit route enable,
- * non-empty non-prod host, sk_test, successful probe that checked capabilities (unsupported or detected-but-unproven).
+ * A valid Stripe key opens Stripe Checkout collection (test keys move test money). Who may fund is
+ * decided before this point.
  */
 export function resolveCollaborationCollectionRoute(input: {
   environment: "sandbox" | "live";
   stripeKeyMode: "sandbox" | "live" | null;
   originOrHost: string;
   probe: CollaborationCapabilityProbe;
-  trustedDeployment: boolean;
-  sandboxRouteEnabled: boolean;
 }): CollaborationCollectionDecision {
   const allocatedFunds = input.probe.allocatedFunds === true;
   const treasury = input.probe.treasury === true;
-  const host = collectionRequestHost(input.originOrHost);
-  const liveHost = isLiveProductCollectionHost(input.originOrHost);
 
   if (input.probe.status === "failed") {
     return refuseCollaborationCollection({
@@ -569,8 +405,6 @@ export function resolveCollaborationCollectionRoute(input: {
       refuseKind: "missing_context",
     });
   }
-  void host;
-  void liveHost;
   // Who may fund is decided before this point: test accounts while Stripe uses test keys, launch
   // approvals and a recorded test transaction once it uses live keys.
   return {
@@ -582,27 +416,6 @@ export function resolveCollaborationCollectionRoute(input: {
     simulation: input.stripeKeyMode === "sandbox",
     simulationLabel: input.stripeKeyMode === "sandbox" ? "Stripe test mode" : null,
     limitation: null,
-  };
-}
-
-/** Downstream release/payout for sandbox ledger-hold — labelled simulation, not provider E2E. */
-export function sandboxLedgerHoldReleaseSimulation(input: { settlementId: string; fundingId: string }) {
-  const settlementId = input.settlementId.trim();
-  const fundingId = input.fundingId.trim();
-  if (!settlementId || !fundingId) {
-    return {
-      ok: false as const,
-      error: "Sandbox release simulation needs a settlement and funding id. Nothing was transferred.",
-    };
-  }
-  return {
-    ok: true as const,
-    simulation: true as const,
-    providerE2eComplete: false as const,
-    simulationLabel: "SIMULATION: sandbox_ledger_hold_release",
-    transferRef: `${SANDBOX_TRANSFER_REF_PREFIX}${settlementId}`,
-    limitation: CAPABILITY_LIMITATION,
-    note: "App-ledger release recorded for sandbox tests only. Stripe allocated-funds / Treasury payout was not executed.",
   };
 }
 

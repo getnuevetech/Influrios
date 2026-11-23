@@ -113,8 +113,6 @@ describe("subscription sandbox paths (independent of collab deposits)", () => {
       stripeKeyMode: "live",
       originOrHost: "https://influrios.com",
       probe: { status: "checked", allocatedFunds: true, treasury: true, reason: "flags" },
-      trustedDeployment: true,
-      sandboxRouteEnabled: true,
     });
     // Subscription quotes never move money; collaboration collection with live keys is standard Stripe.
     assert.equal(liveCollab.ok && liveCollab.topology, "stripe_charges_and_transfers");
@@ -139,8 +137,6 @@ describe("subscription sandbox paths (independent of collab deposits)", () => {
       stripeKeyMode: "sandbox",
       originOrHost: "https://influrios.com/billing",
       probe: { status: "checked", allocatedFunds: false, treasury: false, reason: "none" },
-      trustedDeployment: true,
-      sandboxRouteEnabled: true,
     });
     assert.equal(route.ok, true);
     assert.equal(route.ok && route.simulation, true);

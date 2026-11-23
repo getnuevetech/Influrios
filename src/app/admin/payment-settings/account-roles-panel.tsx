@@ -99,8 +99,7 @@ export async function AccountRolesPanel() {
         <p className="font-semibold text-indigo">Stripe capability check · {status.checkedAt}</p>
         <p className="mt-2">{status.reason}</p>
         <p className="mt-2">
-          Environment: {access.environment}. Key mode: {access.stripeKeyMode ?? "none"}. Trusted deployment:{" "}
-          {access.trustedDeployment ? "yes" : "no"}. Sandbox route enabled: {access.sandboxRouteEnabled ? "yes" : "no"}.
+          Environment: {access.environment}. Key mode: {access.stripeKeyMode ?? "none"}.
         </p>
         <p className="mt-2">
           Allocated funds: {status.allocatedFunds}. Treasury: {status.treasury}. New collaboration funding:{" "}
@@ -112,7 +111,7 @@ export async function AccountRolesPanel() {
         ) : null}
         {status.simulation ? (
           <p className="mt-2 text-muted">
-            SIMULATION: sandbox ledger-hold may be open for sk_test on trusted non-production hosts with COLLABORATION_SANDBOX_LEDGER_HOLD=1 only. That is not provider allocated-funds or Treasury E2E, and live collaboration deposits stay closed.
+            Stripe test mode: deposits and transfers move sandbox money only. Only test accounts can fund until live keys and launch approvals are in place.
           </p>
         ) : null}
         <ul className="mt-3 space-y-2">

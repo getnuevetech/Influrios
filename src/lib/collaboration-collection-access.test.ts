@@ -1,16 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
-  buildSandboxCollectionProvenance,
   collectionRequestHost,
   isLiveProductCollectionHost,
-  isSandboxLedgerHoldRouteEnabled,
-  isSandboxLedgerHoldTransferRef,
-  isTrustedSandboxDeployment,
-  mergeSandboxCollectionProvenance,
-  readSandboxCollectionProvenance,
+  mergeCollectionProvenance,
   resolveCollaborationCollectionRoute,
-  sandboxLedgerHoldReleaseSimulation,
   stripeCapabilityStatus,
 } from "@/lib/payment-account-routing";
 import { classifyStripeKey, setStripeTransportForTests } from "@/lib/stripe-admin";
@@ -27,8 +21,6 @@ const noCaps = {
   reason: "The account payload does not prove allocated funds or Treasury.",
 };
 
-const sandboxGates = { trustedDeployment: true, sandboxRouteEnabled: true };
-
 describe("collaboration collection routing", () => {
   it("parses hosts and treats influrios.com as the live product host", () => {
     assert.equal(collectionRequestHost("https://app.example.com:3000/x"), "app.example.com");
@@ -39,14 +31,6 @@ describe("collaboration collection routing", () => {
     assert.equal(isLiveProductCollectionHost("https://staging.example.com"), false);
   });
 
-  it("requires trusted deployment and explicit sandbox route enable", () => {
-    assert.equal(isTrustedSandboxDeployment({ NODE_ENV: "production" }), false);
-    assert.equal(isTrustedSandboxDeployment({ NODE_ENV: "test" }), true);
-    assert.equal(isTrustedSandboxDeployment({}), false);
-    assert.equal(isSandboxLedgerHoldRouteEnabled({ COLLABORATION_SANDBOX_LEDGER_HOLD: "1" }), true);
-    assert.equal(isSandboxLedgerHoldRouteEnabled({}), false);
-  });
-
   it("opens standard Stripe collection with test keys, on any host, labelled as test mode", () => {
     for (const host of ["http://127.0.0.1:3000", "https://influrios.com"]) {
       const route = resolveCollaborationCollectionRoute({
@@ -54,8 +38,6 @@ describe("collaboration collection routing", () => {
         stripeKeyMode: "sandbox",
         originOrHost: host,
         probe: noCaps,
-        trustedDeployment: false,
-        sandboxRouteEnabled: false,
       });
       assert.equal(route.ok, true);
       if (!route.ok) return;
@@ -71,7 +53,6 @@ describe("collaboration collection routing", () => {
       stripeKeyMode: "live",
       originOrHost: "https://influrios.com",
       probe: noCaps,
-      ...sandboxGates,
     });
     assert.equal(live.ok, true);
     if (!live.ok) return;
@@ -86,12 +67,11 @@ describe("collaboration collection routing", () => {
       stripeKeyMode: null,
       originOrHost: "https://influrios.com",
       probe: noCaps,
-      ...sandboxGates,
     });
     assert.equal(none.ok, false);
   });
 
-  it("treats failed probes as verification_failed, not sandbox_ledger_hold", () => {
+  it("treats failed probes as verification_failed", () => {
     const failed = resolveCollaborationCollectionRoute({
       environment: "sandbox",
       stripeKeyMode: "sandbox",
@@ -103,7 +83,6 @@ describe("collaboration collection routing", () => {
         reason: "Stripe account probe failed (HTTP 401). Verification stays unknown. Nothing was enabled.",
         httpStatus: 401,
       },
-      ...sandboxGates,
     });
     assert.equal(failed.ok, false);
     if (!failed.ok) {
@@ -112,38 +91,21 @@ describe("collaboration collection routing", () => {
     }
   });
 
-  it("persists and reads sandbox provenance without reclassification from a later key", () => {
-    const provenance = buildSandboxCollectionProvenance({
-      originOrHost: "http://127.0.0.1:3000",
-      allocatedFundsDetected: false,
-      treasuryDetected: false,
-      openedAt: "2026-11-19T03:00:00.000Z",
-    });
-    const merged = mergeSandboxCollectionProvenance({ countryCode: "US", version: "1" }, provenance);
-    const read = readSandboxCollectionProvenance(merged);
-    assert.ok(read);
-    assert.equal(read?.topology, "sandbox_ledger_hold");
-    assert.equal(read?.providerE2eComplete, false);
-    assert.equal(read?.originHost, "127.0.0.1");
-    assert.equal(isSandboxLedgerHoldTransferRef("sim_sandbox_ledger_hold:set_1"), true);
-    assert.equal(isSandboxLedgerHoldTransferRef("tr_123"), false);
+  it("records collection provenance without dropping frozen route fields", () => {
+    const merged = mergeCollectionProvenance(
+      { countryCode: "US", version: "1" },
+      { topology: "stripe_charges_and_transfers", stripeKeyModeAtOpen: "sandbox", testMode: true, originHost: "influrios.com", openedAt: "2026-11-19T03:00:00.000Z" },
+    );
+    assert.equal((merged as { countryCode?: string }).countryCode, "US");
+    assert.equal((merged as { collaborationCollection: { topology: string } }).collaborationCollection.topology, "stripe_charges_and_transfers");
   });
 
-  it("labels sandbox release simulation without claiming provider payout", () => {
-    const sim = sandboxLedgerHoldReleaseSimulation({ settlementId: "set_1", fundingId: "fund_1" });
-    assert.equal(sim.ok, true);
-    if (!sim.ok) return;
-    assert.equal(sim.providerE2eComplete, false);
-    assert.equal(sim.transferRef, "sim_sandbox_ledger_hold:set_1");
-  });
-
-  it("surfaces sandbox_ledger_hold in capability status without enabling live", () => {
+  it("reports Stripe Checkout collection in capability status", () => {
     const decision = resolveCollaborationCollectionRoute({
       environment: "sandbox",
       stripeKeyMode: "sandbox",
       originOrHost: "http://127.0.0.1:3000",
       probe: noCaps,
-      ...sandboxGates,
     });
     const status = stripeCapabilityStatus({
       secretPresent: true,
@@ -153,8 +115,8 @@ describe("collaboration collection routing", () => {
     });
     assert.equal(status.allocatedFunds, "unavailable");
     assert.equal(status.treasury, "unavailable");
-    assert.equal(status.newCollaborationFunding, "sandbox_ledger_hold");
-    assert.equal(status.providerE2eComplete, false);
+    assert.equal(status.newCollaborationFunding, "stripe_checkout");
+    assert.equal(status.providerE2eComplete, true);
     assert.equal(status.checkedAt, "2026-11-19T03:00:00.000Z");
   });
 });
@@ -192,28 +154,19 @@ describe("collaboration collection live refusal (verify + transport)", () => {
     assert.equal(access.probe.status, "checked");
   });
 
-  it("refuses failed Stripe probes (401) instead of opening sandbox_ledger_hold", async () => {
+  it("refuses failed Stripe probes (401)", async () => {
     const previous = process.env.STRIPE_SECRET_KEY;
     process.env.STRIPE_SECRET_KEY = "sk_test_examplekey";
     setStripeTransportForTests(async () => jsonResponse(401, { error: { message: "Invalid API Key" } }));
     const access = await verifyCollaborationCollectionAccess({
       originOrHost: "http://127.0.0.1:3000",
       environment: "sandbox",
-      env: { COLLABORATION_SANDBOX_LEDGER_HOLD: "1", NODE_ENV: "test" },
+      env: { NODE_ENV: "test" },
     });
     process.env.STRIPE_SECRET_KEY = previous;
     setStripeTransportForTests(null);
     assert.equal(access.ok, false);
     assert.equal(access.probe.status, "failed");
     if (!access.ok) assert.equal(access.refuseKind, "verification_failed");
-  });
-});
-
-describe("settlement simulation retry semantics", () => {
-  it("keeps simulated transfer refs out of ordinary transfer_recorded classification", () => {
-    assert.equal(isSandboxLedgerHoldTransferRef("sim_sandbox_ledger_hold:abc"), true);
-    assert.equal(isSandboxLedgerHoldTransferRef("tr_live_abc"), false);
-    const sim = sandboxLedgerHoldReleaseSimulation({ settlementId: "s1", fundingId: "f1" });
-    assert.equal(sim.ok && sim.providerE2eComplete, false);
   });
 });
