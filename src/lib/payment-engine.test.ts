@@ -997,7 +997,24 @@ describe("payment engine acceptance", () => {
       },
       "USD",
     );
-    assert.equal(blocked && "error" in blocked && blocked.error, "Influencer tax withholding is not part of this route.");
+    // 9,800 + 700 + 1,050 + 20 = 11,570, not the 11,550 signed: the quote does not add up.
+    assert.equal(blocked && "error" in blocked && blocked.error, "The signed quote does not reconcile.");
+    // The live US agreement: $551.25 charged = $486.87 influencer net + $37.50 fees + $26.25 + $0.63 tax.
+    const live = readSignedCollection(
+      {
+        signedQuote: {
+          currency: "USD",
+          businessPaysCents: 55_125,
+          influencerReceivesCents: 48_687,
+          platformFeesTotalCents: 3_750,
+          businessTaxCents: 2_625,
+          influencerTaxCents: 63,
+          withholdingCents: 0,
+        },
+      },
+      "USD",
+    );
+    assert.equal(live && !("error" in live) && live.collectCents, 55_125);
     // Business tax is collected with the deposit, whether the quote stored the amount before or after tax.
     const beforeTax = readSignedCollection(
       { signedQuote: { currency: "USD", businessPaysCents: 52_500, influencerReceivesCents: 50_000, platformFeesTotalCents: 2_500, businessTaxCents: 2_625 } },

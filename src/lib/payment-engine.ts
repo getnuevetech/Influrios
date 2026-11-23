@@ -264,14 +264,18 @@ export function readSignedCollection(
   ) {
     return { error: "The signed quote amounts are incomplete." };
   }
-  // Business tax is collected with the deposit and held as tax payable. Tax taken from the influencer's
-  // side (withholding) has no payout path yet, so it stays refused.
-  if (influencerTaxCents + withholdingCents !== 0) {
-    return { error: "Influencer tax withholding is not part of this route." };
+  // Taxes are collected with the deposit and held as tax payable. Signed quotes store either:
+  //  - the business payment with all taxes included and the influencer amount after their tax, or
+  //  - the business payment before business tax (older quotes, no influencer tax).
+  if ([businessTaxCents, influencerTaxCents, withholdingCents].some((value) => value < 0)) {
+    return { error: "The signed quote amounts are incomplete." };
   }
-  if (businessTaxCents < 0) return { error: "The signed quote amounts are incomplete." };
   const beforeTax = Number(influencerReceivesCents) + Number(platformFeesTotalCents);
-  const taxIncluded = businessTaxCents > 0 && Number(businessPaysCents) === beforeTax + businessTaxCents;
+  const allTaxes = businessTaxCents + influencerTaxCents + withholdingCents;
+  const taxIncluded = allTaxes > 0 && Number(businessPaysCents) === beforeTax + allTaxes;
+  if (!taxIncluded && (influencerTaxCents > 0 || withholdingCents > 0)) {
+    return { error: "The signed quote does not reconcile." };
+  }
   if (Number(businessPaysCents) !== beforeTax && !taxIncluded) {
     return { error: "The signed quote does not reconcile." };
   }
@@ -1043,11 +1047,16 @@ export function signedCollectCents(deal: {
   businessPlatformFeeCents: number;
   influencerPlatformFeeCents: number;
   businessTaxCents?: number | null;
+  influencerTaxCents?: number | null;
 }) {
-  const tax = deal.businessTaxCents ?? 0;
+  const businessTax = deal.businessTaxCents ?? 0;
+  const influencerTax = deal.influencerTaxCents ?? 0;
   const beforeTax = deal.influencerReceivesCents + deal.businessPlatformFeeCents + deal.influencerPlatformFeeCents;
-  if (tax > 0 && deal.businessPaysCents === beforeTax + tax) return deal.businessPaysCents;
-  return deal.businessPaysCents + tax;
+  if (businessTax + influencerTax > 0 && deal.businessPaysCents === beforeTax + businessTax + influencerTax) {
+    return deal.businessPaysCents;
+  }
+  if (businessTax > 0 && deal.businessPaysCents === beforeTax + businessTax) return deal.businessPaysCents;
+  return deal.businessPaysCents + businessTax;
 }
 
 export function readSignedDealMoney(plan: unknown): SignedDealMoney | null {
