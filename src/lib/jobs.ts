@@ -597,7 +597,20 @@ const IN_APP_COLLAB_KINDS: Partial<Record<CollabNotificationKind, "business" | "
   dispute_resolved: "both",
 };
 
-async function recordCollabInAppNotice(input: { fundingId: string; kind: CollabNotificationKind; milestone?: string; detail?: string }) {
+/** Real figures for the email; the milestone is found by id, or by title for older callers. */
+async function collabMoneyVarsFor(fundingId: string, milestoneId?: string, milestoneTitle?: string) {
+  const { collabMoneyVars } = await import("@/lib/collab-email-links");
+  let id = milestoneId;
+  if (!id && milestoneTitle) {
+    const row = await prisma.fundingMilestone.findFirst({ where: { fundingId, title: milestoneTitle }, select: { id: true } }).catch(() => null);
+    id = row?.id;
+  }
+  const money = await collabMoneyVars({ fundingId, milestoneId: id }).catch(() => ({}) as Record<string, string>);
+  // Keep only values we actually know; unknown ones render as "—".
+  return Object.fromEntries(Object.entries(money).filter(([, value]) => value));
+}
+
+async function recordCollabInAppNotice(input: { fundingId: string; kind: CollabNotificationKind; milestone?: string; milestoneId?: string; detail?: string }) {
   const audience = IN_APP_COLLAB_KINDS[input.kind];
   if (!audience) return;
   const funding = await prisma.collaborationFunding.findUnique({
@@ -623,12 +636,15 @@ async function recordCollabInAppNotice(input: { fundingId: string; kind: CollabN
     audience !== "influencer" ? workspace?.ownerUserId : null,
   ].filter((id): id is string => Boolean(id));
   const sourceId = `${input.kind}:${funding.id}:${input.milestone ?? ""}`;
+  // A payout notice opens the payout receipt; everything else opens the collaboration.
+  const payoutKind = input.kind === "payout_completed" || input.kind === "payout_failed" || input.kind === "payout_returned";
+  const noticeHref = payoutKind && input.milestoneId ? `/creator/earnings/receipts/${input.milestoneId}` : `/collaboration/work/${funding.id}`;
   const detail = `${funding.title}${input.milestone ? ` · ${input.milestone}` : ""}`;
   for (const userId of userIds) {
     await prisma.accountNotice.upsert({
       where: { userId_kind_sourceId: { userId, kind: input.kind, sourceId } },
-      create: { userId, kind: input.kind, sourceId, title: rendered.subject, detail, href: `/collaboration/work/${funding.id}` },
-      update: { title: rendered.subject, detail, readAt: null, createdAt: new Date() },
+      create: { userId, kind: input.kind, sourceId, title: rendered.subject, detail, href: noticeHref },
+      update: { title: rendered.subject, detail, href: noticeHref, readAt: null, createdAt: new Date() },
     });
   }
 }
@@ -637,6 +653,8 @@ export async function notifyCollabFundingEvent(input: {
   fundingId: string;
   kind: CollabNotificationKind;
   milestone?: string;
+  /** The milestone the event is about, so links and figures are for that milestone. */
+  milestoneId?: string;
   detail?: string;
   /** Extra recipients (e.g. admin on payout failure). */
   extraEmails?: string[];
@@ -710,19 +728,17 @@ export async function notifyCollabFundingEvent(input: {
     businessEmail: parties.businessEmail,
     influencerEmail: parties.influencerEmail,
     fundingId: funding.id,
-    vars: collabCatalogVars({
-      business: vars.business,
-      influencer: vars.influencer,
-      title: vars.title,
-      milestone: vars.milestone,
-      detail: vars.detail,
-      fundingId: funding.id,
-      amounts: {
-        expected: displayMoney(funding.grossCents),
-        observed: displayMoney(funding.grossCents),
-        payout: input.milestone ? displayMoney(funding.grossCents) : "—",
-      },
-    }),
+    vars: {
+      ...collabCatalogVars({
+        business: vars.business,
+        influencer: vars.influencer,
+        title: vars.title,
+        milestone: vars.milestone,
+        detail: vars.detail,
+        fundingId: funding.id,
+      }),
+      ...(await collabMoneyVarsFor(funding.id, input.milestoneId, input.milestone)),
+    },
   });
   if (count > 0 && input.processNow !== false) await processDueJobs();
   return { queued: count > 0, count };

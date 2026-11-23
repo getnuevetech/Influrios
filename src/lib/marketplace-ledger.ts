@@ -2216,13 +2216,14 @@ export async function applyMarketplaceEvent(input: {
           fundingId: funding.id,
           kind,
           milestone: milestone?.title,
+          milestoneId: milestone?.id,
           detail:
             input.eventType === "funding.failed"
               ? "Provider rejected or failed the funding hold."
               : input.eventType === "funding.chargeback"
                 ? "Provider reported a chargeback — funding moved to payment-risk; no automatic refund."
                 : input.eventType === "payout.refunded"
-                  ? `Refunded ${input.amountCents}¢`
+                  ? `Refunded ${(input.amountCents / 100).toFixed(2)} ${funding.currency}`
                   : undefined,
         });
       });
