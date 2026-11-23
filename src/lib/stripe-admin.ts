@@ -131,6 +131,8 @@ export type StripeCheckoutPayment = {
   currency: string | null;
   url: string | null;
   metadata: Record<string, string>;
+  /** Stripe session state: open, complete or expired. A complete but unpaid session is still clearing. */
+  status?: string;
 };
 
 /** Reads the payment Stripe actually recorded. A return URL is not this object. */
@@ -147,7 +149,8 @@ export function stripeCheckoutPayment(payload: Record<string, unknown> | null): 
   for (const [key, value] of Object.entries(raw)) {
     if (typeof value === "string" && value.trim()) metadata[key] = value.trim();
   }
-  return { id, paymentStatus, amountTotal, currency: /^[A-Z]{3}$/.test(currency) ? currency : null, url, metadata };
+  const status = typeof payload.status === "string" ? payload.status : undefined;
+  return { id, paymentStatus, amountTotal, currency: /^[A-Z]{3}$/.test(currency) ? currency : null, url, metadata, ...(status ? { status } : {}) };
 }
 
 export async function expireStripeCheckoutSession(secret: string, sessionId: string) {
@@ -562,7 +565,7 @@ export function stripeFundingCheckoutBody(input: {
   successUrl: string;
   cancelUrl: string;
   customerEmail?: string;
-  paymentMethod: "card" | "us_bank_account";
+  paymentMethod: "card" | "us_bank_account" | "customer_balance";
   metadata: Record<string, string>;
 }) {
   const body = new URLSearchParams({
@@ -577,6 +580,12 @@ export function stripeFundingCheckoutBody(input: {
   });
   for (const [key, value] of Object.entries(input.metadata)) body.set(`metadata[${key}]`, value);
   if (input.customerEmail) body.set("customer_email", input.customerEmail);
+  if (input.paymentMethod === "customer_balance") {
+    // Wire or ACH credit to account details Stripe issues for this customer; funds land in the platform balance.
+    body.set("customer_creation", "always");
+    body.set("payment_method_options[customer_balance][funding_type]", "bank_transfer");
+    body.set("payment_method_options[customer_balance][bank_transfer][type]", "us_bank_transfer");
+  }
   return body;
 }
 
@@ -589,7 +598,7 @@ export async function openStripeFundingCheckout(input: {
   successUrl: string;
   cancelUrl: string;
   customerEmail?: string;
-  paymentMethod: "card" | "us_bank_account";
+  paymentMethod: "card" | "us_bank_account" | "customer_balance";
   metadata: Record<string, string>;
 }) {
   try {
@@ -909,11 +918,38 @@ export async function stripeApiRequest(input: {
       }
     }
   }
+  const account = input.stripeAccount?.trim() ?? "";
+  if (account && !/^acct_[A-Za-z0-9]+$/.test(account)) {
+    return { ok: false, submitted: false, state: "blocked", error: "The Stripe account id is not valid. Nothing was sent." };
+  }
   try {
-    const payload = await stripeCall(input.method, input.path, input.secret, input.body, input.idempotencyKey, {
-      stripeAccount: input.stripeAccount,
-      apiVersion: version,
+    const response = await transport(`${STRIPE_HOST}${input.path}`, {
+      method: input.method,
+      redirect: "manual",
+      signal: AbortSignal.timeout(8000),
+      headers: {
+        Authorization: `Bearer ${input.secret}`,
+        "Stripe-Version": version,
+        ...(account ? { "Stripe-Account": account } : {}),
+        ...(input.body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
+        ...(input.idempotencyKey ? { "Idempotency-Key": input.idempotencyKey } : {}),
+      },
+      body: input.body,
     });
+    const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+    if (response.status >= 400 && response.status < 500) {
+      // Stripe refused the request, so nothing was created. Keep its reason for the operator.
+      const message = (payload as { error?: { message?: unknown } } | null)?.error?.message;
+      return {
+        ok: false,
+        submitted: false,
+        state: "blocked",
+        error: `Stripe refused: ${typeof message === "string" && message.trim() ? message.trim().slice(0, 300) : `status ${response.status}`}`,
+      };
+    }
+    if (response.status < 200 || response.status >= 300) {
+      return { ok: false, submitted: false, state: "unknown", error: "The provider result is unknown. Nothing was marked submitted." };
+    }
     const id = typeof payload?.id === "string" ? payload.id.trim() : "";
     if (!payload || !id) {
       return { ok: false, submitted: false, state: "unknown", error: "Stripe did not return an object id. Nothing was marked submitted." };

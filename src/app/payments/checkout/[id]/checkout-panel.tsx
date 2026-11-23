@@ -1,7 +1,14 @@
 import Link from "next/link";
-import { actionStartFundingDeposit } from "@/app/payments/actions";
+import { actionChangeFundingMethod, actionStartFundingDeposit } from "@/app/payments/actions";
 import { BlockedNote, MoneyAmount, PaymentStatus } from "@/components/payment-journey/status";
-import { DEPOSIT_METHOD_LABELS, DEPOSIT_METHODS, type DepositMethod } from "@/lib/funding-checkout";
+import { DEPOSIT_METHOD_LABELS, isGatewayDepositMethod, type DepositMethod } from "@/lib/funding-checkout";
+import type { DepositMethodChoice } from "@/lib/deposit-method-policy";
+
+const METHOD_NOTES: Record<string, string> = {
+  card: "Pay now by card. Best for smaller amounts.",
+  ach_online: "Debit your US bank account. Lower cost; funds clear in about 4 business days.",
+  bank_transfer: "Send a wire or ACH credit to account details Stripe gives you. Funds clear when your bank transfer arrives.",
+};
 import { formatMinor } from "@/lib/payment-standard-v4";
 import { SignedDiscountNote } from "@/components/signed-discount-note";
 import { readSignedDealMoney } from "@/lib/payment-engine";
@@ -28,6 +35,7 @@ export function CheckoutPanel({
   returned,
   cancelled,
   readiness,
+  methodChoice,
 }: {
   fundingId: string;
   title: string;
@@ -47,6 +55,7 @@ export function CheckoutPanel({
     recipientReady: boolean;
     routeRecorded: boolean;
   };
+  methodChoice: DepositMethodChoice;
 }) {
   const signedPlan = (feeSnapshot as { financialPlan?: unknown } | null)?.financialPlan;
   const signed = readSignedDealMoney(signedPlan);
@@ -109,23 +118,44 @@ export function CheckoutPanel({
           <Link href={`/collaboration/work/${fundingId}`} className="inline-flex h-11 items-center rounded-full bg-violet px-4 text-sm font-semibold text-white">Open collaboration</Link>
         </div>
       ) : processing ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <BlockedNote kind="processing" />
           <p className="text-sm">Reference {fundingId}. You can close this page. There is no second charge button.</p>
+          {businessViewer && openDeposit && openDeposit.status === "gateway_opened" && isGatewayDepositMethod(openDeposit.method) ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <form action={actionStartFundingDeposit}>
+                <input type="hidden" name="fundingId" value={fundingId} />
+                <input type="hidden" name="method" value={openDeposit.method} />
+                <button type="submit" className="inline-flex h-11 items-center rounded-full bg-violet px-4 text-sm font-semibold text-white">
+                  Continue to payment
+                </button>
+              </form>
+              <form action={actionChangeFundingMethod}>
+                <input type="hidden" name="fundingId" value={fundingId} />
+                <button type="submit" className="inline-flex h-11 items-center rounded-full border border-border px-4 text-sm font-semibold text-indigo">
+                  Use a different payment method
+                </button>
+              </form>
+            </div>
+          ) : null}
         </div>
       ) : businessViewer && status === "awaiting_provider" && taxKnown ? (
         <form action={actionStartFundingDeposit} className="space-y-4 rounded-2xl border border-border bg-white p-5">
           <input type="hidden" name="fundingId" value={fundingId} />
           <fieldset className="space-y-2">
             <legend className="text-sm font-semibold">Payment method</legend>
-            {DEPOSIT_METHODS.filter((method) => method === "card" || method === "ach_online").map((method) => (
-              <label key={method} className="flex min-h-11 items-center gap-2 text-sm">
-                <input type="radio" name="method" value={method} required />
-                {DEPOSIT_METHOD_LABELS[method as DepositMethod]}
+            {methodChoice.methods.map((method) => (
+              <label key={method} className="flex min-h-11 items-start gap-2 rounded-xl border border-border px-3 py-2 text-sm">
+                <input type="radio" name="method" value={method} required defaultChecked={method === methodChoice.recommended} className="mt-1" />
+                <span>
+                  <span className="font-semibold">{DEPOSIT_METHOD_LABELS[method as DepositMethod]}</span>
+                  {method === methodChoice.recommended && methodChoice.methods.length > 1 ? <span className="ml-2 text-xs text-violet">Recommended</span> : null}
+                  <span className="block text-xs text-muted">{METHOD_NOTES[method]}</span>
+                </span>
               </label>
             ))}
           </fieldset>
-          <p className="text-xs text-muted">Wire and check are not offered unless a route version lists them. Card checkout still waits for provider confirmation.</p>
+          <p className="text-xs text-muted">The methods shown depend on the amount. Funding is confirmed only when Stripe confirms the payment.</p>
           <button type="submit" className="inline-flex h-11 items-center rounded-full bg-violet px-4 text-sm font-semibold text-white">
             Fund collaboration {formatMinor(total, currency)}
           </button>

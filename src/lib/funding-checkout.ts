@@ -13,12 +13,13 @@ import {
 
 export const MANUAL_DEPOSIT_KEY = "marketplace.manual_deposit";
 
-export const DEPOSIT_METHODS = ["card", "ach_online", "ach_wire", "check"] as const;
+export const DEPOSIT_METHODS = ["card", "ach_online", "bank_transfer", "ach_wire", "check"] as const;
 export type DepositMethod = (typeof DEPOSIT_METHODS)[number];
 
 export const DEPOSIT_METHOD_LABELS: Record<DepositMethod, string> = {
   card: "Credit or debit card",
-  ach_online: "Online ACH",
+  ach_online: "ACH bank debit",
+  bank_transfer: "Wire or bank transfer",
   ach_wire: "ACH wire, bank to bank",
   check: "Check",
 };
@@ -37,8 +38,22 @@ export function parseDepositMethod(value: string): DepositMethod | null {
   return DEPOSIT_METHODS.includes(method as DepositMethod) ? (method as DepositMethod) : null;
 }
 
+/** Methods paid through Stripe Checkout into the Collaborations balance. */
+export const GATEWAY_DEPOSIT_METHODS = ["card", "ach_online", "bank_transfer"] as const;
+
+export function isGatewayDepositMethod(method: string) {
+  return (GATEWAY_DEPOSIT_METHODS as readonly string[]).includes(method);
+}
+
 export function depositMethodKind(method: DepositMethod): "gateway" | "manual" {
-  return method === "card" || method === "ach_online" ? "gateway" : "manual";
+  return isGatewayDepositMethod(method) ? "gateway" : "manual";
+}
+
+/** Stripe Checkout payment method type for a gateway deposit. */
+export function stripePaymentMethodFor(method: DepositMethod): "card" | "us_bank_account" | "customer_balance" {
+  if (method === "card") return "card";
+  if (method === "bank_transfer") return "customer_balance";
+  return "us_bank_account";
 }
 
 export function readManualDepositInstructions(value: unknown): ManualDepositInstructions {
@@ -122,6 +137,8 @@ export type StartFundingDepositDeps = {
     limitation?: string | null;
   }>;
   env?: Record<string, string | undefined>;
+  /** Amount bands for payment methods; read from settings when absent. */
+  depositBands?: import("@/lib/deposit-method-policy").DepositBands;
   /** When set, skip rollout/tax/charge product gates (unit tests only). */
   skipProductGates?: boolean;
 };
@@ -224,7 +241,15 @@ export async function startFundingDeposit(
     return { ok: true, kind: "manual", depositId: created.id, instructions };
   }
   if (input.method === "ach_online" && funding.currency.trim().toUpperCase() !== "USD") {
-    return { ok: false, error: "Online ACH collects USD. Nothing was charged." };
+    return { ok: false, error: "ACH bank debit collects USD. Nothing was charged." };
+  }
+  if (isGatewayDepositMethod(input.method)) {
+    const { depositMethodsForAmount, getDepositBands } = await import("@/lib/deposit-method-policy");
+    const bands = deps.depositBands ?? (await getDepositBands());
+    const choice = depositMethodsForAmount(planned.amountCents, funding.currency, bands);
+    if (!(choice.methods as string[]).includes(input.method)) {
+      return { ok: false, error: `${DEPOSIT_METHOD_LABELS[input.method]} is not offered for this amount. Nothing was charged.` };
+    }
   }
   const { verifyCollaborationCollectionAccess } = await import("@/lib/collaboration-collection-access");
   const {
@@ -287,6 +312,10 @@ export async function startFundingDeposit(
         };
       }
       return { ok: true, kind: "gateway", url: session.url, depositId: openDeposit.id };
+    }
+    if (session?.status === "complete" && session.paymentStatus === "unpaid") {
+      // Submitted bank debit or transfer that is still clearing: never open a second charge.
+      return { ok: false, error: "Your bank payment is still clearing with Stripe. Nothing was charged again." };
     }
     await prisma.fundingDeposit.update({ where: { id: openDeposit.id }, data: { status: "failed" } }).catch(() => undefined);
   }
@@ -352,7 +381,7 @@ export async function startFundingDeposit(
     successUrl: `${origin}/payments/checkout/${funding.id}?returned=1`,
     cancelUrl: `${origin}/payments/checkout/${funding.id}?cancelled=1`,
     customerEmail: payerEmail(input.email) || undefined,
-    paymentMethod: input.method === "card" ? "card" : "us_bank_account",
+    paymentMethod: stripePaymentMethodFor(input.method),
     metadata: {
       purpose: "funding_deposit",
       depositId: deposit.id,
@@ -524,7 +553,7 @@ export function prefundingCancellationDecision(input: {
       return { ok: false, error: "A charge is already confirmed. Wait for the funding hold. Nothing was cancelled." };
     }
     if (deposit.status === "failed" || deposit.status === "expired") continue;
-    const gateway = deposit.method === "card" || deposit.method === "ach_online";
+    const gateway = isGatewayDepositMethod(deposit.method);
     if (deposit.status === "gateway_opened" && gateway) {
       if (deposit.charge !== "unpaid") {
         return { ok: false, error: "A checkout result is still unknown. Nothing was cancelled." };
@@ -552,7 +581,7 @@ export async function cancelUnfundedPrefund(input: { fundingId: string; actor: s
   const charges = new Map<string, "paid" | "unpaid" | "unknown">();
   for (const deposit of funding.deposits) {
     if (deposit.status !== "gateway_opened") continue;
-    if (deposit.method !== "card" && deposit.method !== "ach_online") continue;
+    if (!isGatewayDepositMethod(deposit.method)) continue;
     if (!creds?.ok) {
       charges.set(deposit.id, "unknown");
       continue;
@@ -576,7 +605,7 @@ export async function cancelUnfundedPrefund(input: { fundingId: string; actor: s
   if (creds?.ok) {
     for (const deposit of funding.deposits) {
       if (!decision.expireIds.includes(deposit.id)) continue;
-      if (deposit.method !== "card" && deposit.method !== "ach_online") continue;
+      if (!isGatewayDepositMethod(deposit.method)) continue;
       if (!deposit.reference) continue;
       const expired = await expireStripeCheckoutSession(creds.secret, deposit.reference);
       if (!expired) return { ok: false as const, error: "The checkout could not be expired. Nothing was cancelled." };
@@ -610,6 +639,45 @@ export async function cancelUnfundedPrefund(input: { fundingId: string; actor: s
 }
 
 /**
+ * Lets the business pick another method: expires the open Stripe checkout first. Stripe refuses to
+ * expire a session that was already submitted, so a payment in progress is never abandoned.
+ */
+export async function abandonOpenGatewayDeposit(input: { fundingId: string; actor: string }) {
+  const funding = await prisma.collaborationFunding.findUnique({
+    where: { id: input.fundingId.trim() },
+    include: { deposits: { where: { status: "gateway_opened" } } },
+  });
+  if (!funding || funding.status !== "awaiting_provider") {
+    return { ok: false as const, error: "This funding is not waiting for a deposit. Nothing was changed." };
+  }
+  const open = funding.deposits.filter((deposit) => isGatewayDepositMethod(deposit.method));
+  if (open.length === 0) return { ok: true as const };
+  const creds = await stripeCredentials().catch(() => null);
+  if (!creds?.ok) return { ok: false as const, error: "Stripe is not reachable. Nothing was changed." };
+  for (const deposit of open) {
+    if (deposit.reference) {
+      const expired = await expireStripeCheckoutSession(creds.secret, deposit.reference);
+      if (!expired) {
+        return { ok: false as const, error: "This payment was already submitted at Stripe and is being processed. Nothing was changed." };
+      }
+    }
+    await prisma.fundingDeposit.updateMany({ where: { id: deposit.id, status: "gateway_opened" }, data: { status: "expired" } });
+  }
+  await prisma.auditLog
+    .create({
+      data: {
+        actor: input.actor,
+        action: "funding.deposit.method_changed",
+        objectType: "CollaborationFunding",
+        objectId: funding.id,
+        after: { expired: open.map((deposit) => deposit.id) },
+      },
+    })
+    .catch(() => undefined);
+  return { ok: true as const };
+}
+
+/**
  * Asks Stripe about an open card or online ACH checkout and posts the hold when Stripe says paid.
  * An unpaid or missing session leaves the agreement awaiting the provider.
  */
@@ -624,7 +692,7 @@ export async function syncOpenGatewayDeposits(fundingId: string) {
   const creds = await stripeCredentials().catch(() => null);
   if (!creds?.ok) return false;
   const open = await prisma.fundingDeposit.findMany({
-    where: { fundingId: id, status: "gateway_opened", method: { in: ["card", "ach_online"] } },
+    where: { fundingId: id, status: "gateway_opened", method: { in: [...GATEWAY_DEPOSIT_METHODS] } },
     orderBy: { createdAt: "desc" },
     take: 3,
   });
@@ -677,7 +745,7 @@ export async function confirmGatewayDeposit(input: {
   if (input.currency != null && input.currency.trim().toUpperCase() !== deposit.currency.trim().toUpperCase()) {
     return { ok: false as const, error: "The paid currency does not match this deposit. Nothing was changed." };
   }
-  if (deposit.method !== "card" && deposit.method !== "ach_online") {
+  if (!isGatewayDepositMethod(deposit.method)) {
     return { ok: false as const, error: "This deposit is not a gateway checkout. Nothing was changed." };
   }
   if (deposit.status === "confirmed") {

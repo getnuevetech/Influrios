@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
-import { actionAcceptFundingSettlement, actionApproveReleasePush, actionCancelUnfundedPrefund, actionExecuteHeldCancellation, actionPushProviderRelease, actionSaveReleaseAutomation, actionScheduleMilestoneRelease } from "@/app/admin/marketplace/actions";
+import { actionAcceptFundingSettlement, actionApproveReleasePush, actionCancelUnfundedPrefund, actionExecuteHeldCancellation, actionPushProviderRelease, actionRetryProviderRelease, actionSaveReleaseAutomation, actionScheduleMilestoneRelease } from "@/app/admin/marketplace/actions";
 import { prisma } from "@/lib/db";
 import { getLaunchGate } from "@/lib/launch-gate";
 import { readShareSnapshot } from "@/lib/fx-share";
@@ -34,6 +34,7 @@ const RELEASE_LOG_LABEL: Record<string, string> = {
   "launch_gate.release_automation": "Switches saved",
   provider_instruction_release: "Instruction recorded",
   milestone_release_external: "Waiting for external handling",
+  milestone_release_retry: "Sent again by admin",
 };
 
 function releaseWhen(value: Date) {
@@ -102,6 +103,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
             "milestone_release_approved",
             "milestone_release_requested",
             "milestone_release_skipped",
+            "milestone_release_retry",
             "launch_gate.release_automation",
             "provider_instruction_release",
           ],
@@ -124,6 +126,29 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       })
     : [];
   const externalMilestoneIds = new Set(externalReleases.map((row) => row.milestoneId));
+  // Releases whose automatic sends failed: show the reason and, after the last retry, a "Send again" button.
+  const queueIds = payoutQueue.map((row) => row.id);
+  const [failedCommands, failureNotes] = queueIds.length
+    ? await Promise.all([
+        prisma.providerCommand.findMany({
+          where: { operation: "release", status: { in: ["failed", "unknown"] }, milestoneId: { in: queueIds } },
+          select: { milestoneId: true, attemptCount: true },
+        }),
+        prisma.auditLog.findMany({
+          where: { action: "milestone_release_skipped", objectId: { in: queueIds } },
+          orderBy: { createdAt: "desc" },
+          select: { objectId: true, after: true, createdAt: true },
+          take: 100,
+        }),
+      ])
+    : [[], []];
+  const failedAttempts = new Map(failedCommands.map((row) => [row.milestoneId ?? "", row.attemptCount]));
+  const lastFailure = new Map<string, string>();
+  for (const note of failureNotes) {
+    if (lastFailure.has(note.objectId ?? "")) continue;
+    const detail = releaseLogDetail(note.after);
+    if (detail) lastFailure.set(note.objectId ?? "", detail);
+  }
   const monthly = reportsOn ? await ledgerMonthlyReport() : [];
   const sweeps = await listFundingSweepResults().catch(() => []);
   const fundingRows = fundings.rows;
@@ -187,7 +212,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         <p className="mt-1 text-xs text-muted">
           Every approved milestone stays in this list until the provider confirms <code className="text-[11px]">payout.released</code>.
           With a switch off, each row has its own button. With a switch on, the row stays visible and the release sweep does that step.
-          Saving the switches runs the sweep once. A Stripe send records the instruction here; it does not call Stripe.
+          Saving the switches runs the sweep once. On Stripe, a send transfers the influencer's net to their connected account and the milestone fees to Operations.
         </p>
         {canManage ? (
           <form action={actionSaveReleaseAutomation} className="mt-3 grid gap-2 text-sm">
@@ -232,7 +257,18 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                     {step.action === "wait_provider" || step.action === "wait_sweep" ? (
                       <p className="mt-1 text-xs text-muted">{step.label}</p>
                     ) : null}
+                    {failedAttempts.has(milestone.id) && lastFailure.get(milestone.id) ? (
+                      <p className="mt-1 text-xs font-semibold text-rose-700">
+                        Not sent ({failedAttempts.get(milestone.id)} {failedAttempts.get(milestone.id) === 1 ? "try" : "tries"}): {lastFailure.get(milestone.id)}
+                      </p>
+                    ) : null}
                   </div>
+                  {canManage && step.action === "wait_sweep" && failedAttempts.has(milestone.id) ? (
+                    <form action={actionRetryProviderRelease}>
+                      <input type="hidden" name="milestoneId" value={milestone.id} />
+                      <button type="submit" className="btn-secondary !py-1.5 text-xs">Send again</button>
+                    </form>
+                  ) : null}
                   {canManage && step.action === "schedule" ? (
                     <form action={actionScheduleMilestoneRelease}>
                       <input type="hidden" name="fundingId" value={milestone.fundingId} />

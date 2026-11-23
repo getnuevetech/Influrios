@@ -25,7 +25,7 @@ import {
 import { setProductSwitch } from "@/lib/product-switches";
 import { wiseRateCheckDraft } from "@/lib/fx-share";
 import { quoteWiseUserRate, saveWiseProvider } from "@/lib/wise-quote";
-import { enqueueAutoApprovalSweep, enqueueReviewDeadlineSweep, enqueueDisputeSlaSweep, enqueueProviderHoldWarnSweep, enqueueFailedPayoutRetrySweep, enqueueFundingReconciliationSweep, enqueueScheduledReleaseSweep, pushScheduledRelease } from "@/lib/jobs";
+import { enqueueAutoApprovalSweep, enqueueReviewDeadlineSweep, enqueueDisputeSlaSweep, enqueueProviderHoldWarnSweep, enqueueFailedPayoutRetrySweep, enqueueFundingReconciliationSweep, enqueueScheduledReleaseSweep, pushScheduledRelease, resetFailedReleaseCommand } from "@/lib/jobs";
 import { getLaunchGate, saveReleaseAutomation } from "@/lib/launch-gate";
 import { confirmManualDeposit, readManualDepositInstructions, saveManualDepositInstructions } from "@/lib/funding-checkout";
 
@@ -59,6 +59,27 @@ export async function actionSaveManualDepositInstructions(formData: FormData) {
   revalidatePath("/admin/marketplace/settings");
   revalidatePath("/payments/checkout");
   redirect("/admin/marketplace/settings?saved=deposit");
+}
+
+export async function actionSaveDepositBands(formData: FormData) {
+  const session = await requireAdminAction("marketplace.manage");
+  const dollars = (name: string) => Math.round(Number(String(formData.get(name) ?? "").replace(/[^0-9.]/g, "")) * 100);
+  const { saveDepositBands } = await import("@/lib/deposit-method-policy");
+  const result = await saveDepositBands({ cardMaxCents: dollars("cardMax"), bankTransferMinCents: dollars("bankTransferMin") });
+  if (!result.ok) redirect(`/admin/marketplace/settings?error=${encodeURIComponent(result.error)}`);
+  await prisma.auditLog
+    .create({
+      data: {
+        actor: session.email,
+        action: "funding.deposit.bands",
+        objectType: "PlatformSetting",
+        objectId: "marketplace.deposit_method_bands",
+        after: result.bands,
+      },
+    })
+    .catch(() => undefined);
+  revalidatePath("/admin/marketplace/settings");
+  redirect("/admin/marketplace/settings?saved=bands");
 }
 
 export async function actionConfirmManualDeposit(formData: FormData) {
@@ -623,6 +644,28 @@ export async function actionPushProviderRelease(formData: FormData) {
   }
   revalidatePath("/admin/marketplace");
   revalidatePath("/admin/jobs");
+  redirect("/admin/marketplace?saved=provider_release");
+}
+
+/** A payout whose automatic sends ran out of retries: try once more now. */
+export async function actionRetryProviderRelease(formData: FormData) {
+  const session = await requireAdminAction("marketplace.manage");
+  const milestoneId = String(formData.get("milestoneId") ?? "").trim();
+  await resetFailedReleaseCommand(milestoneId);
+  await prisma.auditLog
+    .create({ data: { actor: session.email, action: "milestone_release_retry", objectType: "FundingMilestone", objectId: milestoneId, after: {} } })
+    .catch(() => undefined);
+  const result = await pushScheduledRelease(milestoneId);
+  if (!result.ok) {
+    const last = await prisma.auditLog.findFirst({
+      where: { action: "milestone_release_skipped", objectId: milestoneId },
+      orderBy: { createdAt: "desc" },
+      select: { after: true },
+    });
+    const reason = (last?.after as { error?: unknown } | null)?.error;
+    redirect(`/admin/marketplace?error=${encodeURIComponent(typeof reason === "string" && reason ? reason : result.error)}`);
+  }
+  revalidatePath("/admin/marketplace");
   redirect("/admin/marketplace?saved=provider_release");
 }
 

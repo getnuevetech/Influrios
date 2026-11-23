@@ -14,6 +14,7 @@ import {
   actionSaveMarketplaceProvider,
   actionSaveMarketplaceSettings,
   actionSaveManualDepositInstructions,
+  actionSaveDepositBands,
   actionSaveRevenueParties,
   actionSaveTemplates,
   actionEnqueueAutoApproval,
@@ -36,6 +37,7 @@ import { wiseFxConfig } from "@/lib/wise-quote";
 import { formatMoney } from "@/lib/money";
 import { marketplaceConfig } from "@/lib/marketplace-ledger";
 import { getManualDepositInstructions } from "@/lib/funding-checkout";
+import { getDepositBands } from "@/lib/deposit-method-policy";
 import { productSwitch } from "@/lib/product-switches";
 import { AdminCollapse } from "@/components/admin-collapse";
 import { ApprovedProvidersField } from "@/app/admin/marketplace/approved-providers-field";
@@ -58,7 +60,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
   const session = await requireAdminPage("marketplace");
   const canManage = hasPermission(session, "marketplace.manage");
   const params = await searchParams;
-  const [config, reasons, sources, claims, rates, parties, wise, reportsOn, collabOsOn, collabTypes, timeframes, paymentGateways, depositInstructions] =
+  const [config, reasons, sources, claims, rates, parties, wise, reportsOn, collabOsOn, collabTypes, timeframes, paymentGateways, depositInstructions, depositBands] =
     await Promise.all([
       marketplaceConfig(),
       listDisputeReasons(),
@@ -73,6 +75,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
       listAllCatalogOptions("timeframe"),
       listProviders("payment").catch(() => []),
       getManualDepositInstructions(),
+      getDepositBands(),
     ]);
   const marketplaceProviders = config.providers.filter((row) => row.code !== "demo");
   const demoProvider = config.providers.find((row) => row.code === "demo") ?? null;
@@ -118,6 +121,34 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
           {params.error}
         </div>
       ) : null}
+
+      <section className="card-surface space-y-3 p-5">
+        <h2 className="font-display text-lg font-bold text-indigo">Payment methods by amount</h2>
+        <p className="max-w-3xl text-sm text-muted">
+          The funding page shows only the methods that suit the deposit (USD). Up to the card limit: card or ACH bank
+          debit. Above it: ACH bank debit. From the wire amount: wire or bank transfer to account details Stripe issues.
+          Other currencies pay by card.
+        </p>
+        {canManage ? (
+          <form action={actionSaveDepositBands} className="flex flex-wrap items-end gap-3">
+            <label className="text-xs font-semibold text-muted">
+              Card up to (USD)
+              <input name="cardMax" inputMode="decimal" defaultValue={(depositBands.cardMaxCents / 100).toFixed(0)} className="mt-1 w-40 rounded-lg border border-border px-3 py-2 text-sm font-normal text-indigo" />
+            </label>
+            <label className="text-xs font-semibold text-muted">
+              Wire or bank transfer from (USD)
+              <input name="bankTransferMin" inputMode="decimal" defaultValue={(depositBands.bankTransferMinCents / 100).toFixed(0)} className="mt-1 w-40 rounded-lg border border-border px-3 py-2 text-sm font-normal text-indigo" />
+            </label>
+            <button type="submit" className="btn-primary w-fit text-sm">
+              Save amounts
+            </button>
+          </form>
+        ) : (
+          <p className="text-sm text-muted">
+            Card up to {formatMoney(depositBands.cardMaxCents, "USD")} · wire from {formatMoney(depositBands.bankTransferMinCents, "USD")}.
+          </p>
+        )}
+      </section>
 
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Manual deposit instructions</h2>
