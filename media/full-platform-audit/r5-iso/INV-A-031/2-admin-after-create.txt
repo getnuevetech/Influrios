@@ -1,0 +1,152 @@
+∞
+Influrios
+Home
+Discover
+Categories
+Collaboration
+For Businesses
+Pricing
+AR
+
+AUDIT r5iso01 Super
+
+audit.admin@example.com
+
+▾
+Create
+
+Signed in as Super Admin (audit.admin@example.com)
+
+Influrios Admin
+
+Super Admin · Platform Control
+
+MAIN MENU
+
+Dashboard
+Banners
+Example portraits
+Value proposition
+Homepage
+Collaboration landing
+Business landing
+FAQ
+Site stats
+Influencer cards
+
+MEMBERS & ACCESS
+
+Influencer accounts
+Business accounts
+All accounts
+Admin users
+Access levels
+Invitations
+Agency
+Guest gates
+
+SUBSCRIPTIONS
+
+Plans & features
+Billing activity
+
+COLLABORATIONS
+
+Deals
+Collaborations
+Marketplace listings
+Marketplace ledger
+Managed Matching
+Intelligence
+Collaboration ops
+Trust & Disputes
+
+PAYMENTS & FINANCE
+
+Payment settings
+Discount codes
+Meilisearch
+KYC
+Finance
+
+INTEGRATIONS & OPS
+
+AI pipelines
+Document signing
+Contracts
+Social networks
+Legal documents
+Short links
+Referrals
+Email
+Email templates
+Email health
+Jobs
+Taxonomy
+← View site
+Sign out
+← Admin
+Invitations
+
+Invite a directory profile with a private claim link. Email delivery stays off until SMTP is configured, so the working step is to copy the link.
+
+Timing
+Days until the link expires
+Follow-up after days
+Save timing
+Invite a profile
+Profile
+AUDIT r5 Unclaimed Profile (audit-r5iso01-unclaimed)
+AUDIT r5iso01 Influencer A (audit-r5iso01-a)
+AUDIT r5iso01 Influencer B (audit-r5iso01-b)
+AUDIT r5iso01 Unrelated (audit-r5iso01-u)
+Template
+Claim your card
+Campaign
+Creator outreach
+Influencer outreach
+Email (optional until SMTP)
+Expires in days
+Follow-up in days
+Queue invitation
+Pipeline
+
+AUDIT r5 Unclaimed Profile
+
+opened · Creator outreach
+
+Expand
+Templates
+
+Placeholders: {{name}}, {{profile}}, {{link}}, {{expiry}}.
+
+Claim your card
+
+Active
+
+Expand
+
+New template
+
+Add template
+Campaigns
+Creator outreach
+Influencer outreach
+Add
+Acquisition
+
+Counts use the first source stored on a draft and the campaign stored on an invitation. A blank source stays blank.
+
+SOURCE	INVITED	PREVIEWED	CLAIMED	VERIFIED	PUBLISHED
+Creator outreach	1	1	0	0	0
+Agency CSV
+
+Columns are handle, name, email, platform, and source. A row starts a private draft. It does not publish a profile. The email is stored on the import and is not used as a login.
+
+Source for rows that leave source blank
+CSV
+Import rows
+Do not contact
+Profile slug
+Email
+Suppress

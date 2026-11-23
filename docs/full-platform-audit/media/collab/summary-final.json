@@ -1,0 +1,695 @@
+{
+  "unique": {
+    "Fail": 2,
+    "Pass": 100,
+    "Blocked": 11
+  },
+  "raw": {
+    "Fail": 4,
+    "Pass": 103,
+    "Blocked": 11
+  },
+  "unique_total": 113,
+  "raw_total": 118,
+  "artifacts": 115,
+  "by_id": [
+    {
+      "status": "Fail",
+      "id": "INV-R-020:desktop",
+      "case": "Invite token page destination (invalid token)",
+      "actual": "http=404; url=https://influrios.com/invite/invalid-ips19-token; sample=\u221e Influrios Home Discover Categories Collaboration For Businesses Pricing Log in Join Influrios \u2192 404 This page could not be found. \u221e Influrios Influencers. Collaborations. Real Opportunities. PLATFORM Home Discover Coll"
+    },
+    {
+      "status": "Pass",
+      "id": "AUTH-business-desktop",
+      "case": "login",
+      "actual": "url=https://influrios.com/business/home"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-004:desktop:business",
+      "case": "route /collaboration",
+      "actual": "http=200; url=https://influrios.com/collaboration/business; gateHint=false; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-058:desktop:business",
+      "case": "route /collaboration/business",
+      "actual": "http=200; url=https://influrios.com/collaboration/business; gateHint=false; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-066:desktop:business",
+      "case": "route /collaboration/contracts",
+      "actual": "http=200; url=https://influrios.com/collaboration/contracts; gateHint=false; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-068:desktop:business",
+      "case": "route /collaboration/contract",
+      "actual": "http=200; url=https://influrios.com/collaboration/contract; gateHint=false; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-063:desktop:business",
+      "case": "route /collaboration/propose",
+      "actual": "http=200; url=https://influrios.com/collaboration/propose; gateHint=false; sample=\u221e Influrios Home Discover Categories Collaboration For Businesses Pricing Agboola Log out Missing influencers for this proposal. Back to matches Contracts & records Public matches \u221e Influrios Influencers. Collaborations."
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-064:desktop:business",
+      "case": "route /collaboration/records",
+      "actual": "http=200; url=https://influrios.com/collaboration/records; gateHint=false; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-070:desktop:business",
+      "case": "route /collaboration/team",
+      "actual": "http=200; url=https://influrios.com/collaboration/team; gateHint=false; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-029:desktop:business",
+      "case": "route /payments",
+      "actual": "http=200; url=https://influrios.com/payments; gateHint=false; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-069:desktop:business",
+      "case": "Workroom reachable",
+      "actual": "url=https://influrios.com/collaboration/work/cmw9ybc0m005io901ek96km44; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola A"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-057:desktop:business",
+      "case": "route /collaboration/inbox",
+      "actual": "http=200; url=https://influrios.com/collaboration/inbox; gateHint=false; sample=\u221e Influrios Home Discover Categories Collaboration For Businesses Pricing Agboola Log out \u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Col"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-C-001:desktop:business:/collaboration",
+      "case": "live deposits closed \u2014 no open-deposit CTA",
+      "actual": "openButtons=0; openLinks=0; closedCopy=false; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out "
+    },
+    {
+      "status": "Pass",
+      "id": "INV-C-001:desktop:business:/payments",
+      "case": "live deposits closed \u2014 no open-deposit CTA",
+      "actual": "openButtons=0; openLinks=0; closedCopy=false; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out "
+    },
+    {
+      "status": "Pass",
+      "id": "INV-P-008:desktop",
+      "case": "Business request composer popup/surface",
+      "actual": "clickedNew=false; composerVisible=true; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola A"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-032/033:desktop",
+      "case": "Save/publish request actions present",
+      "actual": "saved=false; hasPublish=true; after=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-038:desktop",
+      "case": "Invite creator(s) control",
+      "actual": "invitePresent=true; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out "
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-066:desktop:business:surface",
+      "case": "Contracts list surface",
+      "actual": "\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Contracts Agreements tied to"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-067/INV-P-003:desktop:business",
+      "case": "Agreement detail / sign dialog path",
+      "actual": "opened=true; signControls=0; url=https://influrios.com/collaboration/contracts; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-049:desktop",
+      "case": "Contract wizard loads",
+      "actual": "\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings CONTRACT & MILESTONE WIZARD "
+    },
+    {
+      "status": "Fail",
+      "id": "INV-A-052/056/057:desktop:business",
+      "case": "Fund signed agreement / checkout (live deposits closed)",
+      "actual": "fundCta=1; url=https://influrios.com/collaboration/contract; blockedHint=false; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-D-001:desktop:business",
+      "case": "Deliverable files tab (#536 revalidate)",
+      "actual": "\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Collabor"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-D-001-download:desktop:business",
+      "case": "Authorized deliverable download (#536 revalidate)",
+      "actual": "status=200; bytes=2015041"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-059/060:desktop",
+      "case": "Business review hub \u2014 request changes + approve (#536 COR-23 revalidate)",
+      "actual": "requestChanges=false; approve=true; separatedCopy=false; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Collaborations / Workspace 4"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-060:desktop:step",
+      "case": "Approve confirm step (#536 COR-23)",
+      "actual": "sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2; textareaPresent=false"
+    },
+    {
+      "status": "Blocked",
+      "id": "INV-A-066:desktop:business",
+      "case": "Cancellation request path visible",
+      "actual": "cancelControls=0; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-040/041:desktop",
+      "case": "Withdraw participation / close request controls",
+      "actual": "withdraw=0; close=1; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. Al"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-063:desktop",
+      "case": "Cancel prefund path on payments",
+      "actual": "prefundControl=false; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-N-002:desktop:business",
+      "case": "Action inbox consistency surface",
+      "actual": "\u221e Influrios Home Discover Categories Collaboration For Businesses Pricing Agboola Log out \u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Setting"
+    },
+    {
+      "status": "Pass",
+      "id": "AUTH-influencer-desktop",
+      "case": "login",
+      "actual": "url=https://influrios.com/creator"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-004:desktop:influencer",
+      "case": "route /collaboration",
+      "actual": "http=200; url=https://influrios.com/collaboration/hub; gateHint=false; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Invited Discove"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-056:desktop:influencer",
+      "case": "route /collaboration/hub?view=collaborations",
+      "actual": "http=200; url=https://influrios.com/collaboration/hub?view=collaborations; gateHint=false; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations "
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-056b:desktop:influencer",
+      "case": "route /collaboration/hub?view=opportunities",
+      "actual": "http=200; url=https://influrios.com/collaboration/hub?view=opportunities; gateHint=false; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Invited Discove"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-057:desktop:influencer",
+      "case": "route /collaboration/inbox",
+      "actual": "http=200; url=https://influrios.com/collaboration/inbox; gateHint=false; sample=\u221e Influrios Home Discover Categories Collaboration For Businesses Pricing Ag Log out \u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-066:desktop:influencer",
+      "case": "route /collaboration/contracts",
+      "actual": "http=200; url=https://influrios.com/collaboration/contracts; gateHint=false; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Contracts Agree"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-069:desktop:influencer",
+      "case": "route /collaboration/work/cmw9ybc0m005io901ek96km44",
+      "actual": "http=200; url=https://influrios.com/collaboration/work/cmw9ybc0m005io901ek96km44; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations / Workspace 4th Test"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-029:desktop:influencer",
+      "case": "route /payments",
+      "actual": "http=200; url=https://influrios.com/payments; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Start funding from a signed collabo"
+    },
+    {
+      "status": "Pass",
+      "id": "AUTH-influencer-desktop-resume",
+      "case": "login",
+      "actual": "https://influrios.com/creator"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-070:desktop:influencer",
+      "case": "route /collaboration/team",
+      "actual": "http=200; url=https://influrios.com/collaboration/team; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer \u2190 Business hub Coordinated proposal"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-C-001:desktop:influencer:/collaboration",
+      "case": "live deposits closed",
+      "actual": "openCta=0; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-C-001:desktop:influencer:/payments",
+      "case": "live deposits closed",
+      "actual": "openCta=0; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-066:desktop:influencer:surface",
+      "case": "Contracts list",
+      "actual": "\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Contracts Agreements tied to real parties, and reusable"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-067/INV-P-003:desktop:influencer",
+      "case": "Agreement detail / sign",
+      "actual": "opened=false; signControls=0; url=https://influrios.com/collaboration/contracts; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Contracts Agree"
+    },
+    {
+      "status": "Blocked",
+      "id": "INV-A-050:desktop:influencer",
+      "case": "Native sign control path",
+      "actual": "No Sign button; likely already signed/voided; url=https://influrios.com/collaboration/contracts"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-069:desktop:influencer:deep",
+      "case": "Workroom content",
+      "actual": "\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations / Workspace 4th Test Campaign After Pay Engine Rebuilt ABC H"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-D-001-download:desktop:influencer",
+      "case": "Authorized download #536",
+      "actual": "status=200; bytes=2015041"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-058:desktop:intent-submit",
+      "case": "Milestone submit surface",
+      "actual": "dialogish=true; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations / Workspace 4th Test"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-058:desktop:intent-revise",
+      "case": "Milestone revise surface",
+      "actual": "dialogish=true; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations / Workspace 4th Test"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-058:desktop:intent-add",
+      "case": "Milestone add surface",
+      "actual": "dialogish=true; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations / Workspace 4th Test"
+    },
+    {
+      "status": "Blocked",
+      "id": "INV-A-066:desktop:influencer",
+      "case": "Cancellation path",
+      "actual": "cancelControls=0; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations "
+    },
+    {
+      "status": "Pass",
+      "id": "INV-N-002:desktop:influencer",
+      "case": "Action inbox",
+      "actual": "\u221e Influrios Home Discover Categories Collaboration For Businesses Pricing Ag Log out \u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserv"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-026/028:desktop",
+      "case": "Apply controls",
+      "actual": "apply=0; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Invited Discove"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-P-022/INV-A-030:desktop",
+      "case": "Invitation accept/decline UI",
+      "actual": "clickedTab=false; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations Manage invitations, "
+    },
+    {
+      "status": "Pass",
+      "id": "INV-D-001-signed-out",
+      "case": "Signed-out deny #536",
+      "actual": "status=401; body=Sign in to open this file."
+    },
+    {
+      "status": "Blocked",
+      "id": "INV-A-052/056/057:desktop:business:recheck",
+      "case": "Fund CTA after click (live deposits closed)",
+      "actual": "clicked=true; stripeRedirect=false; url=https://influrios.com/collaboration/contract; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola A"
+    },
+    {
+      "status": "Blocked",
+      "id": "INV-R-030:desktop",
+      "case": "Funding checkout route under closed deposits",
+      "actual": "http=404; url=https://influrios.com/payments/checkout/ips19-closed-probe; sample=404 This page could not be found."
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-059/060:desktop:deep",
+      "case": "Milestone review controls",
+      "actual": "requestChanges=false; approve=true; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Collaborations / Workspace 4"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-059/060:desktop",
+      "case": "Request detail route",
+      "actual": "http=200; url=https://influrios.com/collaboration/business/request/new?step=0; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-P-009:desktop",
+      "case": "Active collaboration overview",
+      "actual": "\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola A"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-020:mobile",
+      "case": "Invite token invalid",
+      "actual": "http=404; sample=\u221e Influrios Join Influrios \u2192 404 This page could not be found. \u221e Influrios Influencers. Collaborations. Real Opportunities. PLATFORM Home Discover Collaboration Influencer Card FOR BUSINESSES Find Inf"
+    },
+    {
+      "status": "Pass",
+      "id": "AUTH-business-mobile",
+      "case": "login",
+      "actual": "https://influrios.com/business/home"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-004:mobile:business",
+      "case": "route /collaboration",
+      "actual": "http=200; url=https://influrios.com/collaboration/business; sample=2 A Dashboard Action inbox Company Profile Discover Creators Collaborations2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Funded to date $4,830 Collaborations "
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-058:mobile:business",
+      "case": "route /collaboration/business",
+      "actual": "http=200; url=https://influrios.com/collaboration/business; sample=2 A Dashboard Action inbox Company Profile Discover Creators Collaborations2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Funded to date $4,830 Collaborations "
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-066:mobile:business",
+      "case": "route /collaboration/contracts",
+      "actual": "http=200; url=https://influrios.com/collaboration/contracts; sample=2 A Dashboard Action inbox Company Profile Discover Creators Collaborations2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Contracts Agreements tied to real par"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-068:mobile:business",
+      "case": "route /collaboration/contract",
+      "actual": "http=200; url=https://influrios.com/collaboration/contract; sample=2 A Dashboard Action inbox Company Profile Discover Creators Collaborations2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings CONTRACT & MILESTONE WIZARD Form the "
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-069:mobile:business",
+      "case": "route /collaboration/work/cmw9ybc0m005io901ek96km44",
+      "actual": "http=200; url=https://influrios.com/collaboration/work/cmw9ybc0m005io901ek96km44; sample=2 A Dashboard Action inbox Company Profile Discover Creators Collaborations2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Collaborations / Workspace 4th Test C"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-057:mobile:business",
+      "case": "route /collaboration/inbox",
+      "actual": "http=200; url=https://influrios.com/collaboration/inbox; sample=\u221e Influrios Log out 2 A Dashboard Action inbox Company Profile Discover Creators Collaborations2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Needs your attent"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-029:mobile:business",
+      "case": "route /payments",
+      "actual": "http=200; url=https://influrios.com/payments; sample=2 A Dashboard Action inbox Company Profile Discover Creators Collaborations2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Start funding from a signed collabora"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-063:mobile:business",
+      "case": "route /collaboration/propose",
+      "actual": "http=200; url=https://influrios.com/collaboration/propose; sample=\u221e Influrios Log out Missing influencers for this proposal. Back to matches Contracts & records Public matches \u221e Influrios Influencers. Collaborations. Real Opportunities. PLATFORM Home Discover Collab"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-064:mobile:business",
+      "case": "route /collaboration/records",
+      "actual": "http=200; url=https://influrios.com/collaboration/records; sample=2 A Dashboard Action inbox Company Profile Discover Creators Collaborations2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings \u2190 Collaboration hub Active Collaborat"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-070:mobile:business",
+      "case": "route /collaboration/team",
+      "actual": "http=200; url=https://influrios.com/collaboration/team; sample=2 A Dashboard Action inbox Company Profile Discover Creators Collaborations2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings \u2190 Business hub Coordinated proposals "
+    },
+    {
+      "status": "Pass",
+      "id": "INV-C-001:mobile:business:/collaboration",
+      "case": "live deposits closed",
+      "actual": "openCta=0"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-C-001:mobile:business:/payments",
+      "case": "live deposits closed",
+      "actual": "openCta=0"
+    },
+    {
+      "status": "Blocked",
+      "id": "INV-A-052/056/057:mobile:business:recheck",
+      "case": "Fund CTA after click (live deposits closed)",
+      "actual": "clicked=true; stripeRedirect=false; url=https://influrios.com/collaboration/contract; sample=2 A Dashboard Action inbox Company Profile Discover Creators Collaborations2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings CONTRACT & MILESTONE WIZARD Form the collaboration Parties \u2192 scope \u2192 commerci"
+    },
+    {
+      "status": "Blocked",
+      "id": "INV-R-030:mobile",
+      "case": "Funding checkout route under closed deposits",
+      "actual": "http=404; url=https://influrios.com/payments/checkout/ips19-closed-probe; sample=404 This page could not be found."
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-059/060:mobile:deep",
+      "case": "Milestone review controls",
+      "actual": "requestChanges=false; approve=true; sample=2 A Dashboard Action inbox Company Profile Discover Creators Collaborations2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Collaborations / Workspace 4th Test Campaign After Pay Engine Rebuilt Ag Olomola \u00b7 Funds held Gross compensation $4,2"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-059/060:mobile",
+      "case": "Request detail route",
+      "actual": "http=200; url=https://influrios.com/collaboration/business/request/new?step=0; sample=2 A Dashboard Action inbox Company Profile Discover Creators Collaborations2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Close Create request One brief. Private invitations or a "
+    },
+    {
+      "status": "Pass",
+      "id": "INV-P-009:mobile",
+      "case": "Active collaboration overview",
+      "actual": "2 A Dashboard Action inbox Company Profile Discover Creators Collaborations2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Funded to date $4,830 Collaborations + New request Requests Opportunities Act"
+    },
+    {
+      "status": "Pass",
+      "id": "AUTH-influencer-mobile",
+      "case": "login",
+      "actual": "https://influrios.com/creator"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-069:mobile:influencer",
+      "case": "route /collaboration/work/cmw9ybc0m005io901ek96km44",
+      "actual": "http=200; url=https://influrios.com/collaboration/work/cmw9ybc0m005io901ek96km44; sample=2 A Dashboard Action inbox My Profile Collaborations1 Contracts Earnings & Payouts1 Messages Settings Collaborations / Workspace 4th Test Campaign After Pay Engine Rebuilt ABC Holdings \u00b7 Funds held Gross influencer compensation $4,200.00 Yo"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-029:mobile:influencer",
+      "case": "route /payments",
+      "actual": "http=200; url=https://influrios.com/payments; sample=2 A Dashboard Action inbox My Profile Collaborations1 Contracts Earnings & Payouts1 Messages Settings Start funding from a signed collaboration contract. Collaboration payments Funding and influencer payouts for signed agreements. Opening t"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-070:mobile:influencer",
+      "case": "route /collaboration/team",
+      "actual": "http=200; url=https://influrios.com/collaboration/team; sample=2 A Dashboard Action inbox My Profile Collaborations1 Contracts Earnings & Payouts1 Messages Settings \u2190 Business hub Coordinated proposals Invite two or more influencers to one proposal. Each influencer only sees their own invitation until "
+    },
+    {
+      "status": "Pass",
+      "id": "INV-C-001:mobile:influencer:/collaboration",
+      "case": "live deposits closed",
+      "actual": "openCta=0; sample=2 A Dashboard Action inbox My Profile Collaborations1 Contracts Earnings & Payouts1 Messages Settings Invited Discover Applications Opportunities Discover campaigns and influencer "
+    },
+    {
+      "status": "Pass",
+      "id": "INV-C-001:mobile:influencer:/payments",
+      "case": "live deposits closed",
+      "actual": "openCta=0; sample=2 A Dashboard Action inbox My Profile Collaborations1 Contracts Earnings & Payouts1 Messages Settings Start funding from a signed collaboration contract. Collaboration payments Fun"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-066:mobile:influencer:surface",
+      "case": "Contracts list",
+      "actual": "2 A Dashboard Action inbox My Profile Collaborations1 Contracts Earnings & Payouts1 Messages Settings Contracts Agreements tied to real parties, and reusable templates to start the next draft. Agreements Templates All statuses Needs my signature Awaiting other"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-067/INV-P-003:mobile:influencer",
+      "case": "Agreement detail / sign",
+      "actual": "opened=false; signControls=0; url=https://influrios.com/collaboration/contracts; sample=2 A Dashboard Action inbox My Profile Collaborations1 Contracts Earnings & Payouts1 Messages Settings Contracts Agreements tied to real parties, and reusable templates to start the next draft. Agreements Templates All st"
+    },
+    {
+      "status": "Blocked",
+      "id": "INV-A-050:mobile:influencer",
+      "case": "Native sign control path",
+      "actual": "No Sign button; likely already signed/voided; url=https://influrios.com/collaboration/contracts"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-069:mobile:influencer:deep",
+      "case": "Workroom content",
+      "actual": "2 A Dashboard Action inbox My Profile Collaborations1 Contracts Earnings & Payouts1 Messages Settings Collaborations / Workspace 4th Test Campaign After Pay Engine Rebuilt ABC Holdings \u00b7 Funds held Gross influencer compensation $4,200.00 Your platform fee $630.00 Agreed net payou"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-D-001-download:mobile:influencer",
+      "case": "Authorized download #536",
+      "actual": "status=200; bytes=2015041"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-058:mobile:intent-submit",
+      "case": "Milestone submit surface",
+      "actual": "dialogish=true; sample=2 A Dashboard Action inbox My Profile Collaborations1 Contracts Earnings & Payouts1 Messages Settings Collaborations / Workspace 4th Test Campaign After Pay Engine Rebuilt ABC Holdings \u00b7 Funds held Gross influencer compensation $4,200.00 Yo"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-058:mobile:intent-revise",
+      "case": "Milestone revise surface",
+      "actual": "dialogish=true; sample=2 A Dashboard Action inbox My Profile Collaborations1 Contracts Earnings & Payouts1 Messages Settings Collaborations / Workspace 4th Test Campaign After Pay Engine Rebuilt ABC Holdings \u00b7 Funds held Gross influencer compensation $4,200.00 Yo"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-058:mobile:intent-add",
+      "case": "Milestone add surface",
+      "actual": "dialogish=true; sample=2 A Dashboard Action inbox My Profile Collaborations1 Contracts Earnings & Payouts1 Messages Settings Collaborations / Workspace 4th Test Campaign After Pay Engine Rebuilt ABC Holdings \u00b7 Funds held Gross influencer compensation $4,200.00 Yo"
+    },
+    {
+      "status": "Blocked",
+      "id": "INV-A-066:mobile:influencer",
+      "case": "Cancellation path",
+      "actual": "cancelControls=0; sample=2 A Dashboard Action inbox My Profile Collaborations1 Contracts Earnings & Payouts1 Messages Settings Collaborations / Workspace 4th Test Campaign After Pay Engine Rebuilt ABC Holdings \u00b7 Funds held Gross influencer compe"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-N-002:mobile:influencer",
+      "case": "Action inbox",
+      "actual": "\u221e Influrios Log out 2 A Dashboard Action inbox My Profile Collaborations1 Contracts Earnings & Payouts1 Messages Settings Needs your attention Opening a notification does not complete the task. 4 open tasks Assigned to me Waiting on others Resolved All types D"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-026/028:mobile",
+      "case": "Apply controls",
+      "actual": "apply=0; sample=2 A Dashboard Action inbox My Profile Collaborations1 Contracts Earnings & Payouts1 Messages Settings Invited Discover Applications Opportunities Discover campaigns and influencer openings that fit you. Matching preferen"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-P-022/INV-A-030:mobile",
+      "case": "Invitation accept/decline UI",
+      "actual": "clickedTab=false; sample=2 A Dashboard Action inbox My Profile Collaborations1 Contracts Earnings & Payouts1 Messages Settings Collaborations Manage invitations, deliverables, and ongoing work. Find opportunities Active 2 Invitations 0 Due this week 0 Completed 0 O"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-P-008:desktop:deep",
+      "case": "New request composer via /request/new",
+      "actual": "\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Close Create request One brief. Private invitations or a public oppo"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-032/033:desktop:deep",
+      "case": "Save/publish on composer",
+      "actual": "invite=false; publish=false; save=true"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-P-009:desktop:deep",
+      "case": "Active collab \u2192 workroom/overview",
+      "actual": "url=https://influrios.com/collaboration/business?tab=requests&filter=all&q=; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola A"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-P-003:desktop:deep",
+      "case": "Contract agreement surface",
+      "actual": "url=https://influrios.com/collaboration/contracts; dialogs=0; sign=0; fund=0; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Contracts Agreements tied to"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-059/060:desktop:focus",
+      "case": "COR-23 review hub via focus deep-link #536 revalidate",
+      "actual": "rc=true; approve=true; separated=true; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Collaborations / Workspace 4th Test Campaign After Pay Engine Rebuilt Ag Olomola \u00b7 Funds held Gross compensa"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-059:desktop:focus-step",
+      "case": "Request changes step",
+      "actual": "\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Collaborations / Workspace 4th Test Campaign Aft"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-060:desktop:focus-step",
+      "case": "Approve confirm step",
+      "actual": "\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Collaborations / Workspace 4th Test Campaign Aft"
+    },
+    {
+      "status": "Blocked",
+      "id": "INV-A-066/067:desktop:payments",
+      "case": "Cancellation/settlement from payments",
+      "actual": "cancelCtrl=0; url=https://influrios.com/payments?currency=USD&status=needs_funding; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Start funding from a signed collaboration contra"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-066:desktop:workroom-tabs",
+      "case": "Workroom settlement/cancel surfaces",
+      "actual": "\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Collaborations / Workspace 4th Test Campaign Aft"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-040/041:desktop:deep",
+      "case": "Withdraw / close request",
+      "actual": "withdraw=0; close=1; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola A"
+    },
+    {
+      "status": "Blocked",
+      "id": "INV-C-001/INV-A-056:desktop:start-funding",
+      "case": "Start funding path under closed live deposits",
+      "actual": "nav=link; stripe=false; closedHint=true; url=https://influrios.com/payments?currency=USD&status=needs_funding; sample=\u221e Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out \u00a9 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Start funding from a signed "
+    },
+    {
+      "status": "Pass",
+      "id": "INV-N-002:desktop:influencer:deep",
+      "case": "Inbox task kinds visible",
+      "actual": "tasks={\"review_contract\":true,\"review_delivery\":true,\"submit_delivery\":false,\"review_invitation\":true,\"review_funding\":true}; sample=\u221e Influrios Home Discover Categories Collaboration For Businesses Pricing Ag Log out \u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Needs your attention Opening a"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-N-002:desktop:influencer:open-task",
+      "case": "Open inbox task destination",
+      "actual": "url=https://influrios.com/collaboration/inbox; sample=\u221e Influrios Home Discover Categories Collaboration For Businesses Pricing Ag Log out \u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrio"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-R-056:desktop:influencer:hub-content",
+      "case": "Hub collaborations content",
+      "actual": "\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations Manage invitations, deliverables, and ongoing work. Find opportunities Active 2 "
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-026/028/030:desktop:deep",
+      "case": "Apply/accept/decline on opportunities",
+      "actual": "apply=0; accept=0; decline=0; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Invited Discover Applications Opportunities Discover ca"
+    },
+    {
+      "status": "Pass",
+      "id": "INV-A-058:desktop:focus-state",
+      "case": "Influencer milestone focus state",
+      "actual": "\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations / Workspace 4th Test Campaign After Pay Engine Rebuilt ABC Holdings \u00b7 Funds held Gross influencer compensation $4,200.00"
+    },
+    {
+      "status": "Pass",
+      "id": "COR-22:desktop:revalidate",
+      "case": "Normalized Saved as https://\u2026 (#536 COR-22)",
+      "actual": "savedAs=true; sample=\u221e Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out \u00a9 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Collaborations / Workspace 4th Test Campaign After Pay Engine Rebuilt ABC H"
+    }
+  ]
+}

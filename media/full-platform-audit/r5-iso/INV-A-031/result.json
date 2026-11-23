@@ -1,0 +1,33 @@
+{
+  "check": "INV-A-031",
+  "host": "http://127.0.0.1:3000",
+  "startedAt": "2026-11-21T16:57:04.194Z",
+  "steps": [
+    "admin queued invitation via UI; landed http://127.0.0.1:3000/admin/invitations",
+    "invitee clicked Decline on token page; landed http://127.0.0.1:3000/invite/Ixw3rBClP7czKpA3gr9vqiFW0UIsvNM5"
+  ],
+  "adminBefore": {
+    "funnel": []
+  },
+  "dbBefore": "opened|1",
+  "unclaimedInPicker": true,
+  "reusedFromAttempt1": true,
+  "statusCreated": "opened",
+  "statusAfterJob": "opened",
+  "mail": [
+    "AUDIT, create your Influrios Card",
+    "AUDIT, create your Influrios Card"
+  ],
+  "statusAfterOpen": "opened",
+  "declinedCopy": true,
+  "declinedCopyAfterReload": true,
+  "statusAfter": "declined",
+  "events": "created/audit.admin@example.com\nsend_queued/audit.admin@example.com\nsend_delivered/smtp\nsend_queued/audit.admin@example.com\nsend_delivered/smtp\nopened/creator\ndeclined/creator",
+  "adminAfter": {
+    "funnel": []
+  },
+  "dbAfter": "declined|1",
+  "mobileDeclined": true,
+  "mobileDeclineButtonShown": 0,
+  "finishedAt": "2026-11-21T16:57:09.914Z"
+}

@@ -1,0 +1,11 @@
+{
+  "check": "INV-J-010",
+  "host": "http://127.0.0.1:3000",
+  "startedAt": "2026-11-21T17:06:24.177Z",
+  "steps": [
+    "admin enabled Automatic milestone approval (UI) with reason"
+  ],
+  "gateBefore": false,
+  "error": "Error: Command failed: psql -h 127.0.0.1 -p 5433 -U postgres influrios_audit -Atc select \"automaticMilestoneApprovalEnabled\" from \"LaunchGate\" limit 1\nERROR:  relation \"LaunchGate\" does not exist\nLINE 1: select \"automaticMilestoneApprovalEnabled\" from \"LaunchGate\"...\n                                                        ^\n\n    at genericNodeError (node:internal/errors:983:15)\n    at wrappedFn (node:internal/errors:537:14)\n    at checkExecSyncError (node:child_process:916:11)\n    at execFileSync (node:child_process:952:15)\n    at module.exports (/tmp/claude-0/-home-user-Influrios/887caec7-95f2-55b2-aeae-033df38ced6b/scratchpad/run/db.js:2:23)\n    at /tmp/claude-0/-home-user-Influrios/887caec7-95f2-55b2-aeae-033df38ced6b/scratchpad/run/j010.js:17:16\n    at async Object.run (/tmp/claude-0/-home-user-Influrios/887caec7-95f2-55b2-aeae-033df38ced6b/scratchpad/run/runner.js:6:9)",
+  "finishedAt": "2026-11-21T17:06:26.606Z"
+}

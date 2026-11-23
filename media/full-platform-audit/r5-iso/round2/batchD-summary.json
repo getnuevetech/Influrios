@@ -1,0 +1,7 @@
+{
+  "INV-A-029": "Pass",
+  "INV-R-062": "ERROR locator.selectOption: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('form:has(select[name=creatorSlug])').first().locator('select[name=creatorSlug]')\u001b[22m\n\u001b[2m    - locator resolved to <select name=\"creatorSlug\" class=\"mt-1 w-full rounded-xl border border-border px-3 py-2 font-norm",
+  "INV-C-013": "Pass",
+  "INV-C-015": "Blocked: signed request (fixture without brief) has no delete control on its page",
+  "INV-A-053-survey": "survey"
+}

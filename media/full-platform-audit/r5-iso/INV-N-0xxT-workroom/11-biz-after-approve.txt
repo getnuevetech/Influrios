@@ -1,0 +1,91 @@
+∞
+Influrios
+Dashboard
+Action inbox
+Company Profile
+Discover Creators
+Collaborations
+1
+Contracts
+Analytics
+Team
+Billing & Plans
+Collaboration Payments
+Verification
+Settings
+Log out
+
+© 2026 Influrios. All rights reserved.
+
+1
+A
+
+AUDIT r5iso01 Co A
+
+AUDIT r5iso01 Co A
+
+Collaborations / Workspace
+
+AUDIT r5 Workroom notices
+
+AUDIT r5iso01 Influencer B · Funds held
+
+Funding total
+$800.00
+Platform fee
+$0.00
+Milestones
+Files
+Brief
+Messages
+View payments
+Milestone	Amount	Work status	Payment	Action
+AUDIT r5 Milestone 1	$400.00	In review · V2	
+
+—
+
+	
+
+Next step: Review version 2
+
+Review version 2
+AUDIT r5 Milestone 2	$400.00	In review · V1	
+
+—
+
+	
+
+Next step: Review version 1
+
+Review version 1
+Approve version 2?
+×
+
+Confirm this version · payment remains separate
+
+Version · 2 · AUDIT r5 m1 v2 with captions
+
+Files / link
+
+Saved as https://example.com/audit-r5-m1-v2
+
+Consequences · Marks delivery approved for this milestone. Does not pay the influencer or release bank funds by itself until you confirm release below.
+
+This starts settlement and does not charge the business again.
+
+Milestone
+AUDIT r5 Milestone 1
+Version
+v2
+Gross
+$400.00
+Business fee allocation
+$0.00
+
+This uses money already funded. It does not charge the business again, and it does not mark the payout paid.
+
+I approve version v2 of AUDIT r5 Milestone 1.
+Need changes instead
+Approve version 2
+
+Cancel

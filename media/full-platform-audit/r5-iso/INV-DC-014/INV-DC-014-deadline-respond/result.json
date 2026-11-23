@@ -1,0 +1,33 @@
+{
+  "check": "INV-DC-014-deadline-respond",
+  "host": "http://127.0.0.1:3000",
+  "startedAt": "2026-11-21T16:50:19.219Z",
+  "steps": [],
+  "url": "http://127.0.0.1:3000/creator?error=This%20invitation%20has%20expired.%20Nothing%20was%20signed%20or%20funded.",
+  "message": null,
+  "statusAfter": "REQUESTED",
+  "afterAttempt": {
+    "homeBanner": 1,
+    "homeStat": 1,
+    "homeAttention": 1,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 1,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 2,
+    "hubInvitationsCard": 1,
+    "hubNoInvitesCopy": false,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 1
+  },
+  "finishedAt": "2026-11-21T16:50:24.092Z"
+}

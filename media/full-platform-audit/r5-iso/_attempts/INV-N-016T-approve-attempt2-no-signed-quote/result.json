@@ -1,0 +1,78 @@
+{
+  "check": "INV-N-016T-approve",
+  "host": "http://127.0.0.1:3000",
+  "startedAt": "2026-11-21T17:05:01.315Z",
+  "steps": [
+    "business ticked confirmation and approved M1 v2; url http://127.0.0.1:3000/collaboration/work/cmwqnkk1f00037dc25lwesptv?error=The%20signed%20total%20is%20missing.%20Nothing%20was%20released."
+  ],
+  "infBefore": {
+    "homeBanner": null,
+    "homeStat": 0,
+    "homeAttention": null,
+    "homePayoutReminder": false,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 0,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 2,
+    "hubInvitationsCard": 0,
+    "hubNoInvitesCopy": true,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Ready",
+    "inboxOpenTasks": 1
+  },
+  "milestones": "AUDIT r5 Milestone 1:submitted\nAUDIT r5 Milestone 2:submitted",
+  "mail": [],
+  "infAfter": {
+    "homeBanner": null,
+    "homeStat": 0,
+    "homeAttention": null,
+    "homePayoutReminder": false,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 0,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 2,
+    "hubInvitationsCard": 0,
+    "hubNoInvitesCopy": true,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Ready",
+    "inboxOpenTasks": 1
+  },
+  "infNotificationCentre": "All (2) | Action required (2) | Invitations (2) | Work (0) | Payments (0)",
+  "approvedNoticeInCentre": false,
+  "biz": {
+    "attentionText": "Review a submission /  / AUDIT r5 Workroom notices · audit-r5iso01-b / ",
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "Company Profile": 0,
+      "Discover Creators": 0,
+      "Collaborations": 1,
+      "Contracts": 0,
+      "Analytics": 0,
+      "Team": 0,
+      "Billing & Plans": 0,
+      "Collaboration Payments": 0,
+      "Verification": 0,
+      "Settings": 0
+    },
+    "bell": 1
+  },
+  "bizInbox": "2",
+  "finishedAt": "2026-11-21T17:05:10.529Z"
+}

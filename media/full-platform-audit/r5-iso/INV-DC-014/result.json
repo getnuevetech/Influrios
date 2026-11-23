@@ -1,0 +1,139 @@
+{
+  "check": "INV-DC-014",
+  "host": "http://127.0.0.1:3000",
+  "startedAt": "2026-11-21T16:49:30.098Z",
+  "steps": [
+    "business sent private invitation via wizard (deadline 2026-11-28)",
+    "TIME-TRAVEL fixture: responseDeadline set to now()-1h in DB (clock cannot be advanced)",
+    "POST /api/cron/sweeps (CRON_SECRET)"
+  ],
+  "before": {
+    "homeBanner": null,
+    "homeStat": 0,
+    "homeAttention": null,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 0,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 1,
+    "hubInvitationsCard": 0,
+    "hubNoInvitesCopy": true,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 0
+  },
+  "create": {
+    "url": "http://127.0.0.1:3000/collaboration/business/request/cmwqn84om00zo7do5vwbp66pz?saved=invites&sent=1&step=0",
+    "sentAt": "Terms step Next (no Review stop)",
+    "banner": "1 invitation recorded. Each recipient has a private invitation. Nothing was charged."
+  },
+  "application": "cmwqn84oz00zp7do5zjafig2u",
+  "invited": {
+    "homeBanner": 1,
+    "homeStat": 1,
+    "homeAttention": 1,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 1,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 1,
+    "hubInvitationsCard": 1,
+    "hubNoInvitesCopy": false,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 1
+  },
+  "deadlinePassedPreSweep": {
+    "homeBanner": 1,
+    "homeStat": 1,
+    "homeAttention": 1,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 1,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 2,
+    "hubInvitationsCard": 1,
+    "hubNoInvitesCopy": false,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 1
+  },
+  "statusPreSweep": "REQUESTED",
+  "sweep1": "{\"ok\":true,\"enqueued\":{\"queued\":13},\"processed\":{\"processed\":13}}",
+  "sweep1b": "{\"ok\":true,\"enqueued\":{\"queued\":13},\"processed\":{\"processed\":13}}",
+  "statusAfterSweep": "REQUESTED",
+  "events": ">REQUESTED",
+  "after": {
+    "homeBanner": 1,
+    "homeStat": 1,
+    "homeAttention": 1,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 1,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 2,
+    "hubInvitationsCard": 1,
+    "hubNoInvitesCopy": false,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 1
+  },
+  "afterMobile": {
+    "homeBanner": 1,
+    "homeStat": 1,
+    "homeAttention": 1,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations1": 0,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 2,
+    "hubInvitationsCard": 1,
+    "hubNoInvitesCopy": false,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 1
+  },
+  "notificationCentre": "All (2) | Action required (2) | Invitations (2)",
+  "notices": "invitation read=false\ninvitation read=false",
+  "finishedAt": "2026-11-21T16:49:51.311Z"
+}

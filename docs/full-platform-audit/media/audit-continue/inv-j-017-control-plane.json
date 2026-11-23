@@ -1,0 +1,46 @@
+{
+  "plane": {
+    "version": 3,
+    "dualApprovalThresholdCents": 50000,
+    "mentorship": {
+      "enabled": true,
+      "minFollowers": 1000,
+      "requireIdentityVerified": true,
+      "requireGlobalPayoutReady": false,
+      "notes": "Mentors must meet admin eligibility before appearing in Find a Mentor."
+    },
+    "guestCollab": {
+      "proposeSoft": 1,
+      "proposeHard": 2,
+      "applySoft": 2,
+      "applyHard": 3
+    },
+    "applicationExpire": {
+      "mode": "auto",
+      "afterDays": 14
+    },
+    "updatedAt": "2026-11-21T04:05:43.088Z"
+  },
+  "prior": {
+    "version": 3,
+    "dualApprovalThresholdCents": 50000,
+    "mentorship": {
+      "enabled": true,
+      "minFollowers": 1000,
+      "requireIdentityVerified": true,
+      "requireGlobalPayoutReady": false,
+      "notes": "Mentors must meet admin eligibility before appearing in Find a Mentor."
+    },
+    "guestCollab": {
+      "proposeSoft": 1,
+      "proposeHard": 2,
+      "applySoft": 2,
+      "applyHard": 3
+    },
+    "applicationExpire": {
+      "mode": "auto",
+      "afterDays": 14
+    },
+    "updatedAt": "2026-11-21T04:05:43.088Z"
+  }
+}

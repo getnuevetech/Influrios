@@ -1,0 +1,10 @@
+{
+  "check": "INV-R-065",
+  "steps": [],
+  "fixture": "FIXTURE: influencer A planTier set to PLUS in DB (plan purchase is Stripe / RC-CATALOG)",
+  "fields": [],
+  "buttons": [
+    "Log out"
+  ],
+  "error": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('form button:visible').filter({ hasText: /propose|send|create|submit/i }).first()\u001b[22m\n"
+}

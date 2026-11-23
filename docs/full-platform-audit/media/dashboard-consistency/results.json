@@ -1,0 +1,902 @@
+{
+  "startedAt": "2026-11-20T23:42:41.386Z",
+  "base": "https://influrios.com",
+  "shots": 68,
+  "counts": {
+    "Pass": 22,
+    "Fail": 6,
+    "Blocked": 5
+  },
+  "results": [
+    {
+      "id": "INV-DC-002:influencer:desktop:before",
+      "cases": "Contradiction INV-DC-002 influencer desktop baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "payout Ready but Earnings badge still 1",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-desktop-collab.png",
+      "status": "Fail"
+    },
+    {
+      "id": "INV-DC-001:influencer:desktop:before",
+      "cases": "Consistency INV-DC-001 influencer desktop baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "Invitations=0; Collaborations badge=1 attributed to non-invite work/active (2)",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-desktop-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-003:influencer:desktop:before",
+      "cases": "Consistency INV-DC-003 influencer desktop baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "sidebar badges stable across destinations: {\"c\":1,\"e\":1,\"k\":0}",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-desktop-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-004:influencer:desktop:before",
+      "cases": "Consistency INV-DC-004 influencer desktop baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "bell unread=2; centre signals≈1; unreadWordHits=1",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-desktop-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-005-surface:influencer:desktop:before",
+      "cases": "Consistency INV-DC-005-surface influencer desktop baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "inbox needsAttention=true; CTAs=4",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-desktop-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-001:business:desktop:before",
+      "cases": "Contradiction INV-DC-001 business desktop baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "destination Invitations=2026 > sidebar Collaborations badge=2",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-business-desktop-collab.png",
+      "status": "Fail"
+    },
+    {
+      "id": "INV-DC-002:business:desktop:before",
+      "cases": "Consistency INV-DC-002 business desktop baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "Payments badge=0; destination funding signals≈1",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-business-desktop-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-003:business:desktop:before",
+      "cases": "Consistency INV-DC-003 business desktop baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "sidebar badges stable across destinations: {\"c\":2,\"e\":0,\"k\":0}",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-business-desktop-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-004:business:desktop:before",
+      "cases": "Consistency INV-DC-004 business desktop baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "bell unread=2; centre signals≈4; unreadWordHits=3",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-business-desktop-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-005-surface:business:desktop:before",
+      "cases": "Consistency INV-DC-005-surface business desktop baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "inbox needsAttention=true; CTAs=5",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-business-desktop-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-002:influencer:mobile:before",
+      "cases": "Contradiction INV-DC-002 influencer mobile baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "payout Ready but Earnings badge still 1",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-mobile-collab.png",
+      "status": "Fail"
+    },
+    {
+      "id": "INV-DC-001:influencer:mobile:before",
+      "cases": "Consistency INV-DC-001 influencer mobile baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "Invitations=0; Collaborations badge=1 attributed to non-invite work/active (2)",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-mobile-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-003:influencer:mobile:before",
+      "cases": "Consistency INV-DC-003 influencer mobile baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "sidebar badges stable across destinations: {\"c\":1,\"e\":1,\"k\":0}",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-mobile-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-004:influencer:mobile:before",
+      "cases": "Consistency INV-DC-004 influencer mobile baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "bell unread=2; centre signals≈5; unreadWordHits=1",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-mobile-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-005-surface:influencer:mobile:before",
+      "cases": "Consistency INV-DC-005-surface influencer mobile baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "inbox needsAttention=true; CTAs=4",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-mobile-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-001:business:mobile:before",
+      "cases": "Contradiction INV-DC-001 business mobile baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "destination Invitations=2026 > sidebar Collaborations badge=2",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-business-mobile-collab.png",
+      "status": "Fail"
+    },
+    {
+      "id": "INV-DC-002:business:mobile:before",
+      "cases": "Consistency INV-DC-002 business mobile baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "Payments badge=0; destination funding signals≈1",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-business-mobile-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-003:business:mobile:before",
+      "cases": "Consistency INV-DC-003 business mobile baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "sidebar badges stable across destinations: {\"c\":2,\"e\":0,\"k\":0}",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-business-mobile-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-004:business:mobile:before",
+      "cases": "Consistency INV-DC-004 business mobile baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "bell unread=2; centre signals≈4; unreadWordHits=3",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-business-mobile-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-005-surface:business:mobile:before",
+      "cases": "Consistency INV-DC-005-surface business mobile baseline",
+      "expected": "Surfaces agree for same account",
+      "actual": "inbox needsAttention=true; CTAs=5",
+      "evidence": "media/full-platform-audit/dashboard-consistency/before-business-mobile-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-010:invite-create",
+      "cases": "Business create invitation for consistency fixture",
+      "expected": "Invitation sendable without live deposit",
+      "actual": "send control absent or blocked; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Close Create request One brief. Private invitati",
+      "evidence": "media/full-platform-audit/dashboard-consistency/biz-invite-composer-after.png",
+      "status": "Blocked"
+    },
+    {
+      "id": "INV-DC-011:invite-view",
+      "cases": "Influencer view invitation clears unread (not action-required)",
+      "expected": "Opening invitation marks notice read; task may remain",
+      "actual": "No pending application link on hub/opportunities",
+      "evidence": "media/full-platform-audit/dashboard-consistency/inf-invitations-tab.png",
+      "status": "Blocked"
+    },
+    {
+      "id": "INV-DC-002:influencer:desktop:after-view",
+      "cases": "Consistency after view",
+      "expected": "Surfaces agree",
+      "actual": "payoutReady=false; badge=0",
+      "evidence": "media/full-platform-audit/dashboard-consistency/after-view-influencer-desktop-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-003:influencer:desktop:after-view",
+      "cases": "Consistency after view",
+      "expected": "Surfaces agree",
+      "actual": "sidebar badges stable across destinations: {\"c\":null,\"e\":null,\"k\":null}",
+      "evidence": "media/full-platform-audit/dashboard-consistency/after-view-influencer-desktop-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-012:invite-respond-clears-action",
+      "cases": "Completing required invitation action clears action-required",
+      "expected": "After decline/interest, task clears",
+      "actual": "No mutable pending invitation on AUDIT influencer (0 pending or funded-only)",
+      "evidence": "media/full-platform-audit/dashboard-consistency/pre-invite-action-influencer-desktop-collab.png",
+      "status": "Blocked"
+    },
+    {
+      "id": "INV-DC-013:withdraw",
+      "cases": "Business withdraw pending invitation; badges/destinations agree after",
+      "expected": "Withdraw updates invitation counts + sidebar together",
+      "actual": "Blocked: no Withdraw control on business hub",
+      "evidence": "media/full-platform-audit/dashboard-consistency/biz-withdraw-surface.png",
+      "status": "Blocked"
+    },
+    {
+      "id": "INV-DC-020:unread-clear:influencer",
+      "cases": "Opening a notice clears unread indicator (influencer)",
+      "expected": "Bell unread decreases after opening one notice; action-required unchanged by read alone",
+      "actual": "opened=true; before=2; after=2",
+      "evidence": "media/full-platform-audit/dashboard-consistency/unread-after-open-influencer.png",
+      "status": "Fail"
+    },
+    {
+      "id": "INV-DC-020:unread-clear:business",
+      "cases": "Opening a notice clears unread indicator (business)",
+      "expected": "Bell unread decreases after opening one notice; action-required unchanged by read alone",
+      "actual": "opened=true; before=0; after=2",
+      "evidence": "media/full-platform-audit/dashboard-consistency/unread-after-open-business.png",
+      "status": "Blocked"
+    },
+    {
+      "id": "INV-DC-030:refresh",
+      "cases": "Refresh keeps payout/invite/badge agreement",
+      "expected": "Same counts after reload",
+      "actual": "stable badges={\"collaborations\":1,\"contracts\":0,\"earnings\":1,\"payments\":null,\"inbox\":0,\"unreadBell\":2,\"bellLabel\":\"Notifications, 2 unread\"} invites=0",
+      "evidence": "media/full-platform-audit/dashboard-consistency/post-refresh-influencer-desktop-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-031:relogin",
+      "cases": "Sign-in again keeps payout/invite/badge agreement",
+      "expected": "Same counts after re-login",
+      "actual": "stable badges={\"collaborations\":1,\"contracts\":0,\"earnings\":1,\"payments\":null,\"inbox\":0,\"unreadBell\":2,\"bellLabel\":\"Notifications, 2 unread\"} invites=0",
+      "evidence": "media/full-platform-audit/dashboard-consistency/post-relogin-influencer-desktop-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-032:refresh:business",
+      "cases": "Business refresh badge stability",
+      "expected": "Same sidebar badges after reload",
+      "actual": "stable {\"collaborations\":2,\"contracts\":0,\"earnings\":null,\"payments\":0,\"inbox\":0,\"unreadBell\":2,\"bellLabel\":\"Notifications, 2 unread\"}",
+      "evidence": "media/full-platform-audit/dashboard-consistency/biz-post-refresh-business-desktop-home.png",
+      "status": "Pass"
+    },
+    {
+      "id": "INV-DC-033:relogin:business",
+      "cases": "Business re-login badge stability",
+      "expected": "Same sidebar badges after re-login",
+      "actual": "refresh={\"collaborations\":2,\"contracts\":0,\"earnings\":null,\"payments\":0,\"inbox\":0,\"unreadBell\":2,\"bellLabel\":\"Notifications, 2 unread\"} relogin={\"collaborations\":null,\"contracts\":null,\"earnings\":null,\"payments\":null,\"inbox\":null,\"unreadBell\":0,\"bellLabel\":\"\"}",
+      "evidence": "media/full-platform-audit/dashboard-consistency/biz-post-relogin-business-desktop-home.png",
+      "status": "Fail"
+    },
+    {
+      "id": "INV-DC-014:expire",
+      "cases": "Expiring invitation updates counts (via sweep or deadline)",
+      "expected": "Expire sweep available; counts agree after expiry",
+      "actual": "sweep listed; never=false; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing SA Super Admin audit-admin@example.invalid ▾ Create Signed in as Super Admin (audit-admin@example.invalid) Influrios Admin Super Admin · Platform Control MAIN MENU Dashboard Banners Example portraits Value proposition Homepage Collaboration landing Business landing FAQ Site stats Influencer cards MEMBERS & ACCESS Influencer accounts Busines",
+      "evidence": "media/full-platform-audit/dashboard-consistency/admin-expire-sweep-jobs.png",
+      "status": "Pass"
+    }
+  ],
+  "snaps": [
+    {
+      "role": "influencer",
+      "viewport": "desktop",
+      "tag": "before",
+      "metrics": {
+        "badgeCollab": 1,
+        "badgeEarnings": 1,
+        "badgePayments": 0,
+        "inviteDest": 0,
+        "payoutNotReady": true,
+        "payoutReady": true,
+        "unread": 2
+      },
+      "pages": {
+        "home": {
+          "url": "https://influrios.com/creator",
+          "badges": {
+            "collaborations": 1,
+            "contracts": 0,
+            "earnings": 1,
+            "payments": null,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": 1,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": false,
+            "notReady": true,
+            "setupReminder": true,
+            "rawReadyPhrase": false,
+            "rawNotReady": true
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-desktop-home.png"
+        },
+        "collab": {
+          "url": "https://influrios.com/collaboration/hub?view=collaborations",
+          "badges": {
+            "collaborations": 1,
+            "contracts": 0,
+            "earnings": 1,
+            "payments": null,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": 0,
+            "active": 2,
+            "due": 0,
+            "completed": 0,
+            "pendingReview": null,
+            "noInvites": true
+          },
+          "payout": {
+            "ready": false,
+            "notReady": true,
+            "setupReminder": false,
+            "rawReadyPhrase": false,
+            "rawNotReady": true
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-desktop-collab.png"
+        },
+        "money": {
+          "url": "https://influrios.com/creator/earnings",
+          "badges": {
+            "collaborations": 1,
+            "contracts": 0,
+            "earnings": 1,
+            "payments": null,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": null,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": true,
+            "notReady": false,
+            "setupReminder": false,
+            "rawReadyPhrase": true,
+            "rawNotReady": false
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-desktop-money.png"
+        },
+        "inbox": {
+          "url": "https://influrios.com/collaboration/inbox",
+          "badges": {
+            "collaborations": 1,
+            "contracts": 0,
+            "earnings": 1,
+            "payments": null,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": null,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": false,
+            "notReady": false,
+            "setupReminder": false,
+            "rawReadyPhrase": false,
+            "rawNotReady": false
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-desktop-inbox.png"
+        },
+        "notifications": {
+          "url": "https://influrios.com/creator/notifications",
+          "badges": {
+            "collaborations": 1,
+            "contracts": 0,
+            "earnings": 1,
+            "payments": null,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": null,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": false,
+            "notReady": false,
+            "setupReminder": false,
+            "rawReadyPhrase": false,
+            "rawNotReady": false
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-desktop-notifications.png"
+        }
+      }
+    },
+    {
+      "role": "business",
+      "viewport": "desktop",
+      "tag": "before",
+      "metrics": {
+        "badgeCollab": 2,
+        "badgeEarnings": 0,
+        "badgePayments": 0,
+        "inviteDest": 2026,
+        "payoutNotReady": false,
+        "payoutReady": true,
+        "unread": 2
+      },
+      "pages": {
+        "home": {
+          "url": "https://influrios.com/business/home",
+          "badges": {
+            "collaborations": 2,
+            "contracts": 0,
+            "earnings": null,
+            "payments": 0,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": null,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": true,
+            "notReady": false,
+            "setupReminder": false,
+            "rawReadyPhrase": true,
+            "rawNotReady": false
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-business-desktop-home.png"
+        },
+        "collab": {
+          "url": "https://influrios.com/collaboration/business",
+          "badges": {
+            "collaborations": 2,
+            "contracts": 0,
+            "earnings": null,
+            "payments": 0,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": 2026,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": false,
+            "notReady": false,
+            "setupReminder": false,
+            "rawReadyPhrase": false,
+            "rawNotReady": false
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-business-desktop-collab.png"
+        },
+        "money": {
+          "url": "https://influrios.com/payments",
+          "badges": {
+            "collaborations": 2,
+            "contracts": 0,
+            "earnings": null,
+            "payments": 0,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": null,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": false,
+            "notReady": false,
+            "setupReminder": false,
+            "rawReadyPhrase": false,
+            "rawNotReady": false
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-business-desktop-money.png"
+        },
+        "inbox": {
+          "url": "https://influrios.com/collaboration/inbox",
+          "badges": {
+            "collaborations": 2,
+            "contracts": 0,
+            "earnings": null,
+            "payments": 0,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": null,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": false,
+            "notReady": false,
+            "setupReminder": false,
+            "rawReadyPhrase": false,
+            "rawNotReady": false
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-business-desktop-inbox.png"
+        },
+        "notifications": {
+          "url": "https://influrios.com/notifications",
+          "badges": {
+            "collaborations": null,
+            "contracts": null,
+            "earnings": null,
+            "payments": null,
+            "inbox": null,
+            "unreadBell": 0,
+            "bellLabel": ""
+          },
+          "hub": {
+            "invitations": null,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": false,
+            "notReady": false,
+            "setupReminder": false,
+            "rawReadyPhrase": false,
+            "rawNotReady": false
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-business-desktop-notifications.png"
+        }
+      }
+    },
+    {
+      "role": "influencer",
+      "viewport": "mobile",
+      "tag": "before",
+      "metrics": {
+        "badgeCollab": 1,
+        "badgeEarnings": 1,
+        "badgePayments": 0,
+        "inviteDest": 0,
+        "payoutNotReady": true,
+        "payoutReady": true,
+        "unread": 2
+      },
+      "pages": {
+        "home": {
+          "url": "https://influrios.com/creator",
+          "badges": {
+            "collaborations": 1,
+            "contracts": 0,
+            "earnings": 1,
+            "payments": null,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": 1,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": false,
+            "notReady": true,
+            "setupReminder": true,
+            "rawReadyPhrase": false,
+            "rawNotReady": true
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-mobile-home.png"
+        },
+        "collab": {
+          "url": "https://influrios.com/collaboration/hub?view=collaborations",
+          "badges": {
+            "collaborations": 1,
+            "contracts": 0,
+            "earnings": 1,
+            "payments": null,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": 0,
+            "active": 2,
+            "due": 0,
+            "completed": 0,
+            "pendingReview": null,
+            "noInvites": true
+          },
+          "payout": {
+            "ready": false,
+            "notReady": true,
+            "setupReminder": false,
+            "rawReadyPhrase": false,
+            "rawNotReady": true
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-mobile-collab.png"
+        },
+        "money": {
+          "url": "https://influrios.com/creator/earnings",
+          "badges": {
+            "collaborations": 1,
+            "contracts": 0,
+            "earnings": 1,
+            "payments": null,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": null,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": true,
+            "notReady": false,
+            "setupReminder": false,
+            "rawReadyPhrase": true,
+            "rawNotReady": false
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-mobile-money.png"
+        },
+        "inbox": {
+          "url": "https://influrios.com/collaboration/inbox",
+          "badges": {
+            "collaborations": 1,
+            "contracts": 0,
+            "earnings": 1,
+            "payments": null,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": null,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": false,
+            "notReady": false,
+            "setupReminder": false,
+            "rawReadyPhrase": false,
+            "rawNotReady": false
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-mobile-inbox.png"
+        },
+        "notifications": {
+          "url": "https://influrios.com/creator/notifications",
+          "badges": {
+            "collaborations": 1,
+            "contracts": 0,
+            "earnings": 1,
+            "payments": null,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": null,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": false,
+            "notReady": false,
+            "setupReminder": false,
+            "rawReadyPhrase": false,
+            "rawNotReady": false
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-influencer-mobile-notifications.png"
+        }
+      }
+    },
+    {
+      "role": "business",
+      "viewport": "mobile",
+      "tag": "before",
+      "metrics": {
+        "badgeCollab": 2,
+        "badgeEarnings": 0,
+        "badgePayments": 0,
+        "inviteDest": 2026,
+        "payoutNotReady": false,
+        "payoutReady": true,
+        "unread": 2
+      },
+      "pages": {
+        "home": {
+          "url": "https://influrios.com/business/home",
+          "badges": {
+            "collaborations": 2,
+            "contracts": 0,
+            "earnings": null,
+            "payments": 0,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": null,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": true,
+            "notReady": false,
+            "setupReminder": false,
+            "rawReadyPhrase": true,
+            "rawNotReady": false
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-business-mobile-home.png"
+        },
+        "collab": {
+          "url": "https://influrios.com/collaboration/business",
+          "badges": {
+            "collaborations": 2,
+            "contracts": 0,
+            "earnings": null,
+            "payments": 0,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": 2026,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": false,
+            "notReady": false,
+            "setupReminder": false,
+            "rawReadyPhrase": false,
+            "rawNotReady": false
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-business-mobile-collab.png"
+        },
+        "money": {
+          "url": "https://influrios.com/payments",
+          "badges": {
+            "collaborations": 2,
+            "contracts": 0,
+            "earnings": null,
+            "payments": 0,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": null,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": false,
+            "notReady": false,
+            "setupReminder": false,
+            "rawReadyPhrase": false,
+            "rawNotReady": false
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-business-mobile-money.png"
+        },
+        "inbox": {
+          "url": "https://influrios.com/collaboration/inbox",
+          "badges": {
+            "collaborations": 2,
+            "contracts": 0,
+            "earnings": null,
+            "payments": 0,
+            "inbox": 0,
+            "unreadBell": 2,
+            "bellLabel": "Notifications, 2 unread"
+          },
+          "hub": {
+            "invitations": null,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": false,
+            "notReady": false,
+            "setupReminder": false,
+            "rawReadyPhrase": false,
+            "rawNotReady": false
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-business-mobile-inbox.png"
+        },
+        "notifications": {
+          "url": "https://influrios.com/notifications",
+          "badges": {
+            "collaborations": null,
+            "contracts": null,
+            "earnings": null,
+            "payments": null,
+            "inbox": null,
+            "unreadBell": 0,
+            "bellLabel": ""
+          },
+          "hub": {
+            "invitations": null,
+            "active": null,
+            "due": null,
+            "completed": null,
+            "pendingReview": null,
+            "noInvites": false
+          },
+          "payout": {
+            "ready": false,
+            "notReady": false,
+            "setupReminder": false,
+            "rawReadyPhrase": false,
+            "rawNotReady": false
+          },
+          "evidence": "media/full-platform-audit/dashboard-consistency/before-business-mobile-notifications.png"
+        }
+      }
+    }
+  ]
+}

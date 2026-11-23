@@ -1,0 +1,977 @@
+{
+  "startedAt": "2026-11-20T22:57:26.470Z",
+  "followupAt": "2026-11-20T23:00:51.494Z",
+  "finishedAt": "2026-11-20T23:00:51.494Z",
+  "base": "https://influrios.com",
+  "counts": {
+    "Pass": 54,
+    "Fail": 2,
+    "Blocked": 33,
+    "Not tested": 0,
+    "Explicitly deferred": 0
+  },
+  "results": [
+    {
+      "invId": "INV-R-001",
+      "cases": "guest desktop /",
+      "expected": "Marketing home loads",
+      "actual": "http=200; url=https://influrios.com/; title=Influrios — Find the right influence; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Log in Join Influrios → BEAUTY 186K followers FOOD 284K followers FASHION 238K followe",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-001-desktop.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-007",
+      "cases": "guest desktop /card",
+      "expected": "Influencer Card marketing loads",
+      "actual": "http=200; url=https://influrios.com/card; title=Influencer Card · Influrios; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Log in Join Influrios → INFLURIOS CARD Your Influencer Card, everywhere. One portable ",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-007-desktop.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-008",
+      "cases": "guest desktop /faq",
+      "expected": "FAQ loads",
+      "actual": "http=200; url=https://influrios.com/faq; title=FAQ · Influrios; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Log in Join Influrios → HELP FAQ Answers for visitors, creators, businesses, and agenc",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-008-desktop.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-009",
+      "cases": "guest desktop /trust",
+      "expected": "Trust marketing loads",
+      "actual": "http=200; url=https://influrios.com/trust; title=Trust & Disputes · Influrios; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Log in Join Influrios → TRUST & DISPUTES Ledger disputes Ledger disputes for provider-",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-009-desktop.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-010",
+      "cases": "signed-in /mentorship",
+      "expected": "Mentorship page loads (gate OK)",
+      "actual": "url=https://influrios.com/mentorship; paidOff=true; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Ag Log out ∞ Influrios Dashboard Action inbox My Profile Collabora",
+      "evidence": "media/full-platform-audit/nt-chase/inv-c-007-mentorship-gate.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": "Guest redirects to login; signed-in loads mentorship with paid_mentoring off copy"
+    },
+    {
+      "invId": "INV-R-011",
+      "cases": "guest desktop /legal",
+      "expected": "Legal center loads",
+      "actual": "http=200; url=https://influrios.com/legal; title=Legal Center · Influrios; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Log in Join Influrios → INFLURIOS Legal Center Each terms document and policy is publi",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-011-desktop.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-012",
+      "cases": "guest desktop /legal/privacy-policy",
+      "expected": "Legal slug doc loads",
+      "actual": "http=200; url=https://influrios.com/legal/privacy-policy; title=Privacy Policy · Influrios · Influrios; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Log in Join Influrios → ← Legal Center VERSION 1.1 · EFFECTIVE 2026-09-30 Privacy Poli",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-012-desktop.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-021",
+      "cases": "retest /c/ag-olomola-2",
+      "expected": "Public card/creator slug loads",
+      "actual": "http=200; url=https://influrios.com/c/ag-olomola-2; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Log in Join Influrios → ∞ Influrios ✓ Ag Olomola @ag.olomola Lifestyle Houston, United States Instagram UNVERIFIED YouTube UNV",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-021-retest.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-022",
+      "cases": "retest /creators/ag-olomola-2",
+      "expected": "Public card/creator slug loads",
+      "actual": "http=200; url=https://influrios.com/creators/ag-olomola-2; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Log in Join Influrios → AO Ag Olomola Lifestyle Influencer Houston, United States Open to partnerships Invite to collaborate V",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-022-retest.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-023",
+      "cases": "guest desktop /q/invalid-nt-chase-token",
+      "expected": "QR/short token landing handles invalid",
+      "actual": "http=404; url=https://influrios.com/q/invalid-nt-chase-token; title=404: This page could not be found.; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Log in Join Influrios → 404 This page could not be found. ∞ Influrios Influencers. Col; invalid token handled",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-023-desktop.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-M-001",
+      "cases": "Public header NAV items desktop",
+      "expected": "Home/Discover/Categories/Collaborations/For Businesses/Pricing present",
+      "actual": "matched=Home,Discover,Categories,Collaboration,Business,Pricing; login=true; joinish=true",
+      "evidence": "media/full-platform-audit/nt-chase/inv-m-001-header.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-M-003",
+      "cases": "Public footer platform links",
+      "expected": "Platform footer links resolve",
+      "actual": "matched=Home,Discover,Collaboration,Influencer Card,Card",
+      "evidence": "media/full-platform-audit/nt-chase/inv-m-footer.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-M-004",
+      "cases": "Public footer business links",
+      "expected": "Business footer incl Agency workspace",
+      "actual": "matched=Agency,Intelligence,Business,Opportunities,Find",
+      "evidence": "media/full-platform-audit/nt-chase/inv-m-footer.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-M-005",
+      "cases": "Public footer resources links",
+      "expected": "Resources footer links",
+      "actual": "matched=FAQ,Pricing,Trust,Checkout,Categories,Protected",
+      "evidence": "media/full-platform-audit/nt-chase/inv-m-footer.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-M-006",
+      "cases": "Public footer legal links",
+      "expected": "Legal footer links",
+      "actual": "matched=Contact,About,Privacy,Terms,Legal",
+      "evidence": "media/full-platform-audit/nt-chase/inv-m-footer.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-C-017",
+      "cases": "Mobile public Log in hidden <sm",
+      "expected": "Log in CTA hidden or constrained on mobile public chrome",
+      "actual": "href=/login count=1; visible=false",
+      "evidence": "media/full-platform-audit/nt-chase/inv-c-017-mobile-login.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": "Gate observation: hidden-on-mobile is the inventoried UX risk"
+    },
+    {
+      "invId": "INV-I-009",
+      "cases": "GET /api/places autocomplete",
+      "expected": "Places autocomplete mounted",
+      "actual": "http=200; body={\"results\":[{\"name\":\"Lagos\",\"country\":\"Nigeria\",\"state\":\"Lagos\"},{\"name\":\"Lagos\",\"country\":\"Portugal\",\"state\":\"Faro\"},{\"",
+      "evidence": "media/full-platform-audit/nt-chase/inv-i-009-places.json",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-I-010",
+      "cases": "GET /api/qr/ag-olomola-2",
+      "expected": "QR asset",
+      "actual": "http=200; ct=image/svg+xml; charset=utf-8; bytes=2978",
+      "evidence": "media/full-platform-audit/nt-chase/inv-i-010-qr-ag-olomola-2.json",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-038",
+      "cases": "influencer /creator/analytics",
+      "expected": "Creator analytics loads",
+      "actual": "http=200; url=https://influrios.com/creator/analytics; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. Al",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-038.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-040",
+      "cases": "influencer /creator/media-kit",
+      "expected": "Media kit loads",
+      "actual": "http=200; url=https://influrios.com/creator/media-kit; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. Al",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-040.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-048",
+      "cases": "influencer /dashboard/kyc",
+      "expected": "KYC dashboard loads",
+      "actual": "http=200; url=https://influrios.com/dashboard/kyc; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. Al",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-048.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-M-007",
+      "cases": "Influencer CREATOR_NAV sidebar",
+      "expected": "CREATOR_NAV items present",
+      "actual": "matched=Dashboard,inbox,Profile,Collaboration,Contract,Earnings,Message,Settings",
+      "evidence": "media/full-platform-audit/nt-chase/inv-m-007-creator-nav.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-C-014",
+      "cases": "Setup reminders conditional display",
+      "expected": "Reminders shown only while incomplete (or absent when complete)",
+      "actual": "cues=true; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Bil",
+      "evidence": "media/full-platform-audit/nt-chase/inv-c-014-setup-reminders.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": "Conditional gate observed on creator home"
+    },
+    {
+      "invId": "INV-A-007",
+      "cases": "Save personal details / country form",
+      "expected": "Account details form + save control",
+      "actual": "formish=true; saveVisible=true; url=https://influrios.com/account",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-007-account-details.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": "Did not mutate production fixture fields beyond observation"
+    },
+    {
+      "invId": "INV-A-008",
+      "cases": "Save email & comm preferences",
+      "expected": "Notification prefs + save",
+      "actual": "prefs=true; url=https://influrios.com/account?tab=notifications; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Bil",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-008-notif-prefs.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-019",
+      "cases": "Save managed-intro opt-in",
+      "expected": "Opt-in control on profile/details",
+      "actual": "optInSignals=true; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out ",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-019-managed-intro.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-021",
+      "cases": "Short-link slug/destination UI",
+      "expected": "Links panel editable",
+      "actual": "signals=true; url=https://influrios.com/dashboard/links",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-021-links.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-022",
+      "cases": "Submit document KYC / start gateway KYC UI",
+      "expected": "KYC surface with submit/start",
+      "actual": "signals=true; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out ",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-022-kyc.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": "Did not submit live KYC documents"
+    },
+    {
+      "invId": "INV-D-007",
+      "cases": "Media kit export/view",
+      "expected": "Media kit surface loads",
+      "actual": "http=200; signals=true; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Bil",
+      "evidence": "media/full-platform-audit/nt-chase/inv-d-007-media-kit.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-P-024",
+      "cases": "Creator QR / preview overlay",
+      "expected": "QR overlay opens",
+      "actual": "clicked=Preview public card; qrSignals=true",
+      "evidence": "media/full-platform-audit/nt-chase/inv-p-024-attempt-0.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-I-007",
+      "cases": "Deliverable download API",
+      "expected": "Auth download works",
+      "actual": "files tab GET → 200 bytes=2015041",
+      "evidence": "media/full-platform-audit/nt-chase/inv-i-007-download-meta.json",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-027",
+      "cases": "Toggle saved listing",
+      "expected": "Save/unsave control",
+      "actual": "saveControls=2; sample=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Bil",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-027-saved.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-029",
+      "cases": "Creator transition application",
+      "expected": "Transition controls on application",
+      "actual": "appLinks=0; transitionish=0",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-029-transition.png",
+      "defects": "No application id / transition CTA on audit fixture",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-078",
+      "cases": "Mentorship become/request/respond/cancel UI",
+      "expected": "Mentorship actions reachable or gated",
+      "actual": "signals=true; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Ag Log out ∞ Influrios Dashboard Action inbox My Profile Collabora",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-078-mentorship.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": "Did not mutate mentorship relationships on shared fixture"
+    },
+    {
+      "invId": "INV-N-023",
+      "cases": "Kind appears when event fires (historical scan)",
+      "expected": "In-app notice for kind",
+      "actual": "Kind not present in centre/inbox; cannot fire event (deposits closed / no dispute fixture)",
+      "evidence": "media/full-platform-audit/nt-chase/inv-n-kinds-centre.png",
+      "defects": "Blocked: cannot trigger kind on live (deposits closed / no dispute/ops fire); no historical notice in centre",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-N-024",
+      "cases": "Kind appears when event fires (historical scan)",
+      "expected": "In-app notice for kind",
+      "actual": "Kind not present in centre/inbox; cannot fire event (deposits closed / no dispute fixture)",
+      "evidence": "media/full-platform-audit/nt-chase/inv-n-kinds-centre.png",
+      "defects": "Blocked: cannot trigger kind on live (deposits closed / no dispute/ops fire); no historical notice in centre",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-N-025",
+      "cases": "Kind appears when event fires (historical scan)",
+      "expected": "In-app notice for kind",
+      "actual": "Kind not present in centre/inbox; cannot fire event (deposits closed / no dispute fixture)",
+      "evidence": "media/full-platform-audit/nt-chase/inv-n-kinds-centre.png",
+      "defects": "Blocked: cannot trigger kind on live (deposits closed / no dispute/ops fire); no historical notice in centre",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-N-026",
+      "cases": "Kind appears when event fires (historical scan)",
+      "expected": "In-app notice for kind",
+      "actual": "No dispute_resolved notice in centre (prior Pass was false positive on inbox 'resolved' filter label)",
+      "evidence": "media/full-platform-audit/nt-chase/inv-n-kinds-centre.png",
+      "defects": "Blocked: cannot fire dispute_resolved on live; no historical notice",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-N-029",
+      "cases": "Kind appears when event fires (historical scan)",
+      "expected": "In-app notice for kind",
+      "actual": "Kind not present in centre/inbox; cannot fire event (deposits closed / no dispute fixture)",
+      "evidence": "media/full-platform-audit/nt-chase/inv-n-kinds-centre.png",
+      "defects": "Blocked: cannot trigger kind on live (deposits closed / no dispute/ops fire); no historical notice in centre",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-N-030",
+      "cases": "Kind appears when event fires (historical scan)",
+      "expected": "In-app notice for kind",
+      "actual": "Kind not present in centre/inbox; cannot fire event (deposits closed / no dispute fixture)",
+      "evidence": "media/full-platform-audit/nt-chase/inv-n-kinds-centre.png",
+      "defects": "Blocked: cannot trigger kind on live (deposits closed / no dispute/ops fire); no historical notice in centre",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-N-031",
+      "cases": "Kind appears when event fires (historical scan)",
+      "expected": "In-app notice for kind",
+      "actual": "Kind not present in centre/inbox; cannot fire event (deposits closed / no dispute fixture)",
+      "evidence": "media/full-platform-audit/nt-chase/inv-n-kinds-centre.png",
+      "defects": "Blocked: cannot trigger kind on live (deposits closed / no dispute/ops fire); no historical notice in centre",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-N-032",
+      "cases": "Kind appears when event fires (historical scan)",
+      "expected": "In-app notice for kind",
+      "actual": "Kind not present in centre/inbox; cannot fire event (deposits closed / no dispute fixture)",
+      "evidence": "media/full-platform-audit/nt-chase/inv-n-kinds-centre.png",
+      "defects": "Blocked: cannot trigger kind on live (deposits closed / no dispute/ops fire); no historical notice in centre",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-N-033",
+      "cases": "Kind appears when event fires (historical scan)",
+      "expected": "In-app notice for kind",
+      "actual": "Kind not present in centre/inbox; cannot fire event (deposits closed / no dispute fixture)",
+      "evidence": "media/full-platform-audit/nt-chase/inv-n-kinds-centre.png",
+      "defects": "Blocked: cannot trigger kind on live (deposits closed / no dispute/ops fire); no historical notice in centre",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-N-034",
+      "cases": "Kind appears when event fires (historical scan)",
+      "expected": "In-app notice for kind",
+      "actual": "Kind not present in centre/inbox; cannot fire event (deposits closed / no dispute fixture)",
+      "evidence": "media/full-platform-audit/nt-chase/inv-n-kinds-centre.png",
+      "defects": "Blocked: cannot trigger kind on live (deposits closed / no dispute/ops fire); no historical notice in centre",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-053",
+      "cases": "business /business/intelligence",
+      "expected": "Business intelligence loads",
+      "actual": "http=200; url=https://influrios.com/business/intelligence; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verificati",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-053.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-054",
+      "cases": "business /business/campaigns",
+      "expected": "Business campaigns loads",
+      "actual": "http=200; url=https://influrios.com/collaboration/business?tab=requests; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verificati",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-054.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-055",
+      "cases": "business /business/workspace",
+      "expected": "Business workspace loads",
+      "actual": "http=200; url=https://influrios.com/collaboration/business; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verificati",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-055.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-M-009",
+      "cases": "Business BUSINESS_NAV sidebar",
+      "expected": "BUSINESS_NAV items present",
+      "actual": "matched=Dashboard,inbox,Company,Discover,Collaboration,Contract,Analytics,Team,Billing,Payment,Verification,Settings",
+      "evidence": "media/full-platform-audit/nt-chase/inv-m-009-business-nav.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-065",
+      "cases": "record detail",
+      "expected": "Detail loads",
+      "actual": "list http=200; no /collaboration/records/{id} href on fixture",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-065-records-list.png",
+      "defects": "Blocked: no record id deep-link on audit business fixture",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-071",
+      "cases": "team proposal detail",
+      "expected": "Detail loads",
+      "actual": "opened /collaboration/team/cmw9qs2tx00baqv01xvpsbn1r; http=200",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-071-team-detail.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-061",
+      "cases": "application detail",
+      "expected": "Detail loads",
+      "actual": "No /collaboration/applications/{id} on business opportunities",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-061-062-opps.png",
+      "defects": "Blocked: no application id on audit fixture",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-062",
+      "cases": "opening detail",
+      "expected": "Opening detail loads",
+      "actual": "No /collaboration/openings/{id} link found",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-061-062-opps.png",
+      "defects": "Blocked: no openings deep-link on audit fixture",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-025",
+      "cases": "Workspace actions",
+      "expected": "Workspace actions available",
+      "actual": "signals=true; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing &",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-025-workspace.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-034",
+      "cases": "Refresh campaign suggestions",
+      "expected": "Refresh control",
+      "actual": "refreshControls=0; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Anal",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-034-refresh.png",
+      "defects": "Blocked: refresh suggestions control not exposed on fixture",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-036",
+      "cases": "Send/reply/decline inquiry",
+      "expected": "Inquiry actions",
+      "actual": "inquiryish=0",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-036-inquiry.png",
+      "defects": "Blocked: no inquiry thread/actions on audit business fixture",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-037",
+      "cases": "Advance lead / shortlist from inquiry",
+      "expected": "Advance/shortlist from inquiry",
+      "actual": "inquiryish=0; shortlist note: Discover demo blocks shortlist (COR-13)",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-036-inquiry.png",
+      "defects": "Blocked: no inquiry fixture; Discover shortlist Fail already COR-13",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-039",
+      "cases": "Transition marketplace application",
+      "expected": "Business transition controls",
+      "actual": "transitionish=0; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Anal",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-039-transition.png",
+      "defects": "Blocked: no marketplace application to transition on fixture",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-042",
+      "cases": "Request managed match",
+      "expected": "Match request control",
+      "actual": "controls=0; text=false",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-042-match.png",
+      "defects": "Blocked: managed match CTA not found on business hub fixture",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-043",
+      "cases": "Set plan (workspace)",
+      "expected": "Plan selection surface",
+      "actual": "signals=true",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-043-plans.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-044",
+      "cases": "Create brief legacy",
+      "expected": "Legacy brief action",
+      "actual": "Superseded by Create request wizard (INV-P-008); no separate legacy brief CTA on live hub",
+      "evidence": "media/full-platform-audit/collab/manual/biz-request-new.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": "Observed: composer is the live create path; legacy brief not exposed"
+    },
+    {
+      "invId": "INV-A-045",
+      "cases": "Transition application detail",
+      "expected": "Detail transitions",
+      "actual": "Depends on INV-R-061 application id — none on fixture",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-061-062-opps.png",
+      "defects": "Blocked: no application detail id on audit fixture",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-051",
+      "cases": "Post contract message",
+      "expected": "Message on agreement",
+      "actual": "msgControls=0; dialogSignals=true",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-051-after-click.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-053",
+      "cases": "Apply collaboration discount",
+      "expected": "Discount on quote",
+      "actual": "discountSignals=false",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-053-discount.png",
+      "defects": "Blocked: discount apply UI not exposed on contract wizard for fixture (or needs quote state)",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-C-009",
+      "cases": "contract_ai_tailor gate",
+      "expected": "AI tailor gated observably",
+      "actual": "AI tailor UI absent — contract_ai_tailor gate off or no draft context",
+      "evidence": "media/full-platform-audit/nt-chase/inv-c-009-ai-tailor.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-P-004",
+      "cases": "AI tailor dialog",
+      "expected": "Opens when contract_ai_tailor on",
+      "actual": "AI tailor UI absent — contract_ai_tailor gate off or no draft context",
+      "evidence": "media/full-platform-audit/nt-chase/inv-c-009-ai-tailor.png",
+      "defects": "Blocked: contract_ai_tailor off or Tailor control not on wizard for fixture",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-054",
+      "cases": "AI tailor draft action",
+      "expected": "AI dialog when enabled",
+      "actual": "AI tailor UI absent — contract_ai_tailor gate off or no draft context",
+      "evidence": "media/full-platform-audit/nt-chase/inv-c-009-ai-tailor.png",
+      "defects": "Blocked: AI tailor not available (gate off / no draft)",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-055",
+      "cases": "Create deal",
+      "expected": "Create deal action",
+      "actual": "createish=0; sample=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Anal",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-055-create-deal.png",
+      "defects": "Blocked: live deposits closed — create/fund deal path must not open Stripe charge; no isolated create-deal fixture",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-062",
+      "cases": "Request change order",
+      "expected": "Change order control",
+      "actual": "controls=0",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-062-change-order.png",
+      "defects": "Blocked: change-order CTA not on held workroom fixture (may require different payment state)",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-064",
+      "cases": "Add evidence / open dispute",
+      "expected": "Dispute entry from work/payments",
+      "actual": "workroom=0; payments=0",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-064-dispute.png",
+      "defects": "Blocked: dispute/evidence CTA not exposed on held funding fixture (jurisdiction/state gated)",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-065",
+      "cases": "Stop series / convert ambassador",
+      "expected": "Series controls",
+      "actual": "controls=0; text=false",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-065-series.png",
+      "defects": "Blocked: series/ambassador controls not on payments fixture (needs series deal state)",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-A-069",
+      "cases": "Own-milestone dashboard path",
+      "expected": "Dashboard funding actions",
+      "actual": "Business home lacked distinct own-milestone dashboard funding actions; workroom path is separate INV-A-058..060",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-069-dashboard.png",
+      "defects": "Blocked: dashboard-own milestone path not separately exercisable on audit fixture",
+      "status": "Blocked",
+      "notes": "Do not aggregate Pass from workroom coverage"
+    },
+    {
+      "invId": "INV-A-079",
+      "cases": "Open dispute (trust page)",
+      "expected": "Dispute entry on /trust",
+      "actual": "openDispute=0; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Agboola Log out TRUST & DISPUTES Ledger disput",
+      "evidence": "media/full-platform-audit/nt-chase/inv-a-079-trust.png",
+      "defects": "Blocked: open-dispute CTA not on public trust marketing (member dispute may be payments-only); no dispute fixture",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-P-006",
+      "cases": "RecordDialog payment journey",
+      "expected": "Record dialog opens",
+      "actual": "viewish=2",
+      "evidence": "media/full-platform-audit/nt-chase/inv-p-006-record.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-D-008",
+      "cases": "Contract PDF/printable",
+      "expected": "Printable/PDF view",
+      "actual": "printControls=4; afterClickSignals=true",
+      "evidence": "media/full-platform-audit/nt-chase/inv-d-008-after.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-C-015",
+      "cases": "Delete signed/funded request protected",
+      "expected": "Action refused for signed/funded",
+      "actual": "deleteControls=6; did not mutate funded fixture — protection observed as UI absence or would need destructive probe",
+      "evidence": "media/full-platform-audit/nt-chase/inv-c-015-delete-protect.png",
+      "defects": "Blocked: delete control present but not executed on production funded fixture (destructive)",
+      "status": "Blocked",
+      "notes": "Pass when delete not offered on funded/signed requests; Blocked if control present but unsafe to click on shared fixture"
+    },
+    {
+      "invId": "INV-C-013",
+      "cases": "Unpublished profile hidden from Discover",
+      "expected": "Unpublished profiles not listed when public_pages_live on",
+      "actual": "Cannot validate: Discover is Sample directory demo (public_pages_live off) — live publish gating not observable",
+      "evidence": "media/full-platform-audit/auth/retest-P-07-discover-business.png",
+      "defects": "Blocked: public_pages_live demo mode prevents unpublished-vs-live Discover check",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-J-001",
+      "cases": "invitation_email kind on Jobs UI",
+      "expected": "Kind operable or historical succeeded",
+      "actual": "invitation_email listed=false; invitation-ish=true",
+      "evidence": "media/full-platform-audit/nt-chase/inv-j-001-jobs-detail.png",
+      "defects": "Kind invitation_email not listed on /admin/jobs this run (may only appear when enqueued)",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-J-006",
+      "cases": "Kind listed / historical success on Jobs UI",
+      "expected": "Kind operable or historical succeeded",
+      "actual": "Kind listed on /admin/jobs",
+      "evidence": "media/full-platform-audit/nt-chase/inv-j-jobs-page.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-J-010",
+      "cases": "Kind listed / historical success on Jobs UI",
+      "expected": "Kind operable or historical succeeded",
+      "actual": "Kind listed on /admin/jobs",
+      "evidence": "media/full-platform-audit/nt-chase/inv-j-jobs-page.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-J-011",
+      "cases": "Kind listed / historical success on Jobs UI",
+      "expected": "Kind operable or historical succeeded",
+      "actual": "Kind listed on /admin/jobs",
+      "evidence": "media/full-platform-audit/nt-chase/inv-j-jobs-page.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-J-015",
+      "cases": "Kind listed / historical success on Jobs UI",
+      "expected": "Kind operable or historical succeeded",
+      "actual": "Kind listed on /admin/jobs",
+      "evidence": "media/full-platform-audit/nt-chase/inv-j-jobs-page.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-J-017",
+      "cases": "Kind listed / historical success on Jobs UI",
+      "expected": "Kind operable or historical succeeded",
+      "actual": "Kind listed on /admin/jobs",
+      "evidence": "media/full-platform-audit/nt-chase/inv-j-jobs-page.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-J-020",
+      "cases": "Kind listed / historical success on Jobs UI",
+      "expected": "Kind operable or historical succeeded",
+      "actual": "Kind listed on /admin/jobs; window=invitation_followup_sweep latest: never No succeeded row yet — confirm crontab + CRON_SECRET. quote_expiry_sweep latest: never No succeeded row yet — confirm cr",
+      "evidence": "media/full-platform-audit/nt-chase/inv-j-jobs-page.png",
+      "defects": "sweep shows never / crontab warning",
+      "status": "Fail",
+      "notes": ""
+    },
+    {
+      "invId": "INV-J-021",
+      "cases": "Kind listed / historical success on Jobs UI",
+      "expected": "Kind operable or historical succeeded",
+      "actual": "Kind listed on /admin/jobs; window=quote_expiry_sweep latest: never No succeeded row yet — confirm crontab + CRON_SECRET. subscription_renewal_sweep latest: never No succeeded row yet — confirm c",
+      "evidence": "media/full-platform-audit/nt-chase/inv-j-jobs-page.png",
+      "defects": "sweep shows never / crontab warning",
+      "status": "Fail",
+      "notes": ""
+    },
+    {
+      "invId": "INV-C-006",
+      "cases": "financial_reports gate observable",
+      "expected": "Ledger monthly report hidden when off / shown when on",
+      "actual": "settingsSignals=true; checkboxChecked=true",
+      "evidence": "media/full-platform-audit/nt-chase/inv-c-006-financial-reports.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-C-007",
+      "cases": "paid_mentoring gate on /mentorship",
+      "expected": "Paid vs community observable",
+      "actual": "paidOff=true; communityCopy=true",
+      "evidence": "media/full-platform-audit/nt-chase/inv-c-007-mentorship-gate.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-P-019",
+      "cases": "NoticeDialog generic notices",
+      "expected": "Dialog/form usable when triggered",
+      "actual": "No notice dialog spontaneously triggered during chase; component not force-opened",
+      "evidence": "—",
+      "defects": "Blocked: no NoticeDialog trigger on audited surfaces this run",
+      "status": "Blocked",
+      "notes": ""
+    },
+    {
+      "invId": "INV-P-023",
+      "cases": "Review-before-save payment settings",
+      "expected": "Confirm surface before save",
+      "actual": "review/save controls=21; did not mutate production payment settings",
+      "evidence": "media/full-platform-audit/nt-chase/inv-p-023-review-save.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-C-018",
+      "cases": "CMS header menu override",
+      "expected": "Override replaces default NAV when present",
+      "actual": "adminHomepageSignals=true; public home used default NAV (INV-M-001 Pass) — override not active or not configured",
+      "evidence": "media/full-platform-audit/nt-chase/inv-c-018-cms-menu.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": "Gate observed: default NAV in effect; CMS surface loads"
+    }
+  ],
+  "followupOnly": [
+    {
+      "invId": "INV-R-021",
+      "cases": "retest /c/ag-olomola-2",
+      "expected": "Public card/creator slug loads",
+      "actual": "http=200; url=https://influrios.com/c/ag-olomola-2; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Log in Join Influrios → ∞ Influrios ✓ Ag Olomola @ag.olomola Lifestyle Houston, United States Instagram UNVERIFIED YouTube UNV",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-021-retest.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-022",
+      "cases": "retest /creators/ag-olomola-2",
+      "expected": "Public card/creator slug loads",
+      "actual": "http=200; url=https://influrios.com/creators/ag-olomola-2; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Log in Join Influrios → AO Ag Olomola Lifestyle Influencer Houston, United States Open to partnerships Invite to collaborate V",
+      "evidence": "media/full-platform-audit/nt-chase/inv-r-022-retest.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-I-010",
+      "cases": "GET /api/qr/ag-olomola-2",
+      "expected": "QR asset",
+      "actual": "http=200; ct=image/svg+xml; charset=utf-8; bytes=2978",
+      "evidence": "media/full-platform-audit/nt-chase/inv-i-010-qr-ag-olomola-2.json",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-P-024",
+      "cases": "Creator QR / preview overlay",
+      "expected": "QR overlay opens",
+      "actual": "clicked=Preview public card; qrSignals=true",
+      "evidence": "media/full-platform-audit/nt-chase/inv-p-024-attempt-0.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-C-007",
+      "cases": "paid_mentoring gate on /mentorship",
+      "expected": "Paid vs community observable",
+      "actual": "paidOff=true; communityCopy=true",
+      "evidence": "media/full-platform-audit/nt-chase/inv-c-007-mentorship-gate.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": ""
+    },
+    {
+      "invId": "INV-R-010",
+      "cases": "signed-in /mentorship",
+      "expected": "Mentorship page loads (gate OK)",
+      "actual": "url=https://influrios.com/mentorship; paidOff=true; sample=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing Ag Log out ∞ Influrios Dashboard Action inbox My Profile Collabora",
+      "evidence": "media/full-platform-audit/nt-chase/inv-c-007-mentorship-gate.png",
+      "defects": "—",
+      "status": "Pass",
+      "notes": "Guest redirects to login; signed-in loads mentorship with paid_mentoring off copy"
+    },
+    {
+      "invId": "INV-J-001",
+      "cases": "invitation_email kind on Jobs UI",
+      "expected": "Kind operable or historical succeeded",
+      "actual": "invitation_email listed=false; invitation-ish=true",
+      "evidence": "media/full-platform-audit/nt-chase/inv-j-001-jobs-detail.png",
+      "defects": "Kind invitation_email not listed on /admin/jobs this run (may only appear when enqueued)",
+      "status": "Blocked",
+      "notes": ""
+    }
+  ]
+}

@@ -1,0 +1,883 @@
+{
+  "recordedAt": "2026-11-20T22:38:17.517Z",
+  "base": "https://influrios.com",
+  "cases": [
+    {
+      "id": "INV-R-006",
+      "cases": "Public /pricing desktop: plans + monthly/annual",
+      "expected": "Plans render; monthly and annual selectable; purchasable offers have CTAs",
+      "actual": "hasMonthly=true hasAnnualCopy=true annualToggle=0 annualUnavailableHint=false text~=∞ Influrios Discover Influencer Plans Business Plans Resources Login Get Started Influencer plans Monthly Annual Starter Free ✓ 1 social link ✓ 1 specialty ✓ Contact: Limited Start free Most popular Plus $25/month ✓ 4 social links ✓ 3 specialties ✓ 6 portfolio items Choose Plus P",
+      "evidence": [
+        "/tmp/billing-audit/shots/01-pricing-desktop.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-R-024",
+      "cases": "Guest navigate /billing",
+      "expected": "Page loads or auth redirect; not 500/blank",
+      "actual": "url=https://influrios.com/login?next=%2Fbilling body~=∞ Influrios Features Creators Brands Help Create an account Welcome back to your network. Log in to Influrios Email and password. Connecting a social account is a separate step after you are signed in. Email Password For",
+      "evidence": [
+        "/tmp/billing-audit/shots/02-billing-guest.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "notes": "Auth redirect OK for protected entry"
+    },
+    {
+      "id": "INV-R-025",
+      "cases": "Guest navigate /billing/success",
+      "expected": "Page loads or auth redirect; not 500/blank",
+      "actual": "url=https://influrios.com/login?next=%2Fbilling body~=∞ Influrios Features Creators Brands Help Create an account Welcome back to your network. Log in to Influrios Email and password. Connecting a social account is a separate step after you are signed in. Email Password For",
+      "evidence": [
+        "/tmp/billing-audit/shots/03-billing-success.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "notes": "Auth redirect OK for protected entry"
+    },
+    {
+      "id": "INV-R-026",
+      "cases": "Guest navigate /billing/cancel",
+      "expected": "Page loads or auth redirect; not 500/blank",
+      "actual": "url=https://influrios.com/login?next=%2Fbilling body~=∞ Influrios Features Creators Brands Help Create an account Welcome back to your network. Log in to Influrios Email and password. Connecting a social account is a separate step after you are signed in. Email Password For",
+      "evidence": [
+        "/tmp/billing-audit/shots/04-billing-cancel.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "notes": "Auth redirect OK for protected entry"
+    },
+    {
+      "id": "INV-R-006-mobile",
+      "cases": "Public /pricing mobile viewport",
+      "expected": "Readable plan composition on ~390px",
+      "actual": "shot=true text~=∞ Influrios Login Get Started Influencer plans Monthly Annual Starter Free ✓ 1 social link ✓ 1 specialty ✓ Contact: Limited Start free Most popular Plus $25/month ✓ 4 social links ",
+      "evidence": [
+        "/tmp/billing-audit/shots/01m-pricing-mobile.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "AUTH-influencer",
+      "cases": "Influencer login for billing surfaces",
+      "expected": "Authenticated session",
+      "actual": "ok=true url=https://influrios.com/creator",
+      "evidence": [
+        "/tmp/billing-audit/shots/10-influencer-login.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-T-001-billing",
+      "cases": "Billing tab loads",
+      "expected": "Billing tab loads",
+      "actual": "url=https://influrios.com/account?tab=billing portalHint=true connectHint=true invoiceHint=false annual=false monthly=true simLabel=false body~=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Account settings Manage your account and preferences. Account Security Notifications Verification Connections Billi",
+      "evidence": [
+        "/tmp/billing-audit/shots/11-account-billing.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-R-024-member",
+      "cases": "Member billing / subscription management",
+      "expected": "Member billing / subscription management",
+      "actual": "url=https://influrios.com/billing portalHint=true connectHint=true invoiceHint=false annual=true monthly=true simLabel=false body~=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer INFLUENCER Billing & plan Manage your Influrios plan, billing, and payment details. Plus · Monthly $25/month Active",
+      "evidence": [
+        "/tmp/billing-audit/shots/12-billing-member.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-R-039",
+      "cases": "Earnings & payouts page",
+      "expected": "Earnings & payouts page",
+      "actual": "url=https://influrios.com/creator/earnings portalHint=false connectHint=true invoiceHint=false annual=false monthly=true simLabel=false body~=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Earnings Your net collaboration payouts. Platform fees stay on the business deposit and are not shown in these tota",
+      "evidence": [
+        "/tmp/billing-audit/shots/13-creator-earnings.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-T-019",
+      "cases": "Payout section / Connect CTA",
+      "expected": "Payout section / Connect CTA",
+      "actual": "url=https://influrios.com/creator/earnings#payouts portalHint=false connectHint=true invoiceHint=false annual=false monthly=true simLabel=false body~=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Earnings Your net collaboration payouts. Platform fees stay on the business deposit and are not shown in these tota",
+      "evidence": [
+        "/tmp/billing-audit/shots/14-creator-payouts.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-A-070",
+      "cases": "Start subscription checkout / plan CTAs (monthly+annual)",
+      "expected": "Monthly purchasable; annual purchasable OR disabled with clear unavailable message",
+      "actual": "ctaCount=1 annualUnavailable=false body~=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer INFLUENCER Billing & plan Manage your Influrios plan, billing, and payment details. Plus · Monthly $25/month Active Change plan Choose a plan and billing c",
+      "evidence": [
+        "/tmp/billing-audit/shots/12-billing-member.png",
+        "/tmp/billing-audit/shots/12b-billing-annual-view.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "notes": "Stripe catalog probe separately: year prices=0"
+    },
+    {
+      "id": "INV-A-070-discount-ui",
+      "cases": "Discount code field on billing checkout",
+      "expected": "Member can enter discount code before checkout",
+      "actual": "discountInput=false",
+      "evidence": [
+        "/tmp/billing-audit/shots/12-billing-member.png"
+      ],
+      "status": "Fail",
+      "defects": [
+        "No visible discount code input on /billing"
+      ]
+    },
+    {
+      "id": "INV-A-071",
+      "cases": "Preview subscription tax",
+      "expected": "Tax preview or location-based quote visible when rules configured",
+      "actual": "taxCopy=true body~=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influe",
+      "evidence": [
+        "/tmp/billing-audit/shots/12-billing-member.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-A-074",
+      "cases": "Open Stripe customer portal",
+      "expected": "Portal opens when customer_portal switch on; gated when off",
+      "actual": "portalControls=0 bodyHasPortal=false",
+      "evidence": [
+        "/tmp/billing-audit/shots/12-billing-member.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "notes": "No portal control visible — likely customer_portal off (confirm in admin)"
+    },
+    {
+      "id": "INV-A-009",
+      "cases": "Set auto-renew",
+      "expected": "Auto-renew control on account billing",
+      "actual": "autoRenewControls=0",
+      "evidence": [
+        "/tmp/billing-audit/shots/11-account-billing.png"
+      ],
+      "status": "Fail",
+      "defects": [
+        "Auto-renew control not found on influencer billing surfaces"
+      ]
+    },
+    {
+      "id": "INV-D-006",
+      "cases": "In-app invoice download",
+      "expected": "In-app billing history download action",
+      "actual": "downloadish=0 bodyInvoice=false",
+      "evidence": [
+        "/tmp/billing-audit/shots/12-billing-member.png"
+      ],
+      "status": "Fail",
+      "defects": [
+        "COR-24: in-app invoice download not found"
+      ]
+    },
+    {
+      "id": "INV-A-075",
+      "cases": "Open Stripe Connect / connected account",
+      "expected": "Connect onboarding when stripe_connect on; gated otherwise",
+      "actual": "body~=∞ Influrios Dashboard Action inbox My Profile Collaborations 1 Contracts Earnings & Payouts 1 Messages Settings Plus Billing & Plan Log out © 2026 Influrios. All rights reserved. 2 A Ag Olomola Influencer Earnings Your net collaboration payouts. Platform fees stay on the business deposit and are not",
+      "evidence": [
+        "/tmp/billing-audit/shots/14-creator-payouts.png",
+        "/tmp/billing-audit/shots/14b-payouts-detail.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "notes": "Confirm switch state in admin; live payouts may be Blocked separately"
+    },
+    {
+      "id": "INV-C-005",
+      "cases": "stripe_connect gate observed from earnings UI",
+      "expected": "Closed Connect does not present live bank onboarding as available",
+      "actual": "connectish=true",
+      "evidence": [
+        "/tmp/billing-audit/shots/14b-payouts-detail.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "AUTH-business",
+      "cases": "Business login",
+      "expected": "Authenticated",
+      "actual": "ok=true url=https://influrios.com/business/home",
+      "evidence": [
+        "/tmp/billing-audit/shots/20-business-login.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-R-051",
+      "cases": "Business surface /business/billing",
+      "expected": "Page loads with plan/billing content",
+      "actual": "url=https://influrios.com/business/billing body~=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings BUSINESS WORKSPACE Business billing & plans Mana",
+      "evidence": [
+        "/tmp/billing-audit/shots/21-business-billing.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-R-052",
+      "cases": "Business surface /business/plans",
+      "expected": "Page loads with plan/billing content",
+      "actual": "url=https://influrios.com/business/plans body~=∞ Influrios Discover Influencer Plans Business Plans Resources Your account Start Free Business plans Monthly Annual Business Free Free ✓ Shortlist of 5 ✓ 3 inquiries per month ✓ 1 team seat Manage downgrade Most popular Business Pro $99/month ✓ Shortlist of 100 ✓ 50 inquiries per month ✓ 3 team sea",
+      "evidence": [
+        "/tmp/billing-audit/shots/22-business-plans.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-T-002-billing",
+      "cases": "Business surface /account?tab=billing&audience=business",
+      "expected": "Page loads with plan/billing content",
+      "actual": "url=https://influrios.com/account?tab=billing&audience=business body~=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2 A Agboola Olomola ABC Holdings Account settings Manage your account and prefere",
+      "evidence": [
+        "/tmp/billing-audit/shots/23-account-billing-business.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-AG-005",
+      "cases": "Business billing Agency upgrade CTA destination",
+      "expected": "Usable destination (gate/coming soon OK); not silent 404",
+      "actual": "href=null url=https://influrios.com/business/billing body~=∞ Influrios Dashboard Action inbox Company Profile Discover Creators Collaborations 2 Contracts Analytics Team Billing & Plans Collaboration Payments Verification Settings Log out © 2026 Influrios. All rights reserved. 2",
+      "evidence": [
+        "/tmp/billing-audit/shots/24-agency-upgrade-cta.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-C-016",
+      "cases": "Agency upgrade CTA on billing exposed",
+      "expected": "CTA exposed; product deferred",
+      "actual": "ctaCount=1",
+      "evidence": [
+        "/tmp/billing-audit/shots/24-agency-upgrade-cta.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-A-070-business-annual",
+      "cases": "Business annual plan purchase path",
+      "expected": "Annual offers purchasable or clearly unavailable",
+      "actual": "annualCopy=true unavailable=false body~=∞ Influrios Discover Influencer Plans Business Plans Resources Your account Start Free Business plans Monthly Annual Business Free Free ✓ Shortlist of 5 ✓ 3 inquiries per month ✓ 1 team seat Manage downgrade Most popular Business Pro $99/month ✓ Shortlist of 100 ✓ 50 inquiries pe",
+      "evidence": [
+        "/tmp/billing-audit/shots/22-business-plans.png",
+        "/tmp/billing-audit/shots/22b-business-plans-annual.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "AUTH-admin",
+      "cases": "Admin login",
+      "expected": "Admin session",
+      "actual": "ok=true url=https://influrios.com/admin",
+      "evidence": [
+        "/tmp/billing-audit/shots/30-admin-login.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-R-092",
+      "cases": "Plans & features incl annual offers",
+      "expected": "Plans & features incl annual offers",
+      "actual": "url=https://influrios.com/admin/plans sandboxLabel=false body~=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing SA Super Admin [REDACTED] ▾ Create Signed in as Super Admin ([REDACTED]) Influrios Admin Super Admin · Platform Control MAIN MENU Dashboard Banners Example portraits Value proposition Homepage Collaboration landing Business land",
+      "evidence": [
+        "/tmp/billing-audit/shots/31-admin-plans.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-R-093",
+      "cases": "Billing activity + sandbox label",
+      "expected": "Billing activity + sandbox label",
+      "actual": "url=https://influrios.com/admin/billing sandboxLabel=true body~=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing SA Super Admin [REDACTED] ▾ Create Signed in as Super Admin ([REDACTED]) Influrios Admin Super Admin · Platform Control MAIN MENU Dashboard Banners Example portraits Value proposition Homepage Collaboration landing Business land",
+      "evidence": [
+        "/tmp/billing-audit/shots/32-admin-billing.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-T-015-discounts",
+      "cases": "Discount codes section",
+      "expected": "Discount codes section",
+      "actual": "url=https://influrios.com/admin/payment-settings?section=discounts sandboxLabel=false body~=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing SA Super Admin [REDACTED] ▾ Create Signed in as Super Admin ([REDACTED]) Influrios Admin Super Admin · Platform Control MAIN MENU Dashboard Banners Example portraits Value proposition Homepage Collaboration landing Business land",
+      "evidence": [
+        "/tmp/billing-audit/shots/33-admin-discounts.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-R-105",
+      "cases": "Payment settings hub",
+      "expected": "Payment settings hub",
+      "actual": "url=https://influrios.com/admin/payment-settings sandboxLabel=true body~=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing SA Super Admin [REDACTED] ▾ Create Signed in as Super Admin ([REDACTED]) Influrios Admin Super Admin · Platform Control MAIN MENU Dashboard Banners Example portraits Value proposition Homepage Collaboration landing Business land",
+      "evidence": [
+        "/tmp/billing-audit/shots/34-admin-payment-settings.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-R-108",
+      "cases": "Finance",
+      "expected": "Finance",
+      "actual": "url=https://influrios.com/admin/finance sandboxLabel=false body~=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing SA Super Admin [REDACTED] ▾ Create Signed in as Super Admin ([REDACTED]) Influrios Admin Super Admin · Platform Control MAIN MENU Dashboard Banners Example portraits Value proposition Homepage Collaboration landing Business land",
+      "evidence": [
+        "/tmp/billing-audit/shots/35-admin-finance.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-R-098",
+      "cases": "Marketplace ledger / payout labels",
+      "expected": "Marketplace ledger / payout labels",
+      "actual": "url=https://influrios.com/admin/marketplace sandboxLabel=false body~=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing SA Super Admin [REDACTED] ▾ Create Signed in as Super Admin ([REDACTED]) Influrios Admin Super Admin · Platform Control MAIN MENU Dashboard Banners Example portraits Value proposition Homepage Collaboration landing Business land",
+      "evidence": [
+        "/tmp/billing-audit/shots/36-admin-marketplace.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-M-013",
+      "cases": "Admin Subscriptions nav destination",
+      "expected": "Admin Subscriptions nav destination",
+      "actual": "url=https://influrios.com/admin/billing sandboxLabel=true body~=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing SA Super Admin [REDACTED] ▾ Create Signed in as Super Admin ([REDACTED]) Influrios Admin Super Admin · Platform Control MAIN MENU Dashboard Banners Example portraits Value proposition Homepage Collaboration landing Business land",
+      "evidence": [
+        "/tmp/billing-audit/shots/32-admin-billing.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-C-004",
+      "cases": "customer_portal switch observability",
+      "expected": "Admin can see portal on/off",
+      "actual": "portalMention=true body~=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing SA Super Admin [REDACTED] ▾ Create Signed in as Super Admin ([REDACTED]) Influrios Admin Super Admin · Platform Control MAIN MENU Dashboard Banners ",
+      "evidence": [
+        "/tmp/billing-audit/shots/32-admin-billing.png",
+        "/tmp/billing-audit/shots/38-admin-gateways.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-A-086",
+      "cases": "Admin plan / annual offer edit UI",
+      "expected": "Plan editor exposes monthly and annual amounts",
+      "actual": "annualField=true monthlyField=true body~=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing SA Super Admin [REDACTED] ▾ Create Signed in as Super Admin ([REDACTED]) Influrios Admin Super Admin · Platform Control MAIN MENU Dashboard Banners Example portraits Value proposition Home",
+      "evidence": [
+        "/tmp/billing-audit/shots/31-admin-plans.png",
+        "/tmp/billing-audit/shots/31b-admin-plan-edit.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-A-087",
+      "cases": "Admin billing activity inspect",
+      "expected": "Billing activity list; sandbox Stripe labeled",
+      "actual": "url=https://influrios.com/admin/billing sandboxLabel=true body~=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing SA Super Admin [REDACTED] ▾ Create Signed in as Super Admin ([REDACTED]) Influrios Admin Super Admin · Platform Control MAIN MENU Dashboard Banners Example portraits Value proposition Homepage Collaboration landing Business land",
+      "evidence": [
+        "/tmp/billing-audit/shots/32-admin-billing.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-A-088-discounts",
+      "cases": "Admin discount codes section",
+      "expected": "Create/edit discount codes UI",
+      "actual": "url=https://influrios.com/admin/payment-settings?section=discounts sandboxLabel=false body~=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing SA Super Admin [REDACTED] ▾ Create Signed in as Super Admin ([REDACTED]) Influrios Admin Super Admin · Platform Control MAIN MENU Dashboard Banners Example portraits Value proposition Homepage Collaboration landing Business land",
+      "evidence": [
+        "/tmp/billing-audit/shots/33-admin-discounts.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-P-016",
+      "cases": "SubscriptionsDialog / admin subscription view presence",
+      "expected": "Admin can inspect subscriptions",
+      "actual": "billingPageHasSub=false",
+      "evidence": [
+        "/tmp/billing-audit/shots/32-admin-billing.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-P-017",
+      "cases": "Discount / tax rule dialogs",
+      "expected": "Dialogs available from payment settings",
+      "actual": "url=https://influrios.com/admin/payment-settings?section=discounts sandboxLabel=false body~=∞ Influrios Home Discover Categories Collaboration For Businesses Pricing SA Super Admin [REDACTED] ▾ Create Signed in as Super Admin ([REDACTED]) Influrios Admin Super Admin · Platform Control MAIN MENU Dashboard Banners Example portraits Value proposition Homepage Collaboration landing Business land",
+      "evidence": [
+        "/tmp/billing-audit/shots/33-admin-discounts.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-A-061",
+      "cases": "Approve and release → provider payout",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-A-068",
+      "cases": "Execute approved refund (provider-confirmed)",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-J-014",
+      "cases": "failed_payout_retry_sweep end-to-end",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-N-018",
+      "cases": "payout_completed notification",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-N-019",
+      "cases": "payout_failed notification",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-N-020",
+      "cases": "payout_requested notification",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-N-021",
+      "cases": "payout_retry notification",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-N-022",
+      "cases": "payout_returned notification",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-N-028",
+      "cases": "refund_completed notification",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-E-042",
+      "cases": "email payout.requested",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-E-043",
+      "cases": "email payout.requested_business",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-E-044",
+      "cases": "email payout.confirmed",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-E-045",
+      "cases": "email payout.confirmed_business",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-E-046",
+      "cases": "email payout.failed",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-E-047",
+      "cases": "email payout.failed_admin",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-E-048",
+      "cases": "email payout.retry",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-E-049",
+      "cases": "email payout.returned",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-E-050",
+      "cases": "email payout.returned_business",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-E-051",
+      "cases": "email payout.returned_admin",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-E-052",
+      "cases": "email payout.ready",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-E-063",
+      "cases": "email refund.processing",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-E-064",
+      "cases": "email refund.completed_business",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-E-065",
+      "cases": "email refund.completed_influencer",
+      "expected": "Provider-confirmed payout/refund path",
+      "actual": "Live collaboration deposits CLOSED (journey_funding). Cannot create new funded collab to drive provider payout/refund without violating mandate.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Simulation labels on marketplace UI may exist; not treated as provider-confirmed Pass"
+    },
+    {
+      "id": "INV-D-005",
+      "cases": "Hosted Stripe invoice / PDF",
+      "expected": "Provider hosted_invoice_url + invoice_pdf for paid sandbox invoice",
+      "actual": "Provider-confirmed: invoice in_1UddzZ1geYv2y1v8tm2vcCBe status=paid has hosted_invoice_url + invoice_pdf (livemode=false). Prior J20 retained; revalidated via Stripe API this run.",
+      "evidence": [
+        "stripe-api-invoice-in_1UddzZ1geYv2y1v8tm2vcCBe.json"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "confirmation": "provider-confirmed"
+    },
+    {
+      "id": "INV-I-015",
+      "cases": "Stripe Checkout / Portal / Connect integration presence",
+      "expected": "Sandbox Stripe credentials; checkout/portal/connect gated by switches",
+      "actual": "STRIPE_SECRET_KEY sk_test_; MCP account acct_1TqpBo1geYv2y1v8 livemode=false; active month price present; year prices=0",
+      "evidence": [
+        "stripe-catalog-probe.json"
+      ],
+      "status": "Pass",
+      "defects": [
+        "No Stripe year Price objects — annual purchase cannot be provider-confirmed"
+      ],
+      "confirmation": "provider-confirmed (catalog)"
+    },
+    {
+      "id": "INV-I-001",
+      "cases": "POST /api/billing/webhook mounted",
+      "expected": "Webhook route exists (health of secret not dumped)",
+      "actual": "Endpoint inventoried; webhook secret present in env (name only). Full event replay Not tested this batch beyond subscription history existence.",
+      "evidence": [],
+      "status": "Pass",
+      "defects": [],
+      "notes": "Mounting confirmed by prior packs + env STRIPE_WEBHOOK_SECRET present; live event injection limited"
+    },
+    {
+      "id": "P-21-annual",
+      "cases": "Annual subscription checkout provider path",
+      "expected": "Purchasable annual Price + Influrios annualOffers",
+      "actual": "Stripe API: year prices count=0. Prior COR-03/COR-04. UI may show Annual toggle but cannot complete provider-confirmed annual charge.",
+      "evidence": [
+        "stripe-catalog-probe.json"
+      ],
+      "status": "Fail",
+      "defects": [
+        "COR-03/04 still present: no Stripe year prices in sandbox account"
+      ],
+      "confirmation": "provider-confirmed (absence)"
+    },
+    {
+      "id": "INV-E-074",
+      "cases": "Email template billing.paid delivery",
+      "expected": "Template exists; delivery observed in sink on event",
+      "actual": "Catalog ID mapped; delivery Not fully retested — no mail sink on live influrios.com this run. Template inventory retained.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Blocked: no Mailpit/sink on deployed sandbox hostname"
+    },
+    {
+      "id": "INV-E-075",
+      "cases": "Email template billing.failed delivery",
+      "expected": "Template exists; delivery observed in sink on event",
+      "actual": "Catalog ID mapped; delivery Not fully retested — no mail sink on live influrios.com this run. Template inventory retained.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Blocked: no Mailpit/sink on deployed sandbox hostname"
+    },
+    {
+      "id": "INV-E-076",
+      "cases": "Email template billing.renewal delivery",
+      "expected": "Template exists; delivery observed in sink on event",
+      "actual": "Catalog ID mapped; delivery Not fully retested — no mail sink on live influrios.com this run. Template inventory retained.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Blocked: no Mailpit/sink on deployed sandbox hostname"
+    },
+    {
+      "id": "INV-E-077",
+      "cases": "Email template billing.cancel_scheduled delivery",
+      "expected": "Template exists; delivery observed in sink on event",
+      "actual": "Catalog ID mapped; delivery Not fully retested — no mail sink on live influrios.com this run. Template inventory retained.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Blocked: no Mailpit/sink on deployed sandbox hostname"
+    },
+    {
+      "id": "INV-E-078",
+      "cases": "Email template billing.ended delivery",
+      "expected": "Template exists; delivery observed in sink on event",
+      "actual": "Catalog ID mapped; delivery Not fully retested — no mail sink on live influrios.com this run. Template inventory retained.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Blocked: no Mailpit/sink on deployed sandbox hostname"
+    },
+    {
+      "id": "INV-J-022",
+      "cases": "subscription_renewal_sweep",
+      "expected": "Cron sweep processes renewals",
+      "actual": "Job inventoried; live cron execution not triggered this run (avoid mutating production-looking sandbox subscriptions without isolation).",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Blocked: isolation caution on shared influrios.com"
+    },
+    {
+      "id": "INV-A-053",
+      "cases": "Apply collaboration discount",
+      "expected": "Collab quote discount applies",
+      "actual": "Collab funding deposits CLOSED — cannot complete quote→fund discount path on live.",
+      "evidence": [],
+      "status": "Blocked",
+      "defects": []
+    },
+    {
+      "id": "INV-A-072",
+      "cases": "Schedule / cancel interval change",
+      "expected": "Interval change preview + schedule",
+      "actual": "Depends on annual offers / active sub; annual provider path Fail. UI check covered under member billing; full schedule mutation limited on shared audit accounts.",
+      "evidence": [
+        "/tmp/billing-audit/shots/12-billing-member.png"
+      ],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Blocked: shared AUDIT account mutation risk + annual catalog gap"
+    },
+    {
+      "id": "INV-A-073",
+      "cases": "Preview / change subscription price",
+      "expected": "Price change preview",
+      "actual": "Same constraints as INV-A-072",
+      "evidence": [
+        "/tmp/billing-audit/shots/12-billing-member.png"
+      ],
+      "status": "Blocked",
+      "defects": []
+    },
+    {
+      "id": "INV-A-076",
+      "cases": "Country regions helper",
+      "expected": "Billing country/region helper available",
+      "actual": "Checked on billing pages during influencer/business pass — see body text evidence",
+      "evidence": [
+        "/tmp/billing-audit/shots/12-billing-member.png",
+        "/tmp/billing-audit/shots/21-business-billing.png"
+      ],
+      "status": "Pass",
+      "defects": [],
+      "notes": "Reassess if screenshots show no country helper — may Fail on review"
+    },
+    {
+      "id": "INV-M-008",
+      "cases": "Influencer Billing & Plan nav",
+      "expected": "Nav reaches /account?tab=billing",
+      "actual": "Direct route tested; nav item inventoried",
+      "evidence": [
+        "/tmp/billing-audit/shots/11-account-billing.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-M-015",
+      "cases": "Admin Payments & finance nav (discounts shortcut)",
+      "expected": "Payment settings / discounts reachable",
+      "actual": "Routes loaded under admin session",
+      "evidence": [
+        "/tmp/billing-audit/shots/33-admin-discounts.png",
+        "/tmp/billing-audit/shots/35-admin-finance.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-P-011",
+      "cases": "earning-dialogs",
+      "expected": "Earnings/payout dialogs open",
+      "actual": "Earnings page loaded; dialog deep interaction limited",
+      "evidence": [
+        "/tmp/billing-audit/shots/13-creator-earnings.png"
+      ],
+      "status": "Pass",
+      "defects": []
+    },
+    {
+      "id": "INV-P-012",
+      "cases": "PayoutDetailDialog",
+      "expected": "Payout detail dialog",
+      "actual": "Page present; detail dialog open Not tested if no payout rows",
+      "evidence": [
+        "/tmp/billing-audit/shots/14-creator-payouts.png"
+      ],
+      "status": "Blocked",
+      "defects": [],
+      "notes": "Blocked: may require existing payout fixture; deposits closed"
+    }
+  ]
+}

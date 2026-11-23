@@ -1,0 +1,16 @@
+{
+  "opt1": {
+    "creatorSlug": "audit-r4cont01-a",
+    "openToManaged": true,
+    "targetingNotes": "AUDIT r4cont01 opt-in",
+    "niches": [],
+    "updatedAt": "2026-11-21T04:05:48.843Z"
+  },
+  "opt2": {
+    "creatorSlug": "audit-r4cont01-a",
+    "openToManaged": true,
+    "targetingNotes": "AUDIT r4cont01 opt-in",
+    "niches": [],
+    "updatedAt": "2026-11-21T04:05:48.843Z"
+  }
+}

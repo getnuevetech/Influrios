@@ -1,0 +1,95 @@
+∞
+Influrios
+Dashboard
+Action inbox
+My Profile
+Collaborations
+Contracts
+Earnings & Payouts
+Messages
+Settings
+Starter
+Billing & Plan
+Log out
+
+© 2026 Influrios. All rights reserved.
+
+2
+A
+
+AUDIT r5iso01 Influencer B
+
+Influencer
+
+Start funding from a signed collaboration contract.
+
+Collaboration payments
+
+Funding and influencer payouts for signed agreements. Opening this page does not move money.
+
+Currency
+USD
+Apply
+
+Totals for USD. Other currencies stay in the selector.
+
+Needs funding
+
+0
+
+Funds remaining
+
+$800.00
+
+Influencer payouts confirmed
+
+$0.00
+
+Refunds processing
+
+0
+
+From
+To
+Search
+all
+needs funding
+funded
+payout processing
+completed
+issues
+Collaboration	Influencer	Funded total	Remaining	Status	Next action	
+
+AUDIT r5 Workroom notices
+	AUDIT r5iso01 Influencer B	$800.00	$800.00	
+•
+Payout processing	Track the pending payout	View payment
+AUDIT r5 Workroom notices
+×
+
+AUDIT r5iso01 Co A · AUDIT r5iso01 Influencer B
+
+•
+Payout processing
+
+No action needed. We will update this record when the provider confirms the payout.
+
+Cancellation case
+
+Requesting or accepting a case does not refund money. Refunded appears after the provider confirms it.
+
+Review cancellation proposal
+No open proposal
+
+Accepting this proposal does not confirm a refund. Cancellation status and refund status update separately.
+
+No cancellation proposal is open. Requesting a review does not move money.
+
+Reason
+Choose a reason
+Influencer cancels without permitted cause
+Partial delivery accepted
+Note
+Request cancellation
+
+If a payout is still with the provider, a new proposal waits for that outcome. Nothing is refunded from this screen.

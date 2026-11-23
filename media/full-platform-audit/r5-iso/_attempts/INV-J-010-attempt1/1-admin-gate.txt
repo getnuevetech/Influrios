@@ -1,0 +1,826 @@
+∞
+Influrios
+Home
+Discover
+Categories
+Collaboration
+For Businesses
+Pricing
+AR
+
+AUDIT r5iso01 Super
+
+audit.admin@example.com
+
+▾
+Create
+
+Signed in as Super Admin (audit.admin@example.com)
+
+Influrios Admin
+
+Super Admin · Platform Control
+
+MAIN MENU
+
+Dashboard
+Banners
+Example portraits
+Value proposition
+Homepage
+Collaboration landing
+Business landing
+FAQ
+Site stats
+Influencer cards
+
+MEMBERS & ACCESS
+
+Influencer accounts
+Business accounts
+All accounts
+Admin users
+Access levels
+Invitations
+Agency
+Guest gates
+
+SUBSCRIPTIONS
+
+Plans & features
+Billing activity
+
+COLLABORATIONS
+
+Deals
+Collaborations
+Marketplace listings
+Marketplace ledger
+Managed Matching
+Intelligence
+Collaboration ops
+Trust & Disputes
+
+PAYMENTS & FINANCE
+
+Payment settings
+Discount codes
+Meilisearch
+KYC
+Finance
+
+INTEGRATIONS & OPS
+
+AI pipelines
+Document signing
+Contracts
+Social networks
+Legal documents
+Short links
+Referrals
+Email
+Email templates
+Email health
+Jobs
+Taxonomy
+← View site
+Sign out
+Payment settings
+
+Providers and connections, account roles, country routes, fees, and tax settings. Saving a form does not start a charge or move money that is already with a provider.
+
+Providers
+Account roles
+Country routes
+Fees & policies
+Tax
+Discount codes
+Audit
+Country routes
+
+Set which provider and currency to use for each creator country. This is the only editor for currency, precision, collection, holding, and the payout gateway. A deal stores the route it used, so a later edit does not reroute money already in motion.
+
+Add country route
+Launch approvals
+
+Live collection stays off until all four approvals are saved and a reconciled payout trace and refund trace are recorded. Saving this form does not charge a deal.
+
+Trace: not recorded
+
+Fee schedules approved
+Tax treatment approved
+Fee earning and refund policy approved
+Provider route approved
+Save approvals
+Process clocks
+
+These clocks start at the previous fixed values. A review window is copied onto a milestone when it is funded, and a quote expiry is copied when the deal is signed. The other clocks are read each time the job runs. A country can still set its own review window on Marketplace settings. Attribution days and the recurring interval stay on that page too. Login lockout, webhook signature age, and mail timeouts stay fixed.
+
+Review window, hours
+Review notice lead, hours
+Quote life, hours
+Unknown command wait, minutes
+Provider command attempts
+Dispute reminder, hours
+Hold warning, hours
+Stale funding, hours
+Failed payout attempts
+Failed payout waits, hours
+Team proposal life, days
+Save process clocks
+Extra funding paths
+
+Each path stays off until it is saved here. Turning one on does not charge a deal and does not approve live collection.
+
+Cross-border funding
+Team funding
+Staged funding
+Automatic milestone approval
+Automatic provider switching
+All-in budget entry
+
+Payout approval and the provider send live on Marketplace ledger → Payout release. Saving this form leaves those switches as they are.
+
+Save funding paths
+
+Enter the staging amounts and redacted provider references from one funded payout and one confirmed refund. The trace is stored only when collection equals the payout plus fees plus tax.
+
+Record staging trace
+
+Subscription billing
+
+Plan prices and the billing portal. Separate from collaboration funding.
+
+No country has two currencies.
+
+COUNTRY	CURRENCY	PROVIDER	STATUS	ACTION
+United Kingdom
+GB
+	GBP	Not configured	GB has no collection provider.	Configure
+Nigeria
+NG
+	NGN	Not configured	NG is not open for protected payments.	Configure
+United States
+US
+	USD	primary	Enabled	Configure
+Edit a country route
+
+United States
+
+Currency
+AAD
+AED
+AFN
+ALL
+AMD
+ANG
+AOA
+ARS
+AUD
+AWG
+AZN
+BAM
+BBD
+BDT
+BGN
+BHD
+BIF
+BMD
+BND
+BOB
+BRL
+BSD
+BTN
+BWP
+BYN
+BZD
+CAD
+CDF
+CHF
+CLP
+CNY
+COP
+CRC
+CUP
+CVE
+CZK
+DJF
+DKK
+DOP
+DZD
+EGP
+ERN
+ETB
+EUR
+FJD
+FKP
+GBP
+GEL
+GHS
+GIP
+GMD
+GNF
+GTQ
+GYD
+HKD
+HNL
+HRK
+HTG
+HUF
+IDR
+ILS
+INR
+IQD
+IRR
+ISK
+JMD
+JOD
+JPY
+KES
+KGS
+KHR
+KMF
+KPW
+KRW
+KWD
+KYD
+KZT
+LAK
+LBP
+LKR
+LRD
+LSL
+LYD
+MAD
+MDL
+MGA
+MKD
+MMK
+MNT
+MOP
+MRO
+MUR
+MVR
+MWK
+MXN
+MYR
+MZN
+NAD
+NGN
+NIO
+NOK
+NPR
+NZD
+OMR
+PAB
+PEN
+PGK
+PHP
+PKR
+PLN
+PYG
+QAR
+RON
+RSD
+RUB
+RWF
+SAR
+SBD
+SCR
+SDG
+SEK
+SGD
+SHP
+SLL
+SOS
+SRD
+SSP
+STD
+SYP
+SZL
+THB
+TJS
+TMT
+TND
+TOP
+TRY
+TTD
+TWD
+TZS
+UAH
+UGX
+USD
+UYU
+UZS
+VEF
+VND
+VUV
+WST
+XAF
+XCD
+XOF
+XPF
+YER
+ZAR
+ZMW
+ZWL
+Minor digits
+Collection
+None
+primary
+Primary marketplace
+primary
+Payout gateway
+Choose
+primary
+Save US
+← Admin
+Country activation corridors
+
+Corridor currency and collection are one part of a country route. Compare them with the gateway and the jurisdiction on Country routes.
+
+Corridors control collaboration collection, influencer payout onboarding, payout methods, and KYC for each country. Add a country from the list (full name + currency letters for a new payout profile). The collection route is a gateway saved on Payment gateways — for example Airwallex for Nigeria routes influencers to Airwallex setup, not Stripe Connect. KYC type is either KYC by Gateway or KYC by Document Upload. Group countries to keep this list short. An existing payout profile keeps the currency it already stored.
+
+Also see Collaboration operations and Providers.
+
+Backup currency
+
+A country with no corridor uses this code on a new payout profile. It starts as USD.
+
+Backup currency
+AAD
+AED
+AFN
+ALL
+AMD
+ANG
+AOA
+ARS
+AUD
+AWG
+AZN
+BAM
+BBD
+BDT
+BGN
+BHD
+BIF
+BMD
+BND
+BOB
+BRL
+BSD
+BTN
+BWP
+BYN
+BZD
+CAD
+CDF
+CHF
+CLP
+CNY
+COP
+CRC
+CUP
+CVE
+CZK
+DJF
+DKK
+DOP
+DZD
+EGP
+ERN
+ETB
+EUR
+FJD
+FKP
+GBP
+GEL
+GHS
+GIP
+GMD
+GNF
+GTQ
+GYD
+HKD
+HNL
+HRK
+HTG
+HUF
+IDR
+ILS
+INR
+IQD
+IRR
+ISK
+JMD
+JOD
+JPY
+KES
+KGS
+KHR
+KMF
+KPW
+KRW
+KWD
+KYD
+KZT
+LAK
+LBP
+LKR
+LRD
+LSL
+LYD
+MAD
+MDL
+MGA
+MKD
+MMK
+MNT
+MOP
+MRO
+MUR
+MVR
+MWK
+MXN
+MYR
+MZN
+NAD
+NGN
+NIO
+NOK
+NPR
+NZD
+OMR
+PAB
+PEN
+PGK
+PHP
+PKR
+PLN
+PYG
+QAR
+RON
+RSD
+RUB
+RWF
+SAR
+SBD
+SCR
+SDG
+SEK
+SGD
+SHP
+SLL
+SOS
+SRD
+SSP
+STD
+SYP
+SZL
+THB
+TJS
+TMT
+TND
+TOP
+TRY
+TTD
+TWD
+TZS
+UAH
+UGX
+USD
+UYU
+UZS
+VEF
+VND
+VUV
+WST
+XAF
+XCD
+XOF
+XPF
+YER
+ZAR
+ZMW
+ZWL
+Save backup currency
+Add a country
+
+Choose the country and a collection route. The currency in the country name is stored on the new corridor.
+
+Country
+Choose a country
+Afghanistan — AFN
+Aland Islands — EUR
+Albania — ALL
+Algeria — DZD
+American Samoa — USD
+Andorra — EUR
+Angola — AOA
+Anguilla — XCD
+Antarctica — AAD
+Antigua And Barbuda — XCD
+Argentina — ARS
+Armenia — AMD
+Aruba — AWG
+Australia — AUD
+Austria — EUR
+Azerbaijan — AZN
+Bahrain — BHD
+Bangladesh — BDT
+Barbados — BBD
+Belarus — BYN
+Belgium — EUR
+Belize — BZD
+Benin — XOF
+Bermuda — BMD
+Bhutan — BTN
+Bolivia — BOB
+Bonaire, Sint Eustatius and Saba — USD
+Bosnia and Herzegovina — BAM
+Botswana — BWP
+Bouvet Island — NOK
+Brazil — BRL
+British Indian Ocean Territory — USD
+Brunei — BND
+Bulgaria — BGN
+Burkina Faso — XOF
+Burundi — BIF
+Cambodia — KHR
+Cameroon — XAF
+Canada — CAD
+Cape Verde — CVE
+Cayman Islands — KYD
+Central African Republic — XAF
+Chad — XAF
+Chile — CLP
+China — CNY
+Christmas Island — AUD
+Cocos (Keeling) Islands — AUD
+Colombia — COP
+Comoros — KMF
+Congo — XAF
+Cook Islands — NZD
+Costa Rica — CRC
+Cote D'Ivoire (Ivory Coast) — XOF
+Croatia — HRK
+Cuba — CUP
+Curaçao — ANG
+Cyprus — EUR
+Czech Republic — CZK
+Democratic Republic of the Congo — CDF
+Denmark — DKK
+Djibouti — DJF
+Dominica — XCD
+Dominican Republic — DOP
+East Timor — USD
+Ecuador — USD
+Egypt — EGP
+El Salvador — USD
+Equatorial Guinea — XAF
+Eritrea — ERN
+Estonia — EUR
+Ethiopia — ETB
+Falkland Islands — FKP
+Faroe Islands — DKK
+Fiji Islands — FJD
+Finland — EUR
+France — EUR
+French Guiana — EUR
+French Polynesia — XPF
+French Southern Territories — EUR
+Gabon — XAF
+Georgia — GEL
+Germany — EUR
+Ghana — GHS
+Gibraltar — GIP
+Greece — EUR
+Greenland — DKK
+Grenada — XCD
+Guadeloupe — EUR
+Guam — USD
+Guatemala — GTQ
+Guernsey and Alderney — GBP
+Guinea — GNF
+Guinea-Bissau — XOF
+Guyana — GYD
+Haiti — HTG
+Heard Island and McDonald Islands — AUD
+Honduras — HNL
+Hong Kong S.A.R. — HKD
+Hungary — HUF
+Iceland — ISK
+India — INR
+Indonesia — IDR
+Iran — IRR
+Iraq — IQD
+Ireland — EUR
+Israel — ILS
+Italy — EUR
+Jamaica — JMD
+Japan — JPY
+Jersey — GBP
+Jordan — JOD
+Kazakhstan — KZT
+Kenya — KES
+Kiribati — AUD
+Kosovo — EUR
+Kuwait — KWD
+Kyrgyzstan — KGS
+Laos — LAK
+Latvia — EUR
+Lebanon — LBP
+Lesotho — LSL
+Liberia — LRD
+Libya — LYD
+Liechtenstein — CHF
+Lithuania — EUR
+Luxembourg — EUR
+Macau S.A.R. — MOP
+Macedonia — MKD
+Madagascar — MGA
+Malawi — MWK
+Malaysia — MYR
+Maldives — MVR
+Mali — XOF
+Malta — EUR
+Man (Isle of) — GBP
+Marshall Islands — USD
+Martinique — EUR
+Mauritania — MRO
+Mauritius — MUR
+Mayotte — EUR
+Mexico — MXN
+Micronesia — USD
+Moldova — MDL
+Monaco — EUR
+Mongolia — MNT
+Montenegro — EUR
+Montserrat — XCD
+Morocco — MAD
+Mozambique — MZN
+Myanmar — MMK
+Namibia — NAD
+Nauru — AUD
+Nepal — NPR
+Netherlands — EUR
+New Caledonia — XPF
+New Zealand — NZD
+Nicaragua — NIO
+Niger — XOF
+Nigeria — NGN
+Niue — NZD
+Norfolk Island — AUD
+North Korea — KPW
+Northern Mariana Islands — USD
+Norway — NOK
+Oman — OMR
+Pakistan — PKR
+Palau — USD
+Palestinian Territory Occupied — ILS
+Panama — PAB
+Papua new Guinea — PGK
+Paraguay — PYG
+Peru — PEN
+Philippines — PHP
+Pitcairn Island — NZD
+Poland — PLN
+Portugal — EUR
+Puerto Rico — USD
+Qatar — QAR
+Reunion — EUR
+Romania — RON
+Russia — RUB
+Rwanda — RWF
+Saint Helena — SHP
+Saint Kitts And Nevis — XCD
+Saint Lucia — XCD
+Saint Pierre and Miquelon — EUR
+Saint Vincent And The Grenadines — XCD
+Saint-Barthelemy — EUR
+Saint-Martin (French part) — EUR
+Samoa — WST
+San Marino — EUR
+Sao Tome and Principe — STD
+Saudi Arabia — SAR
+Senegal — XOF
+Serbia — RSD
+Seychelles — SCR
+Sierra Leone — SLL
+Singapore — SGD
+Sint Maarten (Dutch part) — ANG
+Slovakia — EUR
+Slovenia — EUR
+Solomon Islands — SBD
+Somalia — SOS
+South Africa — ZAR
+South Georgia — GBP
+South Korea — KRW
+South Sudan — SSP
+Spain — EUR
+Sri Lanka — LKR
+Sudan — SDG
+Suriname — SRD
+Svalbard And Jan Mayen Islands — NOK
+Swaziland — SZL
+Sweden — SEK
+Switzerland — CHF
+Syria — SYP
+Taiwan — TWD
+Tajikistan — TJS
+Tanzania — TZS
+Thailand — THB
+The Bahamas — BSD
+The Gambia — GMD
+Togo — XOF
+Tokelau — NZD
+Tonga — TOP
+Trinidad And Tobago — TTD
+Tunisia — TND
+Turkey — TRY
+Turkmenistan — TMT
+Turks And Caicos Islands — USD
+Tuvalu — AUD
+Uganda — UGX
+Ukraine — UAH
+United Arab Emirates — AED
+United Kingdom — GBP
+United States Minor Outlying Islands — USD
+Uruguay — UYU
+Uzbekistan — UZS
+Vanuatu — VUV
+Vatican City State (Holy See) — EUR
+Venezuela — VEF
+Vietnam — VND
+Virgin Islands (British) — USD
+Virgin Islands (US) — USD
+Wallis And Futuna Islands — XPF
+Western Sahara — MAD
+Yemen — YER
+Zambia — ZMW
+Zimbabwe — ZWL
+Collection route
+No collection route
+KYC type
+Choose a KYC type
+KYC by Gateway
+KYC by Document Upload
+Payout methods
+Local bank
+USD bank
+M-Pesa
+Flutterwave payout
+Add country
+Country groups
+
+Fold countries into a named group and choose one KYC type for that group. Saving writes the type onto every country in the group. Each country keeps its own currency and collection route, and you can change one country’s KYC type afterward.
+
+Define the gateway and the government-ID details on KYC.
+
+KYC by Gateway. The creator completes KYC with the payment gateway assigned for this corridor (for example Stripe Connect identity).
+KYC by Document Upload. The creator uploads the configured identity documents and enters the required details (ID numbers, address, date of birth, and so on).
+Add a group
+Group name
+KYC type
+Choose a KYC type
+KYC by Gateway
+KYC by Document Upload
+Countries
+United States — USD
+Create group
+
+Not in a group
+
+1 countries · United States — USD
+
+Collapse
+
+United States — USD
+
+primary · KYC by Document Upload · Active
+
+Collapse
+Route versions
+
+View a version to see its accounts, capabilities, verification, tax, and history. Opening a route does not move money or reroute a funded agreement.
+
+Country	Currency	Provider	Environment	Readiness	New funding	Version	
+No route version yet. A draft stays off until the provider approves allocated funds.
+New route version
+
+This creates a draft. It does not reroute held money. Webhooks, refunds, and reconciliation stay available when collections are off.
+
+Country
+Currency
+Environment
+sandbox
+live
+Provider
+
+New collaboration collections stay off. A checkbox or a note does not prove allocated funds or Treasury, and it does not charge anyone.
+
+Manual bank payout control is recorded for this draft
+Allow release scheduling after funding is confirmed
+Notes
+Save route draft

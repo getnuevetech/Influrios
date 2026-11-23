@@ -1,0 +1,23 @@
+{
+  "payoutMethods": [
+    ":",
+    "local_bank:US · Local bank",
+    "usd_bank:US · USD bank"
+  ],
+  "checkedAtSend": [
+    true,
+    true
+  ],
+  "serviceLevelAtSend": "discovery",
+  "payoutAtSend": "local_bank",
+  "urlAfterSend": "http://127.0.0.1:3000/collaboration/contracts/cmwqop0oz00i87d9i2h5zf6dt",
+  "banners": [
+    "Status: sent · Influrios in-app · 0/2 signed",
+    "Your signature is required — use the form below.",
+    "Tax",
+    "ACTION REQUIRED",
+    "You are listed as business (audit.r5iso01.business-a@example.com). Type your legal name, then write your original signature on screen — Influrios stamps that ink and page-endorsement initials on every page of the PDF.",
+    "Write your original signature on the pad with finger, stylus, or mouse"
+  ],
+  "contract": "cmwqop0oz00i87d9i2h5zf6dt|sent"
+}

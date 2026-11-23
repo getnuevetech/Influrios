@@ -1,0 +1,23 @@
+{
+  "account": "acct_1TqpBo1geYv2y1v8",
+  "livemode": false,
+  "prices_total": 1,
+  "prices": [
+    {
+      "id": "price_1UdKNn1geYv2y1v8zetPPRPQ",
+      "active": true,
+      "unit_amount": 1900,
+      "interval": "month",
+      "product": "prod_VedfnllEJPtNbR"
+    }
+  ],
+  "year_prices_total": 0,
+  "invoice_revalidate": {
+    "id": "in_1UddzZ1geYv2y1v8tm2vcCBe",
+    "status": "paid",
+    "total": 2668,
+    "hosted_invoice_url": "https://invoice.stripe.com/i/acct_1TqpBo1geYv2y1v8/test_YWNjdF8xVHFwQm8xZ2VZdjJ5MXY4LF9WZXh2QkhrTTZrNmQzUW5pNEhqVUtiZmJNMUNvT3A5LDE4NTc1NTA0OA0200hjtLkPCq?s=ap",
+    "invoice_pdf": "https://pay.stripe.com/invoice/acct_1TqpBo1geYv2y1v8/test_YWNjdF8xVHFwQm8xZ2VZdjJ5MXY4LF9WZXh2QkhrTTZrNmQzUW5pNEhqVUtiZmJNMUNvT3A5LDE4NTc1NTA0OA0200hjtLkPCq/pdf?s=ap",
+    "livemode": false
+  }
+}

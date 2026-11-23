@@ -1,0 +1,147 @@
+∞
+Influrios
+Home
+Discover
+Categories
+Collaboration
+For Businesses
+Pricing
+AR
+
+AUDIT r5iso01 Super
+
+audit.admin@example.com
+
+▾
+Create
+
+Signed in as Super Admin (audit.admin@example.com)
+
+Influrios Admin
+
+Super Admin · Platform Control
+
+MAIN MENU
+
+Dashboard
+Banners
+Example portraits
+Value proposition
+Homepage
+Collaboration landing
+Business landing
+FAQ
+Site stats
+Influencer cards
+
+MEMBERS & ACCESS
+
+Influencer accounts
+Business accounts
+All accounts
+Admin users
+Access levels
+Invitations
+Agency
+Guest gates
+
+SUBSCRIPTIONS
+
+Plans & features
+Billing activity
+
+COLLABORATIONS
+
+Deals
+Collaborations
+Marketplace listings
+Marketplace ledger
+Managed Matching
+Intelligence
+Collaboration ops
+Trust & Disputes
+
+PAYMENTS & FINANCE
+
+Payment settings
+Discount codes
+Meilisearch
+KYC
+Finance
+
+INTEGRATIONS & OPS
+
+AI pipelines
+Document signing
+Contracts
+Social networks
+Legal documents
+Short links
+Referrals
+Email
+Email templates
+Email health
+Jobs
+Taxonomy
+← View site
+Sign out
+← Admin
+Collaboration operations
+
+Control plane for corridors, mentorship eligibility, dual-approval thresholds, guest collab limits, marketplace application expire (manual/auto), and account-purpose reference. Config is versioned and audit-logged — no deploy required.
+
+CONTROL PLANE VERSION
+
+v1
+
+ACTIVE CORRIDORS
+
+0
+
+SUSPENDED CORRIDORS
+
+0
+
+DUAL-APPROVAL THRESHOLD
+
+$500
+
+Country routes
+
+Suspend / activate country matrix
+
+Fees & policies
+
+Versioned commission matrix
+
+Providers
+
+Gateway readiness by country
+
+Financial reports
+
+Ledger totals & monthly report
+
+Risk / disputes
+
+Mediation & dual-approval decisions
+
+Guest profile gates
+
+Discover/profile soft & hard stops
+
+Risk controls & eligibility
+
+Expand
+
+Account purposes
+
+Expand
+
+Financial snapshot
+
+Expand
+
+Recent control-plane audit
+
+Expand

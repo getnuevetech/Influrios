@@ -1,0 +1,28 @@
+{
+  "check": "INV-C-013",
+  "fixture": "FIXTURE: InfluenceCard published=true for audit-r5iso01-a, published=false for audit-r5iso01-u (no member UI publishes cards); Instagram account on both; public_pages_live on (admin UI, IPS-45)",
+  "discover": {
+    "all": {
+      "publishedA": true,
+      "unpublishedU": false,
+      "demoBanner": false
+    },
+    "AUDIT r5iso01": {
+      "publishedA": true,
+      "unpublishedU": false,
+      "demoBanner": false
+    },
+    "audit-r5iso01": {
+      "publishedA": false,
+      "unpublishedU": false,
+      "demoBanner": false
+    }
+  },
+  "profile": {
+    "/c/audit-r5iso01-a": "200 shown",
+    "/creators/audit-r5iso01-a": "200 shown",
+    "/c/audit-r5iso01-u": "404 not-found page",
+    "/creators/audit-r5iso01-u": "404 not-found page"
+  },
+  "result": "Pass (published listed/visible, unpublished hidden)"
+}

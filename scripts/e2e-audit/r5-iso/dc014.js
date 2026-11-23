@@ -1,0 +1,21 @@
+const { createRequest } = require('./wizard'); const { execSync } = require('child_process');
+const cron = () => execSync(`curl -s -X POST -H "Authorization: Bearer ${process.env.CRON_SECRET}" http://127.0.0.1:3000/api/cron/sweeps`).toString();
+require('./runner').run('INV-DC-014', async ({ b, dir, res, BASE, U, session, C, db, step }) => {
+  const inf = await session(b, U.infB); const biz = await session(b, U.bizA);
+  res.before = await C.influencer(inf.p, dir, '1-before');
+  res.create = await createRequest(biz.p, dir, { title: 'AUDIT r5 DC-014 Expire', slugs: ['audit-r5iso01-b'] }); step('business sent private invitation via wizard (deadline 2026-11-28)');
+  const id = db(`select id from "MarketplaceApplication" where "toSlug"='audit-r5iso01-b' and status='REQUESTED' order by "createdAt" desc limit 1`);
+  res.application = id; res.invited = await C.influencer(inf.p, dir, '2-invited');
+  db(`update "MarketplaceApplication" set "responseDeadline" = now() - interval '1 hour' where id='${id}'`); step('TIME-TRAVEL fixture: responseDeadline set to now()-1h in DB (clock cannot be advanced)');
+  res.deadlinePassedPreSweep = await C.influencer(inf.p, dir, '3-deadline-passed-pre-sweep');
+  res.statusPreSweep = db(`select status from "MarketplaceApplication" where id='${id}'`);
+  res.sweep1 = cron(); step('POST /api/cron/sweeps (CRON_SECRET)');
+  await new Promise(r => setTimeout(r, 3000)); res.sweep1b = cron();
+  res.statusAfterSweep = db(`select status from "MarketplaceApplication" where id='${id}'`);
+  res.events = db(`select coalesce("fromStatus",'')||'>'||"toStatus" from "MarketplaceApplicationEvent" where "applicationId"='${id}' order by "createdAt"`);
+  res.after = await C.influencer(inf.p, dir, '4-after-sweep');
+  const mob = await session(b, U.infB, true); res.afterMobile = await C.influencer(mob.p, dir, '5-after-mobile');
+  await inf.p.goto(BASE + '/creator/notifications'); await inf.p.waitForLoadState('networkidle'); const t = await C.shot(inf.p, dir, '6-notifications');
+  res.notificationCentre = (t.match(/All \(\d+\)[^\n]*\n[^\n]*\n[^\n]*/) || [''])[0].replace(/\n/g, ' | ');
+  res.notices = db(`select n.kind||' read='||(n."readAt" is not null) from "AccountNotice" n join "User" u on u.id=n."userId" where u.email='${U.infB}' order by n."createdAt"`);
+});

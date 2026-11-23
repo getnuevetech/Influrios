@@ -1,0 +1,13 @@
+const { chromium, BASE } = require('./lib'); const C = require('./capture'); const { admin } = require('./survey2'); const db = require('./db'); const fs = require('fs');
+(async () => { const b = await chromium.launch(); const a = await admin(b); a.setDefaultTimeout(10000); const dir = process.env.EV + '/INV-A-053'; fs.mkdirSync(dir, { recursive: true }); const r = { check: 'INV-A-053', steps: [] };
+  await a.goto(BASE + '/admin/payment-settings?section=discounts'); await a.waitForLoadState('networkidle'); await a.getByText('+ Create code').click(); await a.waitForTimeout(800);
+  const f = a.locator('form:has(input[name=code])').first();
+  await f.locator('select[name=productCharge]').selectOption('business_collaboration_fee'); await a.waitForTimeout(400);
+  await f.locator('input[name=code]').fill('AUDITR5TEN'); await f.locator('select[name=kind]').selectOption('percentage'); await f.locator('input[name=value]').fill('10');
+  if (await f.locator('select[name=serviceLevel]').count()) await f.locator('select[name=serviceLevel]').selectOption('discovery').catch(() => {});
+  await f.locator('input[name=startsAt]').fill('2026-11-20'); await f.locator('input[name=endsAt]').fill('2026-12-31');
+  await C.shot(a, dir, '1-admin-create-code');
+  await f.locator('button[name=intent][value=activate]').click(); await a.waitForTimeout(2500); const t = await C.shot(a, dir, '2-admin-after-activate');
+  r.msg = (t.match(/[^\n]*(saved|active|error|could not|required)[^\n]*/i) || [null])[0];
+  r.db = db(`select "displayCode"||':'||lifecycle||':'||"productCharge"||':'||coalesce("serviceLevel",'')||':'||coalesce("percentBps"::text,'') from "DiscountOffer"`);
+  fs.writeFileSync(dir + '/admin-code.json', JSON.stringify(r, null, 2)); console.log(JSON.stringify(r)); await b.close(); })().catch(e => { console.error('ERR', e.message); process.exit(1); });

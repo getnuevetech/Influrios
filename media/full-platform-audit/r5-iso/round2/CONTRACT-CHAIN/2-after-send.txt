@@ -1,0 +1,171 @@
+∞
+Influrios
+Dashboard
+Action inbox
+Company Profile
+Discover Creators
+Collaborations
+1
+Contracts
+Analytics
+Team
+Billing & Plans
+Collaboration Payments
+Verification
+Settings
+Log out
+
+© 2026 Influrios. All rights reserved.
+
+1
+A
+
+AUDIT r5iso01 Co A
+
+AUDIT r5iso01 Co A
+
+CONTRACT & MILESTONE WIZARD
+
+Form the collaboration
+
+Parties → scope → commercial → milestones → payment readiness → preview → accept → funding. Custom milestones need Business Pro/Agency and influencer accept.
+
+← Business Hub
+1. Parties
+2. Scope
+3. Commercial
+4. Milestones
+5. Readiness
+6. Preview
+7. Accept
+8. Funding
+
+“AUDIT r5 DC-010 Launch” is already filled in, including the USD value. Add anything the agreement still needs.
+
+1. Parties
+
+Business: AUDIT r5iso01 Co A · plan BUSINESS FREE
+
+Influencer
+Select influencer…
+AUDIT r5 Unclaimed Profile · San Francisco, United States
+AUDIT r5iso01 Influencer A · San Francisco, United States
+AUDIT r5iso01 Influencer B · San Francisco, United States
+AUDIT r5iso01 Unrelated · San Francisco, United States
+
+AUDIT r5iso01 Influencer A
+
+Identity verified · US
+
+2. Scope
+
+Carried over from the accepted campaign intent.
+
+Campaign title
+Deliverables, channels, usage & revisions
+3. Commercial terms
+Gross influencer compensation (USD)
+The influencer amount before the influencer platform fee. The quote adds the business platform fee on top.
+Jurisdiction
+United Kingdom (GBP)
+Nigeria (NGN)
+United States (USD)
+Payout method
+US · Local bank
+US · USD bank
+Collaboration service level
+Choose a service level
+Discovery only
+Platform match
+Contracted collaboration
+This choice uses the fee rule saved for this service level. Managed introduction is off until admin enables it.
+
+Your fee for this service level
+
+Your fee rule
+Contracted Pilot · Business · v1
+5.00% of the gross influencer compensation · $40.00 added on top
+Add discount code
+Gross compensation
+$800.00
+Business fee
+$40.00
+You pay
+$840.00
+
+Add tax rule for influencer_service in US. Nothing was charged.
+
+Your fee stays reserved until the agreement is signed. Changing a rule later does not change this quote after it is locked.
+
+Commercial framing
+4. Milestones
+Admin templates
+Custom schedule (Pro/Agency)
+
+Admin templates are fixed. Choose Custom schedule before changing a milestone.
+
+5. Payment readiness
+
+Status: ROUTE_READY · Global Payout Ready: yes
+
+Identity: verified
+Payout country: US
+Corridor: activated
+Payment route: ready (Primary (audit local))
+Withdrawal method (Global Payout Ready): Local bank (VERIFIED)
+Jurisdiction protected payments: on
+Legal review: APPROVED · full funding
+Marketplace provider: Primary (audit local) ready
+
+ROUTE_READY. Live funding stays off until the fee schedules, tax treatment, earning and refund policy, and provider route are approved.
+
+6. Contract preview
+
+Service level Discovery only. Your fee is reserved on signing. Later edits do not change a locked deal, and the fee is not earned yet.
+
+Gross compensation
+$800.00
+Your platform fee
+$40.00
+Activation fee
+$0.00
+Collaboration service fee
+$40.00
+You pay
+$840.00
+Expected payout currency
+USD
+Kickoff · 50%
+$400.00 (collaboration fee $20.00)
+Final delivery · 50%
+$400.00 (collaboration fee $20.00)
+7. Accept & funding instruction
+
+Fee disclosure
+
+Fee schedule (locked for this agreement):
+- Jurisdiction: US
+- Service level: contracted
+- Gross: $800.00
+- Fee type: platform_service
+- Rate: 5.00%
+- Platform fee: $40.00
+- Business platform fee: $40.00
+- Business pays: $840.00
+- Fee state: reserved. Not earned. Not settled to Influrios.
+- Rule: rule_pilot_contracted_business v1
+- Rule name: Contracted Pilot · Business
+- Payer: brand
+
+Legal pack references this live fee snapshot — not a hard-coded percentage. See Marketplace Terms and Protected Payments Policy.
+
+I accept this fee disclosure. Your platform fee is reserved on the signed agreement. It is not earned, and live funding stays off.
+I accept this financial plan on behalf of AUDIT r5iso01 Co A. This checkbox does not sign the agreement. Funding freezes the fee rule version after every party has signed through the active signing channel.
+
+Send for signature uses Influrios in-app signing. Each party can download the agreement before and after signing. Funding does not start until every party has signed.
+
+Refresh preview
+Send for signature
+Start funding →
+
+After funding starts, manage milestones on Protected Payments.

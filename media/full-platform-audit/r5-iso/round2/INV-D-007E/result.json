@@ -1,0 +1,23 @@
+{
+  "check": "INV-D-007E",
+  "steps": [],
+  "controls": [
+    "∞ Influrios",
+    "Dashboard",
+    "Action inbox",
+    "My Profile",
+    "Collaborations",
+    "Contracts",
+    "Earnings & Payouts",
+    "Messages",
+    "Settings",
+    "Starter Billing & Plan",
+    "Log out",
+    "2",
+    "← Creator account",
+    "View media kit",
+    "Edit profile photos"
+  ],
+  "exportControl": [],
+  "result": "Fail: no export/download action on the media kit (only \"View media kit\")"
+}

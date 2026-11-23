@@ -1,0 +1,15 @@
+{
+  "INV-R-061": "Pass",
+  "INV-A-045": "Pass",
+  "INV-A-039": "Blocked: no business transition control on detail (status ACCEPTED)",
+  "INV-R-065": "Blocked: no record link listed",
+  "INV-T-013": "Pass",
+  "INV-P-005": "Pass",
+  "INV-P-012": "Command failed: psql -h 127.0.0.1 -p 5433 -U postgres influrios_audit -Atc select count(*) from \"PayoutRecord\"\nERROR:  relation \"PayoutRecord\" does not exist\nLINE 1: select count(*) from \"PayoutRecord\"\n                             ^\n",
+  "INV-D-007E": "Fail: no export/download action on the media kit (only \"View media kit\")",
+  "INV-J-001": "Pass (admin Send email → invitation_email job succeeded → SMTP sink delivery; INV-A-031 evidence)",
+  "INV-A-079": "Fail: no member dispute entry on this surface",
+  "INV-A-064": "Fail: no member dispute entry on this surface",
+  "INV-A-034": "Fail: action exists in code but no UI control on business surfaces",
+  "INV-A-042": "Fail: action exists in code but no UI control on business surfaces"
+}

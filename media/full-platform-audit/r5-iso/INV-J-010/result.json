@@ -1,0 +1,39 @@
+{
+  "check": "INV-J-010",
+  "host": "http://127.0.0.1:3000",
+  "startedAt": "2026-11-21T17:06:52.296Z",
+  "steps": [
+    "collection-only pass: sweep already ran in attempt 2 (see _attempts/INV-J-010-attempt2); no new sweep"
+  ],
+  "m2": "release_scheduled approvedAt=2026-11-21 17:06:34.376",
+  "autoApprovedLogs": "1",
+  "jobRows": "milestone_auto_approval:succeeded:1\nmilestone_auto_approval:succeeded:1\nmilestone_auto_approval:succeeded:1",
+  "n017mail": [
+    "17:06:37 <audit.r5iso01.business-a@example.com> :: Approved: AUDIT r5 Milestone 2",
+    "17:06:37 <audit.r5iso01.influencer-b@example.com> :: Approved: AUDIT r5 Milestone 2"
+  ],
+  "infCentre": "All (2) | Action required (2) | Invitations (2) | Work (0) | Payments (0)",
+  "infCentreMentionsAuto": false,
+  "bizCentre": "All (1) | Action required (1) | Invitations (0) | Work (1) | Payments (0)",
+  "bizCentreMentionsAuto": false,
+  "biz": {
+    "attentionText": "Review a submission /  / AUDIT r5 Workroom notices · audit-r5iso01-b / ",
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "Company Profile": 0,
+      "Discover Creators": 0,
+      "Collaborations": 1,
+      "Contracts": 0,
+      "Analytics": 0,
+      "Team": 0,
+      "Billing & Plans": 0,
+      "Collaboration Payments": 0,
+      "Verification": 0,
+      "Settings": 0
+    },
+    "bell": 1
+  },
+  "bizInbox": "2",
+  "finishedAt": "2026-11-21T17:06:57.179Z"
+}

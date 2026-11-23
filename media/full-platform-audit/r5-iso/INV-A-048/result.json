@@ -1,0 +1,230 @@
+{
+  "check": "INV-A-048",
+  "host": "http://127.0.0.1:3000",
+  "startedAt": "2026-11-21T16:57:47.109Z",
+  "steps": [
+    "business sent team proposal via /collaboration/team; landed http://127.0.0.1:3000/collaboration/team?sent=1"
+  ],
+  "uBefore": {
+    "homeBanner": null,
+    "homeStat": 0,
+    "homeAttention": null,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 0,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 0,
+    "hubInvitationsCard": 0,
+    "hubNoInvitesCopy": true,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 0
+  },
+  "aBefore": {
+    "homeBanner": 1,
+    "homeStat": 1,
+    "homeAttention": 1,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 1,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 1,
+    "hubInvitationsCard": 1,
+    "hubNoInvitesCopy": false,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 1
+  },
+  "proposalId": "cmwqnitb001fb7do5hyqf8bdp",
+  "dbAfterSend": "sent / audit-r5iso01-a:invited, audit-r5iso01-u:invited",
+  "uInvited": {
+    "homeBanner": 1,
+    "homeStat": 1,
+    "homeAttention": 1,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 1,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 0,
+    "hubInvitationsCard": 1,
+    "hubNoInvitesCopy": true,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 0
+  },
+  "aInvited": {
+    "homeBanner": 2,
+    "homeStat": 2,
+    "homeAttention": 2,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 2,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 1,
+    "hubInvitationsCard": 2,
+    "hubNoInvitesCopy": false,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 1
+  },
+  "uPage": {
+    "pending": true,
+    "noFurtherAction": false,
+    "accept": 1,
+    "decline": 1
+  },
+  "uAfterAcceptCopy": "You accepted\n",
+  "uAcceptPersisted": true,
+  "uAfterAccept": {
+    "homeBanner": null,
+    "homeStat": 0,
+    "homeAttention": null,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 0,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 1,
+    "hubInvitationsCard": 0,
+    "hubNoInvitesCopy": true,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 0
+  },
+  "aPage": {
+    "pending": true,
+    "noFurtherAction": false,
+    "accept": 1
+  },
+  "aDeclineCopy": "Proposal status: declined",
+  "aAfterDecline": {
+    "homeBanner": 1,
+    "homeStat": 1,
+    "homeAttention": 1,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 1,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 2,
+    "hubInvitationsCard": 1,
+    "hubNoInvitesCopy": false,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 1
+  },
+  "dbFinal": "declined / audit-r5iso01-u:accepted, audit-r5iso01-a:declined",
+  "uSeesAfterTeammateDecline": "You accepted\n",
+  "uFinal": {
+    "homeBanner": null,
+    "homeStat": 0,
+    "homeAttention": null,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 0,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 1,
+    "hubInvitationsCard": 0,
+    "hubNoInvitesCopy": true,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 0
+  },
+  "uMobile": {
+    "homeBanner": null,
+    "homeStat": 0,
+    "homeAttention": null,
+    "homePayoutReminder": true,
+    "homeActive": 0,
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "My Profile": 0,
+      "Collaborations": 0,
+      "Contracts": 0,
+      "Earnings & Payouts": 0,
+      "Messages": 0,
+      "Settings": 0
+    },
+    "bell": 1,
+    "hubInvitationsCard": 0,
+    "hubNoInvitesCopy": true,
+    "hubActive": 0,
+    "hubPaymentReadiness": "Not ready",
+    "inboxOpenTasks": 0
+  },
+  "bizView": "Invited influencers / audit-r5iso01-u · creator / ACCEPTED · 50.00% / audit-r5iso01-a · creator / DECLINED · 50.00% / This invitation is closed. Send a new invitation to change who is included.",
+  "biz": {
+    "attentionText": "Nothing is waiting on you. New responses, signatures, and funding tasks appear here. /  / A / AUDIT r5iso01 Co A",
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "Company Profile": 0,
+      "Discover Creators": 0,
+      "Collaborations": 0,
+      "Contracts": 0,
+      "Analytics": 0,
+      "Team": 0,
+      "Billing & Plans": 0,
+      "Collaboration Payments": 0,
+      "Verification": 0,
+      "Settings": 0
+    },
+    "bell": 0
+  },
+  "finishedAt": "2026-11-21T16:58:13.824Z"
+}

@@ -1,0 +1,6 @@
+{
+  "check": "INV-A-053",
+  "steps": [],
+  "msg": "Active",
+  "db": "AUDITR5TEN:active:business_collaboration_fee:discovery:1000"
+}

@@ -1,0 +1,479 @@
+∞
+Influrios
+Home
+Discover
+Categories
+Collaboration
+For Businesses
+Pricing
+AR
+
+AUDIT r5iso01 Super
+
+audit.admin@example.com
+
+▾
+Create
+
+Signed in as Super Admin (audit.admin@example.com)
+
+Influrios Admin
+
+Super Admin · Platform Control
+
+MAIN MENU
+
+Dashboard
+Banners
+Example portraits
+Value proposition
+Homepage
+Collaboration landing
+Business landing
+FAQ
+Site stats
+Influencer cards
+
+MEMBERS & ACCESS
+
+Influencer accounts
+Business accounts
+All accounts
+Admin users
+Access levels
+Invitations
+Agency
+Guest gates
+
+SUBSCRIPTIONS
+
+Plans & features
+Billing activity
+
+COLLABORATIONS
+
+Deals
+Collaborations
+Marketplace listings
+Marketplace ledger
+Managed Matching
+Intelligence
+Collaboration ops
+Trust & Disputes
+
+PAYMENTS & FINANCE
+
+Payment settings
+Discount codes
+Meilisearch
+KYC
+Finance
+
+INTEGRATIONS & OPS
+
+AI pipelines
+Document signing
+Contracts
+Social networks
+Legal documents
+Short links
+Referrals
+Email
+Email templates
+Email health
+Jobs
+Taxonomy
+← View site
+Sign out
+Homepage
+
+Control section order/publish state, category tile imagery, collaboration match cards, and header/footer links. Banner copy, featured cards, and the value strip have dedicated editors linked below — every homepage surface is editable from admin.
+
+Public page mode saved.
+
+Public pages
+
+Off shows the demo set on the homepage, Discover, the collaboration landing, the business landing, and the influencer card page. On uses stored profiles, and an empty directory stays empty. The Featured Influencers strip and the homepage influencer card always use the demo set.
+
+Show live profiles
+Save
+Content editors
+
+Use these for copy, images, dimensions, and styles that belong to each homepage block.
+
+Banners & imagery
+
+Hero, sponsored, card promo, and closing CTA — titles, subtitles, CTAs, height scale, uploaded images.
+
+Featured influencer cards
+
+Carousel width, social/QR sizes, per-card visibility, order, and feature toggles.
+
+Value proposition strip
+
+Eyebrow, headlines, pillar cards, accents, and links under sponsored.
+
+Site stats / footer counters
+
+Audited numbers and tagline used in chrome (kept off homepage until published).
+
+Taxonomy
+
+Category names, active state, and synonyms that feed Discover and homepage category tiles.
+
+Section order & publish
+
+Order and enabled/draft state reshape the public homepage on the next request. Statistics stay off until numbers are audited.
+
+Hero
+hero
+Order
+Enabled
+Yes
+No
+Status
+Published
+Draft
+Save
+Categories
+categories
+Order
+Enabled
+Yes
+No
+Status
+Published
+Draft
+Save
+Featured influencers
+featured
+Order
+Enabled
+Yes
+No
+Status
+Published
+Draft
+Save
+Sponsored
+sponsored
+Order
+Enabled
+Yes
+No
+Status
+Published
+Draft
+Save
+Value proposition
+value_proposition
+Order
+Enabled
+Yes
+No
+Status
+Published
+Draft
+Save
+Collaboration matches
+collaboration
+Order
+Enabled
+Yes
+No
+Status
+Published
+Draft
+Save
+Influencer Card
+card_promo
+Order
+Enabled
+Yes
+No
+Status
+Published
+Draft
+Save
+Closing call to action
+cta
+Order
+Enabled
+Yes
+No
+Status
+Published
+Draft
+Save
+Statistics
+statistics
+Order
+Enabled
+Yes
+No
+Status
+Published
+Draft
+Save
+FAQ
+faq
+Order
+Enabled
+Yes
+No
+Status
+Published
+Draft
+Save
+Influencer identity labels
+influencer_identity
+Order
+Enabled
+Yes
+No
+Status
+Published
+Draft
+Save
+Categories row
+
+Title, CTA, and an uploaded image for each category. A category shows its specialty photo until an upload replaces it. Remove returns to that specialty photo.
+
+Section title
+CTA label
+CTA href
+Beauty
+beauty
+Upload image
+Fashion
+fashion
+Upload image
+Food
+food
+Upload image
+Home & Interior
+home-interior
+Upload image
+Hair
+hair
+Upload image
+Travel
+travel
+Upload image
+Fitness
+fitness
+Upload image
+Tech
+tech
+Upload image
+Lifestyle
+lifestyle
+Upload image
+Suppliers
+suppliers
+Upload image
+Parenting
+parenting
+Upload image
+Finance
+finance
+Upload image
+Gaming
+gaming
+Upload image
+Music
+music
+Upload image
+Comedy
+comedy
+Upload image
+Education
+education
+Upload image
+Sports
+sports
+Upload image
+Automotive
+automotive
+Upload image
+Pets
+pets
+Upload image
+Photography
+photography
+Upload image
+Art
+art
+Upload image
+Business
+business
+Upload image
+Health
+health
+Upload image
+Outdoors
+outdoors
+Upload image
+Sustainability
+sustainability
+Upload image
+Entertainment
+entertainment
+Upload image
+Dance
+dance
+Upload image
+Books
+books
+Upload image
+DIY
+diy
+Upload image
+Weddings
+weddings
+Upload image
+Real Estate
+real-estate
+Upload image
+Luxury
+luxury
+Upload image
+Science
+science
+Upload image
+News
+news
+Upload image
+Spirituality
+spirituality
+Upload image
+Save categories
+Collaboration matches row
+
+Cards in the homepage horizontal scroller and on the collaboration landing. Pair creator slugs, tags, and an uploaded cover. A pair without a cover stays a gradient. Empty trailing rows are ignored.
+
+Section title
+Subtitle
+CTA label
+CTA href
+
+MATCH 1
+
+Title
+Left creator
+—
+AUDIT r5 Unclaimed Profile
+AUDIT r5iso01 Influencer A
+AUDIT r5iso01 Influencer B
+AUDIT r5iso01 Unrelated
+Right creator
+—
+AUDIT r5 Unclaimed Profile
+AUDIT r5iso01 Influencer A
+AUDIT r5iso01 Influencer B
+AUDIT r5iso01 Unrelated
+Tags (comma-separated)
+Upload cover
+
+MATCH 2
+
+Title
+Left creator
+—
+AUDIT r5 Unclaimed Profile
+AUDIT r5iso01 Influencer A
+AUDIT r5iso01 Influencer B
+AUDIT r5iso01 Unrelated
+Right creator
+—
+AUDIT r5 Unclaimed Profile
+AUDIT r5iso01 Influencer A
+AUDIT r5iso01 Influencer B
+AUDIT r5iso01 Unrelated
+Tags (comma-separated)
+Upload cover
+Save collaboration matches
+Menus
+
+Header and platform-footer links shown in site chrome.
+
+FOOTER_PLATFORM
+Label
+URL
+Order
+Visible
+Yes
+No
+Save
+FOOTER_PLATFORM
+Label
+URL
+Order
+Visible
+Yes
+No
+Save
+FOOTER_PLATFORM
+Label
+URL
+Order
+Visible
+Yes
+No
+Save
+FOOTER_PLATFORM
+Label
+URL
+Order
+Visible
+Yes
+No
+Save
+HEADER
+Label
+URL
+Order
+Visible
+Yes
+No
+Save
+HEADER
+Label
+URL
+Order
+Visible
+Yes
+No
+Save
+HEADER
+Label
+URL
+Order
+Visible
+Yes
+No
+Save
+HEADER
+Label
+URL
+Order
+Visible
+Yes
+No
+Save
+HEADER
+Label
+URL
+Order
+Visible
+Yes
+No
+Save
+HEADER
+Label
+URL
+Order
+Visible
+Yes
+No
+Save

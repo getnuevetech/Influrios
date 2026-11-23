@@ -1,0 +1,27 @@
+{
+  "check": "INV-A-053-survey",
+  "steps": [],
+  "forms": [
+    {
+      "btn": "Save US",
+      "fields": "currency:select-one,minorDigits:text,collectionProviderCode:select-one,holdingProviderCode:select-one,payoutGatewayCode:select-one",
+      "hidden": "$ACTION_ID_40375b678733bd9aec867f3ffe529191e12b786215,countryCode"
+    },
+    {
+      "btn": "Add country",
+      "fields": "countryCode:select-one*,collectionProviderCode:select-one,kycModel:select-one*,payoutMethod:checkbox,payoutMethod:checkbox,payoutMethod:checkbox,payoutMethod:checkbox",
+      "hidden": "$ACTION_ID_407ad6acf2b5c431035c31eaf72a16bd1cbcdd6c71"
+    },
+    {
+      "btn": "Create group",
+      "fields": "name:text*,kycModel:select-one*,countryCode:select-multiple*",
+      "hidden": "$ACTION_ID_40827362806ba39d8766986360bb5a811c9fb3e0d1"
+    },
+    {
+      "btn": "Save route draft",
+      "fields": "countryCode:text,currency:text,environment:select-one,providerCode:text,bankPayoutControl:checkbox,releasesEnabled:checkbox,evidence:textarea",
+      "hidden": "$ACTION_ID_400dd2193f462ed2ec13db69fd1cc916761112c9da"
+    }
+  ],
+  "result": "survey"
+}

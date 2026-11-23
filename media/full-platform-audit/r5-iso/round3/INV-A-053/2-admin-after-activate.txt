@@ -1,0 +1,113 @@
+∞
+Influrios
+Home
+Discover
+Categories
+Collaboration
+For Businesses
+Pricing
+AR
+
+AUDIT r5iso01 Super
+
+audit.admin@example.com
+
+▾
+Create
+
+Signed in as Super Admin (audit.admin@example.com)
+
+Influrios Admin
+
+Super Admin · Platform Control
+
+MAIN MENU
+
+Dashboard
+Banners
+Example portraits
+Value proposition
+Homepage
+Collaboration landing
+Business landing
+FAQ
+Site stats
+Influencer cards
+
+MEMBERS & ACCESS
+
+Influencer accounts
+Business accounts
+All accounts
+Admin users
+Access levels
+Invitations
+Agency
+Guest gates
+
+SUBSCRIPTIONS
+
+Plans & features
+Billing activity
+
+COLLABORATIONS
+
+Deals
+Collaborations
+Marketplace listings
+Marketplace ledger
+Managed Matching
+Intelligence
+Collaboration ops
+Trust & Disputes
+
+PAYMENTS & FINANCE
+
+Payment settings
+Discount codes
+Meilisearch
+KYC
+Finance
+
+INTEGRATIONS & OPS
+
+AI pipelines
+Document signing
+Contracts
+Social networks
+Legal documents
+Short links
+Referrals
+Email
+Email templates
+Email health
+Jobs
+Taxonomy
+← View site
+Sign out
+Payment settings
+
+Providers and connections, account roles, country routes, fees, and tax settings. Saving a form does not start a charge or move money that is already with a provider.
+
+Providers
+Account roles
+Country routes
+Fees & policies
+Tax
+Discount codes
+Audit
+Discount codes
+
+Create and manage discount codes for subscriptions and collaboration fees. A code changes one charge. It does not move money.
+
++ Create code
+Status
+All statuses
+Active
+Draft
+Scheduled
+Paused
+Expired
+Exhausted
+CODE	PRODUCT CHARGE	VALUE	USES	STATUS
+AUDITR5TEN	Business collaboration fee	10%	0 of 100	Active

@@ -1,0 +1,15 @@
+{
+  "check": "INV-A-039",
+  "steps": [],
+  "controls": [
+    "∞ Influrios",
+    "Collaborations 1",
+    "1",
+    "← Back to list",
+    "Create the agreement",
+    "Open in Active collaborations",
+    "Withdraw"
+  ],
+  "chosen": null,
+  "result": "Blocked: no business transition control on detail (status ACCEPTED)"
+}

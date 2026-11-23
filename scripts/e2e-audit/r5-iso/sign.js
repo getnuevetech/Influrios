@@ -1,0 +1,33 @@
+const { chromium, BASE, U, session } = require('./lib'); const C = require('./capture'); const db = require('./db'); const fs = require('fs'); const { execSync } = require('child_process');
+const CID = 'cmwqop0oz00i87d9i2h5zf6dt'; const dir = process.env.EV + '/CONTRACT-CHAIN'; const r = { steps: [] };
+const mails = () => JSON.parse(execSync('curl -s 127.0.0.1:8025/api/v1/messages').toString()).messages;
+async function sign(p, who, name) {
+  await p.goto(`${BASE}/collaboration/contracts/${CID}`); await p.waitForLoadState('networkidle'); const t0 = await C.shot(p, dir, `5-${who}-before-sign`);
+  r[who + 'Tabs'] = await p.$$eval('[role=tab], a[href*="tab="]', as => as.map(a => a.innerText.trim()).filter(Boolean)).catch(() => []);
+  r[who + 'Fields'] = await p.$$eval('form input:not([type=hidden]), form canvas, form button', es => es.filter(e => e.offsetParent).map(e => `${e.tagName}:${e.name || ''}:${(e.innerText || e.placeholder || '').trim().slice(0, 30)}`));
+  const nameInput = p.locator('input[name*=name i]:visible').first(); await nameInput.fill(name);
+  const cv = p.locator('canvas:visible').first(); await cv.scrollIntoViewIfNeeded(); await p.waitForTimeout(300); const box = await cv.boundingBox();
+  await p.mouse.move(box.x + 20, box.y + box.height / 2); await p.mouse.down();
+  for (let i = 1; i <= 12; i++) await p.mouse.move(box.x + 20 + i * (box.width - 40) / 12, box.y + box.height / 2 + (i % 2 ? -20 : 20), { steps: 4 });
+  await p.mouse.up();
+  await p.mouse.move(box.x + 40, box.y + box.height - 25); await p.mouse.down(); await p.mouse.move(box.x + box.width - 40, box.y + box.height - 30, { steps: 12 }); await p.mouse.up();
+  r[who + 'InkHint'] = await p.locator('text=Draw your signature above to continue.').count();
+  for (const c of await p.locator('form input[type=checkbox]:visible').all()) await c.check().catch(() => {});
+  await C.shot(p, dir, `6-${who}-filled`);
+  const btn = p.locator('form button[type=submit]:visible').filter({ hasText: /sign/i }).first(); r[who + 'SignButton'] = await btn.innerText();
+  await Promise.all([p.waitForNavigation().catch(() => {}), btn.click()]); await p.waitForLoadState('networkidle');
+  const t = await C.shot(p, dir, `7-${who}-after-sign`); r[who + 'After'] = (t.match(/Status:[^\n]*/) || [null])[0];
+  r[who + 'Errors'] = (t.match(/[^\n]*(error|could not|required|invalid)[^\n]*/gi) || []).slice(0, 3);
+}
+(async () => { const b = await chromium.launch(); const biz = await session(b, U.bizA), inf = await session(b, U.infA); const m0 = mails().length;
+  await sign(biz.p, 'business', 'Dana Audit Business'); r.afterBiz = db(`select status from "ContractDocument" where id='${CID}'`);
+  await sign(inf.p, 'influencer', 'Amara Audit Influencer');
+  r.final = db(`select status||' funding='||coalesce("fundingId",'-')||' app='||coalesce("applicationId",'-') from "ContractDocument" where id='${CID}'`);
+  r.parties = db(`select role||':'||status from "ContractParty" where "documentId"='${CID}'`).split('\n');
+  r.mail = mails().slice(m0).map(x => x.created.slice(11, 19) + ' ' + x.to.join() + ' :: ' + x.subject);
+  r.appAfter = db(`select status||' collab='||coalesce("collaborationId",'-') from "MarketplaceApplication" where id='cmwqn2cdw00lr7do5nbnpcd87'`);
+  await biz.p.goto(`${BASE}/collaboration/contracts/${CID}`); await biz.p.waitForLoadState('networkidle'); await C.shot(biz.p, dir, '8-biz-signed-view');
+  r.bizCounts = await C.business(biz.p, dir, '9-biz-home');
+  await biz.p.goto(BASE + '/notifications'); await biz.p.waitForLoadState('networkidle'); const tn = await C.shot(biz.p, dir, '10-biz-notifications');
+  r.bizCentre = (tn.match(/All \(\d+\)[^\n]*\n[^\n]*\n[^\n]*\n[^\n]*\n[^\n]*/) || [''])[0].replace(/\n/g, ' | '); r.fundingNoticeInApp = /fund/i.test(tn.slice(tn.indexOf('Notification centre')));
+  fs.writeFileSync(dir + '/step-sign.json', JSON.stringify(r, null, 2)); console.log(JSON.stringify(r, null, 1)); await b.close(); })().catch(e => { console.error(e.message); fs.writeFileSync(dir + '/step-sign.json', JSON.stringify({ ...r, error: e.message }, null, 2)); process.exit(1); });

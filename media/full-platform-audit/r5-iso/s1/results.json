@@ -1,0 +1,192 @@
+{
+  "stamp": "s1d",
+  "ids": {
+    "S1-M1 Matrix walk": "cmwr24x2y00057dc4gqa9uvjv",
+    "S1-M2 Follow-up": "cmwr24x4v000c7dc4zog0z1jc",
+    "S1-M3 Decline": "cmwr24x5h000j7dc4l3kr8cpq",
+    "S1-M4 Concurrent withdraw": "cmwr24x62000q7dc4ceg8rt7a",
+    "S1-P1 Other influencer": "cmwr24x6n000x7dc4vvzotfu0"
+  },
+  "results": [
+    {
+      "id": "C0 baseline counts",
+      "ok": true,
+      "detail": "badge 4 · tab \"Invitations 4\" · {\"S1-M1 Matrix walk\":{\"home\":true,\"inbox\":true,\"hubListed\":true},\"S1-M2 Follow-up\":{\"home\":true,\"inbox\":true,\"hubListed\":true},\"S1-M3 Decline\":{\"home\":true,\"inbox\":true,\"hubListed\":true},\"S1-M4 Concurrent withdraw\":{\"home\":true,\"inbox\":true,\"hubListed\":true}}"
+    },
+    {
+      "id": "M1.1 popup case 1 actions",
+      "ok": true,
+      "detail": "Ask a question · Decline · I'm interested"
+    },
+    {
+      "id": "M1.2 question persisted (case 2)",
+      "ok": true,
+      "detail": "{\"status\":\"NEGOTIATING\",\"turn\":\"business\",\"interest\":false,\"open\":true}"
+    },
+    {
+      "id": "M1.3 popup reopens at case 2",
+      "ok": true,
+      "detail": "Decline"
+    },
+    {
+      "id": "M1.4 counts drop on every surface",
+      "ok": true,
+      "detail": "badge 4→3 · tab \"Invitations 3\" · M1 {\"home\":false,\"inbox\":false,\"hubListed\":true}"
+    },
+    {
+      "id": "M1.5 persists after re-login",
+      "ok": true,
+      "detail": "case 2"
+    },
+    {
+      "id": "M1.6 business: answer form, no Accept before interest",
+      "ok": true,
+      "detail": "Log out ·  · Send answer · Not a fit · Withdraw"
+    },
+    {
+      "id": "M1.7 answer persisted: turn → invitee (case 3)",
+      "ok": true,
+      "detail": "{\"status\":\"NEGOTIATING\",\"turn\":\"invitee\",\"interest\":false,\"open\":false}"
+    },
+    {
+      "id": "M1.8 counts return on every surface",
+      "ok": true,
+      "detail": "badge 4 · M1 {\"home\":true,\"inbox\":true,\"hubListed\":true}"
+    },
+    {
+      "id": "M1.9 home names the reply",
+      "ok": true,
+      "detail": "home attention detail"
+    },
+    {
+      "id": "M1.10 popup = direct route (case 3)",
+      "ok": true,
+      "detail": "popup [Ask another question · Decline · I'm interested] direct [Ask another question · Decline · I'm interested]"
+    },
+    {
+      "id": "M1.11 direct route never offers Accept/Withdraw to invitee",
+      "ok": true,
+      "detail": "Log out ·  · Decline · Ask another question · I'm interested"
+    },
+    {
+      "id": "M1.12 interest after a question (P1-D1: NEGOTIATING → RESPONDED)",
+      "ok": true,
+      "detail": "{\"status\":\"RESPONDED\",\"turn\":\"business\",\"interest\":true,\"open\":false}"
+    },
+    {
+      "id": "M1.13 stale submission rejected, stored once",
+      "ok": true,
+      "detail": "events=1"
+    },
+    {
+      "id": "M1.14 business can Accept only now",
+      "ok": true,
+      "detail": "Log out ·  · Accept · Not a fit · Withdraw"
+    },
+    {
+      "id": "M2.1 case 4 actions",
+      "ok": true,
+      "detail": "Ask a follow-up question · Decline"
+    },
+    {
+      "id": "M2.2 follow-up: case 5, turn stays business",
+      "ok": true,
+      "detail": "{\"status\":\"NEGOTIATING\",\"turn\":\"business\",\"interest\":true,\"open\":true} [Decline]"
+    },
+    {
+      "id": "M2.3 answer after interest: case 6, no task returns",
+      "ok": true,
+      "detail": "{\"status\":\"NEGOTIATING\",\"turn\":\"business\",\"interest\":true,\"open\":false} · {\"home\":false,\"inbox\":false,\"hubListed\":true} · badge 2"
+    },
+    {
+      "id": "M2.4 case 6 actions",
+      "ok": true,
+      "detail": "Ask a follow-up question · Decline"
+    },
+    {
+      "id": "M3.1 direct route case 1 matches popup",
+      "ok": true,
+      "detail": "Ask a question · Decline · I'm interested"
+    },
+    {
+      "id": "M3.2 decline closes, turn none",
+      "ok": true,
+      "detail": "{\"status\":\"DECLINED\",\"turn\":\"none\",\"interest\":false,\"open\":false}"
+    },
+    {
+      "id": "M4.1 reply after withdrawal rejected, not overwritten",
+      "ok": true,
+      "detail": "{\"status\":\"WITHDRAWN\",\"turn\":\"none\",\"interest\":false,\"open\":false}"
+    },
+    {
+      "id": "P.1 other influencer's invitation not viewable",
+      "ok": true,
+      "detail": "http://127.0.0.1:3000/collaboration/hub?error=You%20cannot%20view%20that%20application."
+    },
+    {
+      "id": "P.2 influencer cannot respond to another influencer's invitation",
+      "ok": true,
+      "detail": "{\"status\":\"REQUESTED\",\"turn\":\"invitee\",\"interest\":false,\"open\":false} · http://127.0.0.1:3000/collaboration/hub?view=collaborations&tab=invitations&error=You%20cannot%20respond%20to%20this%20invitation."
+    },
+    {
+      "id": "P.3 other business cannot view",
+      "ok": true,
+      "detail": "http://127.0.0.1:3000/business/home"
+    },
+    {
+      "id": "P.4 other business cannot answer",
+      "ok": true,
+      "detail": "http://127.0.0.1:3000/business/home"
+    },
+    {
+      "id": "P.5 other business cannot accept",
+      "ok": true,
+      "detail": "http://127.0.0.1:3000/business/home"
+    },
+    {
+      "id": "P.6 invitee cannot accept (server, P1-AUD-10)",
+      "ok": true,
+      "detail": "http://127.0.0.1:3000/collaboration/applications/cmwr24x2y00057dc4gqa9uvjv?error=Open%20this%20application%20and%20review%20the%20details%20before%20taking%20that%20action."
+    },
+    {
+      "id": "P.7 influencer cannot answer as business",
+      "ok": true,
+      "detail": "http://127.0.0.1:3000/collaboration/applications/cmwr24x4v000c7dc4zog0z1jc?error=You%20cannot%20manage%20this%20invitation."
+    },
+    {
+      "id": "P.8 signed-out direct route → login with return to item",
+      "ok": true,
+      "detail": "http://127.0.0.1:3000/login?next=%2Fcollaboration%2Fapplications%2Fcmwr24x2y00057dc4gqa9uvjv"
+    },
+    {
+      "id": "P.8b after sign-in the user lands on the item",
+      "ok": true,
+      "detail": "http://127.0.0.1:3000/collaboration/applications/cmwr24x2y00057dc4gqa9uvjv"
+    },
+    {
+      "id": "P.9 signed-out submission refused → login with return to item",
+      "ok": true,
+      "detail": "http://127.0.0.1:3000/login?next=%2Fcollaboration%2Fapplications%2Fcmwr24x2y00057dc4gqa9uvjv"
+    },
+    {
+      "id": "MOB.1 mobile popup = desktop (case 6)",
+      "ok": true,
+      "detail": "Ask a follow-up question · Decline"
+    },
+    {
+      "id": "MOB.2 mobile home shows no task for business-turn invitations",
+      "ok": true,
+      "detail": "M1 (case 4) and M2 (case 6) listed in hub only"
+    },
+    {
+      "id": "MOB.3 hub invitations: no horizontal page scroll at 390",
+      "ok": true,
+      "detail": "hub scrollWidth 390 · (observation, S9 scope: /creator scrollWidth 562)"
+    },
+    {
+      "id": "C1 final counts consistent",
+      "ok": true,
+      "detail": "badge 4→0 · {\"S1-M1 Matrix walk\":{\"home\":false,\"inbox\":false,\"hubListed\":true},\"S1-M2 Follow-up\":{\"home\":false,\"inbox\":false,\"hubListed\":true},\"S1-M3 Decline\":{\"home\":false,\"inbox\":false,\"hubListed\":false},\"S1-M4 Concurrent withdraw\":{\"home\":false,\"inbox\":false,\"hubListed\":false}}"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "ok": true,
+  "message": "SMTP accepted the claim invitation template (250 2.0.0 Ok: queued as 00b7gNazvsuRCr1Bh5LeE0).",
+  "mailpitTotal": 2,
+  "sample": {
+    "ID": "00b7gNazvsuRCr1Bh5LeE0",
+    "MessageID": "6Cc2VaCoCtldbBfDyewbkT@mailpit",
+    "Read": false,
+    "From": {
+      "Name": "",
+      "Address": "noreply@audit.local"
+    },
+    "To": [
+      {
+        "Name": "",
+        "Address": "audit.r3pr12vx.influencer-a@example.com"
+      }
+    ],
+    "Cc": null,
+    "Bcc": null,
+    "ReplyTo": null,
+    "Subject": "Preview recipient, your Influrios profile is ready",
+    "Created": "2026-11-21T01:52:09.235Z",
+    "Username": "",
+    "Tags": [],
+    "Size": 602,
+    "Attachments": 0,
+    "Snippet": "Hi Preview recipient, we prepared your Influrios profile. Open http://127.0.0.1:3000 before preview window to claim preview profile."
+  }
+}

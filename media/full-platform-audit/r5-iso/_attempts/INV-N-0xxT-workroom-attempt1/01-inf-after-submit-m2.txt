@@ -1,0 +1,56 @@
+∞
+Influrios
+Dashboard
+Action inbox
+My Profile
+Collaborations
+Contracts
+Earnings & Payouts
+Messages
+Settings
+Starter
+Billing & Plan
+Log out
+
+© 2026 Influrios. All rights reserved.
+
+2
+A
+
+AUDIT r5iso01 Influencer B
+
+Influencer
+
+Collaborations / Workspace
+
+AUDIT r5 Workroom notices
+
+AUDIT r5iso01 Co A · Funds held
+
+Gross compensation
+$800.00
+Platform fee
+$0.00
+Net payout
+$800.00
+Milestones
+Files
+Brief
+Messages
+View payments
+
+Version submitted. The review window has started.
+
+Saved as https://example.com/audit-r5-m2-v1
+
+Milestone	Amount	Work status	Payment	Action
+AUDIT r5 Milestone 1	$400.00	In review · V1	
+
+—
+
+	View details
+AUDIT r5 Milestone 2	$400.00	In review · V1	
+
+—
+
+	View details

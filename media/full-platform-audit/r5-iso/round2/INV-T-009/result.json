@@ -1,0 +1,16 @@
+{
+  "check": "INV-T-009",
+  "panels": {
+    "Overview": "content shown",
+    "Document": "content shown",
+    "Signers": "content shown",
+    "Activity": "content shown"
+  },
+  "tabs": [
+    "Overview",
+    "Document",
+    "Signers",
+    "Activity"
+  ],
+  "result": "Pass"
+}

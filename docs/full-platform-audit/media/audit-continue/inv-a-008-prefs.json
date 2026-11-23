@@ -1,0 +1,16 @@
+{
+  "prefs1": {
+    "email": "audit.r4cont01.influencer-a@example.com",
+    "collaborations": false,
+    "billing": true,
+    "outreach": false,
+    "productNews": true
+  },
+  "prefs2": {
+    "email": "audit.r4cont01.influencer-a@example.com",
+    "collaborations": true,
+    "billing": true,
+    "outreach": false,
+    "productNews": true
+  }
+}

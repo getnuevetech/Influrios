@@ -1,0 +1,25 @@
+const { execSync } = require('child_process');
+const cron = () => execSync(`curl -s -X POST -H "Authorization: Bearer ${process.env.CRON_SECRET}" http://127.0.0.1:3000/api/cron/sweeps`).toString();
+require('./runner').run('INV-DC-014-sweep', async ({ b, dir, res, BASE, U, session, C, db, step }) => {
+  const id = 'cmwqn84oz00zp7do5zjafig2u';
+  const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } }); const a = await ctx.newPage();
+  await a.goto(BASE + '/admin/login'); await a.fill('input[name=email]', 'audit.admin@example.com'); await a.fill('input[name=password]', 'AuditLocalPass!2026');
+  await Promise.all([a.waitForNavigation().catch(() => {}), a.click('button[type=submit]')]);
+  await a.goto(BASE + '/admin/collaboration-ops'); await a.waitForLoadState('networkidle'); await C.shot(a, dir, '1-admin-ops-before');
+  await a.locator('details:has(select[name=applicationExpireMode]) > summary').first().click(); await a.waitForTimeout(300);
+  await a.selectOption('select[name=applicationExpireMode]', 'auto'); await a.fill('input[name=applicationExpireAfterDays]', '1');
+  await a.fill('input[name=stepUpPassword]', 'AuditLocalPass!2026');
+  await Promise.all([a.waitForNavigation().catch(() => {}), a.click('button:has-text("Save control plane")')]);
+  await a.waitForLoadState('networkidle'); await C.shot(a, dir, '2-admin-ops-saved'); res.plane = db(`select value::text from "PlatformSetting" where key like '%control%'`).slice(0, 400); step('admin set application expiry: Auto after 1 day (UI, password step-up)');
+  db(`update "MarketplaceApplication" set "createdAt" = now() - interval '2 days' where id='${id}'`); step('TIME-TRAVEL fixture: createdAt set to now()-2d');
+  res.sweep = cron(); step('POST /api/cron/sweeps');
+  res.status = db(`select status from "MarketplaceApplication" where id='${id}'`);
+  res.sweepRerun = cron(); res.events = db(`select coalesce("fromStatus",'')||'>'||"toStatus" from "MarketplaceApplicationEvent" where "applicationId"='${id}' order by "createdAt"`);
+  const inf = await session(b, U.infB);
+  res.after = await C.influencer(inf.p, dir, '3-after-expire');
+  res.afterReload = await C.influencer(inf.p, dir, '4-after-reload');
+  const mob = await session(b, U.infB, true); res.afterMobile = await C.influencer(mob.p, dir, '5-after-mobile');
+  await inf.p.goto(BASE + '/creator/notifications'); await inf.p.waitForLoadState('networkidle'); const t = await C.shot(inf.p, dir, '6-notifications');
+  res.notificationCentre = (t.match(/All \(\d+\)[^\n]*\n[^\n]*\n[^\n]*/) || [''])[0].replace(/\n/g, ' | ');
+  res.mail = JSON.parse(execSync('curl -s 127.0.0.1:8025/api/v1/messages').toString()).messages.slice(-2).map(m => m.created.slice(11, 19) + ' ' + m.subject);
+});

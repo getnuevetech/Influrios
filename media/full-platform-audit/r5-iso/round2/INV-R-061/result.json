@@ -1,0 +1,12 @@
+{
+  "check": "INV-R-061",
+  "steps": [],
+  "http": 200,
+  "hasTitle": true,
+  "controls": [
+    "Accept",
+    "Decline",
+    "Withdraw"
+  ],
+  "result": "Pass"
+}

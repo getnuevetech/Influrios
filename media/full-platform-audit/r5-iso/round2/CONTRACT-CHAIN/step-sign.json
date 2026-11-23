@@ -1,0 +1,80 @@
+{
+  "steps": [],
+  "businessTabs": [],
+  "businessFields": [
+    "BUTTON::Log out",
+    "INPUT:q:Search creators, campaigns, or",
+    "BUTTON::",
+    "INPUT:typedName:Type your full legal name",
+    "BUTTON::Clear pad",
+    "CANVAS::",
+    "INPUT::",
+    "INPUT:agree:",
+    "BUTTON::Sign agreement now",
+    "BUTTON::Send on this contract"
+  ],
+  "businessInkHint": 0,
+  "businessSignButton": "Sign agreement now",
+  "businessAfter": "Status: sent · Influrios in-app · 1/2 signed",
+  "businessErrors": [
+    "No retroactive fee change. The fee rule recorded when this Agreement becomes binding controls this collaboration. A later Admin or platform pricing change will not retroactively alter the fee terms of this Agreement unless all required parties agree to an amendment.",
+    "Each Influencer is responsible for making clear and conspicuous advertising, sponsorship or material-connection disclosures required by applicable law and the rules of the social platform on which content is published. The Business will not instruct an Influencer to conceal a required disclosure.",
+    "- Influencers must use campaign-required disclosures, hashtags, labels or platform tools."
+  ],
+  "afterBiz": "sent",
+  "influencerTabs": [
+    "Starter\nBilling & Plan"
+  ],
+  "influencerFields": [
+    "BUTTON::Log out",
+    "INPUT:q:Search opportunities, brands, ",
+    "BUTTON::",
+    "INPUT:typedName:Type your full legal name",
+    "BUTTON::Clear pad",
+    "CANVAS::",
+    "INPUT::",
+    "INPUT:agree:",
+    "BUTTON::Sign agreement now",
+    "BUTTON::Send on this contract"
+  ],
+  "influencerInkHint": 0,
+  "influencerSignButton": "Sign agreement now",
+  "influencerAfter": "Status: signed · Influrios in-app · 2/2 signed",
+  "influencerErrors": [
+    "No retroactive fee change. The fee rule recorded when this Agreement becomes binding controls this collaboration. A later Admin or platform pricing change will not retroactively alter the fee terms of this Agreement unless all required parties agree to an amendment.",
+    "Each Influencer is responsible for making clear and conspicuous advertising, sponsorship or material-connection disclosures required by applicable law and the rules of the social platform on which content is published. The Business will not instruct an Influencer to conceal a required disclosure.",
+    "- Influencers must use campaign-required disclosures, hashtags, labels or platform tools."
+  ],
+  "final": "signed funding=- app=cmwqn2cdw00lr7do5nbnpcd87",
+  "parties": [
+    "business:signed",
+    "creator:signed"
+  ],
+  "mail": [
+    "17:32:40 <audit.r5iso01.influencer-a@example.com> :: Signature progress on “AUDIT r5 DC-010 Launch”",
+    "17:32:40 <audit.r5iso01.influencer-a@example.com> :: Still needed: your signature on “AUDIT r5 DC-010 Launch”",
+    "17:32:43 <audit.r5iso01.business-a@example.com> :: Fully signed: “AUDIT r5 DC-010 Launch”",
+    "17:32:43 <audit.r5iso01.influencer-a@example.com> :: Fully signed: “AUDIT r5 DC-010 Launch”"
+  ],
+  "appAfter": "ACCEPTED collab=-",
+  "bizCounts": {
+    "attentionText": "Review a submission /  / AUDIT r5 Workroom notices · audit-r5iso01-b / ",
+    "sidebar": {
+      "Dashboard": 0,
+      "Action inbox": 0,
+      "Company Profile": 0,
+      "Discover Creators": 0,
+      "Collaborations": 1,
+      "Contracts": 0,
+      "Analytics": 0,
+      "Team": 0,
+      "Billing & Plans": 0,
+      "Collaboration Payments": 0,
+      "Verification": 0,
+      "Settings": 0
+    },
+    "bell": 2
+  },
+  "bizCentre": "All (2) | Action required (2) | Invitations (0) | Work (2) | Payments (0)",
+  "fundingNoticeInApp": false
+}

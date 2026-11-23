@@ -1,0 +1,154 @@
+{
+  "taxonomyAdd": true,
+  "taxonomyDialog": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEm",
+  "guestsToggles": 0,
+  "plansDialog": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEm",
+  "accountDialog": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocument signing\nContracts\nSocial networks\nLegal documents\nShort links\nReferrals\nEmail\nEmail templates\nEm",
+  "templateIdsFound": [
+    "account.verify",
+    "account.card_verify",
+    "account.reset",
+    "account.admin_setup",
+    "account.claim",
+    "account.claim_followup",
+    "account.welcome_influencer",
+    "account.welcome_business",
+    "account.password_changed",
+    "account.smtp_test",
+    "invite.collaboration",
+    "invite.private_campaign",
+    "invite.accepted",
+    "invite.declined",
+    "invite.team_sent",
+    "invite.team_accepted",
+    "invite.team_declined",
+    "invite.team_expired",
+    "contract.sign",
+    "contract.progress",
+    "contract.reminder",
+    "contract.signed_business",
+    "contract.signed_influencer",
+    "contract.declined",
+    "contract.voided",
+    "contract.message",
+    "contract.quote_expiring",
+    "contract.change_requested",
+    "contract.change_accepted",
+    "funding.required",
+    "funding.open",
+    "funding.processing",
+    "funding.confirmed_business",
+    "funding.confirmed_influencer",
+    "funding.failed",
+    "funding.expired",
+    "milestone.submitted",
+    "milestone.review_reminder",
+    "milestone.revision",
+    "milestone.approved",
+    "milestone.auto_approved",
+    "payout.requested",
+    "payout.requested_business",
+    "payout.confirmed",
+    "payout.confirmed_business",
+    "payout.failed",
+    "payout.failed_admin",
+    "payout.retry",
+    "payout.returned",
+    "payout.returned_business",
+    "payout.returned_admin",
+    "payout.ready",
+    "dispute.opened",
+    "dispute.opened_admin",
+    "dispute.resolved",
+    "dispute.response_reminder",
+    "dispute.overdue_admin",
+    "cancellation.review",
+    "cancellation.request_received",
+    "cancellation.review_admin",
+    "cancellation.waiting_payout",
+    "cancellation.completed",
+    "refund.processing",
+    "refund.completed_business",
+    "refund.completed_influencer",
+    "payment.risk",
+    "payment.activation_receipt",
+    "ops.relationship_claim",
+    "ops.route_blocked",
+    "ops.route_blocked_admin",
+    "ops.stale_funding",
+    "ops.ledger_mismatch",
+    "ops.hold_warning",
+    "billing.paid",
+    "billing.failed",
+    "billing.renewal",
+    "billing.cancel_scheduled",
+    "billing.ended",
+    "marketing.broadcast"
+  ],
+  "templateIdCount": 79,
+  "mailTestJobs": [
+    "mail_test SUCCEEDED · 1 ATTEMPTS 2026-11-20T22:37:08.101Z collab_notification SUCCEEDED · 1 ATTEMPTS 2026-11-20T05:08:28.594",
+    "mail_test SUCCEEDED · 1 ATTEMPTS 2026-11-18T19:16:47.436Z scheduled_release_sweep SUCCEEDED · 1 ATTEMPTS 2026-11-13T22:54:49"
+  ],
+  "cronNote": true,
+  "feesSnippet": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nSA\n\nSuper Admin\n\[EMAIL]\n\n▾\nCreate\n\nSigned in as Super Admin ([EMAIL])\n\nInflurios Admin\n\nSuper Admin · Platform Control\n\nMAIN MENU\n\nDashboard\nBanners\nExample portraits\nValue proposition\nHomepage\nCollaboration landing\nBusiness landing\nFAQ\nSite stats\nInfluencer cards\n\nMEMBERS & ACCESS\n\nInfluencer accounts\nBusiness accounts\nAll accounts\nAdmin users\nAccess levels\nInvitations\nAgency\nGuest gates\n\nSUBSCRIPTIONS\n\nPlans & features\nBilling activity\n\nCOLLABORATIONS\n\nDeals\nCollaborations\nMarketplace listings\nMarketplace ledger\nManaged Matching\nIntelligence\nCollaboration ops\nTrust & Disputes\n\nPAYMENTS & FINANCE\n\nPayment settings\nDiscount codes\nMeilisearch\nKYC\nFinance\n\nINTEGRATIONS & OPS\n\nAI pipelines\nDocum",
+  "legalExport": true,
+  "bizCollabUrl": "/collaboration/business",
+  "bizCollabSnippet": "∞\nInflurios\nDashboard\nAction inbox\nCompany Profile\nDiscover Creators\nCollaborations\n2\nContracts\nAnalytics\nTeam\nBilling & Plans\nCollaboration Payments\nVerification\nSettings\nLog out\n\n© 2026 Influrios. All rights reserved.\n\n2\nA\n\nAgboola Olomola\n\nABC Holdings\n\nFunded to date $4,830\n\nCollaborations\n+ New request\nRequests\nOpportunities\nActive Collaborations\nAll requests\nOpen\nDrafts\nPublished\nInvite only\nClosed\nRequest\tStatus\tVisibility\tResponses\tUpdated\tActions\nFashion to Tech Campaign and Onboarding\tOpen\tPublic\tNo invitations\t2026-11-18\t\nView\n···\n\n4th Test Campaign After Pay Engine Rebuilt\tClosed\tPublic\t3 invited · 1 accepted\t2026-11-09\t\nView\nOpen collaboration\n···\n\n3rd Testing Colabs\tClosed\tPublic\t3 invited · 1 accepted\t2026-11-09\t\nView\nOpen collaboration\n···\n\n2nd Collaboration Test\tClosed\tPublic\t4 invited · 1 accepted\t2026-11-09\t\nView\nOpen collaboration\n···\n\nFirst Campaign Test\tOpen\tPublic\t3 invited\t2026-11-08\t\nView\n···\n\nFree Tech Support\tClosed\tInvite only\tNo invitations\t2026-10-14\t\nView",
+  "bizWorkLinks": 0,
+  "infInboxTasks": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nAg\nLog out\n∞\nInflurios\nDashboard\nAction inbox\nMy Profile\nCollaborations\n1\nContracts\nEarnings & Payouts\n1\nMessages\nSettings\nPlus\nBilling & Plan\nLog out\n\n© 2026 Influrios. All rights reserved.\n\n2\nA\n\nAg Olomola\n\nInfluencer\n\nNeeds your attention\n\nOpening a notification does not complete the task.\n\n4 open tasks\n\nAssigned to me\nWaiting on others\nResolved\nAll types\nDelivery\nContract\nFunding\nPayout\nInvitation\nApply\n\n4th Test Campaign After Pay Engine Rebuilt\n\nDelivery due\n\nABC Holdings · No deadline · Open\n\nOpen workspace\n\n3rd Testing Colabs\n\nDelivery due\n\nABC Holdings · No deadline · Open\n\nOpen workspace\n\n3rd Testing Colabs\n\nDelivery due\n\nABC Holdings · No deadline · Open\n\nOpen workspace\n\n3rd Testing Colabs\n\nDelivery due\n\nABC Holdings · No deadline · Open\n\nOpen workspace\n\nOne task per required action. Complete the action to resolve it. Links stay in this account.\n\nNotifications\n\n2nd Collaboration Test\n\nYour signature is needed\n\nRead\n\nThis is a read notification. It confirms a message was sent. No action is required.\n\nOpen\n\nFree Tech Support\n\nNew campaign invitation\n\nRead\n\nThis is a read notification. It confirms a m",
+  "infCollab": {
+    "url": "/collaboration/hub",
+    "snippet": "∞\nInflurios\nDashboard\nAction inbox\nMy Profile\nCollaborations\n1\nContracts\nEarnings & Payouts\n1\nMessages\nSettings\nPlus\nBilling & Plan\nLog out\n\n© 2026 Influrios. All rights reserved.\n\n2\nA\n\nAg Olomola\n\nInfluencer\n\nInvited\nDiscover\nApplications\nOpportunities\n\nDiscover campaigns and influencer openings that fit you.\n\nMatching preferences\nSearch\nSpecialty\nSpecialty\nTech\nDesign\nBeauty\nFood\nTravel\nFitness\nFashion\nLifestyle\nsupply\nPlatform\nPlatform\nInstagram\nTikTok\nYouTube\nX\nBudget\nBudget\n5000\n4200\n3500\n11000\n10000\nCollaboration type\nCollaboration type\nBrand campaigns\nInfluencer openings\nClear filters\nAll\nTech\nDesign\nBeauty\nFood\nTravel\nFitness\nFashion\nLifestyle\nsupply\nRecommended\nBrand campaigns\nInfluencer openings\nSaved\n0\nRecommended for you\n0 opportunities\nBest match\nName\nSort\n\nCampaigns below are"
+  },
+  "publicNotifications": {
+    "url": "/notifications",
+    "snippet": "Notification centre\n\nUnread and action required are different. Opening a notice marks it read and does not complete the task.\n\nAll (9)\nAction required (9)\nInvitations (6)\nWork (3)\nPayments (0)\nCOUNTERPARTY\n2nd Collaboration Test\nSignature · Your signature is needed\nRead\nSignature\n12 days ago\nOpen\nBUSINESS\nFree Tech Support\nInvitation · New campaign invitation\nRead\nInvitation\n12 days ago\nOpen\nBUSIN"
+  },
+  "apiHealth": {
+    "ok": true,
+    "status": "ok",
+    "checks": {
+      "web": {
+        "ok": true
+      },
+      "db": {
+        "ok": true,
+        "latencyMs": 1
+      }
+    },
+    "secrets": {
+      "authConfigured": true
+    },
+    "revision": "40b6288a84ce4e97e5c7bfe97243cfe318eda761",
+    "ts": "2026-11-20T22:39:35.743Z"
+  },
+  "legalDoc": {
+    "status": 200,
+    "ok": true
+  },
+  "shortResolve": {
+    "status": 404,
+    "body": "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\" />\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n  <title>Unknown short domain · Influrios</title>\n  <style>\n"
+  },
+  "agencyView_clients": {
+    "url": "/agency?view=clients",
+    "not404": true,
+    "head": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nLog in\nJoin Influrios →\n\nAGENCY\n\nAgency\n\nMulti-creator roster, client campaigns, and joint portfolio case studies — Agency pla"
+  },
+  "agencyView_roster": {
+    "url": "/agency?view=roster",
+    "not404": true,
+    "head": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nLog in\nJoin Influrios →\n\nAGENCY\n\nAgency\n\nMulti-creator roster, client campaigns, and joint portfolio case studies — Agency pla"
+  },
+  "agencyView_campaigns": {
+    "url": "/agency?view=campaigns",
+    "not404": true,
+    "head": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nLog in\nJoin Influrios →\n\nAGENCY\n\nAgency\n\nMulti-creator roster, client campaigns, and joint portfolio case studies — Agency pla"
+  },
+  "agencyView_team": {
+    "url": "/agency?view=team",
+    "not404": true,
+    "head": "∞\nInflurios\nHome\nDiscover\nCategories\nCollaboration\nFor Businesses\nPricing\nLog in\nJoin Influrios →\n\nAGENCY\n\nAgency\n\nMulti-creator roster, client campaigns, and joint portfolio case studies — Agency pla"
+  }
+}
