@@ -41,6 +41,12 @@ function fail(message: string): never {
   redirect(`/payments?error=${encodeURIComponent(message)}`);
 }
 
+/** Dispute forms posted from the workroom go back there; older forms keep using /payments. */
+function workroomReturn(formData: FormData, fundingId: string) {
+  const raw = String(formData.get("returnTo") ?? "");
+  return raw === `/collaboration/work/${fundingId}` ? raw : null;
+}
+
 function failWork(fundingId: string, message: string): never {
   redirect(`/collaboration/work/${fundingId}?error=${encodeURIComponent(message)}`);
 }
@@ -435,6 +441,7 @@ export async function actionAddEvidence(formData: FormData) {
   const fundingId = String(formData.get("dealId") ?? "");
   const access = await assertFundingAccess(account, fundingId);
   if (!access.ok) fail(access.error);
+  const back = workroomReturn(formData, access.funding.id);
   const result = await addDisputeEvidence({
     disputeId: String(formData.get("disputeId") ?? ""),
     fundingId: access.funding.id,
@@ -442,10 +449,17 @@ export async function actionAddEvidence(formData: FormData) {
     body: String(formData.get("body") ?? ""),
     url: String(formData.get("url") ?? ""),
   });
-  if (!result.ok) fail(result.error);
+  if (!result.ok) {
+    if (back) redirect(`${back}?error=${encodeURIComponent(result.error)}#problems`);
+    fail(result.error);
+  }
   revalidatePath("/payments");
   revalidatePath("/dashboard");
   revalidatePath("/admin/trust");
+  if (back) {
+    revalidatePath(back);
+    redirect(`${back}?evidence=1#problems`);
+  }
   redirect("/payments?evidence=1");
 }
 
@@ -533,6 +547,7 @@ export async function actionOpenDispute(formData: FormData) {
   const fundingId = String(formData.get("dealId") ?? "");
   const access = await assertFundingAccess(account, fundingId);
   if (!access.ok) fail(access.error);
+  const back = workroomReturn(formData, access.funding.id);
   const result = await openMilestoneDispute({
     fundingId: access.funding.id,
     milestoneId: String(formData.get("milestoneId") ?? ""),
@@ -540,9 +555,16 @@ export async function actionOpenDispute(formData: FormData) {
     reasonId: String(formData.get("reasonId") ?? ""),
     details: String(formData.get("details") ?? ""),
   });
-  if (!result.ok) fail(result.error);
+  if (!result.ok) {
+    if (back) redirect(`${back}?error=${encodeURIComponent(result.error)}#problems`);
+    fail(result.error);
+  }
   revalidatePath("/payments");
   revalidatePath("/admin/trust");
   revalidatePath("/trust");
+  if (back) {
+    revalidatePath(back);
+    redirect(`${back}?disputed=1#problems`);
+  }
   redirect("/payments?disputed=1");
 }

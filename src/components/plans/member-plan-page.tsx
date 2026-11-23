@@ -19,6 +19,16 @@ export type BillingHistoryRow = {
   status: string;
 };
 
+export type InvoiceRow = {
+  id: string;
+  number: string;
+  when: string;
+  amount: string;
+  status: string;
+  pdfUrl: string | null;
+  hostedUrl: string | null;
+};
+
 export function MemberPlanPage({
   audience,
   eyebrow,
@@ -41,6 +51,7 @@ export function MemberPlanPage({
   error,
   notice,
   payout,
+  invoices = [],
   taxByCode = {},
   countries = [],
   billingCountry = "",
@@ -68,6 +79,7 @@ export function MemberPlanPage({
   error?: string;
   notice?: string;
   payout?: ReactNode;
+  invoices?: InvoiceRow[];
   taxByCode?: Record<string, PlanTaxGate>;
   countries?: { code: string; name: string }[];
   billingCountry?: string;
@@ -275,6 +287,35 @@ export function MemberPlanPage({
             ))}
           </ul>
         </div>
+        {invoices.length > 0 ? (
+          <div className="rounded-2xl border border-[#E6ECF7] bg-white px-4 py-3">
+            <p className="font-semibold">Invoices</p>
+            <ul className="mt-2 space-y-2 text-sm">
+              {invoices.map((invoice) => (
+                <li key={invoice.id} className="flex flex-wrap items-center justify-between gap-3">
+                  <span>
+                    {invoice.number} · {invoice.amount}
+                    <span className="mt-0.5 block text-xs text-muted">
+                      {invoice.when} · {invoice.status === "paid" ? "Paid" : invoice.status === "open" ? "Due" : invoice.status}
+                    </span>
+                  </span>
+                  <span className="flex gap-3 text-xs font-semibold">
+                    {invoice.pdfUrl ? (
+                      <a href={invoice.pdfUrl} target="_blank" rel="noreferrer noopener" className="text-violet hover:underline">
+                        Download PDF
+                      </a>
+                    ) : null}
+                    {invoice.hostedUrl ? (
+                      <a href={invoice.hostedUrl} target="_blank" rel="noreferrer noopener" className="text-violet hover:underline">
+                        {invoice.status === "open" ? "Pay invoice" : "View"}
+                      </a>
+                    ) : null}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         {payout ? <div className="text-sm text-muted">{payout}</div> : null}
       </section>
     </div>

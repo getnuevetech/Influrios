@@ -804,6 +804,50 @@ async function stripeForm(path: string, secret: string, body: URLSearchParams) {
   return payload as { url?: string } | null;
 }
 
+export type MemberInvoice = {
+  id: string;
+  number: string;
+  when: string;
+  amount: string;
+  status: string;
+  pdfUrl: string | null;
+  hostedUrl: string | null;
+};
+
+/** A member's Stripe invoices (newest first) with Stripe's own PDF and hosted links. Empty when Stripe is not reachable. */
+export async function listCustomerInvoices(customerId: string, limit = 12): Promise<MemberInvoice[]> {
+  const customer = stripeCustomerId(customerId);
+  if (!customer) return [];
+  const creds = await stripeCredentials();
+  if (!creds.ok) return [];
+  try {
+    const payload = (await stripeCall(
+      "GET",
+      `/v1/invoices?customer=${encodeURIComponent(customer)}&limit=${Math.min(Math.max(limit, 1), 50)}`,
+      creds.secret,
+    )) as { data?: Record<string, unknown>[] } | null;
+    const rows = Array.isArray(payload?.data) ? payload.data : [];
+    const https = (value: unknown) => (typeof value === "string" && value.startsWith("https://") ? value : null);
+    return rows
+      .filter((row) => row.status !== "draft")
+      .map((row) => {
+        const currency = String(row.currency ?? "usd").toUpperCase();
+        const cents = Number(row.status === "paid" ? row.amount_paid : row.amount_due) || 0;
+        return {
+          id: String(row.id ?? ""),
+          number: String(row.number ?? row.id ?? ""),
+          when: new Date(Number(row.created ?? 0) * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          amount: new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100),
+          status: String(row.status ?? ""),
+          pdfUrl: https(row.invoice_pdf),
+          hostedUrl: https(row.hosted_invoice_url),
+        };
+      });
+  } catch {
+    return [];
+  }
+}
+
 export async function openCustomerPortal(input: { customerId: string; returnUrl: string }) {
   const enabled = await productSwitch("customer_portal");
   if (!enabled) return { ok: false as const, error: "The billing portal is turned off. Nothing was opened." };
