@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MemberMobileNav } from "@/components/member-mobile-nav";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
@@ -172,6 +173,29 @@ export async function MemberFrame({
       ? "Search influencers, campaigns, or anything..."
       : "Search opportunities, brands, or anything...";
 
+  // Mobile bar: three primary destinations per role (Dashboard, Collaborations, then Earnings or Contracts).
+  const primaryHrefs =
+    audience === "business" && !agencyAccount
+      ? ["/business/home", "/collaboration/business", "/collaboration/contracts"]
+      : audience === "creator"
+        ? ["/creator", "/collaboration/hub?view=collaborations", "/creator/earnings"]
+        : nav.slice(0, 3).map((item) => item.href);
+  const toMobile = (item: (typeof nav)[number]) => {
+    const count = sidebarBadgeFor(item.href, badgeCounts);
+    return {
+      href: item.href,
+      label: item.label === "Earnings & Payouts" ? "Earnings" : item.label,
+      icon: item.icon,
+      badge: sidebarBadgeLabel(count),
+      badgeCount: Math.max(0, count),
+      active: memberNavActive(item.href, path, search),
+    };
+  };
+  const mobileItems = [
+    ...primaryHrefs.map((href) => nav.find((item) => item.href === href)).filter((item): item is (typeof nav)[number] => Boolean(item)),
+    ...nav.filter((item) => !primaryHrefs.includes(item.href)),
+  ].map(toMobile);
+
   return (
     <div className="flex min-h-screen bg-[#F5F7FB] text-indigo">
       <aside className="sticky top-0 hidden h-screen w-[15.5rem] shrink-0 flex-col border-r border-[#E6ECF7] bg-white lg:flex">
@@ -275,28 +299,7 @@ export async function MemberFrame({
           </div>
         </header>
 
-        <nav className="flex gap-2 overflow-x-auto border-b border-[#E6ECF7] bg-white px-3 py-2 lg:hidden">
-          {nav.map((item) => {
-            const on = memberNavActive(item.href, path, search);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={on ? "page" : undefined}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${
-                  on ? "bg-[#F1ECFF] text-violet" : "text-[#4E5872]"
-                }`}
-              >
-                {item.label}
-                {sidebarBadgeLabel(sidebarBadgeFor(item.href, badgeCounts)) ? (
-                  <span className="ml-1 rounded-full bg-[#6D4AFF] px-1.5 text-[10px] font-bold text-white">
-                    {sidebarBadgeLabel(sidebarBadgeFor(item.href, badgeCounts))}
-                  </span>
-                ) : null}
-              </Link>
-            );
-          })}
-        </nav>
+        <MemberMobileNav primary={mobileItems.slice(0, 3)} more={mobileItems.slice(3)} />
 
         <div className="px-4 py-6 sm:px-6 lg:px-8">{children}</div>
       </div>
