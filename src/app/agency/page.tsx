@@ -390,7 +390,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                           <form action={actionLinkCampaignAgreement} className="mt-2 grid gap-1">
                             <AgencyActionContext token={token} workspaceId={workspaceId ?? ""} clientId={selectedClient?.id ?? ""} />
                             <input type="hidden" name="id" value={camp.id} />
-                            <select name="creatorSlug" className="rounded-lg border border-border bg-white px-2 py-1 text-xs">
+                            <select name="creatorSlug" className="rounded-lg border border-border bg-white px-2 py-1 text-xs" aria-label="Creator slug">
                               {camp.creatorSlugs.map((slug) => (
                                 <option key={slug} value={slug}>
                                   {bySlug.get(slug)?.displayName ?? slug}
@@ -401,7 +401,7 @@ export default async function AgencyPage({ searchParams }: Props) {
                               name="collaborationId"
                               required
                               placeholder="Existing agreement"
-                              className="rounded-lg border border-border bg-white px-2 py-1 text-xs"
+                              className="rounded-lg border border-border bg-white px-2 py-1 text-xs" aria-label="Existing agreement"
                             />
                             <button type="submit" className="text-left text-xs font-semibold text-violet hover:underline">
                               Link agreement

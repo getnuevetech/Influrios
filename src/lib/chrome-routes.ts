@@ -1,17 +1,11 @@
-/** Public plan pages and signed-in account screens draw their own header. */
+/** Signed-in account screens draw their own header. Public, plan and sign-in pages share the site header. */
 const EXACT = new Set([
-  "/pricing",
   "/billing",
   "/creator",
-  "/business/plans",
   "/business/billing",
   "/business/home",
   "/discover",
-  "/login",
-  "/signup",
   "/notifications",
-  "/claim",
-  "/register",
 ]);
 
 export function hidesMarketingChrome(pathname: string): boolean {

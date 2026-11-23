@@ -198,9 +198,9 @@ export default async function AdminInvitationsPage({
             {canEdit ? (
               <form action={actionSaveInvitationTemplate} className="space-y-3 rounded-2xl border border-dashed border-[#C9D4FF] bg-white p-4">
                 <p className="text-sm font-semibold text-indigo">New template</p>
-                <input name="name" placeholder="Name" className="w-full rounded-xl border border-border px-3 py-2" />
-                <input name="subject" placeholder="Subject" className="w-full rounded-xl border border-border px-3 py-2" />
-                <textarea name="body" rows={3} placeholder="Hi {{name}}..." className="w-full rounded-xl border border-border px-3 py-2" />
+                <input name="name" placeholder="Name" className="w-full rounded-xl border border-border px-3 py-2" aria-label="Name" />
+                <input name="subject" placeholder="Subject" className="w-full rounded-xl border border-border px-3 py-2" aria-label="Subject" />
+                <textarea name="body" rows={3} placeholder="Hi {{name}}..." className="w-full rounded-xl border border-border px-3 py-2" aria-label="Hi {{name}}" />
                 <button type="submit" className="text-sm font-semibold text-violet">Add template</button>
               </form>
             ) : null}
@@ -214,7 +214,7 @@ export default async function AdminInvitationsPage({
           </ul>
           {canEdit ? (
             <form action={actionSaveCampaign} className="mt-3 flex gap-2">
-              <input name="name" placeholder="New campaign" className="flex-1 rounded-xl border border-border px-3 py-2" />
+              <input name="name" placeholder="New campaign" className="flex-1 rounded-xl border border-border px-3 py-2" aria-label="New campaign" />
               <button type="submit" className="rounded-xl border border-[#E4EBFF] px-3 py-2 text-sm font-semibold text-indigo">Add</button>
             </form>
           ) : null}
@@ -294,12 +294,12 @@ export default async function AdminInvitationsPage({
 
           <h2 className="mt-10 font-display text-lg font-bold text-indigo">Do not contact</h2>
           <form action={actionAddSuppression} className="mt-3 grid gap-3 rounded-2xl border border-[#E4EBFF] bg-white p-4 sm:grid-cols-4">
-            <select name="kind" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2">
+            <select name="kind" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2" aria-label="Kind">
               <option value="slug">Profile slug</option>
               <option value="email">Email</option>
             </select>
-            <input name="value" placeholder="profile slug or email" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2 sm:col-span-2" />
-            <input name="reason" placeholder="Reason" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2" />
+            <input name="value" placeholder="profile slug or email" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2 sm:col-span-2" aria-label="profile slug or email" />
+            <input name="reason" placeholder="Reason" disabled={!canEdit} className="rounded-xl border border-border px-3 py-2" aria-label="Reason" />
             {canEdit ? <button type="submit" className="btn-primary w-fit sm:col-span-4">Suppress</button> : null}
           </form>
           <ul className="mt-3 space-y-2">

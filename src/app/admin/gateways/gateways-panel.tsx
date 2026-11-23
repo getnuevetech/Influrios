@@ -28,7 +28,7 @@ function CountryMultiSelect({ selected }: { selected: string[] }) {
   const options = corridorCountries();
   const chosen = new Set(selected.map((code) => code.trim().toUpperCase()));
   return (
-    <select name="countryCode" multiple required size={10} defaultValue={[...chosen]} className={selectClass}>
+    <select name="countryCode" multiple required size={10} defaultValue={[...chosen]} className={selectClass} aria-label="Country code">
       {options.map((country) => (
         <option key={country.code} value={country.code}>
           {country.name} ({country.code})

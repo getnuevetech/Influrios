@@ -162,7 +162,7 @@ export default async function ClaimPublishPage({ params, searchParams }: Props) 
             name="handle"
             required
             placeholder="@anotherhandle"
-            className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+            className="w-full rounded-xl border border-border px-3 py-2 text-sm" aria-label="@anotherhandle"
           />
           <button type="submit" className="btn-secondary w-full !py-2 text-sm">
             Add social

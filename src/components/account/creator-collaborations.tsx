@@ -196,7 +196,7 @@ export function CreatorCollaborations({
                   name="q"
                   defaultValue={query}
                   placeholder="Search collaborations..."
-                  className="h-10 w-48 rounded-full border border-[#E7ECF5] bg-[#F8FAFC] px-4 text-sm outline-none"
+                  className="h-10 w-48 rounded-full border border-[#E7ECF5] bg-[#F8FAFC] px-4 text-sm outline-none" aria-label="Search collaborations"
                 />
               </form>
             </div>

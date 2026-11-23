@@ -110,7 +110,7 @@ export function DiscoverFilters({
           value={categoryQuery}
           onChange={(event) => setCategoryQuery(event.target.value)}
           placeholder="Search categories…"
-          className="mt-2 w-full rounded-xl border border-border bg-[#F7FAFF] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet"
+          className="mt-2 w-full rounded-xl border border-border bg-[#F7FAFF] px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet" aria-label="Search categories"
         />
         <ul className="mt-3 space-y-2">
           {visibleCategories.map((item) => (
@@ -195,7 +195,7 @@ export function DiscoverFilters({
           step={10000}
           value={followersMin}
           onChange={(event) => setFollowersMin(Math.min(Number(event.target.value), followersMax))}
-          className="mt-3 w-full accent-[#633CFF]"
+          className="mt-3 w-full accent-[#633CFF]" aria-label="Followers min"
         />
         <input
           type="range"
@@ -205,7 +205,7 @@ export function DiscoverFilters({
           step={10000}
           value={followersMax}
           onChange={(event) => setFollowersMax(Math.max(Number(event.target.value), followersMin))}
-          className="mt-1 w-full accent-[#633CFF]"
+          className="mt-1 w-full accent-[#633CFF]" aria-label="Followers max"
         />
       </div>
 
@@ -224,7 +224,7 @@ export function DiscoverFilters({
           step={0.5}
           value={engagementMin}
           onChange={(event) => setEngagementMin(Math.min(Number(event.target.value), engagementMax))}
-          className="mt-3 w-full accent-[#633CFF]"
+          className="mt-3 w-full accent-[#633CFF]" aria-label="Engagement min"
         />
         <input
           type="range"
@@ -234,7 +234,7 @@ export function DiscoverFilters({
           step={0.5}
           value={engagementMax}
           onChange={(event) => setEngagementMax(Math.max(Number(event.target.value), engagementMin))}
-          className="mt-1 w-full accent-[#633CFF]"
+          className="mt-1 w-full accent-[#633CFF]" aria-label="Engagement max"
         />
       </div>
 

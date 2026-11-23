@@ -173,9 +173,9 @@ export function AgencyWorkspaceBar({
                 type="email"
                 required
                 placeholder="Seat email"
-                className="rounded-xl border border-border bg-white px-3 py-2 text-sm"
+                className="rounded-xl border border-border bg-white px-3 py-2 text-sm" aria-label="Seat email"
               />
-              <select name="role" defaultValue="member" className="rounded-xl border border-border bg-white px-3 py-2 text-sm">
+              <select name="role" defaultValue="member" className="rounded-xl border border-border bg-white px-3 py-2 text-sm" aria-label="Role">
                 <option value="manager">Manager</option>
                 <option value="member">Member</option>
               </select>

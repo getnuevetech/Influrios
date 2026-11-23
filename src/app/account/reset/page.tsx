@@ -36,7 +36,7 @@ export default async function ResetPasswordPage({ searchParams }: Props) {
         <form action={actionResetPassword} className="card-surface mt-6 space-y-3 p-6">
           <input type="hidden" name="token" value={token} />
           <p className="text-sm text-muted">Choose a new password for this reset link.</p>
-          <input name="password" type="password" required minLength={policy.passwordMinLength} className="w-full rounded-xl border border-border px-3 py-2" />
+          <input name="password" type="password" required minLength={policy.passwordMinLength} className="w-full rounded-xl border border-border px-3 py-2" aria-label="Password" />
           <button type="submit" className="btn-primary w-full">
             Save password
           </button>

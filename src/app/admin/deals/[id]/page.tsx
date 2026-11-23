@@ -144,9 +144,9 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
                   inputMode="numeric"
                   defaultValue={feePosition ? unsettledFees : undefined}
                   placeholder={feePosition ? "Eligible unsettled fees, minor units" : "Earned fees, minor units"}
-                  className="rounded-lg border px-3 py-2"
+                  className="rounded-lg border px-3 py-2" aria-label="Amount"
                 />
-                <input name="providerReference" required minLength={4} placeholder="Provider settlement reference" className="rounded-lg border px-3 py-2" />
+                <input name="providerReference" required minLength={4} placeholder="Provider settlement reference" className="rounded-lg border px-3 py-2" aria-label="Provider settlement reference" />
                 <button className="w-fit rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">Record settlement</button>
               </form>
             ) : null}
@@ -154,9 +154,9 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
               <form action={actionCompareProviderBalance} className="mt-3 grid gap-2 sm:grid-cols-3">
                 <input type="hidden" name="id" value={anchor} />
                 <input type="hidden" name="fundingId" value={funding.id} />
-                <input name="providerHeldCents" required inputMode="numeric" placeholder="Provider held, minor units" className="rounded-lg border px-3 py-2" />
-                <input name="providerReleasedCents" required inputMode="numeric" placeholder="Provider released, minor units" className="rounded-lg border px-3 py-2" />
-                <input name="providerRefundedCents" required inputMode="numeric" placeholder="Provider refunded, minor units" className="rounded-lg border px-3 py-2" />
+                <input name="providerHeldCents" required inputMode="numeric" placeholder="Provider held, minor units" className="rounded-lg border px-3 py-2" aria-label="Provider held, minor units" />
+                <input name="providerReleasedCents" required inputMode="numeric" placeholder="Provider released, minor units" className="rounded-lg border px-3 py-2" aria-label="Provider released, minor units" />
+                <input name="providerRefundedCents" required inputMode="numeric" placeholder="Provider refunded, minor units" className="rounded-lg border px-3 py-2" aria-label="Provider refunded, minor units" />
                 <button className="w-fit rounded-full border border-indigo px-4 py-2 text-xs font-bold text-indigo">Compare balances</button>
               </form>
             ) : null}

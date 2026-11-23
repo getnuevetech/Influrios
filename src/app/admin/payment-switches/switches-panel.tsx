@@ -59,7 +59,7 @@ export async function PaymentSwitchesPanel({
               </ul>
             </section>
           ))}
-          <input name="reason" required minLength={8} placeholder="Reason for this change" className="w-full rounded-lg border px-3 py-2 text-sm" />
+          <input name="reason" required minLength={8} placeholder="Reason for this change" className="w-full rounded-lg border px-3 py-2 text-sm" aria-label="Reason for this change" />
           <button className="rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">Save switches</button>
         </form>
       ) : (

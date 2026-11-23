@@ -116,6 +116,7 @@ export function AdminTopBar({
               <IconSearch size={16} />
             </span>
             <input
+              aria-label="Search"
               name="q"
               type="search"
               placeholder="Search Influrios (users, businesses, campaigns, invoices...)"

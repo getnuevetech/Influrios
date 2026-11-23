@@ -105,7 +105,7 @@ export async function CountryRoutesPanel({
             <label className="flex gap-2"><input type="checkbox" name="taxTreatmentApproved" defaultChecked={launchGate?.taxTreatmentApproved} /> Tax treatment approved</label>
             <label className="flex gap-2"><input type="checkbox" name="earningRefundPolicyApproved" defaultChecked={launchGate?.earningRefundPolicyApproved} /> Fee earning and refund policy approved</label>
             <label className="flex gap-2"><input type="checkbox" name="providerRouteApproved" defaultChecked={launchGate?.providerRouteApproved} /> Provider route approved</label>
-            <input name="reason" required minLength={8} placeholder="Reason for this change" className="rounded-lg border px-3 py-2" />
+            <input name="reason" required minLength={8} placeholder="Reason for this change" className="rounded-lg border px-3 py-2" aria-label="Reason for this change" />
             <button className="w-fit rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">Save approvals</button>
           </form>
         ) : (
@@ -145,7 +145,7 @@ export async function CountryRoutesPanel({
             <p className="text-xs text-muted">
               Payout approval and the provider send live on Marketplace ledger → Payout release. Saving this form leaves those switches as they are.
             </p>
-            <input name="reason" required minLength={8} placeholder="Reason for this change" className="rounded-lg border px-3 py-2" />
+            <input name="reason" required minLength={8} placeholder="Reason for this change" className="rounded-lg border px-3 py-2" aria-label="Reason for this change" />
             <button className="w-fit rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">Save funding paths</button>
           </form>
         ) : null}
@@ -155,16 +155,16 @@ export async function CountryRoutesPanel({
               Enter the staging amounts and redacted provider references from one funded payout and one confirmed refund.
               The trace is stored only when collection equals the payout plus fees plus tax.
             </p>
-            <input name="currency" required placeholder="Currency" className="rounded-lg border px-3 py-2" />
-            <input name="businessPaysCents" required inputMode="numeric" placeholder="Business pays, minor units" className="rounded-lg border px-3 py-2" />
-            <input name="influencerReceivesCents" required inputMode="numeric" placeholder="Influencer receives, minor units" className="rounded-lg border px-3 py-2" />
-            <input name="platformFeesTotalCents" required inputMode="numeric" placeholder="Platform fees, minor units" className="rounded-lg border px-3 py-2" />
-            <input name="taxCents" required inputMode="numeric" placeholder="Tax, minor units" className="rounded-lg border px-3 py-2" />
-            <input name="collectionRef" required minLength={4} placeholder="Collection reference" className="rounded-lg border px-3 py-2" />
-            <input name="holdingRef" required minLength={4} placeholder="Holding reference" className="rounded-lg border px-3 py-2" />
-            <input name="releaseRef" required minLength={4} placeholder="Release reference" className="rounded-lg border px-3 py-2" />
-            <input name="payoutRef" required minLength={4} placeholder="Confirmed payout reference" className="rounded-lg border px-3 py-2" />
-            <input name="refundRef" required minLength={4} placeholder="Confirmed refund reference" className="rounded-lg border px-3 py-2 sm:col-span-2" />
+            <input name="currency" required placeholder="Currency" className="rounded-lg border px-3 py-2" aria-label="Currency" />
+            <input name="businessPaysCents" required inputMode="numeric" placeholder="Business pays, minor units" className="rounded-lg border px-3 py-2" aria-label="Business pays, minor units" />
+            <input name="influencerReceivesCents" required inputMode="numeric" placeholder="Influencer receives, minor units" className="rounded-lg border px-3 py-2" aria-label="Influencer receives, minor units" />
+            <input name="platformFeesTotalCents" required inputMode="numeric" placeholder="Platform fees, minor units" className="rounded-lg border px-3 py-2" aria-label="Platform fees, minor units" />
+            <input name="taxCents" required inputMode="numeric" placeholder="Tax, minor units" className="rounded-lg border px-3 py-2" aria-label="Tax, minor units" />
+            <input name="collectionRef" required minLength={4} placeholder="Collection reference" className="rounded-lg border px-3 py-2" aria-label="Collection reference" />
+            <input name="holdingRef" required minLength={4} placeholder="Holding reference" className="rounded-lg border px-3 py-2" aria-label="Holding reference" />
+            <input name="releaseRef" required minLength={4} placeholder="Release reference" className="rounded-lg border px-3 py-2" aria-label="Release reference" />
+            <input name="payoutRef" required minLength={4} placeholder="Confirmed payout reference" className="rounded-lg border px-3 py-2" aria-label="Confirmed payout reference" />
+            <input name="refundRef" required minLength={4} placeholder="Confirmed refund reference" className="rounded-lg border px-3 py-2 sm:col-span-2" aria-label="Confirmed refund reference" />
             <button className="w-fit rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">Record staging trace</button>
           </form>
         ) : null}

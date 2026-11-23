@@ -22,7 +22,7 @@ export function ScheduleStartsField() {
         onChange={(event) => {
           const parsed = new Date(event.target.value);
           setIso(Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString());
-        }}
+        }} aria-label="Starts at"
       />
     </>
   );

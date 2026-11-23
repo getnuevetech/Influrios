@@ -138,13 +138,13 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
               name="id"
               required
               placeholder="workspace_id"
-              className="rounded-xl border border-border px-3 py-2 text-sm"
+              className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="workspace_id"
             />
             <input
               name="name"
               required
               placeholder="Display name"
-              className="rounded-xl border border-border px-3 py-2 text-sm"
+              className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Display name"
             />
             <button type="submit" className="btn-secondary !py-2 text-sm">
               Create workspace
@@ -233,9 +233,9 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
               type="email"
               required
               placeholder="seat@agency.demo"
-              className="rounded-xl border border-border px-3 py-2 text-sm"
+              className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="seat@agency.demo"
             />
-            <select name="role" defaultValue="member" className="rounded-xl border border-border px-3 py-2 text-sm">
+            <select name="role" defaultValue="member" className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Role">
               <option value="owner">Owner</option>
               <option value="manager">Manager</option>
               <option value="member">Member</option>
@@ -284,7 +284,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
         {canManage ? (
           <form action={actionAdminAddRoster} className="mt-4 grid gap-3 sm:grid-cols-4">
             <input type="hidden" name="workspaceId" value={workspaceId ?? ""} />
-            <select name="creatorSlug" className="rounded-xl border border-border px-3 py-2 text-sm" required>
+            <select name="creatorSlug" className="rounded-xl border border-border px-3 py-2 text-sm" required aria-label="Creator slug">
               {directoryCreators.filter((c) => !store.roster.some((r) => r.creatorSlug === c.slug)).map(
                 (c) => (
                   <option key={c.slug} value={c.slug}>
@@ -293,7 +293,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
                 ),
               )}
             </select>
-            <select name="role" className="rounded-xl border border-border px-3 py-2 text-sm" defaultValue="talent">
+            <select name="role" className="rounded-xl border border-border px-3 py-2 text-sm" defaultValue="talent" aria-label="Role">
               <option value="lead">Lead</option>
               <option value="specialist">Specialist</option>
               <option value="talent">Talent</option>
@@ -301,7 +301,7 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
             <input
               name="retainerLabel"
               placeholder="Retainer"
-              className="rounded-xl border border-border px-3 py-2 text-sm"
+              className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Retainer"
             />
             <button type="submit" className="btn-primary !py-2 text-sm">
               Add
@@ -347,20 +347,20 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
         {canManage ? (
           <form action={actionAdminCreateCampaign} className="card-surface grid gap-3 p-5 sm:grid-cols-2">
             <input type="hidden" name="workspaceId" value={workspaceId ?? ""} />
-            <input name="title" required placeholder="Title" className="rounded-xl border border-border px-3 py-2 text-sm" />
-            <input name="clientName" required placeholder="Client" className="rounded-xl border border-border px-3 py-2 text-sm" />
-            <input name="specialty" placeholder="Specialty" className="rounded-xl border border-border px-3 py-2 text-sm" />
-            <input name="budgetLabel" placeholder="Budget" className="rounded-xl border border-border px-3 py-2 text-sm" />
+            <input name="title" required placeholder="Title" className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Title" />
+            <input name="clientName" required placeholder="Client" className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Client" />
+            <input name="specialty" placeholder="Specialty" className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Specialty" />
+            <input name="budgetLabel" placeholder="Budget" className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Budget" />
             <input
               name="creatorSlugs"
               defaultValue={store.roster.slice(0, 2).map((r) => r.creatorSlug).join(",")}
               className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2"
-              placeholder="creator slugs, comma-separated"
+              placeholder="creator slugs, comma-separated" aria-label="creator slugs, comma-separated"
             />
             <input
               name="summary"
               placeholder="What this campaign covers"
-              className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2"
+              className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" aria-label="What this campaign covers"
             />
             <button type="submit" className="btn-primary sm:col-span-2 !py-2 text-sm">
               Create campaign
@@ -397,29 +397,29 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
         {canManage ? (
           <form action={actionAdminCreatePortfolio} className="card-surface grid gap-3 p-5 sm:grid-cols-2">
             <input type="hidden" name="workspaceId" value={workspaceId ?? ""} />
-            <input name="title" required placeholder="Title" className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
-            <input name="tagline" placeholder="Tagline" className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
-            <select name="leftSlug" required defaultValue="" className="rounded-xl border border-border px-3 py-2 text-sm">
+            <input name="title" required placeholder="Title" className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" aria-label="Title" />
+            <input name="tagline" placeholder="Tagline" className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" aria-label="Tagline" />
+            <select name="leftSlug" required defaultValue="" className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Left slug">
               <option value="" disabled>Influencer A</option>
               {directoryCreators.map((c) => (
                 <option key={c.slug} value={c.slug}>{c.displayName}</option>
               ))}
             </select>
-            <select name="rightSlug" required defaultValue="" className="rounded-xl border border-border px-3 py-2 text-sm">
+            <select name="rightSlug" required defaultValue="" className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Right slug">
               <option value="" disabled>Influencer B</option>
               {directoryCreators.map((c) => (
                 <option key={c.slug} value={c.slug}>{c.displayName}</option>
               ))}
             </select>
-            <input name="specialty" placeholder="Specialty" className="rounded-xl border border-border px-3 py-2 text-sm" />
-            <select name="campaignId" className="rounded-xl border border-border px-3 py-2 text-sm">
+            <input name="specialty" placeholder="Specialty" className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Specialty" />
+            <select name="campaignId" className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Campaign id">
               <option value="">No campaign</option>
               {store.campaigns.map((c) => (
                 <option key={c.id} value={c.id}>{c.title}</option>
               ))}
             </select>
-            <textarea name="outcome" rows={2} placeholder="What happened" className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
-            <textarea name="metrics" rows={2} placeholder={"Label | value"} className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" />
+            <textarea name="outcome" rows={2} placeholder="What happened" className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" aria-label="What happened" />
+            <textarea name="metrics" rows={2} placeholder={"Label | value"} className="rounded-xl border border-border px-3 py-2 text-sm sm:col-span-2" aria-label="Metrics" />
             <label className="flex items-center gap-2 text-sm text-indigo sm:col-span-2">
               <input name="published" type="checkbox" />
               Publish

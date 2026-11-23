@@ -378,19 +378,19 @@ export function AdminUserAccountsView({
                     name="handle"
                     defaultValue={filters.handle || ""}
                     placeholder="Handle"
-                    className="w-36 rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] outline-none focus:border-violet"
+                    className="w-36 rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] outline-none focus:border-violet" aria-label="Handle"
                   />
                   <input
                     name="email"
                     defaultValue={filters.email || ""}
                     placeholder="Email"
-                    className="w-44 rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] outline-none focus:border-violet"
+                    className="w-44 rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] outline-none focus:border-violet" aria-label="Email"
                   />
                   <input
                     name="phone"
                     defaultValue={filters.phone || ""}
                     placeholder="Mobile"
-                    className="w-36 rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] outline-none focus:border-violet"
+                    className="w-36 rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] outline-none focus:border-violet" aria-label="Mobile"
                   />
                 </>
               ) : (
@@ -403,7 +403,7 @@ export function AdminUserAccountsView({
               <select
                 name="status"
                 defaultValue={filters.status || "all"}
-                className="rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] font-semibold text-indigo"
+                className="rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] font-semibold text-indigo" aria-label="Status"
               >
                 <option value="all">Status</option>
                 <option value="active">Active</option>
@@ -412,7 +412,7 @@ export function AdminUserAccountsView({
               <select
                 name="plan"
                 defaultValue={filters.plan || ""}
-                className="rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] font-semibold text-indigo"
+                className="rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] font-semibold text-indigo" aria-label="Plan"
               >
                 <option value="">Plan</option>
                 {planOptions.map((p) => (
@@ -425,7 +425,7 @@ export function AdminUserAccountsView({
                 <select
                   name="kyc"
                   defaultValue={filters.kyc || "all"}
-                  className="rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] font-semibold text-indigo"
+                  className="rounded-full border border-[#E4EBFF] bg-white px-3 py-2 text-[12px] font-semibold text-indigo" aria-label="Kyc"
                 >
                   <option value="all">KYC</option>
                   <option value="verified">Verified</option>
@@ -988,7 +988,7 @@ function AccountDetailPanel({
                   required
                   rows={3}
                   placeholder="Visible only to admins…"
-                  className="w-full rounded-xl border border-border px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-border px-3 py-2 text-sm" aria-label="Visible only to admins"
                 />
                 <button type="submit" className="rounded-xl bg-[#F1ECFF] px-3 py-2 text-[12px] font-semibold text-violet">
                   Add note

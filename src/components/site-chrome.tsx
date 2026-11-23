@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { actionLogout } from "@/app/account/actions";
-import { getAccountSession } from "@/lib/accounts";
+import { getAccountSession, homePathForRole } from "@/lib/accounts";
 import { getDirectory } from "@/lib/directory";
 import { rethrowIfNextDynamicError } from "@/lib/next-dynamic";
 import { getFooterStrip, type FooterIconKey, type FooterTone } from "@/lib/site-config";
@@ -82,8 +82,8 @@ export async function SiteHeader() {
           </Link>
           {account ? (
             <>
-              <Link href="/account" className="hidden text-sm font-semibold text-indigo sm:inline">
-                {account.name?.split(" ")[0] || "Account"}
+              <Link href={homePathForRole(account.role)} className="hidden text-sm font-semibold text-indigo sm:inline">
+                Your account
               </Link>
               <form action={actionLogout}>
                 <button type="submit" className="btn-secondary !px-4 !py-2 text-sm">
@@ -96,7 +96,7 @@ export async function SiteHeader() {
               <Link href="/login" className="hidden text-sm font-semibold text-indigo sm:inline">
                 Log in
               </Link>
-              <Link href="/claim" className="btn-primary !px-4 !py-2 text-sm">
+              <Link href="/signup" className="btn-primary !px-4 !py-2 text-sm">
                 Join Influrios →
               </Link>
             </>

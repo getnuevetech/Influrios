@@ -315,12 +315,12 @@ export default async function ContractsIndexPage({
               name="q"
               defaultValue={params.q ?? ""}
               placeholder="Search agreements"
-              className="h-10 min-w-[220px] flex-1 rounded-full border border-[#E7ECF5] bg-[#F8FAFC] px-4 text-sm outline-none"
+              className="h-10 min-w-[220px] flex-1 rounded-full border border-[#E7ECF5] bg-[#F8FAFC] px-4 text-sm outline-none" aria-label="Search agreements"
             />
             <select
               name="tab"
               defaultValue={tab}
-              className="h-10 rounded-full border border-[#E7ECF5] bg-white px-3 text-sm font-semibold text-[#344054]"
+              className="h-10 rounded-full border border-[#E7ECF5] bg-white px-3 text-sm font-semibold text-[#344054]" aria-label="Tab"
             >
               <option value="all">All statuses</option>
               <option value="yours">Needs my signature</option>

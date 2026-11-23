@@ -226,7 +226,7 @@ export function CreatorOpportunities({
             <input type="hidden" name="tab" value={tab} />
             {filters.q ? <input type="hidden" name="q" value={filters.q} /> : null}
             {filters.category ? <input type="hidden" name="category" value={filters.category} /> : null}
-            <select name="sort" defaultValue={filters.sort || "match"} className="h-10 rounded-full border border-[#E7ECF5] bg-white px-3 text-sm">
+            <select name="sort" defaultValue={filters.sort || "match"} className="h-10 rounded-full border border-[#E7ECF5] bg-white px-3 text-sm" aria-label="Sort">
               <option value="match">Best match</option>
               <option value="name">Name</option>
             </select>

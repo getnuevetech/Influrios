@@ -11,10 +11,10 @@ describe("influencer landing", () => {
     assert.equal(homePathForRole(null), CREATOR_DASHBOARD);
     assert.equal(isDefaultMemberHome(CREATOR_DASHBOARD), true);
     const shell = readFileSync("src/components/account-shell.tsx", "utf8");
-    const header = readFileSync("src/components/marketing-header.tsx", "utf8");
+    const header = readFileSync("src/components/site-chrome.tsx", "utf8");
     assert.match(shell, /href: "\/creator", label: "Dashboard"/);
     assert.match(header, /Your account/);
-    assert.match(header, /active === "business" \? "\/business\/home" : "\/creator"/);
+    assert.match(header, /href=\{homePathForRole\(account\.role\)\}/);
     assert.equal(shell.includes("Upgrade now"), false);
   });
 });

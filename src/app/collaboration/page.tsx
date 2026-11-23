@@ -286,7 +286,7 @@ export default async function CollaborationPage({ searchParams }: Props) {
                 name="q"
                 defaultValue={params.q}
                 placeholder={hero.searchPlaceholder}
-                className="w-full flex-1 border-0 bg-transparent py-2.5 text-sm text-indigo outline-none placeholder:text-muted/70"
+                className="w-full flex-1 border-0 bg-transparent py-2.5 text-sm text-indigo outline-none placeholder:text-muted/70" aria-label="Search"
               />
               <button type="submit" className="btn-primary shrink-0 !px-5 !py-2.5">
                 Search

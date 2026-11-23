@@ -200,7 +200,7 @@ export default async function HomePage() {
               <input
                 name="q"
                 placeholder="Search influencers by specialty, location, platform, or niche..."
-                className="w-full flex-1 border-0 bg-transparent py-2.5 text-sm text-indigo outline-none placeholder:text-muted/70 sm:text-base"
+                className="w-full flex-1 border-0 bg-transparent py-2.5 text-sm text-indigo outline-none placeholder:text-muted/70 sm:text-base" aria-label="Search"
               />
               <button type="submit" className="btn-primary shrink-0 !px-6 !py-2.5">
                 {hero.ctaLabel}

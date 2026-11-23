@@ -888,7 +888,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
                   name="currency"
                   defaultValue={rate.currency}
                   maxLength={3}
-                  className="rounded-lg border border-border px-3 py-2 text-sm uppercase text-indigo"
+                  className="rounded-lg border border-border px-3 py-2 text-sm uppercase text-indigo" aria-label="Currency"
                 />
                 <p className="self-center text-sm text-muted">Last stored quote: {rate.minorPerUsd} minor units per 1.00 USD</p>
                 <label className="flex items-center gap-2 text-sm text-indigo">
@@ -898,7 +898,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
               </div>
             ))}
             <div className="grid gap-2 sm:grid-cols-[8rem_1fr_auto]">
-              <input name="newCurrency" maxLength={3} placeholder="EUR" className="rounded-lg border border-border px-3 py-2 text-sm uppercase" />
+              <input name="newCurrency" maxLength={3} placeholder="EUR" className="rounded-lg border border-border px-3 py-2 text-sm uppercase" aria-label="New currency" />
               <p className="self-center text-sm text-muted">A new currency waits for a Wise quote.</p>
               <label className="flex items-center gap-2 text-sm text-indigo">
                 <input type="checkbox" name="newActive" defaultChecked className="accent-violet" />
@@ -931,14 +931,14 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
             {parties.map((party, index) => (
               <div key={party.id} className="grid gap-2 sm:grid-cols-[1fr_8rem_auto]">
                 <input type="hidden" name="id" value={party.id} />
-                <input name="label" defaultValue={party.label} className="rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
+                <input name="label" defaultValue={party.label} className="rounded-lg border border-border px-3 py-2 text-sm text-indigo" aria-label="Label" />
                 <input
                   name="sharePercent"
                   type="number"
                   min={1}
                   max={100}
                   defaultValue={party.shareBps / 100}
-                  className="rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+                  className="rounded-lg border border-border px-3 py-2 text-sm text-indigo" aria-label="Share percent"
                 />
                 <label className="flex items-center gap-2 text-sm text-indigo">
                   <input type="checkbox" name="activeIndex" value={String(index)} defaultChecked={party.active} className="accent-violet" />
@@ -947,8 +947,8 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
               </div>
             ))}
             <div className="grid gap-2 sm:grid-cols-[1fr_8rem_auto]">
-              <input name="newLabel" placeholder="Add a party" className="rounded-lg border border-border px-3 py-2 text-sm" />
-              <input name="newSharePercent" type="number" min={1} max={100} placeholder="%" className="rounded-lg border border-border px-3 py-2 text-sm" />
+              <input name="newLabel" placeholder="Add a party" className="rounded-lg border border-border px-3 py-2 text-sm" aria-label="Add a party" />
+              <input name="newSharePercent" type="number" min={1} max={100} placeholder="%" className="rounded-lg border border-border px-3 py-2 text-sm" aria-label="Share percent" />
               <label className="flex items-center gap-2 text-sm text-indigo">
                 <input type="checkbox" name="newActive" className="accent-violet" />
                 Active
@@ -980,7 +980,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
                 <input
                   name="title"
                   defaultValue={template.title}
-                  className="rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+                  className="rounded-lg border border-border px-3 py-2 text-sm text-indigo" aria-label="Title"
                 />
                 <input
                   name="sharePercent"
@@ -988,7 +988,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
                   min={1}
                   max={100}
                   defaultValue={template.shareBps / 100}
-                  className="rounded-lg border border-border px-3 py-2 text-sm text-indigo"
+                  className="rounded-lg border border-border px-3 py-2 text-sm text-indigo" aria-label="Share percent"
                 />
                 <label className="flex items-center gap-2 text-sm text-indigo">
                   <input type="checkbox" name="activeIndex" value={String(index)} defaultChecked={template.active} className="accent-violet" />
@@ -997,8 +997,8 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
               </div>
             ))}
             <div className="grid gap-2 sm:grid-cols-[1fr_8rem_auto]">
-              <input name="newTitle" placeholder="Add a milestone" className="rounded-lg border border-border px-3 py-2 text-sm" />
-              <input name="newSharePercent" type="number" min={1} max={100} placeholder="%" className="rounded-lg border border-border px-3 py-2 text-sm" />
+              <input name="newTitle" placeholder="Add a milestone" className="rounded-lg border border-border px-3 py-2 text-sm" aria-label="Add a milestone" />
+              <input name="newSharePercent" type="number" min={1} max={100} placeholder="%" className="rounded-lg border border-border px-3 py-2 text-sm" aria-label="Share percent" />
               <label className="flex items-center gap-2 text-sm text-indigo">
                 <input type="checkbox" name="newActive" defaultChecked className="accent-violet" />
                 Active
@@ -1031,7 +1031,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
             {reasons.map((reason, index) => (
               <div key={reason.id} className="grid gap-2 sm:grid-cols-[1fr_auto]">
                 <input type="hidden" name="id" value={reason.id} />
-                <input name="label" defaultValue={reason.label} className="rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
+                <input name="label" defaultValue={reason.label} className="rounded-lg border border-border px-3 py-2 text-sm text-indigo" aria-label="Label" />
                 <label className="flex items-center gap-2 text-sm text-indigo">
                   <input type="checkbox" name="activeIndex" value={String(index)} defaultChecked={reason.active} className="accent-violet" />
                   Active
@@ -1039,7 +1039,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
               </div>
             ))}
             <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-              <input name="newLabel" placeholder="Add a reason" className="rounded-lg border border-border px-3 py-2 text-sm" />
+              <input name="newLabel" placeholder="Add a reason" className="rounded-lg border border-border px-3 py-2 text-sm" aria-label="Add a reason" />
               <label className="flex items-center gap-2 text-sm text-indigo">
                 <input type="checkbox" name="newActive" defaultChecked className="accent-violet" />
                 Active
@@ -1106,7 +1106,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
             {sources.map((source, index) => (
               <div key={source.id} className="grid gap-2 sm:grid-cols-[1fr_auto]">
                 <input type="hidden" name="id" value={source.id} />
-                <input name="label" defaultValue={source.label} className="rounded-lg border border-border px-3 py-2 text-sm text-indigo" />
+                <input name="label" defaultValue={source.label} className="rounded-lg border border-border px-3 py-2 text-sm text-indigo" aria-label="Label" />
                 <label className="flex items-center gap-2 text-sm text-indigo">
                   <input type="checkbox" name="activeIndex" value={String(index)} defaultChecked={source.active} className="accent-violet" />
                   Active
@@ -1114,7 +1114,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
               </div>
             ))}
             <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-              <input name="newLabel" placeholder="Add a source" className="rounded-lg border border-border px-3 py-2 text-sm" />
+              <input name="newLabel" placeholder="Add a source" className="rounded-lg border border-border px-3 py-2 text-sm" aria-label="Add a source" />
               <label className="flex items-center gap-2 text-sm text-indigo">
                 <input type="checkbox" name="newActive" defaultChecked className="accent-violet" />
                 Active

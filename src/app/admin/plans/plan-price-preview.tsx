@@ -71,8 +71,8 @@ export function PlanPricePreview({
           <button type="button" className="text-xs font-semibold text-violet underline" onClick={() => setAddress((open) => !open)}>{COUNTRY_TAX_FIELDS.enterPreviewAddress}</button>
           {address ? (
             <div className="grid gap-2 sm:grid-cols-2">
-              <input value={region} onChange={(event) => setRegion(event.target.value)} placeholder="State or region" className="rounded-lg border px-2 py-1 text-sm" />
-              <input value={postalCode} onChange={(event) => setPostalCode(event.target.value)} placeholder="Postal code" className="rounded-lg border px-2 py-1 text-sm" />
+              <input value={region} onChange={(event) => setRegion(event.target.value)} placeholder="State or region" className="rounded-lg border px-2 py-1 text-sm" aria-label="State or region" />
+              <input value={postalCode} onChange={(event) => setPostalCode(event.target.value)} placeholder="Postal code" className="rounded-lg border px-2 py-1 text-sm" aria-label="Postal code" />
             </div>
           ) : null}
           {located && !located.ok ? <p className="text-xs text-muted">{located.reason}</p> : null}

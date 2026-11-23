@@ -197,7 +197,7 @@ export function BusinessCollaborations(props: {
                 {label}
               </button>
             ))}
-            <input name="q" defaultValue={props.query} placeholder="Search requests" className="ml-auto min-w-48 rounded-full border border-[#E6ECF7] px-3 py-1.5 text-sm" />
+            <input name="q" defaultValue={props.query} placeholder="Search requests" className="ml-auto min-w-48 rounded-full border border-[#E6ECF7] px-3 py-1.5 text-sm" aria-label="Search requests" />
           </form>
           {listedCount === 0 ? (
             <div className="mt-8 text-center">

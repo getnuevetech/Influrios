@@ -1,40 +1,8 @@
-import Link from "next/link";
-import { InfluriosWordmark } from "@/components/influrios-wordmark";
-
-const DEFAULT_NAV = [
-  { href: "/discover", label: "Features" },
-  { href: "/discover", label: "Creators" },
-  { href: "/business", label: "Brands" },
-  { href: "/faq", label: "Help" },
-];
-
-export function AccountAccessFrame({
-  actionHref,
-  actionLabel,
-  children,
-}: {
-  actionHref: string;
-  actionLabel: string;
-  children: React.ReactNode;
-}) {
+/** Sign-in, sign-up and claim pages: the site header comes from the root layout. */
+export function AccountAccessFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#F6F4FF]">
-      <header className="flex items-center justify-between gap-4 px-4 py-4 sm:px-8">
-        <Link href="/" className="text-[#1B1464]">
-          <InfluriosWordmark className="inline-flex items-center gap-2 font-display text-xl font-bold text-[#1B1464]" />
-        </Link>
-        <nav className="hidden items-center gap-6 text-sm font-semibold text-[#5C657F] md:flex">
-          {DEFAULT_NAV.map((item) => (
-            <Link key={item.label} href={item.href} className="hover:text-[#1B1464]">
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <Link href={actionHref} className="text-sm font-semibold text-[#6D4AFF]">
-          {actionLabel}
-        </Link>
-      </header>
-      <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-6 lg:grid-cols-2 lg:px-8">{children}</div>
+    <div className="bg-[#F6F4FF] pb-12">
+      <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-8 lg:grid-cols-2 lg:px-8">{children}</div>
     </div>
   );
 }

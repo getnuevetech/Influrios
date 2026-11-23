@@ -50,7 +50,7 @@ function groupSubtitle(codes: string[], corridors: CorridorRow[]) {
 function KycSelect({ value }: { value: string }) {
   const current = kycTypeByCode(value);
   return (
-    <select name="kycModel" required defaultValue={current?.code ?? ""} className={selectClass}>
+    <select name="kycModel" required defaultValue={current?.code ?? ""} className={selectClass} aria-label="Kyc model">
       <option value="" disabled>
         Choose a KYC type
       </option>
@@ -66,7 +66,7 @@ function KycSelect({ value }: { value: string }) {
 function RouteSelect({ value, providers }: { value: string; providers: ProviderOption[] }) {
   const known = providers.some((provider) => provider.code === value);
   return (
-    <select name="collectionProviderCode" defaultValue={value} className={selectClass}>
+    <select name="collectionProviderCode" defaultValue={value} className={selectClass} aria-label="Collection provider code">
       <option value="">No collection route</option>
       {value && !known ? <option value={value}>{value}</option> : null}
       {providers.map((provider) => (
@@ -81,7 +81,7 @@ function RouteSelect({ value, providers }: { value: string; providers: ProviderO
 function CountryMultiSelect({ corridors, selected }: { corridors: CorridorRow[]; selected: string[] }) {
   const options = [...corridors].sort((a, b) => corridorHeading(a).localeCompare(corridorHeading(b)));
   return (
-    <select name="countryCode" multiple required size={8} defaultValue={selected} className={selectClass}>
+    <select name="countryCode" multiple required size={8} defaultValue={selected} className={selectClass} aria-label="Country code">
       {options.map((row) => (
         <option key={row.countryCode} value={row.countryCode}>
           {corridorHeading(row)}

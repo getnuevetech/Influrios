@@ -13,12 +13,13 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Create account" };
 
 type Props = {
-  searchParams: Promise<{ next?: string; error?: string; source?: string; utm_source?: string; utm_campaign?: string }>;
+  searchParams: Promise<{ next?: string; error?: string; role?: string; source?: string; utm_source?: string; utm_campaign?: string }>;
 };
 
 export default async function SignupPage({ searchParams }: Props) {
   const params = await searchParams;
-  const next = safeNextPath(params.next, "/creator?welcome=1");
+  const business = params.role?.toLowerCase() === "business";
+  const next = safeNextPath(params.next, business ? "/business/home" : "/creator?welcome=1");
   const policy = await getSiteConfig();
   const [terms, privacy, portraits] = await Promise.all([
     currentLegalDocument("terms-of-service").catch(() => null),
@@ -28,7 +29,7 @@ export default async function SignupPage({ searchParams }: Props) {
   const portrait = freshExamplePortrait(portraits);
 
   return (
-    <AccountAccessFrame actionHref={`/login?next=${encodeURIComponent(next)}`} actionLabel="Log in">
+    <AccountAccessFrame>
       <div className="order-2 lg:order-1">
         <h1 className="font-display text-4xl font-bold leading-tight text-[#1B1464]">
           Your influence.
@@ -70,11 +71,11 @@ export default async function SignupPage({ searchParams }: Props) {
           <fieldset className="space-y-2 text-sm">
             <legend className="font-semibold text-[#1B1464]">I am joining as</legend>
             <label className="flex items-center gap-2">
-              <input type="radio" name="role" value="CREATOR" defaultChecked className="accent-[#6D4AFF]" />
+              <input type="radio" name="role" value="CREATOR" defaultChecked={!business} className="accent-[#6D4AFF]" />
               Influencer
             </label>
             <label className="flex items-center gap-2">
-              <input type="radio" name="role" value="BUSINESS" className="accent-[#6D4AFF]" />
+              <input type="radio" name="role" value="BUSINESS" defaultChecked={business} className="accent-[#6D4AFF]" />
               Business
             </label>
           </fieldset>
