@@ -14,7 +14,37 @@ export type LaunchGateRecord = LaunchApprovals &
     providerTraceReady: boolean;
     payoutTrace: StagingTrace | null;
     refundTrace: StagingTrace | null;
+    sandboxTestEmails: string[];
   };
+
+/** Lower-case, de-duplicated, valid-looking emails from a comma, space or line separated list. */
+export function parseTestEmails(raw: string | null | undefined): string[] {
+  return [
+    ...new Set(
+      String(raw ?? "")
+        .split(/[\s,;]+/)
+        .map((value) => value.trim().toLowerCase())
+        .filter((value) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)),
+    ),
+  ].slice(0, 20);
+}
+
+/**
+ * Before launch, a deal may be funded only when Stripe uses test keys (no real money), the deal
+ * collects through Stripe, and every party is on the admin's test-account list.
+ */
+export function sandboxTestFundingAllowed(input: {
+  stripeMode: string;
+  collectionProviderCode: string | null | undefined;
+  partyEmails: string[];
+  testEmails: string[];
+}) {
+  if (input.stripeMode !== "sandbox") return false;
+  if (!(input.collectionProviderCode ?? "").toLowerCase().startsWith("stripe")) return false;
+  if (input.testEmails.length === 0 || input.partyEmails.length === 0) return false;
+  const allowed = new Set(input.testEmails.map((email) => email.toLowerCase()));
+  return input.partyEmails.every((email) => allowed.has(email.trim().toLowerCase()));
+}
 
 function readTrace(value: unknown): StagingTrace | null {
   if (!value || typeof value !== "object") return null;
@@ -44,7 +74,27 @@ export async function getLaunchGate(): Promise<LaunchGateRecord> {
     providerTraceReady: row.providerTraceReady,
     payoutTrace: readTrace(row.payoutTraceJson),
     refundTrace: readTrace(row.refundTraceJson),
+    sandboxTestEmails: parseTestEmails(row.sandboxTestEmails),
   };
+}
+
+export async function saveSandboxTestEmails(input: { actor: string; reason: string; emails: string }) {
+  const reason = input.reason.trim();
+  if (reason.length < 8) throw new Error("Add a reason of at least 8 characters. Nothing was changed.");
+  const before = await getLaunchGate();
+  const emails = parseTestEmails(input.emails);
+  await prisma.collaborationLaunchGate.update({ where: { id: GATE_ID }, data: { sandboxTestEmails: emails.join(",") } });
+  await prisma.auditLog.create({
+    data: {
+      actor: input.actor.slice(0, 120),
+      action: "launch_gate.sandbox_test_accounts",
+      objectType: "CollaborationLaunchGate",
+      objectId: GATE_ID,
+      before: { sandboxTestEmails: before.sandboxTestEmails },
+      after: { sandboxTestEmails: emails, reason },
+    },
+  });
+  return emails;
 }
 
 export async function saveLaunchApprovals(input: {

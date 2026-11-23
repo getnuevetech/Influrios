@@ -55,6 +55,23 @@ export async function actionSaveLaunchApprovals(formData: FormData) {
   redirect("/admin/payment-settings?section=routes&saved=launch-approvals");
 }
 
+export async function actionSaveSandboxTestAccounts(formData: FormData) {
+  const session = await requireAdminAction("marketplace.manage");
+  try {
+    const { saveSandboxTestEmails } = await import("@/lib/launch-gate");
+    await saveSandboxTestEmails({
+      actor: session.email,
+      reason: String(formData.get("reason") ?? ""),
+      emails: String(formData.get("emails") ?? ""),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save the test accounts.";
+    redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/payment-settings");
+  redirect("/admin/payment-settings?section=routes&saved=test-accounts");
+}
+
 export async function actionSaveDeferredFunding(formData: FormData) {
   const session = await requireAdminAction("marketplace.manage");
   const gate = await getLaunchGate().catch(() => null);

@@ -178,7 +178,21 @@ export async function fundSignedAgreement(input: {
         }
       : null,
   );
-  if (liveFunding) return { ok: false as const, error: liveFunding };
+  if (liveFunding) {
+    // Before launch: Stripe test keys, Stripe collection, and only admin-listed test accounts.
+    const { sandboxTestFundingAllowed } = await import("@/lib/launch-gate");
+    const { stripeBillingMode } = await import("@/lib/stripe-admin");
+    const corridor = terms.jurisdictionCode
+      ? await prisma.countryActivationCorridor.findUnique({ where: { countryCode: terms.jurisdictionCode } }).catch(() => null)
+      : null;
+    const testDeal = sandboxTestFundingAllowed({
+      stripeMode: await stripeBillingMode().catch(() => "rejected"),
+      collectionProviderCode: corridor?.collectionProviderCode,
+      partyEmails: document.parties.map((party) => party.email),
+      testEmails: gate?.sandboxTestEmails ?? [],
+    });
+    if (!testDeal) return { ok: false as const, error: liveFunding };
+  }
   const expired = signedQuoteExpired(terms.financialPlan);
   if (expired) return { ok: false as const, error: expired };
 

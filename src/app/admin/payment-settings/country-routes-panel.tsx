@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { actionRecordProviderTrace, actionSaveCanonicalCountryRoute, actionSaveDeferredFunding, actionSaveLaunchApprovals, actionSaveProcessTimings } from "@/app/admin/payment-settings/actions";
+import { actionRecordProviderTrace, actionSaveCanonicalCountryRoute, actionSaveDeferredFunding, actionSaveLaunchApprovals, actionSaveProcessTimings, actionSaveSandboxTestAccounts } from "@/app/admin/payment-settings/actions";
 import { paymentSettingsParams } from "@/app/admin/payment-settings/owner";
 import { ReviewBeforeSave } from "@/components/review-before-save";
 import { getLaunchGate } from "@/lib/launch-gate";
 import { loadProcessTimings } from "@/lib/process-timing";
+import { stripeBillingMode } from "@/lib/stripe-admin";
 import { requireAnyAdminModule } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { prisma } from "@/lib/db";
@@ -23,6 +24,7 @@ export async function CountryRoutesPanel({
   const canEdit = hasPermission(session, "collab_finance.manage");
   const canApprove = hasPermission(session, "marketplace.manage");
   const launchGate = await getLaunchGate().catch(() => null);
+  const stripeMode = await stripeBillingMode().catch(() => "rejected" as const);
   const timing = await loadProcessTimings().catch(() => null);
   const params = paymentSettingsParams(await searchParams);
   const [corridors, jurisdictions, routes, gateways] = await Promise.all([
@@ -110,6 +112,29 @@ export async function CountryRoutesPanel({
           </form>
         ) : (
           <p className="mt-2 text-xs text-muted">Finance can change these approvals.</p>
+        )}
+        <h3 className="mt-4 font-display text-base font-bold text-indigo">Test accounts before launch</h3>
+        <p className="mt-1 text-sm text-muted">
+          Stripe is using {stripeMode === "sandbox" ? "test keys" : stripeMode === "live" ? "live keys" : "no usable key"}. While Stripe
+          uses test keys, a deal that collects through Stripe can be funded before the approvals above only when every party&apos;s
+          email is listed here. Use it to run one test deal (fund, release, pay out, refund) and record the test transaction. It
+          stops applying as soon as Stripe uses live keys.
+        </p>
+        {canApprove ? (
+          <form action={actionSaveSandboxTestAccounts} className="mt-3 grid gap-2 text-sm">
+            <textarea
+              name="emails"
+              rows={3}
+              defaultValue={(launchGate?.sandboxTestEmails ?? []).join("\n")}
+              placeholder="One email per line"
+              aria-label="Test account emails"
+              className="rounded-lg border px-3 py-2"
+            />
+            <input name="reason" required minLength={8} placeholder="Reason for this change" className="rounded-lg border px-3 py-2" aria-label="Reason for this change" />
+            <button className="w-fit rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">Save test accounts</button>
+          </form>
+        ) : (
+          <p className="mt-2 text-xs text-muted">{(launchGate?.sandboxTestEmails ?? []).length} test accounts listed.</p>
         )}
         <h3 className="mt-4 font-display text-base font-bold text-indigo">Process clocks</h3>
         <p className="mt-1 text-sm text-muted">
