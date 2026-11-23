@@ -1392,7 +1392,11 @@ export async function runScheduledReleaseSweep(now = new Date(), onlyMilestoneId
       where: { milestoneId: milestone.id },
       select: { id: true },
     });
-    if (ownedSettlement) {
+    // The owned-settlement executor only simulates sandbox_ledger_hold deals. A deal paid through real
+    // Stripe Checkout (charges and transfers) goes to the provider adapter below, which moves the money.
+    const { readSandboxCollectionProvenance } = await import("@/lib/payment-account-routing");
+    const simulatedHold = readSandboxCollectionProvenance(milestone.funding.routeSnapshotJson) != null;
+    if (ownedSettlement && simulatedHold) {
       const { executeOwnedSettlement } = await import("@/lib/payment-settlement-executor");
       await executeOwnedSettlement(ownedSettlement.id);
       continue;
