@@ -1316,6 +1316,22 @@ export async function runScheduledReleaseSweep(now = new Date(), onlyMilestoneId
   const { readShareSnapshot, shareLines } = await import("@/lib/fx-share");
   const { adapterForProvider } = await import("@/lib/payment-provider-adapter");
   const { verifyMarketplaceSignature } = await import("@/lib/ledger");
+  if (!onlyMilestoneId) {
+    // Retry fee transfers to Operations that failed after an influencer payout.
+    const { settleFeesToOperations, stripeReleaseConfig } = await import("@/lib/stripe-release");
+    const config = await stripeReleaseConfig();
+    if (config.ok) {
+      const owed = await prisma.collaborationFunding.findMany({
+        where: { providerCode: { startsWith: "stripe" }, entries: { some: { kind: "fee_eligible" } } },
+        select: { id: true, milestones: { where: { status: "released" }, select: { id: true }, take: 1 } },
+        take: 50,
+      });
+      for (const row of owed) {
+        const milestoneId = row.milestones[0]?.id;
+        if (milestoneId) await settleFeesToOperations({ fundingId: row.id, milestoneId, config }).catch(() => undefined);
+      }
+    }
+  }
   const due = await prisma.fundingMilestone.findMany({
     where: onlyMilestoneId
       ? { id: onlyMilestoneId, status: "release_scheduled", funding: { status: "held" } }
