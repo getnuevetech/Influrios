@@ -308,7 +308,8 @@ export async function marketplaceConfig() {
 }
 
 export async function saveMarketplaceSettings(input: {
-  reviewWindowHours: number;
+  /** Set on Payment settings → Process clocks. Omit to keep the saved value. */
+  reviewWindowHours?: number;
   maxRevisions?: number;
   maxEvidence?: number;
   maxGrossCents?: number;
@@ -323,8 +324,8 @@ export async function saveMarketplaceSettings(input: {
   killFeeFixedCents?: number;
 }) {
   await ensureMarketplaceDefaults();
-  const hours = Math.round(input.reviewWindowHours);
-  if (!Number.isFinite(hours) || hours < 1 || hours > 24 * 30) {
+  const hours = input.reviewWindowHours == null ? null : Math.round(input.reviewWindowHours);
+  if (hours != null && (!Number.isFinite(hours) || hours < 1 || hours > 24 * 30)) {
     throw new Error("Review window must be between 1 and 720 hours.");
   }
   const maxRevisions = input.maxRevisions == null ? null : Math.round(input.maxRevisions);
@@ -361,7 +362,7 @@ export async function saveMarketplaceSettings(input: {
   return prisma.marketplaceSettings.update({
     where: { id: "default" },
     data: {
-      reviewWindowHours: hours,
+      ...(hours == null ? {} : { reviewWindowHours: hours }),
       ...(maxRevisions == null ? {} : { maxRevisions }),
       ...(maxEvidence == null ? {} : { maxEvidence }),
       ...(maxGrossCents == null ? {} : { maxGrossCents }),

@@ -287,26 +287,19 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
       </section>
 
       <section className="card-surface p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Review window</h2>
-        <p className="mt-1 text-xs text-muted">
-          Quote life, the unknown-command wait, dispute reminders, hold warnings, payout retries, stale funding, the review notice, and team proposal life are edited on Payment settings.
+        <h2 className="font-display text-lg font-bold text-indigo">Review and limits</h2>
+        <p className="mt-1 text-sm text-indigo">
+          Default review window: <strong>{config.reviewWindowHours} hours</strong>.{" "}
+          <Link href="/admin/payment-settings?section=routes" className="font-semibold text-violet hover:underline">
+            Change it on Payment settings → Process clocks
+          </Link>
+          . A country can override it under Jurisdictions below.
         </p>
         <p className="mt-1 text-xs text-muted">
-          A submitted milestone auto-approves after this many hours. The window, the revision limit, and the evidence cap are copied onto each new prefund or dispute. A gross cap of 0 means no cap. It is checked on the USD amount when a prefund is created. Lowering it does not cancel a prefund already requested. Turning partial refunds off blocks a new request. A request already recorded still waits for the provider, and the rest of that milestone can be released. A change order amends the gross while the prefund is still waiting for the provider. The limit is copied onto that prefund. Zero means none. Turning change orders off blocks a new amendment and leaves one already recorded in place. The earlier fee snapshot stays on the change order. An open-dispute limit of 0 means no extra limit. Turning risk controls off skips that check and leaves the gross cap in place. The monthly report lists amounts recorded that month. Turning it off hides the report and does not delete ledger rows.
+          A submitted milestone auto-approves after the review window. The window, the revision limit, and the evidence cap are copied onto each new prefund or dispute. A gross cap of 0 means no cap. It is checked on the USD amount when a prefund is created. Lowering it does not cancel a prefund already requested. Turning partial refunds off blocks a new request. A request already recorded still waits for the provider, and the rest of that milestone can be released. A change order amends the gross while the prefund is still waiting for the provider. The limit is copied onto that prefund. Zero means none. Turning change orders off blocks a new amendment and leaves one already recorded in place. The earlier fee snapshot stays on the change order. An open-dispute limit of 0 means no extra limit. Turning risk controls off skips that check and leaves the gross cap in place. The monthly report lists amounts recorded that month. Turning it off hides the report and does not delete ledger rows.
         </p>
         {canManage ? (
           <form action={actionSaveMarketplaceSettings} className="mt-4 flex flex-wrap items-end gap-3">
-            <label className="text-xs font-semibold text-muted">
-              Hours
-              <input
-                name="reviewWindowHours"
-                type="number"
-                min={1}
-                max={720}
-                defaultValue={config.reviewWindowHours}
-                className="mt-1 w-32 rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-              />
-            </label>
             <label className="text-xs font-semibold text-muted">
               Revisions
               <input
@@ -668,7 +661,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
               />
             </label>
             <label className="text-xs font-semibold text-muted">
-              Review window hours (blank = marketplace default)
+              Review window hours for this country (blank = default from Process clocks)
               <input
                 name="reviewWindowHours"
                 type="number"

@@ -113,7 +113,7 @@ export async function CountryRoutesPanel({
         )}
         <h3 className="mt-4 font-display text-base font-bold text-indigo">Process clocks</h3>
         <p className="mt-1 text-sm text-muted">
-          These clocks start at the previous fixed values. A review window is copied onto a milestone when it is funded, and a quote expiry is copied when the deal is signed. The other clocks are read each time the job runs. A country can still set its own review window on Marketplace settings. Attribution days and the recurring interval stay on that page too. Login lockout, webhook signature age, and mail timeouts stay fixed.
+          These clocks start at the previous fixed values. A review window is copied onto a milestone when it is funded, and a quote expiry is copied when the deal is signed. The other clocks are read each time the job runs. The review window here is the default for every country; a country can override it under Marketplace settings → Jurisdictions. Attribution days stay on Marketplace settings. Login lockout, webhook signature age, and mail timeouts stay fixed.
         </p>
         {canApprove && timing ? (
           <form action={actionSaveProcessTimings} className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
