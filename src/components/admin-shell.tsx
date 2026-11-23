@@ -88,26 +88,9 @@ export function AdminTopBar({
           <span className="hidden sm:inline">Influrios</span>
         </Link>
 
-        <nav className="hidden items-center gap-4 text-[13px] font-medium text-muted xl:flex">
-          <Link href="/" className="hover:text-indigo">
-            Home
-          </Link>
-          <Link href="/discover" className="hover:text-indigo">
-            Discover
-          </Link>
-          <Link href="/categories" className="hover:text-indigo">
-            Categories
-          </Link>
-          <Link href="/collaboration" className="hover:text-indigo">
-            Collaboration
-          </Link>
-          <Link href="/business" className="hover:text-indigo">
-            For Businesses
-          </Link>
-          <Link href="/pricing" className="hover:text-indigo">
-            Pricing
-          </Link>
-        </nav>
+        <Link href="/" className="hidden text-[13px] font-medium text-muted hover:text-indigo xl:inline">
+          View site ↗
+        </Link>
 
         <form action="/admin/accounts" method="get" className="mx-auto hidden min-w-0 max-w-xl flex-1 md:block">
           <input type="hidden" name="tab" value="all" />

@@ -16,6 +16,8 @@ export type KpiCard = {
   tone: "violet" | "blue" | "green" | "amber" | "rose";
   trend: Trend;
   spark: number[];
+  /** Plain-language context shown instead of a percentage (e.g. "3 new in the last 30 days"). */
+  note?: string;
 };
 
 export type MonthPoint = { key: string; label: string; influencers: number; businesses: number; collaborations: number };
@@ -124,7 +126,7 @@ function healthOperational(line: HealthLine): boolean {
     return label.includes("sandbox") || label.includes("live secret");
   }
   if (line.key === "email") return label.includes("smtp ready");
-  if (line.key === "marketplace") return label.includes("webhook secret");
+  if (line.key === "marketplace") return label.startsWith("Ready");
   if (line.key === "shortlinks") return label.includes("verified and active");
   if (line.key === "ai") return !line.detail;
   return !line.detail;
@@ -135,7 +137,7 @@ function healthTitle(line: HealthLine): string {
   if (line.key === "email") return "Email (SMTP)";
   if (line.key === "ai") return "AI pipelines";
   if (line.key === "shortlinks") return "Domain & Short links";
-  if (line.key === "marketplace") return "Marketplace webhook";
+  if (line.key === "marketplace") return "Collaboration payments";
   return line.title;
 }
 
@@ -186,10 +188,11 @@ export async function loadAdminDashboard(session: {
     countUsers("CREATOR", d60, d30),
     countUsers("BUSINESS_LIKE", d30),
     countUsers("BUSINESS_LIKE", d60, d30),
-    prisma.collaboration.count({ where: { status: "accepted" } }).catch(() => 0),
-    prisma.collaboration.count({ where: { status: "accepted", createdAt: { gte: d30 } } }).catch(() => 0),
-    prisma.collaboration
-      .count({ where: { status: "accepted", createdAt: { gte: d60, lt: d30 } } })
+    // Active = signed and funded, work or payouts still open.
+    prisma.collaborationFunding.count({ where: { status: { in: ["held", "payment_risk"] } } }).catch(() => 0),
+    prisma.collaborationFunding.count({ where: { status: { in: ["held", "payment_risk", "completed"] }, createdAt: { gte: d30 } } }).catch(() => 0),
+    prisma.collaborationFunding
+      .count({ where: { status: { in: ["held", "payment_risk", "completed"] }, createdAt: { gte: d60, lt: d30 } } })
       .catch(() => 0),
     prisma.collaborationFunding
       .aggregate({
@@ -348,6 +351,7 @@ export async function loadAdminDashboard(session: {
       tone: "violet",
       trend: pctChange(influencers30, influencersPrev),
       spark: sparkFromMonths((m) => m.influencers),
+      note: `${formatInt(influencers30)} new in the last 30 days`,
     },
     {
       key: "businesses",
@@ -357,6 +361,7 @@ export async function loadAdminDashboard(session: {
       tone: "blue",
       trend: pctChange(businesses30, businessesPrev),
       spark: sparkFromMonths((m) => m.businesses),
+      note: `${formatInt(businesses30)} new in the last 30 days`,
     },
     {
       key: "collabs",
@@ -366,6 +371,7 @@ export async function loadAdminDashboard(session: {
       tone: "violet",
       trend: pctChange(collabs30, collabsPrev),
       spark: sparkFromMonths((m) => m.collaborations),
+      note: `${formatInt(collabs30)} funded in the last 30 days`,
     },
     {
       key: "volume",

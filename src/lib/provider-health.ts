@@ -1,9 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getBillingStore } from "@/lib/billing";
-import { marketplaceWebhookSecret } from "@/lib/marketplace-ledger";
 import { stripeBillingMode } from "@/lib/stripe-admin";
 import { mailReady } from "@/lib/mail";
-import { productSwitch } from "@/lib/product-switches";
 
 export type HealthLine = { key: string; title: string; label: string; detail?: string };
 
@@ -16,8 +14,7 @@ export async function providerHealth(): Promise<HealthLine[]> {
     lastProviderInstruction,
     billing,
     stripeMode,
-    marketplace,
-    collabOs,
+    releaseConfig,
     shortDomain,
     paymentRiskCount,
   ] = await Promise.all([
@@ -36,8 +33,7 @@ export async function providerHealth(): Promise<HealthLine[]> {
       .catch(() => null),
     getBillingStore().catch(() => null),
     stripeBillingMode().catch(() => "demo" as const),
-    marketplaceWebhookSecret("primary").catch(() => ({ error: "not_ready" as const })),
-    productSwitch("collab_os_v1").catch(() => true),
+    import("@/lib/stripe-release").then((mod) => mod.stripeReleaseConfig()).catch(() => ({ ok: false as const, reason: "" })),
     prisma.shortLinkDomain
       .findFirst({ where: { isPrimary: true }, select: { hostname: true, verified: true, active: true } })
       .catch(() => null),
@@ -48,7 +44,8 @@ export async function providerHealth(): Promise<HealthLine[]> {
     : billing?.lastWebhookAt
       ? `Last webhook ${billing.lastWebhookAt}`
       : undefined;
-  const marketplaceReady = !("error" in marketplace);
+  // Stripe collects into the Collaborations balance and pays out to influencers and Operations.
+  const collabPaymentsReady = releaseConfig.ok === true;
   const shortLabel = !shortDomain
     ? "No primary short-link domain configured."
     : shortDomain.verified && shortDomain.active
@@ -75,16 +72,13 @@ export async function providerHealth(): Promise<HealthLine[]> {
     },
     {
       key: "marketplace",
-      title: "Marketplace webhook",
-      label: marketplaceReady
-        ? "Primary marketplace provider has a webhook secret."
-        : "Primary marketplace provider is not ready for signed webhooks.",
+      title: "Collaboration payments",
+      label: collabPaymentsReady
+        ? "Ready: Stripe collection and milestone payouts to influencers and Operations."
+        : "Not ready: connect Stripe and set the Operations account under Payment settings.",
       detail: [
-        `collab_os_v1 is ${collabOs ? "on" : "off"}`,
-        paymentRiskCount > 0 ? `${paymentRiskCount} payment-risk funding(s)` : null,
-        lastProviderInstruction?.lastError
-          ? `Last provider instruction error: ${lastProviderInstruction.lastError}`
-          : null,
+        paymentRiskCount > 0 ? `${paymentRiskCount} funding(s) at payment risk` : null,
+        lastProviderInstruction?.lastError ? `Last payout error: ${lastProviderInstruction.lastError}` : null,
       ]
         .filter(Boolean)
         .join(" · "),
