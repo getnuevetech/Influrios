@@ -1530,7 +1530,11 @@ export async function runScheduledReleaseSweep(now = new Date(), onlyMilestoneId
       where: { id: milestone.id, status: "release_scheduled" },
       data: { status: "release_requested" },
     });
-    if (updated.count !== 1) continue;
+    if (updated.count !== 1) {
+      // A Stripe transfer completes at once and the ledger already marked the milestone released.
+      const now2 = await prisma.fundingMilestone.findUnique({ where: { id: milestone.id }, select: { status: true } });
+      if (now2?.status !== "released") continue;
+    }
     requested += 1;
     await prisma.auditLog
       .create({
