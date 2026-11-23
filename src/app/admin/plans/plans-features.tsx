@@ -368,21 +368,24 @@ function PlanPriceFields({
       </label>
       <label className="text-sm font-semibold text-indigo">
         Annual price (USD)
-        <input name="annualPrice" inputMode="decimal" defaultValue={annualDollars} placeholder="Leave blank to keep annual unpublished" autoComplete="off" className={fieldClass} />
+        <input name="annualPrice" inputMode="decimal" defaultValue={annualDollars} placeholder="Leave blank for no yearly plan" autoComplete="off" className={fieldClass} />
       </label>
       <label className="text-sm font-semibold text-indigo">
         Price label
         <input name="priceLabel" defaultValue={priceLabel} placeholder="$49/mo" className={fieldClass} />
         <span className="mt-1 block text-xs font-normal text-muted">Admin label only. Checkout uses the dollar amounts.</span>
       </label>
-      <label className="text-sm font-semibold text-indigo">
-        Stripe price id
-        <input name="stripePriceId" defaultValue={stripePriceId} placeholder="price_..." className={fieldClass} />
-      </label>
-      <label className="text-sm font-semibold text-indigo sm:col-span-2">
-        Annual Stripe price id
-        <input name="annualStripePriceId" defaultValue={annualStripePriceId} placeholder="price_..." className={fieldClass} />
-      </label>
+      <p className="text-xs text-muted sm:col-span-2">
+        Stripe prices are created automatically from these amounts when you save. A new amount creates a new Stripe price;
+        current subscribers keep their price until they change plan.
+        {stripePriceId || annualStripePriceId ? (
+          <span className="mt-1 block font-mono text-[11px]">
+            {stripePriceId ? `Monthly: ${stripePriceId}` : ""}
+            {stripePriceId && annualStripePriceId ? " · " : ""}
+            {annualStripePriceId ? `Yearly: ${annualStripePriceId}` : ""}
+          </span>
+        ) : null}
+      </p>
     </>
   );
 }

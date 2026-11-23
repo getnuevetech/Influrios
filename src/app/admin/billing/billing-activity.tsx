@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { actionCheckStripeSandbox, actionPauseAnnualCode, actionSaveBillingPrices, actionSaveBillingSwitches } from "@/app/admin/billing/actions";
+import { actionCheckStripeSandbox, actionPauseAnnualCode, actionSyncPlanPrices, actionSaveBillingSwitches } from "@/app/admin/billing/actions";
 import { SubscriptionsDialog } from "@/app/admin/subscriptions/dialog";
 import { IconCalendar, IconCheck, IconCopy, IconSearch, IconSettings, IconX } from "@/components/icons";
 import {
@@ -12,7 +12,6 @@ import {
   type CheckoutDisplayStatus,
 } from "@/lib/admin-subscription-view";
 
-const fieldClass = "mt-1 w-full rounded-xl border border-[#E4EBFF] px-3 py-2 text-sm font-normal text-indigo";
 
 type CatalogRow = {
   sku: string;
@@ -283,49 +282,51 @@ export function BillingActivity({
           ) : (
             <p className="mt-3 text-sm text-muted">Saving these needs the gateways edit permission.</p>
           )}
-          <form action={canEdit ? actionSaveBillingPrices : undefined} className="mt-6 grid gap-3 sm:grid-cols-2">
-            <p className="text-sm font-normal text-muted sm:col-span-2">
-              Existing subscriptions stay on the price they already use. A blank monthly field keeps the current mapping. An annual amount can be saved before the annual price id. Public pricing can show that amount, and checkout stays unpublished until the annual price id is saved. Leave both annual fields blank to keep annual unpublished. The annual price id has to differ from the monthly price id.
+          <div className="mt-6 space-y-3 rounded-xl border border-border bg-white p-4 text-sm">
+            <p className="font-semibold text-indigo">Plan prices</p>
+            <p className="text-muted">
+              Monthly and yearly prices are the Influrios prices set on{" "}
+              <a href="/admin/plans" className="font-semibold text-violet hover:underline">Plans &amp; features</a>. Stripe prices are created from
+              them automatically when a plan is saved; nothing is pasted from Stripe. Existing subscribers keep their current price until
+              they change plan.
             </p>
             {unpricedAnnualCodes.length > 0 ? (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-normal text-amber-950 sm:col-span-2">
-                <p className="font-semibold">Annual codes without a saved annual price</p>
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-950">
+                <p className="font-semibold">Annual discount codes for plans without a yearly price</p>
                 <ul className="mt-2 space-y-2">
                   {unpricedAnnualCodes.map((code) => (
                     <li key={code.id} className="flex flex-wrap items-center justify-between gap-2">
-                      <span>{code.code} is active for {code.planName} annual, and that price is not saved.</span>
+                      <span>{code.code} applies to {code.planName} yearly, which has no yearly price yet.</span>
                       {canEdit ? (
-                        <button type="submit" formAction={actionPauseAnnualCode} name="offerId" value={code.id} className="rounded-full border border-amber-400 px-3 py-1 text-xs font-semibold">
-                          Pause code
-                        </button>
+                        <form action={actionPauseAnnualCode}>
+                          <button type="submit" name="offerId" value={code.id} className="rounded-full border border-amber-400 px-3 py-1 text-xs font-semibold">
+                            Pause code
+                          </button>
+                        </form>
                       ) : null}
                     </li>
                   ))}
                 </ul>
               </div>
             ) : null}
-            {catalog.map((product) => (
-              <div key={product.sku} className="text-xs font-semibold text-muted">
-                <label>
-                  {product.name} monthly price id
-                  <input name={product.sku} defaultValue={prices[product.sku] ?? ""} disabled={!canEdit} className={fieldClass} />
-                </label>
-                <label className="mt-2 block">
-                  Annual amount (USD)
-                  <input name={`${product.sku}_annual_amount`} defaultValue={annual[product.sku]?.amount ?? ""} disabled={!canEdit} placeholder="0.00" className={fieldClass} />
-                </label>
-                <label className="mt-2 block">
-                  Annual price id
-                  <input name={`${product.sku}_annual_price`} defaultValue={annual[product.sku]?.priceId ?? ""} disabled={!canEdit} placeholder="price_..." className={fieldClass} />
-                </label>
-              </div>
-            ))}
+            <ul className="space-y-1 text-xs text-muted">
+              {catalog.map((product) => (
+                <li key={product.sku}>
+                  {product.name}: monthly {prices[product.sku] ? "set up in Stripe" : "not set up yet"}
+                  {annual[product.sku]?.amount
+                    ? ` · yearly ${annual[product.sku]?.amount} USD ${annual[product.sku]?.priceId ? "set up in Stripe" : "not set up yet"}`
+                    : " · no yearly price"}
+                </li>
+              ))}
+            </ul>
             {canEdit ? (
-              <button type="submit" className="btn-secondary w-fit !py-2 text-sm sm:col-span-2">
-                Save price ids
-              </button>
+              <form action={actionSyncPlanPrices}>
+                <button type="submit" className="btn-secondary w-fit !py-2 text-sm">
+                  Set up Stripe prices for all plans
+                </button>
+              </form>
             ) : null}
-          </form>
+          </div>
           <ul className="mt-4 space-y-1 text-sm text-muted">
             {catalog.map((product) => (
               <li key={product.sku}>
