@@ -1,6 +1,5 @@
 "use server";
 
-import { payoutProfileReady } from "@/lib/influencer-payout-ready";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAccountSession } from "@/lib/accounts";
@@ -71,14 +70,8 @@ export async function actionApproveAndRelease(formData: FormData) {
   if (!submission || submission.status === "revision_requested") {
     fail(funding.id, "That version is no longer the one under review. Nothing was released.");
   }
-  const creator = await prisma.creator.findUnique({
-    where: { slug: funding.creatorSlug },
-    select: { payoutProfile: { select: { stripeConnectAccountId: true, providerConnectedAccountId: true, primaryStatus: true } } },
-  });
-  const payoutReady = payoutProfileReady(creator?.payoutProfile);
-  if (!payoutReady) {
-    fail(funding.id, "Work was not approved. Payout setup still needs attention, so release stays blocked.");
-  }
+  // Approval records the business's decision on the work. Payout setup only holds the payout,
+  // which the release sweep sends once the influencer's payout account is ready (P1-AUD-08).
   const quote = (funding.feeSnapshotJson as { financialPlan?: { signedQuote?: { milestoneAllocations?: unknown; agreementVersion?: unknown } } } | null)
     ?.financialPlan?.signedQuote;
   const signed = readSignedDealMoney((funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan);

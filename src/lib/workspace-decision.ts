@@ -34,6 +34,8 @@ export type WorkspaceMilestoneState = {
   payoutConfirmed: boolean;
   /** Settlement payoutState paid. Shown separately from the payment column. */
   bankPayoutConfirmed: boolean;
+  /** The influencer has not finished payout setup; an approved milestone waits for it. */
+  payoutSetupPending?: boolean;
 };
 
 export type WorkspaceActor = {
@@ -259,6 +261,9 @@ function workTone(
 
 function paymentStatusLabel(state: WorkspaceMilestoneState, confirmed: boolean) {
   if (confirmed) return "Paid";
+  if (state.payoutSetupPending && (state.milestoneStatus === "approved" || state.milestoneStatus === "release_scheduled")) {
+    return "Approved · payout setup required";
+  }
   if (state.milestoneStatus === "released") return "Awaiting confirmation";
   if (state.milestoneStatus === "refunded") return "Refunded";
   if (state.milestoneStatus === "returned") return "Returned";

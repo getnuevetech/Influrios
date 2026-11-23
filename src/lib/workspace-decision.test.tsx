@@ -361,3 +361,23 @@ describe("workspace decision", () => {
     assert.equal(contractPage.includes("formatMoney("), false);
   });
 });
+
+describe("approval separated from payout setup (P1-AUD-08)", () => {
+  it("labels an approved milestone that waits for payout setup", async () => {
+    const { workspaceDecision } = await import("@/lib/workspace-decision");
+    const base = {
+      fundingStatus: "held",
+      milestoneStatus: "release_scheduled",
+      revisionCount: 0,
+      revisionLimit: 2,
+      disputeOpen: false,
+      payoutConfirmed: false,
+      bankPayoutConfirmed: false,
+      submissions: [{ version: 1, status: "approved", note: "", linkUrl: "", reviewNote: "" }],
+    };
+    const waiting = workspaceDecision({ ...base, payoutSetupPending: true }, { audience: "business", assigned: false });
+    assert.equal(waiting.paymentStatus, "Approved · payout setup required");
+    const ready = workspaceDecision({ ...base, payoutSetupPending: false }, { audience: "business", assigned: false });
+    assert.equal(ready.paymentStatus, "Release scheduled");
+  });
+});

@@ -1416,6 +1416,13 @@ export async function runScheduledReleaseSweep(now = new Date(), onlyMilestoneId
       await logReleaseFailure(milestone.id, milestone.fundingId, "An open dispute holds this payout.");
       continue;
     }
+    // Payout setup holds only the payout: wait without spending a send attempt (P1-AUD-08).
+    const { influencerPayoutReady } = await import("@/lib/influencer-payout-ready");
+    const payee = await influencerPayoutReady(milestone.funding.creatorSlug);
+    if (!payee.ready) {
+      await logReleaseFailure(milestone.id, milestone.fundingId, `Waiting for ${payee.name} to finish payout setup. The payout is sent once it is ready.`);
+      continue;
+    }
     if (!onlyMilestoneId && !providerOn) continue;
     if (
       !releasePushAuthorized({
