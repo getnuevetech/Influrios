@@ -113,7 +113,8 @@ export async function ReconciliationTab({ currency, rows }: { currency: string; 
           <IconCoins size={22} className="text-[#6D4AFF]" />
           <span>
             <strong>Cash reconciliation:</strong> {whole(result.collectedCents, c)} collected − {whole(result.paidCents, c)} paid −{" "}
-            {whole(result.costsCents, c)} costs{result.refundedCents ? ` − ${whole(result.refundedCents, c)} refunded` : ""} ={" "}
+            {whole(result.costsCents, c)} costs{result.refundedCents ? ` − ${whole(result.refundedCents, c)} refunded` : ""}
+            {result.topupsCents ? ` + ${whole(result.topupsCents, c)} platform top-ups` : ""} ={" "}
             {whole(result.ledgerCashCents, c)}
           </span>
         </span>
@@ -122,6 +123,7 @@ export async function ReconciliationTab({ currency, rows }: { currency: string; 
           <span>
             <strong>Cash ownership:</strong> {whole(result.heldCents + result.awaitingPayoutCents, c)} contract funds +{" "}
             {whole(result.taxPayableCents, c)} tax payable + {whole(result.platformNetCents, c)} platform net
+            {result.topupsCents ? ` + ${whole(result.topupsCents, c)} platform top-ups` : ""}
           </span>
         </span>
       </div>

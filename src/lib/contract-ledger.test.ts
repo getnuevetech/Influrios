@@ -92,6 +92,23 @@ describe("contract ledger", () => {
     assert.equal(off.exceptions.pendingSettlement, 1);
   });
 
+  it("explains a platform top-up instead of reporting it as a difference", () => {
+    const result = reconcile([c0108()], {
+      ok: true,
+      availableCents: 137_200 + 500_000,
+      pendingCents: 0,
+      reserveCents: 0,
+      bankCents: 200_000,
+      inTransitCount: 0,
+      topupsCents: 500_000,
+      lastPayout: null,
+      fetchedAt: at(14),
+    });
+    assert.equal(result.topupsCents, 500_000);
+    assert.equal(result.unexplainedCents, 0);
+    assert.ok(result.lines.every((line) => line.matched));
+  });
+
   it("shows provider columns as not read when Stripe cannot be reached", () => {
     const result = reconcile([c0108()], { ok: false, error: "Stripe is not connected", fetchedAt: at(14) });
     assert.equal(result.combinedCents, null);

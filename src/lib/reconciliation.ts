@@ -14,6 +14,8 @@ export type ProviderSnapshot = {
   bankCents: number;
   /** Payouts on their way to the bank. */
   inTransitCount: number;
+  /** Money the platform added to its own Stripe balance (succeeded top-ups). Not contract money. */
+  topupsCents?: number;
   lastPayout: { id: string; amountCents: number; arrivalDate: Date; status: string } | null;
   fetchedAt: Date;
 };
@@ -33,6 +35,8 @@ export type Reconciliation = {
   paidCents: number;
   costsCents: number;
   refundedCents: number;
+  /** Platform top-ups into the Stripe balance; explains cash that no contract brought in. */
+  topupsCents: number;
   ledgerCashCents: number;
   heldCents: number;
   awaitingPayoutCents: number;
@@ -52,12 +56,14 @@ export function reconcile(rows: ContractLedgerRow[], provider: ProviderSnapshot 
   const paid = add((row) => row.paidToInfluencerCents);
   const costs = add((row) => row.processingCostsCents);
   const refunded = add((row) => row.refundedCents);
-  const ledgerCash = collected - paid - costs - refunded;
+  const topups = provider.ok ? provider.topupsCents ?? 0 : 0;
+  const ledgerCash = collected - paid - costs - refunded + topups;
   const base = {
     collectedCents: collected,
     paidCents: paid,
     costsCents: costs,
     refundedCents: refunded,
+    topupsCents: topups,
     ledgerCashCents: ledgerCash,
     heldCents: add((row) => row.heldCents),
     awaitingPayoutCents: add((row) => row.releasedAwaitingPayoutCents),
@@ -127,6 +133,8 @@ export async function loadStripeSnapshot(currency: string): Promise<ProviderSnap
   const balance = await stripeGet("/v1/balance", creds.secret);
   if (!balance.ok) return { ok: false, error: `Stripe balance could not be read: ${balance.error}`, fetchedAt };
   const payouts = await stripeGet("/v1/payouts?limit=100", creds.secret);
+  // Top-ups are the platform funding its own balance; read them so they are not "unexplained".
+  const topups = await stripeGet("/v1/topups?limit=100&status=succeeded", creds.secret);
   if (!payouts.ok) return { ok: false, error: `Stripe payouts could not be read: ${payouts.error}`, fetchedAt };
   const code = currency.toLowerCase();
   const rows = (Array.isArray(payouts.payload.data) ? payouts.payload.data : []) as {
@@ -146,6 +154,11 @@ export async function loadStripeSnapshot(currency: string): Promise<ProviderSnap
     reserveCents: forCurrency(balance.payload.connect_reserved, currency),
     bankCents: paid.reduce((total, row) => total + (Number(row.amount) || 0), 0),
     inTransitCount: mine.filter((row) => row.status === "pending" || row.status === "in_transit").length,
+    topupsCents: topups.ok && Array.isArray(topups.payload.data)
+      ? (topups.payload.data as { amount?: number; currency?: string }[])
+          .filter((row) => (row.currency ?? "") === code)
+          .reduce((total, row) => total + (Number(row.amount) || 0), 0)
+      : 0,
     lastPayout: last?.id
       ? {
           id: last.id,
