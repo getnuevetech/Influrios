@@ -273,7 +273,7 @@ export function liveMailLinks() {
     origin,
     hosts: [host?.hostname, "influrios.example"].filter((item): item is string => Boolean(item)),
     allowHttpHosts: host?.protocol === "http:" ? [host.hostname] : [],
-    support_url: `${origin}/account`,
+    support_url: `${origin}/support`,
     preference_url: `${origin}/account/notifications`,
     unsubscribe_url: `${origin}/account/notifications`,
     sender_legal_name: "Influrios",

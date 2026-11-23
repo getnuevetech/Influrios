@@ -38,6 +38,16 @@ export async function actionSaveMailSettings(formData: FormData) {
   redirect(enabled ? "/admin/mail?saved=1" : "/admin/mail?saved=1&warn=enabled");
 }
 
+export async function actionSaveSupportSettings(formData: FormData) {
+  await requireAdminAction("mail.edit");
+  const { saveSupportSettings } = await import("@/lib/support");
+  const saved = await saveSupportSettings({ email: clean(formData.get("supportEmail"), 200) });
+  if (!saved.ok) redirect(`/admin/mail?error=${encodeURIComponent(saved.error)}`);
+  revalidatePath("/admin/mail");
+  revalidatePath("/support");
+  redirect("/admin/mail?saved=1");
+}
+
 export async function actionSendMailTest(formData: FormData) {
   await requireAdminAction("mail.edit");
   const to = clean(formData.get("to"), 200);

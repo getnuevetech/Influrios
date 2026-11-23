@@ -20,6 +20,8 @@ export type MailMessage = {
   html?: string;
   /** Template tests only. Live mail leaves this unset and sends the address alone. */
   fromName?: string;
+  /** Reply-To address (support messages reply to the sender). */
+  replyTo?: string;
 };
 
 export type MailSettingsRow = {
@@ -294,6 +296,8 @@ function headerSafe(value: string) {
 
 function mailBody(input: { from: string; to: string; subject: string; message: MailMessage }) {
   const headers = [`From: ${input.from}`, `To: ${input.to}`, `Subject: ${input.subject}`, "MIME-Version: 1.0"];
+  const replyTo = (input.message.replyTo ?? "").replace(/[\r\n<>]/g, "").trim();
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(replyTo)) headers.push(`Reply-To: ${replyTo}`);
   if (!input.message.html) {
     return [...headers, "Content-Type: text/plain; charset=utf-8", "", dotStuff(input.message.text), ""].join("\r\n");
   }

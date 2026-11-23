@@ -5,6 +5,7 @@ import {
   actionSaveCommTemplate,
   actionSaveMailSettings,
   actionSendCommTemplate,
+  actionSaveSupportSettings,
   actionSendMailTest,
 } from "@/app/admin/mail/actions";
 import { requireAdminPage } from "@/app/admin/guard";
@@ -21,6 +22,7 @@ import {
   listCommTemplates,
 } from "@/lib/comm-templates";
 import { listRecentMailTests, mailSettingsView } from "@/lib/mail";
+import { getSupportSettings } from "@/lib/support";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Email · Admin" };
@@ -40,6 +42,7 @@ export default async function AdminMailPage({ searchParams }: Props) {
     smsEnabled: false,
   }));
   const templates = await listCommTemplates().catch(() => []);
+  const support = await getSupportSettings().catch(() => ({ email: "" }));
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -246,6 +249,34 @@ export default async function AdminMailPage({ searchParams }: Props) {
           ) : null}
         </form>
       </AdminCollapse>
+
+      <section className="card-surface space-y-3 p-5">
+        <h2 className="font-display text-lg font-bold text-indigo">Support contact</h2>
+        <p className="text-sm text-muted">
+          Every email&apos;s &ldquo;contact support&rdquo; link opens <Link href="/support" className="font-semibold text-violet hover:underline">/support</Link>.
+          Messages from that form go to this address (or to active admins when it is blank), with the sender as Reply-To. The address is
+          also shown on the support page.
+        </p>
+        {canEdit ? (
+          <form action={actionSaveSupportSettings} className="flex flex-wrap items-end gap-3">
+            <label className="text-xs font-semibold text-muted">
+              Support email address
+              <input
+                name="supportEmail"
+                type="email"
+                defaultValue={support.email}
+                placeholder="support@your-domain"
+                className="mt-1 w-72 rounded-lg border border-border px-3 py-2 text-sm font-normal text-indigo"
+              />
+            </label>
+            <button type="submit" className="btn-primary w-fit text-sm">
+              Save support contact
+            </button>
+          </form>
+        ) : (
+          <p className="text-sm text-muted">Support address: {support.email || "not set"}</p>
+        )}
+      </section>
 
       <section className="space-y-3">
         <div>
