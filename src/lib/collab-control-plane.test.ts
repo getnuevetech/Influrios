@@ -97,6 +97,7 @@ describe("collab control plane persistence (db)", () => {
       saveCollabControlPlane,
       setCorridorActive,
       listCorridorsForAdmin,
+      createCorridor,
       COLLAB_CONTROL_PLANE_KEY,
     } = await import("./collab-control-plane");
 
@@ -110,9 +111,13 @@ describe("collab control plane persistence (db)", () => {
     assert.equal(saved.dualApprovalThresholdCents, 750_00);
     assert.equal(saved.mentorship.minFollowers, 2_500);
 
+    // A fresh database has no corridors; add the one this test suspends.
+    if (!(await prisma.countryActivationCorridor.findUnique({ where: { countryCode: "KE" } }))) {
+      await createCorridor({ countryCode: "KE", actor: "p6-test@example.com", payoutMethods: ["local_bank"], kycModel: "gateway" });
+    }
     const corridors = await listCorridorsForAdmin();
-    assert.ok(corridors.length >= 8);
-    const target = corridors.find((row) => row.countryCode === "KE") ?? corridors[0];
+    const target = corridors.find((row) => row.countryCode === "KE");
+    assert.ok(target, "KE corridor is listed");
     const suspended = await setCorridorActive({
       countryCode: target.countryCode,
       active: false,

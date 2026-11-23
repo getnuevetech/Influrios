@@ -53,7 +53,7 @@ describe("marketplace provider save does not silently use Primary", () => {
   it("requires an explicit provider code on save and keeps the selection after redirect", () => {
     const ledger = readFileSync("src/lib/marketplace-ledger.ts", "utf8");
     const actions = readFileSync("src/app/admin/marketplace/actions.ts", "utf8");
-    const page = readFileSync("src/app/admin/marketplace/page.tsx", "utf8");
+    const page = readFileSync("src/app/admin/marketplace/settings/page.tsx", "utf8");
     assert.equal(ledger.includes("(input.code || PROVIDER_CODE)"), false);
     assert.match(ledger, /if \(!code\) throw new Error\("Choose a marketplace provider from the list\."\)/);
     assert.match(actions, /code=\$\{encodeURIComponent\(savedCode\)\}/);
@@ -78,7 +78,7 @@ describe("approved provider picker from gateways", () => {
 
   it("saves approved providers from checkbox multi-select, not free text", () => {
     const actions = readFileSync("src/app/admin/marketplace/actions.ts", "utf8");
-    const page = readFileSync("src/app/admin/marketplace/page.tsx", "utf8");
+    const page = readFileSync("src/app/admin/marketplace/settings/page.tsx", "utf8");
     const field = readFileSync("src/app/admin/marketplace/approved-providers-field.tsx", "utf8");
     assert.match(actions, /formData\.getAll\("approvedProviderIds"\)/);
     assert.match(page, /ApprovedProvidersField/);

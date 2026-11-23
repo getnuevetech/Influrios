@@ -55,37 +55,37 @@ enum SocialPlatform {
 }
 
 model User {
-  id              String    @id @default(cuid())
-  email           String    @unique
-  name            String?
-  passwordHash    String?
-  emailVerifiedAt DateTime?
-  suspendedAt     DateTime?
-  role            UserRole  @default(CREATOR)
+  id                    String                    @id @default(cuid())
+  email                 String                    @unique
+  name                  String?
+  passwordHash          String?
+  emailVerifiedAt       DateTime?
+  suspendedAt           DateTime?
+  role                  UserRole                  @default(CREATOR)
   /// Catalog code from EntitlementPlan. Admin can add codes without a schema change.
-  planTier        String    @default("STARTER")
+  planTier              String                    @default("STARTER")
   /// Preferred outreach channel: email | sms
-  preferredCommChannel String @default("email")
-  phone           String?
+  preferredCommChannel  String                    @default("email")
+  phone                 String?
   /// Stripe Customer id from a confirmed Checkout. The billing portal uses this id.
-  stripeCustomerId String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  creator         Creator?
-  business        BusinessProfile?
-  businessWorkspace BusinessWorkspace?
-  consents        ConsentRecord[]
-  emailChallenges EmailChallenge[]
-  passwordResets  PasswordReset[]
-  onboardingSessions OnboardingSession[]
-  collaborationsSent    Collaboration[] @relation("CollaborationInitiator")
-  collaborationsDecided Collaboration[] @relation("CollaborationDecider")
-  legalAcceptances  LegalAcceptance[]
-  subscriptionStates SubscriptionState[]
-  referralRegistration ReferralRegistration?
-  accountNotices    AccountNotice[]
-  verificationTasks PaymentVerificationTask[]
-  messageThreadReads MessageThreadRead[]
+  stripeCustomerId      String?
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  creator               Creator?
+  business              BusinessProfile?
+  businessWorkspace     BusinessWorkspace?
+  consents              ConsentRecord[]
+  emailChallenges       EmailChallenge[]
+  passwordResets        PasswordReset[]
+  onboardingSessions    OnboardingSession[]
+  collaborationsSent    Collaboration[]           @relation("CollaborationInitiator")
+  collaborationsDecided Collaboration[]           @relation("CollaborationDecider")
+  legalAcceptances      LegalAcceptance[]
+  subscriptionStates    SubscriptionState[]
+  referralRegistration  ReferralRegistration?
+  accountNotices        AccountNotice[]
+  verificationTasks     PaymentVerificationTask[]
+  messageThreadReads    MessageThreadRead[]
 }
 
 /// Unread events for the signed-in member. Reading a row clears the bell. The invitation itself stays pending.
@@ -107,39 +107,39 @@ model AccountNotice {
 
 /// Last time this member opened a conversation. A newer message from someone else is unread.
 model MessageThreadRead {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  threadId  String
-  readAt    DateTime @default(now())
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  threadId String
+  readAt   DateTime @default(now())
 
   @@unique([userId, threadId])
   @@index([userId])
 }
 
 model EntitlementPlan {
-  id            String   @id @default(cuid())
-  code          String   @unique
+  id            String                   @id @default(cuid())
+  code          String                   @unique
   name          String
   description   String?
   /// creator | business
-  audience      String   @default("creator")
-  amountCents   Int      @default(0)
-  priceLabel    String   @default("")
+  audience      String                   @default("creator")
+  amountCents   Int                      @default(0)
+  priceLabel    String                   @default("")
   stripePriceId String?
   /// Stripe tax code for this plan. Empty until a tax profile is chosen. Not a tax amount.
-  taxCode       String   @default("")
+  taxCode       String                   @default("")
   /// exclusive | inclusive | blank. Blank blocks a new subscription checkout.
-  taxBehavior   String   @default("")
+  taxBehavior   String                   @default("")
   /// TaxPolicyVersion id. A plan never stores a universal tax amount.
-  taxPolicyId   String   @default("")
-  publicListing Boolean  @default(false)
-  sortOrder     Int      @default(0)
+  taxPolicyId   String                   @default("")
+  publicListing Boolean                  @default(false)
+  sortOrder     Int                      @default(0)
   limitsJson    Json
   featuresJson  Json
-  active        Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  active        Boolean                  @default(true)
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
   features      PlanFeatureEntitlement[]
 }
 
@@ -160,7 +160,7 @@ model PlanFeatureEntitlement {
 
 /// Country or account grants applied after the plan rows.
 model EntitlementOverride {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   planCode    String?
   countryCode String?
   subjectId   String?
@@ -168,20 +168,10 @@ model EntitlementOverride {
   enabled     Boolean?
   limitInt    Int?
   valueText   String?
-  active      Boolean   @default(true)
+  active      Boolean  @default(true)
   note        String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-/// Frozen entitlement set when a subscription changes.
-model EntitlementSnapshot {
-  id        String   @id @default(cuid())
-  planCode  String
-  subjectId String?
-  reason    String
-  payload   Json
-  createdAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model AuditLog {
@@ -226,16 +216,16 @@ model IntelligenceSettings {
 
 /// Public help. Admin edits these rows. Seed keys are inserted once and then left alone.
 model FaqEntry {
-  id         String   @id @default(cuid())
-  key        String   @unique
+  id        String   @id @default(cuid())
+  key       String   @unique
   /// general | creator | business | agency | visitor
-  audience   String
-  question   String
-  answer     String
-  sortOrder  Int      @default(0)
-  published  Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  audience  String
+  question  String
+  answer    String
+  sortOrder Int      @default(0)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([audience, published, sortOrder])
 }
@@ -277,19 +267,19 @@ model Job {
 }
 
 model Specialty {
-  id          String   @id @default(cuid())
-  slug        String   @unique
-  name        String
-  parentId    String?
-  parent      Specialty?  @relation("SpecialtyTree", fields: [parentId], references: [id])
-  children    Specialty[] @relation("SpecialtyTree")
-  creators    CreatorSpecialty[]
-  synonyms    SpecialtySynonym[]
-  offers      CollaborationOffer[]
-  needs       CollaborationNeed[]
-  active      Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
+  id        String               @id @default(cuid())
+  slug      String               @unique
+  name      String
+  parentId  String?
+  parent    Specialty?           @relation("SpecialtyTree", fields: [parentId], references: [id])
+  children  Specialty[]          @relation("SpecialtyTree")
+  creators  CreatorSpecialty[]
+  synonyms  SpecialtySynonym[]
+  offers    CollaborationOffer[]
+  needs     CollaborationNeed[]
+  active    Boolean              @default(true)
+  sortOrder Int                  @default(0)
+  createdAt DateTime             @default(now())
 }
 
 model SpecialtySynonym {
@@ -301,65 +291,65 @@ model SpecialtySynonym {
 }
 
 model Creator {
-  id                 String             @id @default(cuid())
-  userId             String?            @unique
-  user               User?              @relation(fields: [userId], references: [id])
-  slug               String             @unique
-  displayName        String
-  title              String?
-  bio                String?
-  locationCity       String?
+  id                    String                   @id @default(cuid())
+  userId                String?                  @unique
+  user                  User?                    @relation(fields: [userId], references: [id])
+  slug                  String                   @unique
+  displayName           String
+  title                 String?
+  bio                   String?
+  locationCity          String?
   /// Region / state / province when the member provided one (optional).
-  locationState      String?
-  locationCountry    String?
+  locationState         String?
+  locationCountry       String?
   /// Mailing address. City, state, and country stay on the location fields.
-  addressLine1       String?
-  addressLine2       String?
-  postalCode         String?
-  languages          String[]           @default([])
-  avatarUrl          String?
-  coverUrl           String?
+  addressLine1          String?
+  addressLine2          String?
+  postalCode            String?
+  languages             String[]                 @default([])
+  avatarUrl             String?
+  coverUrl              String?
   /// Influencer-facing presentation gender for default avatars: male | female | unspecified
-  gender             String             @default("unspecified")
-  openToCollab       Boolean            @default(true)
-  availability       String             @default("OPEN_TO_PARTNERSHIPS")
-  identityVerified   VerificationStatus @default(UNVERIFIED)
-  profileState       ProfileState       @default(UNCLAIMED)
-  claimed            Boolean            @default(false)
-  planTier           String             @default("STARTER")
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
-  specialties        CreatorSpecialty[]
-  socialAccounts     SocialAccount[]
-  card               InfluenceCard?
-  collabOffers       CollaborationOffer[]
-  collabNeeds        CollaborationNeed[]
-  discoveryFacets    CreatorDiscoveryFacet[]
-  socialConnections  SocialConnection[]
-  shortLinks         ShortLink[]
-  campaignLinks      CampaignLink[]
-  payoutProfile      InfluencerPayoutProfile?
-  mentorshipProfile  MentorshipProfile?
-  mentorshipAsMentor MentorshipRequest[] @relation("MentorshipMentor")
-  mentorshipAsMentee MentorshipRequest[] @relation("MentorshipMentee")
+  gender                String                   @default("unspecified")
+  openToCollab          Boolean                  @default(true)
+  availability          String                   @default("OPEN_TO_PARTNERSHIPS")
+  identityVerified      VerificationStatus       @default(UNVERIFIED)
+  profileState          ProfileState             @default(UNCLAIMED)
+  claimed               Boolean                  @default(false)
+  planTier              String                   @default("STARTER")
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  specialties           CreatorSpecialty[]
+  socialAccounts        SocialAccount[]
+  card                  InfluenceCard?
+  collabOffers          CollaborationOffer[]
+  collabNeeds           CollaborationNeed[]
+  discoveryFacets       CreatorDiscoveryFacet[]
+  socialConnections     SocialConnection[]
+  shortLinks            ShortLink[]
+  campaignLinks         CampaignLink[]
+  payoutProfile         InfluencerPayoutProfile?
+  mentorshipProfile     MentorshipProfile?
+  mentorshipAsMentor    MentorshipRequest[]      @relation("MentorshipMentor")
+  mentorshipAsMentee    MentorshipRequest[]      @relation("MentorshipMentee")
   referralRegistrations ReferralRegistration[]
 }
 
 /// Collab OS P7 — influencer opt-in to mentor others (community mentoring by default).
 model MentorshipProfile {
-  id              String   @id @default(cuid())
-  creatorId       String   @unique
-  creator         Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  id               String   @id @default(cuid())
+  creatorId        String   @unique
+  creator          Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   /// open | paused | closed
-  availability    String   @default("open")
-  headline        String   @default("")
-  boundaries      String   @default("")
-  nichesJson      Json     @default("[]")
+  availability     String   @default("open")
+  headline         String   @default("")
+  boundaries       String   @default("")
+  nichesJson       Json     @default("[]")
   maxActiveMentees Int      @default(5)
   /// Set only when admin eligibility passed at apply time.
-  eligible        Boolean  @default(false)
-  updatedAt       DateTime @updatedAt
-  createdAt       DateTime @default(now())
+  eligible         Boolean  @default(false)
+  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now())
 }
 
 /// Collab OS P7 — mentee → mentor request lifecycle.
@@ -389,26 +379,26 @@ model MentorshipRequest {
 
 /// Collab OS P5 — influencer payout methods + Global Payout Ready.
 model InfluencerPayoutProfile {
-  id                     String   @id @default(cuid())
-  creatorId              String   @unique
-  creator                Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  primaryMethod          String   @default("local_bank")
-  primaryLabel           String   @default("Local bank")
-  primaryStatus          String   @default("UNVERIFIED")
-  primaryCountryCode     String?
-  primaryCurrency        String?
-  secondaryMethod        String?
-  secondaryLabel         String?
-  secondaryStatus        String   @default("UNVERIFIED")
-  secondaryCountryCode   String?
-  secondaryCurrency      String?
-  globalPayoutReady      Boolean  @default(false)
+  id                         String   @id @default(cuid())
+  creatorId                  String   @unique
+  creator                    Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  primaryMethod              String   @default("local_bank")
+  primaryLabel               String   @default("Local bank")
+  primaryStatus              String   @default("UNVERIFIED")
+  primaryCountryCode         String?
+  primaryCurrency            String?
+  secondaryMethod            String?
+  secondaryLabel             String?
+  secondaryStatus            String   @default("UNVERIFIED")
+  secondaryCountryCode       String?
+  secondaryCurrency          String?
+  globalPayoutReady          Boolean  @default(false)
   /// Stripe Connect account id (acct_). Required before a Stripe corridor is ROUTE_READY.
-  stripeConnectAccountId String?
+  stripeConnectAccountId     String?
   /// Connected-account reference for the collaboration payout rail. Release splits pay this account.
   providerConnectedAccountId String?
-  updatedAt              DateTime @updatedAt
-  createdAt              DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+  createdAt                  DateTime @default(now())
 }
 
 /// Collab OS P5 — Country Activation Matrix for collaboration corridors.
@@ -467,28 +457,28 @@ model KycDocumentRequirement {
 
 /// One influencer KYC submission. Documents stay off the public site.
 model CreatorKycSubmission {
-  id                String   @id @default(cuid())
-  creatorSlug       String   @unique
+  id                String               @id @default(cuid())
+  creatorSlug       String               @unique
   creatorId         String?
-  countryCode       String   @default("")
+  countryCode       String               @default("")
   /// gateway | government_id
   kycModel          String
   gatewayProviderId String?
   /// Identity session opened with the selected gateway. Blank until that provider returns one.
-  gatewaySessionId  String   @default("")
-  gatewaySessionUrl String   @default("")
+  gatewaySessionId  String               @default("")
+  gatewaySessionUrl String               @default("")
   /// submitted | verified | rejected | pending_gateway
-  status            String   @default("submitted")
-  detailsJson       Json     @default("{}")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  status            String               @default("submitted")
+  detailsJson       Json                 @default("{}")
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
   documents         CreatorKycDocument[]
 
   @@index([status])
 }
 
 model CreatorKycDocument {
-  id            String              @id @default(cuid())
+  id            String               @id @default(cuid())
   submissionId  String
   requirementId String
   label         String
@@ -513,28 +503,28 @@ model ProviderCorridorCapability {
 }
 
 model CreatorSpecialty {
-  id          String    @id @default(cuid())
+  id          String     @id @default(cuid())
   creatorId   String
   specialtyId String
-  isPrimary   Boolean   @default(false)
+  isPrimary   Boolean    @default(false)
   source      DataSource @default(CREATOR_CLAIMED)
-  creator     Creator   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  specialty   Specialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+  creator     Creator    @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  specialty   Specialty  @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
 
   @@unique([creatorId, specialtyId])
 }
 
 model SocialAccount {
-  id           String         @id @default(cuid())
-  creatorId    String
-  platform     SocialPlatform
-  handle       String
-  url          String
-  followers    Int?
-  likes        Int?
-  source       DataSource     @default(CREATOR_CLAIMED)
-  refreshedAt  DateTime?
-  creator      Creator        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  id          String         @id @default(cuid())
+  creatorId   String
+  platform    SocialPlatform
+  handle      String
+  url         String
+  followers   Int?
+  likes       Int?
+  source      DataSource     @default(CREATOR_CLAIMED)
+  refreshedAt DateTime?
+  creator     Creator        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
   @@unique([creatorId, platform])
 }
@@ -550,45 +540,51 @@ model SocialConnectPolicy {
 
 /// One creator connection to a social network. Tokens stay encrypted. Counts are not copied here.
 model SocialConnection {
-  id              String         @id @default(cuid())
-  creatorId       String
-  creator         Creator        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  platform        SocialPlatform
-  providerId      String?
-  status          String         @default("needs_consent")
-  consentVersion  String?
-  consentedAt     DateTime?
-  stateToken      String?        @unique
-  /** Exact redirect_uri sent on this authorize attempt. Reused at token exchange. */
+  id               String         @id @default(cuid())
+  creatorId        String
+  creator          Creator        @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  platform         SocialPlatform
+  providerId       String?
+  status           String         @default("needs_consent")
+  consentVersion   String?
+  consentedAt      DateTime?
+  stateToken       String?        @unique
+  /**
+   * Exact redirect_uri sent on this authorize attempt. Reused at token exchange.
+   */
   oauthRedirectUri String?
-  /** When this authorize attempt started. Attempts expire instead of living until use. */
-  oauthStartedAt  DateTime?
-  /** X OAuth 2.0 PKCE verifier. Cleared after the code exchange. */
-  pkceVerifier    String?
-  externalId      String?
-  tokenCipher     String?
-  refreshCipher   String?
-  tokenExpiresAt  DateTime?
-  lastError       String?
-  lastSyncedAt    DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  /**
+   * When this authorize attempt started. Attempts expire instead of living until use.
+   */
+  oauthStartedAt   DateTime?
+  /**
+   * X OAuth 2.0 PKCE verifier. Cleared after the code exchange.
+   */
+  pkceVerifier     String?
+  externalId       String?
+  tokenCipher      String?
+  refreshCipher    String?
+  tokenExpiresAt   DateTime?
+  lastError        String?
+  lastSyncedAt     DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   @@unique([creatorId, platform])
 }
 
 model InfluenceCard {
-  id              String   @id @default(cuid())
-  creatorId       String   @unique
-  slug            String   @unique
-  shortAlias      String?  @unique
-  qrToken         String?  @unique
-  theme           String   @default("starter")
-  published       Boolean  @default(false)
-  platformBrandVisible Boolean @default(true)
-  creator         Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  creatorId            String   @unique
+  slug                 String   @unique
+  shortAlias           String?  @unique
+  qrToken              String?  @unique
+  theme                String   @default("starter")
+  published            Boolean  @default(false)
+  platformBrandVisible Boolean  @default(true)
+  creator              Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 /// Admin-managed Discover terms. A creator link is stored only when that creator chooses the term.
@@ -651,19 +647,19 @@ model CollaborationSettings {
 
 /// A collaboration record (the Opportunity). Status moves draft → sent → accepted | declined, or withdrawn.
 model Collaboration {
-  id              String    @id @default(cuid())
+  id              String                   @id @default(cuid())
   initiatorSlug   String
   recipientSlug   String
   initiatorUserId String?
-  initiatorUser   User?     @relation("CollaborationInitiator", fields: [initiatorUserId], references: [id], onDelete: SetNull)
+  initiatorUser   User?                    @relation("CollaborationInitiator", fields: [initiatorUserId], references: [id], onDelete: SetNull)
   decidedByUserId String?
-  decidedByUser   User?     @relation("CollaborationDecider", fields: [decidedByUserId], references: [id], onDelete: SetNull)
+  decidedByUser   User?                    @relation("CollaborationDecider", fields: [decidedByUserId], references: [id], onDelete: SetNull)
   title           String
   scope           String
   roleInitiator   String
   roleRecipient   String
   commercial      String
-  status          String    @default("draft")
+  status          String                   @default("draft")
   why             String
   reasons         Json
   score           Int
@@ -671,8 +667,8 @@ model Collaboration {
   needSpecialty   String?
   sentAt          DateTime?
   decidedAt       DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
   events          CollaborationEvent[]
   signatures      SignatureRequest[]
   fundings        CollaborationFunding[]
@@ -685,45 +681,23 @@ model Collaboration {
 
 /// Admin-configured AI, payment, or document-signing connection. Secrets are ciphertext.
 model IntegrationProvider {
-  id             String   @id @default(cuid())
-  kind           String
-  code           String
-  name           String
-  enabled        Boolean  @default(false)
-  baseUrl        String?
-  publicKey      String?
-  secretCipher   String?
-  webhookCipher  String?
-  extraJson      Json?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  countryRoutes  PaymentCountryRoute[]
-  countryGroups  PaymentCountryGroup[]
-  aiRoutes       AiFunctionRoute[]
-  signatures     SignatureRequest[]
+  id            String                @id @default(cuid())
+  kind          String
+  code          String
+  name          String
+  enabled       Boolean               @default(false)
+  baseUrl       String?
+  publicKey     String?
+  secretCipher  String?
+  webhookCipher String?
+  extraJson     Json?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  countryRoutes PaymentCountryRoute[]
+  aiRoutes      AiFunctionRoute[]
+  signatures    SignatureRequest[]
 
   @@unique([kind, code])
-}
-
-/// Named set of countries that share one payment gateway assignment.
-model PaymentCountryGroup {
-  id         String                      @id @default(cuid())
-  name       String
-  providerId String
-  provider   IntegrationProvider         @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  createdAt  DateTime                    @default(now())
-  updatedAt  DateTime                    @updatedAt
-  members    PaymentCountryGroupMember[]
-}
-
-model PaymentCountryGroupMember {
-  groupId     String
-  countryCode String
-  group       PaymentCountryGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-
-  @@id([groupId, countryCode])
-  @@unique([countryCode])
-  @@index([groupId])
 }
 
 /// One active payment gateway per country. Example: Flutterwave for NG, Stripe for US.
@@ -782,44 +756,44 @@ model ContractTemplate {
 
 /// One generated agreement. Native in-app signing is primary; DocuSign is optional.
 model ContractDocument {
-  id              String            @id @default(cuid())
-  workspaceId     String?
-  collaborationId String?
-  fundingId       String?
-  teamProposalId  String?
-  applicationId   String?
-  application     MarketplaceApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
-  title           String
+  id                  String                  @id @default(cuid())
+  workspaceId         String?
+  collaborationId     String?
+  fundingId           String?
+  teamProposalId      String?
+  applicationId       String?
+  application         MarketplaceApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  title               String
   /// Human agreement reference assigned before issue (e.g. IC-AB12CD34).
-  agreementRef    String            @default("")
+  agreementRef        String                  @default("")
   /// collaboration | statement_of_work | change_order | nda
-  documentType    String            @default("collaboration")
-  versionLabel    String            @default("v1.0")
-  renderedBody    String
+  documentType        String                  @default("collaboration")
+  versionLabel        String                  @default("v1.0")
+  renderedBody        String
   /// SHA-256 of renderedBody. Empty on historical rows until an operator reviews them.
-  contentDigest   String            @default("")
-  pdfBytes        Bytes
+  contentDigest       String                  @default("")
+  pdfBytes            Bytes
   /// draft | sent | signed | declined | voided
-  status          String            @default("draft")
+  status              String                  @default("draft")
   /// native | docusign
-  signingChannel  String            @default("native")
-  envelopeId      String            @default("")
-  createdByUserId String?
-  sourceJson      Json?
+  signingChannel      String                  @default("native")
+  envelopeId          String                  @default("")
+  createdByUserId     String?
+  sourceJson          Json?
   /// Locked commercial terms captured when the agreement is sent. Funding reads this, not the wizard form.
-  termsSnapshotJson Json?
+  termsSnapshotJson   Json?
   /// Frozen Confirm parties snapshot when the draft is issued for signature.
   partiesSnapshotJson Json?
-  voidReason      String            @default("")
-  voidedAt        DateTime?
-  supersededById  String?
-  supersededBy    ContractDocument? @relation("ContractSupersede", fields: [supersededById], references: [id], onDelete: SetNull)
-  supersedes      ContractDocument[] @relation("ContractSupersede")
-  amendments      ContractTermAmendment[]
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  parties         ContractParty[]
-  messages        ContractMessage[]
+  voidReason          String                  @default("")
+  voidedAt            DateTime?
+  supersededById      String?
+  supersededBy        ContractDocument?       @relation("ContractSupersede", fields: [supersededById], references: [id], onDelete: SetNull)
+  supersedes          ContractDocument[]      @relation("ContractSupersede")
+  amendments          ContractTermAmendment[]
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  parties             ContractParty[]
+  messages            ContractMessage[]
 
   @@index([workspaceId, createdAt])
   @@index([envelopeId])
@@ -850,29 +824,29 @@ model ContractTermAmendment {
 }
 
 model ContractParty {
-  id          String           @id @default(cuid())
-  documentId  String
-  document    ContractDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  role        String
-  name        String
-  email       String
-  userId      String?
-  creatorSlug String?
+  id               String           @id @default(cuid())
+  documentId       String
+  document         ContractDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  role             String
+  name             String
+  email            String
+  userId           String?
+  creatorSlug      String?
   /// Contracting entity when different from the signer display name.
-  legalEntityName String       @default("")
+  legalEntityName  String           @default("")
   /// Capacity in which the person signs (e.g. Authorized representative, Influencer).
-  capacity    String           @default("")
+  capacity         String           @default("")
   /// Public handle shown separately from the contracting name.
-  handle      String           @default("")
-  shareBps    Int              @default(0)
+  handle           String           @default("")
+  shareBps         Int              @default(0)
   /// pending | signed | declined
-  status      String           @default("pending")
+  status           String           @default("pending")
   /// Typed legal name recorded when the party signs in-app.
-  attestation String           @default("")
+  attestation      String           @default("")
   /// Freehand screen-written signature ink JSON (DrawnInk) for original marks.
-  signatureInkJson String      @default("")
-  signedAt    DateTime?
-  createdAt   DateTime         @default(now())
+  signatureInkJson String           @default("")
+  signedAt         DateTime?
+  createdAt        DateTime         @default(now())
 
   @@index([documentId])
   @@index([userId])
@@ -910,31 +884,35 @@ model CollaborationEvent {
 
 /// Public marketplace business request (Collab OS P1b). Replaces hardcoded BUSINESS_REQUESTS reads.
 model MarketplaceBusinessRequest {
-  id           String   @id @default(cuid())
-  brand        String
-  category     String
-  budget       String
-  location     String
-  tags         String[] @default([])
-  summary      String
-  lookingFor   String
-  logoUrl      String?
-  imageUrl     String?
-  status       String   @default("published")
-  sortOrder    Int      @default(0)
-  publishedAt  DateTime?
-  /** Owning business workspace when posted from the hub; null for admin catalog seeds. */
-  workspaceId  String?
-  workspace    BusinessWorkspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
-  /** Campaign intent this request was published from. One acceptance closes only this brief. */
-  briefId      String?
-  currency     String   @default("")
+  id                  String                   @id @default(cuid())
+  brand               String
+  category            String
+  budget              String
+  location            String
+  tags                String[]                 @default([])
+  summary             String
+  lookingFor          String
+  logoUrl             String?
+  imageUrl            String?
+  status              String                   @default("published")
+  sortOrder           Int                      @default(0)
+  publishedAt         DateTime?
+  /**
+   * Owning business workspace when posted from the hub; null for admin catalog seeds.
+   */
+  workspaceId         String?
+  workspace           BusinessWorkspace?       @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  /**
+   * Campaign intent this request was published from. One acceptance closes only this brief.
+   */
+  briefId             String?
+  currency            String                   @default("")
   applicationDeadline DateTime?
-  deliverableSummary String @default("")
-  platforms    String[] @default([])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  applications MarketplaceApplication[]
+  deliverableSummary  String                   @default("")
+  platforms           String[]                 @default([])
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  applications        MarketplaceApplication[]
 
   @@index([status, sortOrder])
   @@index([workspaceId])
@@ -942,23 +920,23 @@ model MarketplaceBusinessRequest {
 
 /// Public marketplace creator opportunity (Collab OS P1b).
 model MarketplaceCreatorOpportunity {
-  id           String   @id @default(cuid())
-  creatorSlug  String
-  lookingFor   String
-  summary      String
-  purpose      String?
-  location     String?
-  budget       String   @default("")
-  currency     String   @default("")
+  id                  String                   @id @default(cuid())
+  creatorSlug         String
+  lookingFor          String
+  summary             String
+  purpose             String?
+  location            String?
+  budget              String                   @default("")
+  currency            String                   @default("")
   applicationDeadline DateTime?
-  deliverableSummary String @default("")
-  platforms    String[] @default([])
-  status       String   @default("published")
-  sortOrder    Int      @default(0)
-  publishedAt  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  applications MarketplaceApplication[]
+  deliverableSummary  String                   @default("")
+  platforms           String[]                 @default([])
+  status              String                   @default("published")
+  sortOrder           Int                      @default(0)
+  publishedAt         DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  applications        MarketplaceApplication[]
 
   @@index([status, sortOrder])
   @@index([creatorSlug])
@@ -966,20 +944,20 @@ model MarketplaceCreatorOpportunity {
 
 /// Persisted match explanation object (Collab OS §3.2).
 model MarketplaceMatchRecord {
-  id                       String    @id @default(cuid())
-  matchType                String    @default("CREATOR_CREATOR")
+  id                       String                 @id @default(cuid())
+  matchType                String                 @default("CREATOR_CREATOR")
   partyASlug               String
   partyBSlug               String
   score                    Int
   breakdownJson            Json
   reasonsJson              Json
   why                      String
-  specialtyHits            String[]  @default([])
-  modelVersion             String    @default("rules-v1")
+  specialtyHits            String[]               @default([])
+  modelVersion             String                 @default("rules-v1")
   expiresAt                DateTime?
   convertedCollaborationId String?
-  createdAt                DateTime  @default(now())
-  updatedAt                DateTime  @updatedAt
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
   saves                    MarketplaceMatchSave[]
 
   @@unique([partyASlug, partyBSlug, matchType])
@@ -1023,7 +1001,9 @@ model MarketplaceApplication {
   fromUserId        String?
   fromSlug          String?
   toSlug            String?
-  /** Campaign intent closed when this application is accepted. */
+  /**
+   * Campaign intent closed when this application is accepted.
+   */
   briefId           String?
   /// Canonical collaboration record. Null until both parties are known. Never guessed from a title.
   collaborationId   String?
@@ -1067,72 +1047,72 @@ model MarketplaceApplicationEvent {
 }
 
 model BusinessProfile {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  user         User     @relation(fields: [userId], references: [id])
-  name         String
-  industry     String?
-  geography    String?
+  id                  String   @id @default(cuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id])
+  name                String
+  industry            String?
+  geography           String?
   /// Reference contact on the company profile — not used for account login.
-  contactName  String?
-  contactEmail String?
-  contactPhone String?
+  contactName         String?
+  contactEmail        String?
+  contactPhone        String?
   /// Mailing address. City, state, and country stay in geography.
-  addressLine1 String?
-  addressLine2 String?
-  postalCode   String?
+  addressLine1        String?
+  addressLine2        String?
+  postalCode          String?
   /// Funding country recorded after verification. The mailing geography and the agreement jurisdiction do not set this.
   verifiedCountryCode String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 }
 
 /// Business workspace for briefs, shortlists, inquiries, and owned marketplace requests.
 /// Signed-in hubs bind via ownerUserId (1:1).
 model BusinessWorkspace {
-  id          String                 @id @default(cuid())
-  ownerUserId String?                @unique
-  owner       User?                  @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
-  name        String
-  plan        String                 @default("BUSINESS_FREE")
-  industry    String
-  updatedAt   DateTime               @updatedAt
-  briefs      BusinessBrief[]
-  shortlist   BusinessShortlistItem[]
-  inquiries   BusinessInquiry[]
-  matchQueue  ManagedMatchRequest[]
+  id                  String                       @id @default(cuid())
+  ownerUserId         String?                      @unique
+  owner               User?                        @relation(fields: [ownerUserId], references: [id], onDelete: SetNull)
+  name                String
+  plan                String                       @default("BUSINESS_FREE")
+  industry            String
+  updatedAt           DateTime                     @updatedAt
+  briefs              BusinessBrief[]
+  shortlist           BusinessShortlistItem[]
+  inquiries           BusinessInquiry[]
+  matchQueue          ManagedMatchRequest[]
   marketplaceRequests MarketplaceBusinessRequest[]
-  fundings    CollaborationFunding[]
+  fundings            CollaborationFunding[]
 }
 
 model BusinessBrief {
-  id              String               @id @default(cuid())
-  workspaceId     String
-  workspace       BusinessWorkspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  title           String
-  goal            String
-  specialty       String
-  budget          String
-  budgetCurrency  String               @default("USD")
-  collabType      String               @default("")
-  timeframe       String               @default("")
-  location        String
-  platform        String
-  summary         String
+  id               String                @id @default(cuid())
+  workspaceId      String
+  workspace        BusinessWorkspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  title            String
+  goal             String
+  specialty        String
+  budget           String
+  budgetCurrency   String                @default("USD")
+  collabType       String                @default("")
+  timeframe        String                @default("")
+  location         String
+  platform         String
+  summary          String
   /// Deliverables the business entered on the campaign. Shown again when the draft is edited.
-  deliverables    String               @default("")
+  deliverables     String                @default("")
   /// Response deadline entered on the campaign. Null until a date is saved.
   responseDeadline DateTime?
   /// private | public. Empty until the business chooses a distribution.
-  distribution    String               @default("")
+  distribution     String                @default("")
   /// Influencers selected on a draft. Sending a private invitation is a separate step.
-  draftRecipients String               @default("")
-  status          String               @default("active")
+  draftRecipients  String                @default("")
+  status           String                @default("active")
   /// How many influencers this campaign can accept before it stops recruiting.
-  creatorSlots    Int                  @default(1)
-  createdAt       DateTime             @default(now())
-  inquiries       BusinessInquiry[]
-  matchQueue      ManagedMatchRequest[]
+  creatorSlots     Int                   @default(1)
+  createdAt        DateTime              @default(now())
+  inquiries        BusinessInquiry[]
+  matchQueue       ManagedMatchRequest[]
 
   @@index([workspaceId])
 }
@@ -1195,39 +1175,28 @@ model CreatorManagedOptIn {
 }
 
 model ManagedIntro {
-  id                String              @id @default(cuid())
-  businessName      String
-  businessId        String
-  creatorSlug       String
-  briefTitle        String
-  briefId           String?
-  notes             String              @default("")
-  status            String              @default("draft")
-  feeExpected       String?
+  id               String               @id @default(cuid())
+  businessName     String
+  businessId       String
+  creatorSlug      String
+  briefTitle       String
+  briefId          String?
+  notes            String               @default("")
+  status           String               @default("draft")
+  feeExpected      String?
   /// Quoted intro fee in cents (sandbox / provider settlement path).
-  feeExpectedCents  Int?
+  feeExpectedCents Int?
   /// Immutable resolveFee snapshot for the intro fee quote.
-  feeQuoteJson      Json?
+  feeQuoteJson     Json?
   /// In-app settlement intent id (e.g. intro_fee_<id>).
-  feeIntentRef      String?
+  feeIntentRef     String?
   /// Provider / sandbox confirmation reference after settlement.
-  feeProviderRef    String?
-  feeSettlementAt   DateTime?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  events            ManagedIntroEvent[]
-  matchRequest      ManagedMatchRequest?
-}
-
-model ManagedIntroEvent {
-  id        String       @id @default(cuid())
-  introId   String
-  intro     ManagedIntro @relation(fields: [introId], references: [id], onDelete: Cascade)
-  status    String
-  note      String?
-  createdAt DateTime     @default(now())
-
-  @@index([introId])
+  feeProviderRef   String?
+  feeSettlementAt  DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  matchRequest     ManagedMatchRequest?
+  events           ManagedIntroEvent[]
 }
 
 /// A business asked for managed matching. Admin records an introduction from the queue.
@@ -1246,49 +1215,49 @@ model ManagedMatchRequest {
 }
 
 model QrRedirect {
-  id          String   @id @default(cuid())
-  token       String   @unique
-  targetUrl   String
-  creatorId   String?
-  campaign    String?
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  token     String   @unique
+  targetUrl String
+  creatorId String?
+  campaign  String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model AnalyticsEvent {
-  id          String   @id @default(cuid())
-  eventType   String
-  creatorId   String?
-  cardId      String?
-  metaJson    Json?
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  eventType String
+  creatorId String?
+  cardId    String?
+  metaJson  Json?
+  createdAt DateTime @default(now())
 }
 
 /// Claim funnel session. Email verification is separate from social verification.
 model OnboardingSession {
-  id               String           @id
-  state            OnboardingState  @default(DRAFT)
+  id               String                @id
+  state            OnboardingState       @default(DRAFT)
   inputHandle      String
   platform         String
-  draftSlug        String           @unique
+  draftSlug        String                @unique
   email            String?
   ownerName        String?
   emailVerifiedAt  DateTime?
   socialVerifiedAt DateTime?
   publishedAt      DateTime?
-  verifyMethod     String           @default("DEMO_CODE")
+  verifyMethod     String                @default("DEMO_CODE")
   payload          Json
   /// First recorded acquisition source. A blank value means no source was recorded.
-  firstTouchSource String           @default("")
+  firstTouchSource String                @default("")
   firstTouchAt     DateTime?
   /// Latest recorded acquisition source. A blank value means no source was recorded.
-  lastTouchSource  String           @default("")
+  lastTouchSource  String                @default("")
   lastTouchAt      DateTime?
   userId           String?
-  user             User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  user             User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
   claims           ProfileClaim[]
   attempts         VerificationAttempt[]
   agencyImports    AgencyImportRow[]
@@ -1403,13 +1372,13 @@ model GuestUsage {
 }
 
 model ProfileClaim {
-  id        String             @id @default(cuid())
+  id        String            @id @default(cuid())
   sessionId String
-  session   OnboardingSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session   OnboardingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   creatorId String?
   email     String
   status    String
-  createdAt DateTime           @default(now())
+  createdAt DateTime          @default(now())
 }
 
 model VerificationAttempt {
@@ -1447,10 +1416,10 @@ model InvitationCampaign {
 
 /// Default expiry and follow-up. Email delivery stays off until SMTP exists.
 model InvitationSettings {
-  id                 String   @id @default("default")
-  defaultExpiryDays  Int      @default(14)
-  defaultFollowUpDays Int     @default(7)
-  updatedAt          DateTime @updatedAt
+  id                  String   @id @default("default")
+  defaultExpiryDays   Int      @default(14)
+  defaultFollowUpDays Int      @default(7)
+  updatedAt           DateTime @updatedAt
 }
 
 model OutreachSuppression {
@@ -1462,24 +1431,24 @@ model OutreachSuppression {
 }
 
 model CreatorInvitation {
-  id          String               @id @default(cuid())
-  token       String               @unique
+  id          String              @id @default(cuid())
+  token       String              @unique
   creatorSlug String
   displayName String
   email       String?
   templateId  String
-  template    InvitationTemplate   @relation(fields: [templateId], references: [id])
+  template    InvitationTemplate  @relation(fields: [templateId], references: [id])
   campaignId  String?
-  campaign    InvitationCampaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  status      String               @default("queued")
+  campaign    InvitationCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  status      String              @default("queued")
   expiresAt   DateTime
   followUpAt  DateTime?
   draftId     String?
   openedAt    DateTime?
   claimedAt   DateTime?
   publishedAt DateTime?
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
   events      InvitationEvent[]
 }
 
@@ -1507,28 +1476,28 @@ model ProcessedWebhook {
 
 /// Normalized subscription status. Plan changes go through this row and the user record together.
 model SubscriptionState {
-  id         String   @id @default(cuid())
-  userId     String?
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  creatorSlug String?
-  sku        String
-  status     String
-  provider   String
-  externalId String
+  id                 String                      @id @default(cuid())
+  userId             String?
+  user               User?                       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  creatorSlug        String?
+  sku                String
+  status             String
+  provider           String
+  externalId         String
   /// month until Stripe confirms a yearly price. Browsing annual does not write this.
-  billingInterval   String    @default("month")
+  billingInterval    String                      @default("month")
   /// Start of the current subscription period. Empty until Stripe or the stored row has it.
   currentPeriodStart DateTime?
-  currentPeriodEnd  DateTime?
+  currentPeriodEnd   DateTime?
   /// When true, the subscription stays active and ends at currentPeriodEnd.
-  cancelAtPeriodEnd Boolean   @default(false)
-  pendingInterval   String    @default("")
-  pendingPriceId    String    @default("")
+  cancelAtPeriodEnd  Boolean                     @default(false)
+  pendingInterval    String                      @default("")
+  pendingPriceId     String                      @default("")
   pendingEffectiveAt DateTime?
-  scheduleId        String    @default("")
-  renewalNotices    SubscriptionRenewalNotice[]
-  updatedAt  DateTime @updatedAt
-  createdAt  DateTime @default(now())
+  scheduleId         String                      @default("")
+  renewalNotices     SubscriptionRenewalNotice[]
+  updatedAt          DateTime                    @updatedAt
+  createdAt          DateTime                    @default(now())
 
   @@unique([provider, externalId])
   @@index([userId])
@@ -1602,12 +1571,12 @@ model EmailTemplatePause {
 
 /// Member choices for optional email. Security mail stays on.
 model EmailPreference {
-  email            String   @id
-  collaborations   Boolean  @default(true)
-  billing          Boolean  @default(true)
-  outreach         Boolean  @default(true)
-  productNews      Boolean  @default(false)
-  updatedAt        DateTime @updatedAt
+  email          String   @id
+  collaborations Boolean  @default(true)
+  billing        Boolean  @default(true)
+  outreach       Boolean  @default(true)
+  productNews    Boolean  @default(false)
+  updatedAt      DateTime @updatedAt
 }
 
 /// Which outreach channels the platform may use (admin control plane).
@@ -1620,23 +1589,23 @@ model CommChannelSettings {
 
 /// Auto and manual communication templates (email + short SMS twin).
 model CommTemplate {
-  id          String   @id @default(cuid())
-  key         String   @unique
-  name        String
+  id         String   @id @default(cuid())
+  key        String   @unique
+  name       String
   /// user | business | influencer | admin | all
-  audience    String   @default("all")
+  audience   String   @default("all")
   /// auto | manual
-  mode        String   @default("auto")
+  mode       String   @default("auto")
   /// welcome | password_reset | custom | …
-  triggerKey  String   @default("custom")
-  subject     String   @default("")
-  bodyEmail   String   @default("")
+  triggerKey String   @default("custom")
+  subject    String   @default("")
+  bodyEmail  String   @default("")
   /// Keep to ~320 characters (about two SMS segments).
-  bodySms     String   @default("")
-  active      Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  updatedAt   DateTime @updatedAt
-  createdAt   DateTime @default(now())
+  bodySms    String   @default("")
+  active     Boolean  @default(true)
+  sortOrder  Int      @default(0)
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
 }
 
 /// A saved copy of one catalog email. Publishing stores a version. It does not send mail.
@@ -1658,16 +1627,6 @@ model EmailTemplateRecord {
   @@index([templateKey, kind])
 }
 
-model ProfileCompletionRule {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  label     String
-  hint      String
-  weight    Int
-  active    Boolean  @default(true)
-  sortOrder Int      @default(0)
-}
-
 /// Hostname that serves inflr.me-style redirects. The primary row is the QR payload host.
 model ShortLinkDomain {
   id         String    @id @default(cuid())
@@ -1686,10 +1645,10 @@ model ShortLinkDomain {
 
 /// Canonical app origin and https hosts a short link may redirect to.
 model ShortLinkSettings {
-  id               String   @id @default("default")
-  canonicalOrigin  String
-  allowedHosts     String
-  updatedAt        DateTime @updatedAt
+  id              String   @id @default("default")
+  canonicalOrigin String
+  allowedHosts    String
+  updatedAt       DateTime @updatedAt
 }
 
 model ReservedSlug {
@@ -1699,27 +1658,27 @@ model ReservedSlug {
 }
 
 model ShortLink {
-  id              String   @id @default(cuid())
-  creatorId       String?
-  creator         Creator? @relation(fields: [creatorId], references: [id], onDelete: SetNull)
-  slug            String   @unique
-  destinationKind String   @default("profile")
-  destination     String
-  status          String   @default("active")
-  dynamic         Boolean  @default(false)
+  id                      String                        @id @default(cuid())
+  creatorId               String?
+  creator                 Creator?                      @relation(fields: [creatorId], references: [id], onDelete: SetNull)
+  slug                    String                        @unique
+  destinationKind         String                        @default("profile")
+  destination             String
+  status                  String                        @default("active")
+  dynamic                 Boolean                       @default(false)
   /// Entitlement snapshot frozen at mint (plan tier + shortlink/QR caps).
   entitlementSnapshotJson Json?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  aliases         ShortLinkAlias[]
-  qrIdentities    QrIdentity[]
-  nfcIdentities   NfcIdentity[]
-  schedules       ShortLinkSchedule[]
-  campaignLinks   CampaignLink[]
-  events          ShortLinkEvent[]
-  abuseCases      ShortLinkAbuseCase[]
-  destinationHistory ShortLinkDestinationHistory[]
-  referralRegistrations ReferralRegistration[]
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @updatedAt
+  aliases                 ShortLinkAlias[]
+  qrIdentities            QrIdentity[]
+  nfcIdentities           NfcIdentity[]
+  schedules               ShortLinkSchedule[]
+  campaignLinks           CampaignLink[]
+  events                  ShortLinkEvent[]
+  abuseCases              ShortLinkAbuseCase[]
+  destinationHistory      ShortLinkDestinationHistory[]
+  referralRegistrations   ReferralRegistration[]
 }
 
 /// One admin-configured referral reward. A blank reward is not stored as points or money.
@@ -1855,24 +1814,24 @@ model ShortLinkAbuseCase {
 
 /// One published version of a split legal document. Old versions stay in this table.
 model LegalDocument {
-  id                   String   @id @default(cuid())
+  id                   String            @id @default(cuid())
   documentKey          String
   title                String
   version              String
   effectiveDate        DateTime
-  jurisdiction         String   @default("global")
-  roleScope            String   @default("all")
+  jurisdiction         String            @default("global")
+  roleScope            String            @default("all")
   featureTrigger       String
-  requiresAcceptance   Boolean  @default(false)
-  requiresReacceptance Boolean  @default(false)
-  acknowledgementOnly  Boolean  @default(false)
-  publishedStatus      String   @default("draft")
+  requiresAcceptance   Boolean           @default(false)
+  requiresReacceptance Boolean           @default(false)
+  acknowledgementOnly  Boolean           @default(false)
+  publishedStatus      String            @default("draft")
   bodyText             String
   documentHash         String
   supersedesId         String?
   category             String
   createdBy            String?
-  createdAt            DateTime @default(now())
+  createdAt            DateTime          @default(now())
   publishedAt          DateTime?
   acceptances          LegalAcceptance[]
 
@@ -1907,69 +1866,69 @@ model LegalAcceptance {
 
 /// Review window for milestone auto-approval. Commercial splits live on MilestoneTemplate.
 model MarketplaceSettings {
-  id                 String   @id @default("default")
-  reviewWindowHours  Int      @default(72)
-  templatesSeeded    Boolean  @default(false)
-  cancelUnconfirmed      Boolean  @default(true)
-  reasonsSeeded          Boolean  @default(false)
-  attributionWindowDays    Int      @default(90)
-  repeatMinGrossCents      Int      @default(0)
-  sourcesSeeded            Boolean  @default(false)
-  fxSeeded                 Boolean  @default(false)
-  sharesSeeded             Boolean  @default(false)
-  maxRevisions             Int      @default(2)
-  maxEvidence              Int      @default(5)
-  maxGrossCents            Int      @default(0)
-  partialRefundsEnabled    Boolean  @default(true)
-  changeOrdersEnabled      Boolean  @default(true)
-  maxChangeOrders          Int      @default(2)
-  riskControlsEnabled      Boolean  @default(true)
-  maxOpenDisputes          Int      @default(0)
+  id                         String   @id @default("default")
+  reviewWindowHours          Int      @default(72)
+  templatesSeeded            Boolean  @default(false)
+  cancelUnconfirmed          Boolean  @default(true)
+  reasonsSeeded              Boolean  @default(false)
+  attributionWindowDays      Int      @default(90)
+  repeatMinGrossCents        Int      @default(0)
+  sourcesSeeded              Boolean  @default(false)
+  fxSeeded                   Boolean  @default(false)
+  sharesSeeded               Boolean  @default(false)
+  maxRevisions               Int      @default(2)
+  maxEvidence                Int      @default(5)
+  maxGrossCents              Int      @default(0)
+  partialRefundsEnabled      Boolean  @default(true)
+  changeOrdersEnabled        Boolean  @default(true)
+  maxChangeOrders            Int      @default(2)
+  riskControlsEnabled        Boolean  @default(true)
+  maxOpenDisputes            Int      @default(0)
   /// W3.5 — when false, the auto-approval job/sweep is a no-op.
-  autoApprovalEnabled      Boolean  @default(true)
+  autoApprovalEnabled        Boolean  @default(true)
   /// W3.6 — kill fee on current milestone when brand cancels after work began (bps of milestone).
-  killFeeBps               Int      @default(2500)
-  killFeeFixedCents        Int      @default(0)
+  killFeeBps                 Int      @default(2500)
+  killFeeFixedCents          Int      @default(0)
   /// New payout profiles use this code when the country has no corridor.
-  payoutFallbackCurrency   String   @default("USD")
+  payoutFallbackCurrency     String   @default("USD")
   /// Signed quote lifetime. A quote already signed keeps the expiry it stored.
-  quoteValidHours              Int    @default(168)
+  quoteValidHours            Int      @default(168)
   /// Pending provider command with no reference becomes unknown after this many minutes.
-  unknownCommandMinutes        Int    @default(15)
+  unknownCommandMinutes      Int      @default(15)
   /// Failed provider commands may be sent again until this many attempts.
-  providerCommandMaxAttempts   Int    @default(3)
-  disputeSlaHours              Int    @default(72)
-  providerHoldWarnHours        Int    @default(168)
+  providerCommandMaxAttempts Int      @default(3)
+  disputeSlaHours            Int      @default(72)
+  providerHoldWarnHours      Int      @default(168)
   /// Comma-separated hours between failed payout retries.
-  failedPayoutBackoffHours     String @default("1,6,24,72")
-  failedPayoutMaxAttempts      Int    @default(4)
-  staleFundingHours            Int    @default(48)
-  reviewDeadlineLeadHours      Int    @default(12)
-  teamProposalLifeDays         Int    @default(14)
-  updatedAt                DateTime @updatedAt
+  failedPayoutBackoffHours   String   @default("1,6,24,72")
+  failedPayoutMaxAttempts    Int      @default(4)
+  staleFundingHours          Int      @default(48)
+  reviewDeadlineLeadHours    Int      @default(12)
+  teamProposalLifeDays       Int      @default(14)
+  updatedAt                  DateTime @updatedAt
 }
 
 /// Finance approvals for collaboration funding. Defaults stay off. A page load does not change them.
 model CollaborationLaunchGate {
-  id                          String   @id @default("default")
-  feeSchedulesApproved        Boolean  @default(false)
-  taxTreatmentApproved        Boolean  @default(false)
-  earningRefundPolicyApproved Boolean  @default(false)
-  providerRouteApproved       Boolean  @default(false)
-  providerTraceReady          Boolean  @default(false)
-  payoutTraceJson             Json?
-  refundTraceJson             Json?
+  id                                String   @id @default("default")
+  feeSchedulesApproved              Boolean  @default(false)
+  taxTreatmentApproved              Boolean  @default(false)
+  earningRefundPolicyApproved       Boolean  @default(false)
+  providerRouteApproved             Boolean  @default(false)
+  providerTraceReady                Boolean  @default(false)
+  payoutTraceJson                   Json?
+  refundTraceJson                   Json?
   /// Off until an admin turns the path on. Live collection still needs the four approvals and a trace.
-  crossBorderFundingEnabled            Boolean @default(false)
-  teamFundingEnabled                   Boolean @default(false)
-  automaticMilestoneApprovalEnabled    Boolean @default(false)
-  automaticProviderSwitchingEnabled    Boolean @default(false)
-  allInBudgetEntryEnabled              Boolean @default(false)
+  crossBorderFundingEnabled         Boolean  @default(false)
+  teamFundingEnabled                Boolean  @default(false)
+  automaticMilestoneApprovalEnabled Boolean  @default(false)
+  automaticProviderSwitchingEnabled Boolean  @default(false)
+  allInBudgetEntryEnabled           Boolean  @default(false)
   /// When on, an approved milestone is authorized for payout without an admin push approval.
-  automaticReleaseApprovalEnabled      Boolean @default(false)
+  automaticReleaseApprovalEnabled   Boolean  @default(false)
   /// When on, the release sweep sends the payout instruction to the provider.
-  automaticProviderReleaseEnabled      Boolean @default(false)
-  updatedAt                   DateTime @updatedAt
+  automaticProviderReleaseEnabled   Boolean  @default(false)
+  updatedAt                         DateTime @updatedAt
 }
 
 /// On/off for one payment or charge. Fee rules stay on collaboration fee rows.
@@ -2002,69 +1961,69 @@ model ProviderCommand {
 /// Protected payments and the word "escrow" are jurisdiction flags, not code switches.
 /// W3.3 / Dev Addendum §6 — full capability matrix; flags override features (PA007).
 model CollaborationJurisdiction {
-  code                         String    @id
-  label                        String
-  protectedPaymentsEnabled     Boolean   @default(false)
-  escrowTermAllowed            Boolean   @default(false)
+  code                       String    @id
+  label                      String
+  protectedPaymentsEnabled   Boolean   @default(false)
+  escrowTermAllowed          Boolean   @default(false)
   /// Full one-shot prefunding (schedule kind "once").
-  fullPrefundingEnabled        Boolean   @default(true)
+  fullPrefundingEnabled      Boolean   @default(true)
   /// Managed introduction service level (managed_intro). Fee rules alone never authorize.
-  managedIntroductionEnabled   Boolean   @default(false)
+  managedIntroductionEnabled Boolean   @default(false)
   /// Managed negotiation / campaign service level (managed_campaign).
-  managedNegotiationEnabled    Boolean   @default(false)
+  managedNegotiationEnabled  Boolean   @default(false)
   /// JSON string array of approved marketplace provider codes; empty = any assigned provider.
-  approvedProviderIds          String    @default("[]")
+  approvedProviderIds        String    @default("[]")
   /// APPROVED | PENDING | BLOCKED — Dev Addendum §24.
-  legalReviewStatus            String    @default("PENDING")
-  capabilityNotes              String    @default("")
-  capabilitiesEffectiveFrom    DateTime?
-  capabilitiesEffectiveTo      DateTime?
+  legalReviewStatus          String    @default("PENDING")
+  capabilityNotes            String    @default("")
+  capabilitiesEffectiveFrom  DateTime?
+  capabilitiesEffectiveTo    DateTime?
   /// W3.5 — optional review window override (hours); null = marketplace settings default.
-  reviewWindowHours            Int?
+  reviewWindowHours          Int?
   /// W3.5 — optional max revisions override; null = marketplace settings default.
-  maxRevisions                 Int?
-  currency                     String    @default("USD")
-  minorDigits                  Int       @default(2)
-  providerCode                 String    @default("primary")
-  updatedAt                    DateTime  @updatedAt
+  maxRevisions               Int?
+  currency                   String    @default("USD")
+  minorDigits                Int       @default(2)
+  providerCode               String    @default("primary")
+  updatedAt                  DateTime  @updatedAt
 }
 
 /// Versioned collaboration fee rules (Phase O). Replaces data/collaboration-fees.json rules[].
 /// Funding immutability stays on CollaborationFunding.feeSnapshotJson — this table is the live matrix.
 model CollaborationFeeRule {
-  id            String   @id
-  name          String
-  version       Int      @default(1)
-  active        Boolean  @default(true)
-  priority      Int      @default(100)
-  jurisdiction  String   @default("*")
-  serviceLevel  String   @default("contracted")
+  id                 String   @id
+  name               String
+  version            Int      @default(1)
+  active             Boolean  @default(true)
+  priority           Int      @default(100)
+  jurisdiction       String   @default("*")
+  serviceLevel       String   @default("contracted")
   /// Distinct commercial fee type (platform_service, collaboration, managed_intro, …) — Product Addendum §5.
-  feeType       String   @default("collaboration")
+  feeType            String   @default("collaboration")
   /// W3.1 condition: FULL | NONE | *
-  fundingMode   String   @default("*")
+  fundingMode        String   @default("*")
   /// W3.1 condition: organic | platform_match | managed_intro | referral | pre_existing | *
-  relationshipSource String @default("*")
+  relationshipSource String   @default("*")
   /// W3.1 condition: none | sponsored | ambassador | affiliate | *
-  promotionChannel String @default("*")
-  minGrossCents Int?
-  maxGrossCents Int?
-  method        String   @default("percent")
-  percentBps    Int      @default(0)
-  fixedCents    Int      @default(0)
-  minFeeCents   Int      @default(0)
-  maxFeeCents   Int?
+  promotionChannel   String   @default("*")
+  minGrossCents      Int?
+  maxGrossCents      Int?
+  method             String   @default("percent")
+  percentBps         Int      @default(0)
+  fixedCents         Int      @default(0)
+  minFeeCents        Int      @default(0)
+  maxFeeCents        Int?
   /// Tiered fee bands JSON: [{ "upToCents": 10000, "percentBps": 800 }, { "upToCents": null, "percentBps": 1200 }]
-  tierBandsJson Json?
-  payer         String   @default("brand")
+  tierBandsJson      Json?
+  payer              String   @default("brand")
   /// business_platform_fee | influencer_platform_fee | legacy. Legacy rules do not price a new deal.
-  purpose       String   @default("legacy")
+  purpose            String   @default("legacy")
   /// TaxPolicyVersion id. A fee rule does not store a tax amount and does not enable a route.
-  taxPolicyId   String   @default("")
-  effectiveFrom DateTime
-  notes         String   @default("")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  taxPolicyId        String   @default("")
+  effectiveFrom      DateTime
+  notes              String   @default("")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@index([active, priority])
   @@index([jurisdiction, serviceLevel])
@@ -2103,70 +2062,70 @@ model MilestoneTemplate {
 
 /// A prefund intent. Held only after the marketplace provider confirms.
 model CollaborationFunding {
-  id               String   @id @default(cuid())
-  jurisdictionCode String
-  businessName     String
+  id                     String                 @id @default(cuid())
+  jurisdictionCode       String
+  businessName           String
   /// Owning business workspace when funded from the hub/wizard; null for legacy/admin rows.
-  workspaceId      String?
-  workspace        BusinessWorkspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  workspaceId            String?
+  workspace              BusinessWorkspace?     @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
   /// Optional durable link to a Collaboration proposal/record (hub pipeline join).
-  collaborationId  String?
-  collaboration    Collaboration? @relation(fields: [collaborationId], references: [id], onDelete: SetNull)
+  collaborationId        String?
+  collaboration          Collaboration?         @relation(fields: [collaborationId], references: [id], onDelete: SetNull)
   /// Agreement this prefund was created from. One initial instruction per agreement.
-  contractDocumentId String? @unique
+  contractDocumentId     String?                @unique
   /// contract:{documentId}:initial — a retry returns this row instead of inserting another.
-  idempotencyKey   String?  @unique
+  idempotencyKey         String?                @unique
   /// Frozen collection, holding, and payout route. Later country edits do not rewrite it.
-  routeSnapshotJson Json?
-  creatorSlug      String
-  title            String
-  currency         String   @default("USD")
+  routeSnapshotJson      Json?
+  creatorSlug            String
+  title                  String
+  currency               String                 @default("USD")
   /// Collection route copied from the country corridor. Blank when that corridor has none.
-  collectionProviderCode String @default("")
+  collectionProviderCode String                 @default("")
   /// Payout method chosen from the country corridor. Blank until one is chosen.
-  payoutMethod     String   @default("")
-  grossCents       Int
-  feeCents         Int      @default(0)
-  feeSnapshotJson  Json
-  fxSnapshotJson   Json?
-  shareSnapshotJson Json?
+  payoutMethod           String                 @default("")
+  grossCents             Int
+  feeCents               Int                    @default(0)
+  feeSnapshotJson        Json
+  fxSnapshotJson         Json?
+  shareSnapshotJson      Json?
   /// W3.6 durable chargeback / payment-risk evidence pack (provider refs, amounts, attachments).
   chargebackEvidenceJson Json?
-  serviceLevel     String
-  status            String   @default("awaiting_provider")
-  providerCode      String
+  serviceLevel           String
+  status                 String                 @default("awaiting_provider")
+  providerCode           String
   /// Provider payment id from the charge. The ledger stays awaiting_provider until the webhook.
-  providerPaymentId String?
+  providerPaymentId      String?
   /// Milestone id to provider split id (string or list). Release uses these ids.
-  providerSplitJson Json?
-  attributionLabel  String   @default("")
+  providerSplitJson      Json?
+  attributionLabel       String                 @default("")
   /// W3.7 — active | expired | contested | pre_existing
-  attributionStatus String   @default("active")
-  attributionExpiresAt DateTime?
-  scheduleId        String?
-  scheduleKind      String   @default("once")
+  attributionStatus      String                 @default("active")
+  attributionExpiresAt   DateTime?
+  scheduleId             String?
+  scheduleKind           String                 @default("once")
   /// FULL | NONE. Every collaboration is funded once, in full (scheduleKind=once).
-  fundingMode       String   @default("FULL")
-  trancheIndex      Int      @default(1)
-  trancheCount      Int      @default(1)
-  intervalDays      Int      @default(0)
+  fundingMode            String                 @default("FULL")
+  trancheIndex           Int                    @default(1)
+  trancheCount           Int                    @default(1)
+  intervalDays           Int                    @default(0)
   /// When true, the sweep does not open another tranche for this schedule.
-  seriesStopped     Boolean  @default(false)
-  repeatOfId        String?
-  repeatOf          CollaborationFunding?  @relation("FundingRepeat", fields: [repeatOfId], references: [id], onDelete: SetNull)
-  repeats           CollaborationFunding[] @relation("FundingRepeat")
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  changeOrderLimit  Int      @default(2)
-  changeOrderCount  Int      @default(0)
-  milestones        FundingMilestone[]
-  entries           LedgerEntry[]
-  disputes          MilestoneDispute[]
-  changeOrders      FundingChangeOrder[]
-  deposits          FundingDeposit[]
-  settlements       FundingSettlement[]
-  submissions       MilestoneSubmission[]
-  files             MilestoneFile[]
+  seriesStopped          Boolean                @default(false)
+  repeatOfId             String?
+  repeatOf               CollaborationFunding?  @relation("FundingRepeat", fields: [repeatOfId], references: [id], onDelete: SetNull)
+  repeats                CollaborationFunding[] @relation("FundingRepeat")
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  changeOrderLimit       Int                    @default(2)
+  changeOrderCount       Int                    @default(0)
+  milestones             FundingMilestone[]
+  entries                LedgerEntry[]
+  disputes               MilestoneDispute[]
+  changeOrders           FundingChangeOrder[]
+  deposits               FundingDeposit[]
+  settlements            FundingSettlement[]
+  submissions            MilestoneSubmission[]
+  files                  MilestoneFile[]
 
   @@unique([scheduleId, trancheIndex])
   @@index([creatorSlug, status])
@@ -2178,42 +2137,42 @@ model CollaborationFunding {
 }
 
 model FundingMilestone {
-  id                String               @id @default(cuid())
-  fundingId         String
-  funding           CollaborationFunding @relation(fields: [fundingId], references: [id], onDelete: Cascade)
-  title             String
-  amountCents       Int
-  refundedCents     Int                  @default(0)
-  sortOrder         Int                  @default(0)
-  status            String               @default("pending")
+  id                 String                @id @default(cuid())
+  fundingId          String
+  funding            CollaborationFunding  @relation(fields: [fundingId], references: [id], onDelete: Cascade)
+  title              String
+  amountCents        Int
+  refundedCents      Int                   @default(0)
+  sortOrder          Int                   @default(0)
+  status             String                @default("pending")
   /// W3.10 — usage rights are separate from milestone acceptance (Product §13).
-  rightsStatus      String               @default("pending")
+  rightsStatus       String                @default("pending")
   /// release (default) | acceptance | custom
-  rightsActivateOn  String               @default("release")
-  rightsActivatedAt DateTime?
-  reviewWindowHours Int
-  revisionLimit     Int                  @default(2)
-  revisionCount     Int                  @default(0)
-  revisionNote      String               @default("")
-  submittedAt       DateTime?
-  autoApproveAt     DateTime?
-  approvedAt        DateTime?
+  rightsActivateOn   String                @default("release")
+  rightsActivatedAt  DateTime?
+  reviewWindowHours  Int
+  revisionLimit      Int                   @default(2)
+  revisionCount      Int                   @default(0)
+  revisionNote       String                @default("")
+  submittedAt        DateTime?
+  autoApproveAt      DateTime?
+  approvedAt         DateTime?
   /// Submission deadline for the deliverable. Separate from review and payout dates.
-  deliverableDueAt  DateTime?
+  deliverableDueAt   DateTime?
   /// Dev §8 / §16 — set when release is authorized; sweep queues provider release when due.
   releaseScheduledAt DateTime?
   /// Set when an admin, or automatic release approval, authorizes the provider push.
   releaseApprovedAt  DateTime?
   /// Dev §16 — set when provider reports payout.failed; cleared on successful release or retry reset.
-  payoutFailedAt    DateTime?
-  payoutRetryCount  Int                  @default(0)
+  payoutFailedAt     DateTime?
+  payoutRetryCount   Int                   @default(0)
   /// First provider split id for this milestone. The full list lives on the funding.
-  providerSplitId   String?
-  updatedAt         DateTime             @updatedAt
-  entries           LedgerEntry[]
-  disputes          MilestoneDispute[]
-  submissions       MilestoneSubmission[]
-  files             MilestoneFile[]
+  providerSplitId    String?
+  updatedAt          DateTime              @updatedAt
+  entries            LedgerEntry[]
+  disputes           MilestoneDispute[]
+  submissions        MilestoneSubmission[]
+  files              MilestoneFile[]
 
   @@index([fundingId, status])
   @@index([status, payoutFailedAt])
@@ -2222,20 +2181,20 @@ model FundingMilestone {
 
 /// One submitted version of a milestone. Revisions keep the earlier versions.
 model MilestoneSubmission {
-  id           String           @id @default(cuid())
-  fundingId    String
-  funding      CollaborationFunding @relation(fields: [fundingId], references: [id], onDelete: Cascade)
-  milestoneId  String
-  milestone    FundingMilestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
-  creatorSlug  String
-  version      Int
-  note         String
-  linkUrl      String           @default("")
+  id          String               @id @default(cuid())
+  fundingId   String
+  funding     CollaborationFunding @relation(fields: [fundingId], references: [id], onDelete: Cascade)
+  milestoneId String
+  milestone   FundingMilestone     @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  creatorSlug String
+  version     Int
+  note        String
+  linkUrl     String               @default("")
   /// submitted | revision_requested | approved
-  status       String           @default("submitted")
-  reviewNote   String           @default("")
-  createdAt    DateTime         @default(now())
-  files        MilestoneFile[]
+  status      String               @default("submitted")
+  reviewNote  String               @default("")
+  createdAt   DateTime             @default(now())
+  files       MilestoneFile[]
 
   @@unique([milestoneId, creatorSlug, version])
   @@index([fundingId, createdAt])
@@ -2243,11 +2202,11 @@ model MilestoneSubmission {
 
 /// A document, media file, or other file on a deliverable. Stored outside the public site.
 model MilestoneFile {
-  id           String              @id @default(cuid())
+  id           String               @id @default(cuid())
   fundingId    String
   funding      CollaborationFunding @relation(fields: [fundingId], references: [id], onDelete: Cascade)
   milestoneId  String
-  milestone    FundingMilestone    @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  milestone    FundingMilestone     @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
   submissionId String?
   submission   MilestoneSubmission? @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   /// creator | business
@@ -2258,7 +2217,7 @@ model MilestoneFile {
   contentType  String
   sizeBytes    Int
   storagePath  String
-  createdAt    DateTime            @default(now())
+  createdAt    DateTime             @default(now())
 
   @@index([milestoneId, createdAt])
   @@index([submissionId])
@@ -2400,22 +2359,22 @@ model FundingDeposit {
 
 /// A milestone dispute or a request to cancel money the provider is holding.
 model MilestoneDispute {
-  id                   String                @id @default(cuid())
+  id                   String               @id @default(cuid())
   fundingId            String
-  funding              CollaborationFunding  @relation(fields: [fundingId], references: [id], onDelete: Cascade)
+  funding              CollaborationFunding @relation(fields: [fundingId], references: [id], onDelete: Cascade)
   milestoneId          String?
-  milestone            FundingMilestone?     @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  milestone            FundingMilestone?    @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   openedBy             String
   reasonLabel          String
   reasonCode           String?
   details              String
-  status               String                @default("open")
+  status               String               @default("open")
   requestedRefundCents Int?
-  evidenceLimit        Int                   @default(5)
+  evidenceLimit        Int                  @default(5)
   resolutionNote       String?
   resolutionOutcome    String?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
   notes                DisputeNote[]
 
   @@index([fundingId, status])
@@ -2462,21 +2421,21 @@ model AgencyRosterMember {
 }
 
 model AgencyCampaign {
-  id           String          @id
+  id           String               @id
   workspaceId  String
-  workspace    AgencyWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace    AgencyWorkspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   title        String
   clientName   String
-  status       String          @default("briefing")
+  status       String               @default("briefing")
   specialty    String
   budgetLabel  String
   creatorSlugs Json
-  summary      String          @default("")
+  summary      String               @default("")
   clientId     String?
-  client       AgencyClient?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  client       AgencyClient?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
   links        AgencyCampaignLink[]
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
 
   @@index([workspaceId, status])
   @@index([clientId])
@@ -2557,7 +2516,7 @@ model AdminRole {
   name        String
   description String      @default("")
   system      Boolean     @default(false)
-  permissions String[]  @default([])
+  permissions String[]    @default([])
   users       AdminUser[]
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -2584,21 +2543,21 @@ model AdminUser {
 
 /// Multi-creator proposal. All members must accept before a contract opens.
 model TeamProposal {
-  id             String               @id @default(cuid())
-  workspaceId    String
-  title          String
-  campaignIntent String               @default("")
+  id              String               @id @default(cuid())
+  workspaceId     String
+  title           String
+  campaignIntent  String               @default("")
   /// sent | partial | accepted | declined | expired | draft
-  status         String               @default("sent")
-  expiresAt      DateTime?
+  status          String               @default("sent")
+  expiresAt       DateTime?
   /// Set when the accepted proposal creates its one funding instruction.
-  fundingId      String?
+  fundingId       String?
   /// Canonical collaboration record when one was created for this team. Never guessed from a title.
   collaborationId String?
-  collaboration   Collaboration? @relation(fields: [collaborationId], references: [id], onDelete: SetNull)
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  members        TeamProposalMember[]
+  collaboration   Collaboration?       @relation(fields: [collaborationId], references: [id], onDelete: SetNull)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  members         TeamProposalMember[]
 
   @@index([workspaceId, status])
   @@index([collaborationId])
@@ -2622,31 +2581,31 @@ model TeamProposalMember {
 
 /// Immutable country route version. A new edit is a new version. It does not move held funds.
 model PaymentRouteVersion {
-  id                            String   @id @default(cuid())
+  id                            String               @id @default(cuid())
   countryCode                   String
   version                       Int
   currency                      String
   environment                   String
   providerCode                  String
-  providerImplementationVersion String   @default("stripe-us-4.1")
+  providerImplementationVersion String               @default("stripe-us-4.1")
   /// draft | validated | active | suspended
-  status                        String   @default("draft")
-  newCollectionsEnabled         Boolean  @default(false)
-  releasesEnabled               Boolean  @default(false)
+  status                        String               @default("draft")
+  newCollectionsEnabled         Boolean              @default(false)
+  releasesEnabled               Boolean              @default(false)
   roleMappingJson               Json
   capabilitiesJson              Json
-  taxPolicyId                   String   @default("")
-  approvalEvidence              String   @default("")
-  allocatedFundsApproved        Boolean  @default(false)
+  taxPolicyId                   String               @default("")
+  approvalEvidence              String               @default("")
+  allocatedFundsApproved        Boolean              @default(false)
   /// connect_allocated_funds | treasury_financial_accounts | unavailable
-  topology                      String   @default("unavailable")
+  topology                      String               @default("unavailable")
   /// draft | sandbox_proven | live_approved. A note is not proof.
-  proofState                    String   @default("draft")
-  operationsWithdrawalEnabled   Boolean  @default(false)
-  bankPayoutControl             Boolean  @default(false)
-  connectionId                  String   @default("")
-  effectiveFrom                 DateTime @default(now())
-  createdAt                     DateTime @default(now())
+  proofState                    String               @default("draft")
+  operationsWithdrawalEnabled   Boolean              @default(false)
+  bankPayoutControl             Boolean              @default(false)
+  connectionId                  String               @default("")
+  effectiveFrom                 DateTime             @default(now())
+  createdAt                     DateTime             @default(now())
   bindings                      PaymentRoleBinding[]
 
   @@unique([countryCode, environment, version])
@@ -2656,25 +2615,25 @@ model PaymentRouteVersion {
 /// Versioned tax policy. Treatment is explicit. Rate is jurisdiction-specific and optional.
 /// A row covers one subject. A fee configuration does not cover influencer services.
 model TaxPolicyVersion {
-  id             String   @id @default(cuid())
-  name           String
-  version        Int
+  id                 String    @id @default(cuid())
+  name               String
+  version            Int
   /// platform | connected_account | empty. An approved obligation, never a typed name.
-  liableEntity   String
+  liableEntity       String
   /// taxable | exempt | non_taxable | no_collection_obligation | unresolved
-  treatment      String
-  inclusive      Boolean  @default(false)
-  classification String   @default("")
-  filingOwner    String   @default("")
-  jurisdiction   String   @default("")
+  treatment          String
+  inclusive          Boolean   @default(false)
+  classification     String    @default("")
+  filingOwner        String    @default("")
+  jurisdiction       String    @default("")
   /// Stored subject key: subscriber | business | influencer | services. Not a customer label.
-  customerRole   String
+  customerRole       String
   /// Basis points for an approved manual rate. Null is not zero tax. Automatic calculation leaves this null.
-  rateBps        Int?
+  rateBps            Int?
   /// draft | ready | needs_review | active (legacy ready)
-  status         String   @default("draft")
-  effectiveFrom  DateTime @default(now())
-  notes          String   @default("")
+  status             String    @default("draft")
+  effectiveFrom      DateTime  @default(now())
+  notes              String    @default("")
   /// subscription | business_fee | influencer_fee | influencer_services
   appliesTo          String    @default("")
   countryCode        String    @default("")
@@ -2691,7 +2650,7 @@ model TaxPolicyVersion {
   effectiveTo        DateTime?
   /// Selected product, fee rule, or service ids. Comma-separated. Not a second form.
   linkedIds          String    @default("")
-  createdAt      DateTime @default(now())
+  createdAt          DateTime  @default(now())
 
   @@unique([name, version])
   @@index([status, customerRole])
@@ -2740,13 +2699,13 @@ model PaymentVerificationTask {
 
 /// One settlement command per milestone revision. Status advances from provider facts.
 model MilestoneSettlementV4 {
-  id                 String             @id @default(cuid())
+  id                 String            @id @default(cuid())
   fundingId          String
   milestoneId        String
-  agreementVersion   Int                @default(1)
-  revision           Int                @default(1)
+  agreementVersion   Int               @default(1)
+  revision           Int               @default(1)
   /// planned | dispatched | payout_processing | completed | failed | unknown
-  status             String             @default("planned")
+  status             String            @default("planned")
   currency           String
   grossCents         Int
   businessFeeCents   Int
@@ -2755,17 +2714,17 @@ model MilestoneSettlementV4 {
   operationsFeeCents Int
   /// Null until the original determination is carried. Null is not zero tax.
   taxCents           Int?
-  taxReason          String             @default("")
-  idempotencyKey     String             @unique
+  taxReason          String            @default("")
+  idempotencyKey     String            @unique
   /// queued | pending | in_transit | paid | failed | returned | unknown
-  payoutState        String             @default("queued")
-  transferRef        String             @default("")
-  payoutRef          String             @default("")
-  restrictedFeeCents Int                @default(0)
-  commandKey         String             @default("")
-  sourceAccountId    String             @default("")
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  payoutState        String            @default("queued")
+  transferRef        String            @default("")
+  payoutRef          String            @default("")
+  restrictedFeeCents Int               @default(0)
+  commandKey         String            @default("")
+  sourceAccountId    String            @default("")
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
   legs               SettlementLegV4[]
 
   @@unique([milestoneId, agreementVersion, revision])
@@ -2773,15 +2732,15 @@ model MilestoneSettlementV4 {
 }
 
 model SettlementLegV4 {
-  id             String                @id @default(cuid())
-  settlementId   String
-  settlement     MilestoneSettlementV4 @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  id                   String                @id @default(cuid())
+  settlementId         String
+  settlement           MilestoneSettlementV4 @relation(fields: [settlementId], references: [id], onDelete: Cascade)
   /// influencer_net | operations_fees
-  leg            String
+  leg                  String
   /// planned | dispatched | confirmed | failed | unknown | reversed
-  status         String                @default("planned")
-  amountCents    Int
-  instructionKey String                @default("")
+  status               String                @default("planned")
+  amountCents          Int
+  instructionKey       String                @default("")
   providerRef          String                @default("")
   evidence             String                @default("")
   sourceAccountId      String                @default("")
@@ -2789,23 +2748,6 @@ model SettlementLegV4 {
   updatedAt            DateTime              @updatedAt
 
   @@unique([settlementId, leg])
-}
-
-/// Append-only money lines. A button click does not insert a confirmed cash line.
-model PaymentJournalLine {
-  id            String   @id @default(cuid())
-  fundingId     String
-  currency      String
-  account       String
-  /// debit | credit
-  direction     String
-  amountCents   Int
-  eventKey      String
-  correlationId String   @default("")
-  createdAt     DateTime @default(now())
-
-  @@unique([fundingId, eventKey, account, direction])
-  @@index([fundingId])
 }
 
 model ReconciliationCaseV4 {
@@ -2900,37 +2842,37 @@ model ProviderEventInbox {
 
 /// A versioned discount. Redeemed versions stay when a later version is issued.
 model DiscountOffer {
-  id               String   @id @default(cuid())
-  normalizedCode   String
-  displayCode      String
-  version          Int
+  id              String                @id @default(cuid())
+  normalizedCode  String
+  displayCode     String
+  version         Int
   /// subscription | business_collaboration_fee | influencer_collaboration_fee
-  productCharge    String
+  productCharge   String
   /// percentage | fixed
-  discountKind     String
-  percentBps       Int?
-  fixedCents       Int?
-  currency         String
-  countryCode      String
-  planCode         String   @default("")
-  planName         String   @default("")
+  discountKind    String
+  percentBps      Int?
+  fixedCents      Int?
+  currency        String
+  countryCode     String
+  planCode        String                @default("")
+  planName        String                @default("")
   /// month | year | blank. Monthly and annual first invoices are different offers.
-  billingInterval  String   @default("")
-  serviceLevel     String   @default("")
-  startsAt         DateTime
-  endsAt           DateTime
-  totalUses        Int
-  usesPerCustomer  Int      @default(1)
+  billingInterval String                @default("")
+  serviceLevel    String                @default("")
+  startsAt        DateTime
+  endsAt          DateTime
+  totalUses       Int
+  usesPerCustomer Int                   @default(1)
   /// draft | active | paused. Scheduled, expired, and exhausted are derived.
-  lifecycle        String   @default("draft")
-  reservedCount    Int      @default(0)
-  redeemedCount    Int      @default(0)
-  refundedCount    Int      @default(0)
-  createdById      String   @default("")
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  audits           DiscountOfferAudit[]
-  reservations     DiscountReservation[]
+  lifecycle       String                @default("draft")
+  reservedCount   Int                   @default(0)
+  redeemedCount   Int                   @default(0)
+  refundedCount   Int                   @default(0)
+  createdById     String                @default("")
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  audits          DiscountOfferAudit[]
+  reservations    DiscountReservation[]
 
   @@unique([normalizedCode, version])
   @@index([normalizedCode, lifecycle])
@@ -2950,28 +2892,28 @@ model DiscountOfferAudit {
 
 /// A use reserved for one checkout or agreement version. Consumed only after provider confirmation.
 model DiscountReservation {
-  id              String        @id @default(cuid())
+  id              String              @id @default(cuid())
   offerId         String
-  offer           DiscountOffer @relation(fields: [offerId], references: [id], onDelete: Restrict)
+  offer           DiscountOffer       @relation(fields: [offerId], references: [id], onDelete: Restrict)
   offerVersion    Int
   payerAccountId  String
   /// subscription_checkout | collaboration_agreement
   subjectKind     String
   subjectId       String
-  idempotencyKey  String        @unique
+  idempotencyKey  String              @unique
   /// reserved | consumed | released
   status          String
   charge          String
   currency        String
   amountCents     Int
   baseCents       Int
-  quoteRef        String        @default("")
-  lineLabel       String        @default("")
-  settlementId    String        @default("")
+  quoteRef        String              @default("")
+  lineLabel       String              @default("")
+  settlementId    String              @default("")
   /// none | unknown | abandoned | confirmed | cancelled
-  providerOutcome String        @default("none")
+  providerOutcome String              @default("none")
   expiresAt       DateTime?
-  createdAt       DateTime      @default(now())
+  createdAt       DateTime            @default(now())
   consumedAt      DateTime?
   releasedAt      DateTime?
   refundedAt      DateTime?
@@ -2984,16 +2926,27 @@ model DiscountReservation {
 
 /// Immutable adjustment. It records the quote, line, payer, version, currency, and amount.
 model DiscountAdjustment {
-  id              String               @id @default(cuid())
-  reservationId   String               @unique
-  reservation     DiscountReservation  @relation(fields: [reservationId], references: [id], onDelete: Restrict)
-  quoteRef        String
-  lineLabel       String
-  payerAccountId  String
-  offerId         String
-  offerVersion    Int
-  currency        String
-  amountCents     Int
-  baseCents       Int
-  createdAt       DateTime             @default(now())
+  id             String              @id @default(cuid())
+  reservationId  String              @unique
+  reservation    DiscountReservation @relation(fields: [reservationId], references: [id], onDelete: Restrict)
+  quoteRef       String
+  lineLabel      String
+  payerAccountId String
+  offerId        String
+  offerVersion   Int
+  currency       String
+  amountCents    Int
+  baseCents      Int
+  createdAt      DateTime            @default(now())
+}
+
+model ManagedIntroEvent {
+  id        String       @id @default(cuid())
+  introId   String
+  intro     ManagedIntro @relation(fields: [introId], references: [id], onDelete: Cascade)
+  status    String
+  note      String?
+  createdAt DateTime     @default(now())
+
+  @@index([introId])
 }

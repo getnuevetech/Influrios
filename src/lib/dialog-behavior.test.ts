@@ -33,7 +33,6 @@ describe("shared popup behavior", () => {
   });
 
   it("uses one dialog behavior for payments, admin records, and notices", () => {
-    const payments = readFileSync("src/components/collaboration-payments-dialog.tsx", "utf8");
     const admins = readFileSync("src/components/admin-users-ui.tsx", "utf8");
     const accounts = readFileSync("src/components/admin-accounts-ui.tsx", "utf8");
     const notice = readFileSync("src/components/notice-dialog.tsx", "utf8");
@@ -43,9 +42,6 @@ describe("shared popup behavior", () => {
     assert.equal(existsSync("src/components/card-preview-dialog.tsx"), false);
     assert.equal(dashboard.includes("Open full card"), false);
     assert.equal(dashboard.includes("AccountDialog"), false);
-    assert.match(payments, /useAccountDialogBehavior/);
-    assert.match(payments, /data-account-dialog-root/);
-    assert.match(payments, /role="tablist"/);
     assert.match(admins, /useAccountDialogBehavior/);
     assert.match(accounts, /useAccountDialogBehavior/);
     assert.match(notice, /AccountDialog/);

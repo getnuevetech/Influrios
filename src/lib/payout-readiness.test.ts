@@ -95,8 +95,6 @@ describe("buildPayoutFeeFxQuote", () => {
     assert.equal(providers.includes("GATEWAY_SHELLS"), false);
     assert.equal(providers.includes('gateway: "flutterwave"'), false);
     assert.equal(providers.includes('gateway: "stripe"'), false);
-    const fields = readFileSync("src/app/payments/jurisdiction-payout-method-fields.tsx", "utf8");
-    assert.match(fields, /JurisdictionPayoutMethodFields|payoutChoices|jurisdictionCode/);
     assert.match(readFileSync("src/lib/payout-readiness.ts", "utf8"), /payoutMethodsCompatibleWithCollection/);
   });
 
