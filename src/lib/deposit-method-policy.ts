@@ -19,7 +19,7 @@ export type DepositBands = {
   bankTransferMinCents: number;
 };
 
-export const DEFAULT_DEPOSIT_BANDS: DepositBands = { cardMaxCents: 200_000, bankTransferMinCents: 2_500_000 };
+export const DEFAULT_DEPOSIT_BANDS: DepositBands = { cardMaxCents: 500_000, bankTransferMinCents: 2_500_000 };
 
 export function readDepositBands(value: unknown): DepositBands {
   const row = value && typeof value === "object" ? (value as Record<string, unknown>) : {};

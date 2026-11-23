@@ -8,11 +8,11 @@ const bands = DEFAULT_DEPOSIT_BANDS;
 
 test("small USD deposits offer card (recommended) and ACH debit", () => {
   assert.deepEqual(depositMethodsForAmount(55_125, "USD", bands), { methods: ["card", "ach_online"], recommended: "card" });
-  assert.deepEqual(depositMethodsForAmount(200_000, "usd", bands).methods, ["card", "ach_online"]);
+  assert.deepEqual(depositMethodsForAmount(500_000, "usd", bands).methods, ["card", "ach_online"]);
 });
 
 test("larger USD deposits offer ACH debit only", () => {
-  assert.deepEqual(depositMethodsForAmount(200_001, "USD", bands), { methods: ["ach_online"], recommended: "ach_online" });
+  assert.deepEqual(depositMethodsForAmount(500_001, "USD", bands), { methods: ["ach_online"], recommended: "ach_online" });
   assert.deepEqual(depositMethodsForAmount(2_499_999, "USD", bands).methods, ["ach_online"]);
 });
 
@@ -27,7 +27,7 @@ test("other currencies pay by card", () => {
 
 test("bad saved bands fall back to the defaults", () => {
   assert.deepEqual(readDepositBands(null), bands);
-  assert.deepEqual(readDepositBands({ cardMaxCents: 500_000, bankTransferMinCents: 100_000 }), bands);
+  assert.deepEqual(readDepositBands({ cardMaxCents: 3_000_000, bankTransferMinCents: 100_000 }), bands);
   assert.deepEqual(readDepositBands({ cardMaxCents: 100_000, bankTransferMinCents: 1_000_000 }), { cardMaxCents: 100_000, bankTransferMinCents: 1_000_000 });
 });
 

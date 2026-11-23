@@ -5,7 +5,7 @@ import { DEPOSIT_METHOD_LABELS, isGatewayDepositMethod, type DepositMethod } fro
 import type { DepositMethodChoice } from "@/lib/deposit-method-policy";
 
 const METHOD_NOTES: Record<string, string> = {
-  card: "Pay now by card. Best for smaller amounts.",
+  card: "Pay now by card. Funds are confirmed right away.",
   ach_online: "Debit your US bank account. Lower cost; funds clear in about 4 business days.",
   bank_transfer: "Send a wire or ACH credit to account details Stripe gives you. Funds clear when your bank transfer arrives.",
 };
@@ -146,10 +146,9 @@ export function CheckoutPanel({
             <legend className="text-sm font-semibold">Payment method</legend>
             {methodChoice.methods.map((method) => (
               <label key={method} className="flex min-h-11 items-start gap-2 rounded-xl border border-border px-3 py-2 text-sm">
-                <input type="radio" name="method" value={method} required defaultChecked={method === methodChoice.recommended} className="mt-1" />
+                <input type="radio" name="method" value={method} required defaultChecked={methodChoice.methods.length === 1} className="mt-1" />
                 <span>
                   <span className="font-semibold">{DEPOSIT_METHOD_LABELS[method as DepositMethod]}</span>
-                  {method === methodChoice.recommended && methodChoice.methods.length > 1 ? <span className="ml-2 text-xs text-violet">Recommended</span> : null}
                   <span className="block text-xs text-muted">{METHOD_NOTES[method]}</span>
                 </span>
               </label>
