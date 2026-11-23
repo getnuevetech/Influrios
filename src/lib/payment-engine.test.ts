@@ -997,7 +997,18 @@ describe("payment engine acceptance", () => {
       },
       "USD",
     );
-    assert.equal(blocked && "error" in blocked && blocked.error, "Tax collection is not part of this route.");
+    assert.equal(blocked && "error" in blocked && blocked.error, "Influencer tax withholding is not part of this route.");
+    // Business tax is collected with the deposit, whether the quote stored the amount before or after tax.
+    const beforeTax = readSignedCollection(
+      { signedQuote: { currency: "USD", businessPaysCents: 52_500, influencerReceivesCents: 50_000, platformFeesTotalCents: 2_500, businessTaxCents: 2_625 } },
+      "USD",
+    );
+    assert.equal(beforeTax && !("error" in beforeTax) && beforeTax.collectCents, 55_125);
+    const afterTax = readSignedCollection(
+      { signedQuote: { currency: "USD", businessPaysCents: 55_125, influencerReceivesCents: 50_000, platformFeesTotalCents: 2_500, businessTaxCents: 2_625 } },
+      "USD",
+    );
+    assert.equal(afterTax && !("error" in afterTax) && afterTax.collectCents, 55_125);
     assert.equal(
       readSignedCollection(
         {

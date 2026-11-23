@@ -239,7 +239,7 @@ export function buildProviderStagingTrace(input: {
 export function readSignedCollection(
   plan: unknown,
   routeCurrency: string,
-): { currency: string; businessPaysCents: number; influencerReceivesCents: number; platformFeesTotalCents: number; milestoneCount: number } | { error: string } | null {
+): { currency: string; businessPaysCents: number; businessTaxCents: number; collectCents: number; influencerReceivesCents: number; platformFeesTotalCents: number; milestoneCount: number } | { error: string } | null {
   if (!plan || typeof plan !== "object") return null;
   const quote = (plan as { signedQuote?: Record<string, unknown> }).signedQuote;
   if (!quote) return null;
@@ -264,16 +264,24 @@ export function readSignedCollection(
   ) {
     return { error: "The signed quote amounts are incomplete." };
   }
-  if (businessTaxCents + influencerTaxCents + withholdingCents !== 0) {
-    return { error: "Tax collection is not part of this route." };
+  // Business tax is collected with the deposit and held as tax payable. Tax taken from the influencer's
+  // side (withholding) has no payout path yet, so it stays refused.
+  if (influencerTaxCents + withholdingCents !== 0) {
+    return { error: "Influencer tax withholding is not part of this route." };
   }
-  if (Number(businessPaysCents) !== Number(influencerReceivesCents) + Number(platformFeesTotalCents)) {
+  if (businessTaxCents < 0) return { error: "The signed quote amounts are incomplete." };
+  const beforeTax = Number(influencerReceivesCents) + Number(platformFeesTotalCents);
+  const taxIncluded = businessTaxCents > 0 && Number(businessPaysCents) === beforeTax + businessTaxCents;
+  if (Number(businessPaysCents) !== beforeTax && !taxIncluded) {
     return { error: "The signed quote does not reconcile." };
   }
   const milestoneCount = Number(quote.milestoneCount ?? 1);
   return {
     currency,
     businessPaysCents: Number(businessPaysCents),
+    businessTaxCents,
+    /** What the business is charged: the signed amount plus business tax. */
+    collectCents: taxIncluded ? Number(businessPaysCents) : Number(businessPaysCents) + businessTaxCents,
     influencerReceivesCents: Number(influencerReceivesCents),
     platformFeesTotalCents: Number(platformFeesTotalCents),
     milestoneCount: Number.isInteger(milestoneCount) && milestoneCount > 0 ? milestoneCount : 1,
@@ -1025,6 +1033,23 @@ export type SignedDealMoney = {
   activationFeeCents?: number;
 };
 
+/**
+ * What the business is charged for a signed deal. Some quotes store businessPaysCents before business
+ * tax, others after; either way the business pays the signed amount plus business tax exactly once.
+ */
+export function signedCollectCents(deal: {
+  businessPaysCents: number;
+  influencerReceivesCents: number;
+  businessPlatformFeeCents: number;
+  influencerPlatformFeeCents: number;
+  businessTaxCents?: number | null;
+}) {
+  const tax = deal.businessTaxCents ?? 0;
+  const beforeTax = deal.influencerReceivesCents + deal.businessPlatformFeeCents + deal.influencerPlatformFeeCents;
+  if (tax > 0 && deal.businessPaysCents === beforeTax + tax) return deal.businessPaysCents;
+  return deal.businessPaysCents + tax;
+}
+
 export function readSignedDealMoney(plan: unknown): SignedDealMoney | null {
   if (!plan || typeof plan !== "object") return null;
   const quote = (plan as { signedQuote?: Record<string, unknown> }).signedQuote;
@@ -1153,8 +1178,10 @@ export function signedDealMoneyEvents(input: {
   } | null;
   alreadyRefundedCents?: number;
 }): { ok: true; entries: LedgerPosting[] } | { ok: false; error: string } {
+  // The business is charged the signed amount plus business tax; the tax stays held as tax payable.
+  const collectedCents = signedCollectCents(input.deal);
   if (input.eventType === "funding.held") {
-    if (input.amountCents !== input.deal.businessPaysCents) {
+    if (input.amountCents !== collectedCents) {
       return { ok: false, error: "The collection does not match the signed business payment." };
     }
     const entries: LedgerPosting[] = [
@@ -1201,10 +1228,10 @@ export function signedDealMoneyEvents(input: {
     if (!Number.isInteger(input.amountCents) || input.amountCents <= 0 || !Number.isInteger(alreadyRefunded) || alreadyRefunded < 0) {
       return { ok: false, error: "The refund amount is missing." };
     }
-    if (alreadyRefunded + input.amountCents > input.deal.businessPaysCents) {
+    if (alreadyRefunded + input.amountCents > collectedCents) {
       return { ok: false, error: "The refund is larger than the remaining signed business payment." };
     }
-    const fullRefund = input.amountCents === input.deal.businessPaysCents && alreadyRefunded === 0;
+    const fullRefund = input.amountCents === collectedCents && alreadyRefunded === 0;
     if (input.operationRefundCents == null) {
       if (!fullRefund) {
         return { ok: false, error: "A signed deal refunds the full business payment on the original route." };
@@ -1221,7 +1248,7 @@ export function signedDealMoneyEvents(input: {
         }),
         policyApproved: input.policyApproved,
         payoutReturned: input.payoutReturned ?? false,
-        businessPaysCents: input.deal.businessPaysCents,
+        businessPaysCents: collectedCents,
         influencerReceivesCents: input.deal.influencerReceivesCents,
         businessFeeCents: input.deal.businessPlatformFeeCents,
         influencerFeeCents: input.deal.influencerPlatformFeeCents,
