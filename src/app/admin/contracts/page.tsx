@@ -14,7 +14,7 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Contracts · Admin" };
 
-type Props = { searchParams: Promise<{ error?: string; saved?: string; deleted?: string; voided?: string; q?: string; status?: string; page?: string }> };
+type Props = { searchParams: Promise<{ error?: string; saved?: string; deleted?: string; voided?: string; page?: string }> };
 
 export default async function AdminContractsPage({ searchParams }: Props) {
   const session = await requireAdminPage("contracts");
@@ -24,40 +24,28 @@ export default async function AdminContractsPage({ searchParams }: Props) {
   const canEdit = hasPermission(session, "contracts.templates");
   const canDelete = isSuperAdmin(session);
   const template = await ensureContractTemplate().catch(() => null);
-  const q = (params.q ?? "").trim();
-  const status = (params.status ?? "").trim();
   const page = Math.max(1, Number(params.page) || 1);
   const pageSize = 25;
-  const where = {
-    ...(status ? { status } : {}),
-    ...(q
-      ? {
-          OR: [
-            { title: { contains: q, mode: "insensitive" as const } },
-            { id: q },
-            { parties: { some: { email: { contains: q, mode: "insensitive" as const } } } },
-          ],
-        }
-      : {}),
-  };
-  const [total, documents] = canView
+  // Only agreements still waiting for a signature are listed here; every agreement is on Deals.
+  const where = { status: { in: ["draft", "sent"] } };
+  const [counts, total, awaiting] = canView
     ? await prisma
-    .$transaction([
-      prisma.contractDocument.count({ where }),
-      prisma.contractDocument.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-        include: { parties: { select: { name: true, email: true, role: true, status: true } } },
-      }),
-    ])
-    .catch(() => [0, []] as const)
-    : ([0, []] as const);
+        .$transaction([
+          prisma.contractDocument.groupBy({ by: ["status"], _count: { _all: true }, orderBy: { status: "asc" } }),
+          prisma.contractDocument.count({ where }),
+          prisma.contractDocument.findMany({
+            where,
+            orderBy: { createdAt: "desc" },
+            skip: (page - 1) * pageSize,
+            take: pageSize,
+            include: { parties: { select: { name: true, email: true, role: true, status: true } } },
+          }),
+        ])
+        .catch(() => [[], 0, []] as const)
+    : ([[], 0, []] as const);
+  const countOf = (statuses: string[]) =>
+    counts.filter((row) => statuses.includes(row.status)).reduce((sum, row) => sum + (row._count as { _all: number })._all, 0);
   const pages = Math.max(1, Math.ceil(total / pageSize));
-  const signed = documents.filter((row) => row.status === "signed");
-  const awaiting = documents.filter((row) => row.status === "sent" || row.status === "draft");
-  const other = documents.filter((row) => row.status !== "signed" && row.status !== "sent" && row.status !== "draft");
 
   return (
     <div>
@@ -65,7 +53,8 @@ export default async function AdminContractsPage({ searchParams }: Props) {
         <div>
           <h1 className="font-display text-3xl font-bold text-indigo">Contracts</h1>
           <p className="mt-2 max-w-3xl text-sm text-muted">
-            Sent agreements, signature progress, and the collaboration template. A business or influencer cannot delete
+            The agreement template and the agreements still waiting for a signature. Every agreement, signed or not, is
+            listed on Deals. A business or influencer cannot delete
             a contract. A super admin can delete an unused draft. A sent or signed agreement is voided, so the PDF and
             signatures stay on record. Signing channel (in-app or DocuSign) is configured under{" "}
             <Link href="/admin/signing" className="font-semibold text-violet hover:underline">
@@ -81,35 +70,6 @@ export default async function AdminContractsPage({ searchParams }: Props) {
       {params.saved ? <p className="mt-3 text-sm font-semibold text-emerald-700">Template saved.</p> : null}
       {params.deleted ? <p className="mt-3 text-sm font-semibold text-emerald-700">Draft deleted.</p> : null}
       {params.voided ? <p className="mt-3 text-sm font-semibold text-emerald-700">Agreement voided.</p> : null}
-      <form className="mt-4 flex flex-wrap gap-2" action="/admin/contracts">
-        <input name="q" defaultValue={q} placeholder="Title, email, or id" className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Title, email, or id" />
-        <select name="status" defaultValue={status} className="rounded-xl border border-border px-3 py-2 text-sm" aria-label="Status">
-          <option value="">All statuses</option>
-          {["draft", "sent", "signed", "declined", "voided"].map((value) => (
-            <option key={value} value={value}>
-              {value}
-            </option>
-          ))}
-        </select>
-        <button type="submit" className="btn-secondary !py-2 text-sm">
-          Search
-        </button>
-      </form>
-      <p className="mt-2 text-xs text-muted">
-        {total} agreement{total === 1 ? "" : "s"} · page {page} of {pages}
-        {page > 1 ? (
-          <>
-            {" "}
-            · <Link href={`/admin/contracts?q=${encodeURIComponent(q)}&status=${encodeURIComponent(status)}&page=${page - 1}`} className="font-semibold text-violet">Previous</Link>
-          </>
-        ) : null}
-        {page < pages ? (
-          <>
-            {" "}
-            · <Link href={`/admin/contracts?q=${encodeURIComponent(q)}&status=${encodeURIComponent(status)}&page=${page + 1}`} className="font-semibold text-violet">Next</Link>
-          </>
-        ) : null}
-      </p>
       {params.error ? <p className="mt-3 text-sm font-semibold text-amber-800">{params.error}</p> : null}
       {!canView ? (
         <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -117,25 +77,36 @@ export default async function AdminContractsPage({ searchParams }: Props) {
         </p>
       ) : null}
 
-      {canView ? <section className="mt-8 rounded-2xl border border-[#E4EBFF] bg-white p-5">
-        <h2 className="font-display text-xl font-bold text-indigo">Signature status</h2>
-        <p className="mt-1 text-sm text-muted">
-          {signed.length} fully signed · {awaiting.length} awaiting signatures · {other.length} other
-        </p>
-
-        <h3 className="mt-6 text-sm font-bold uppercase tracking-wide text-violet">Fully signed</h3>
-        <ContractAdminList documents={signed} empty="No fully signed agreements yet." canDelete={canDelete} />
-
-        <h3 className="mt-6 text-sm font-bold uppercase tracking-wide text-violet">Awaiting signatures</h3>
-        <ContractAdminList documents={awaiting} empty="No agreements waiting for signatures." canDelete={canDelete} />
-
-        {other.length > 0 ? (
-          <>
-            <h3 className="mt-6 text-sm font-bold uppercase tracking-wide text-violet">Other</h3>
-            <ContractAdminList documents={other} empty="" canDelete={canDelete} />
-          </>
-        ) : null}
-      </section> : null}
+      {canView ? (
+        <section className="mt-8 rounded-2xl border border-[#E4EBFF] bg-white p-5">
+          <h2 className="font-display text-xl font-bold text-indigo">Signature status</h2>
+          <p className="mt-1 text-sm text-muted">
+            {countOf(["signed"])} fully signed · {countOf(["draft", "sent"])} awaiting signatures ·{" "}
+            {countOf(["declined", "voided"])} declined or voided.{" "}
+            <Link href="/admin/deals" className="font-semibold text-violet hover:underline">
+              See every agreement on Deals
+            </Link>
+            .
+          </p>
+          <h3 className="mt-6 text-sm font-bold uppercase tracking-wide text-violet">Awaiting signatures</h3>
+          <ContractAdminList documents={[...awaiting]} empty="No agreements waiting for signatures." canDelete={canDelete} />
+          {pages > 1 ? (
+            <p className="mt-3 text-xs text-muted">
+              Page {page} of {pages}
+              {page > 1 ? (
+                <>
+                  {" "}· <Link href={`/admin/contracts?page=${page - 1}`} className="font-semibold text-violet">Previous</Link>
+                </>
+              ) : null}
+              {page < pages ? (
+                <>
+                  {" "}· <Link href={`/admin/contracts?page=${page + 1}`} className="font-semibold text-violet">Next</Link>
+                </>
+              ) : null}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="mt-8">
         <h2 className="font-display text-xl font-bold text-indigo">Agreement template</h2>

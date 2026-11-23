@@ -24,3 +24,17 @@ describe("process timing", () => {
     assert.deepEqual(parseBackoffHours("2, 12"), [2, 12]);
   });
 });
+
+describe("one default review window", () => {
+  it("is edited only on Process clocks; Marketplace settings keeps it and offers only the country override", async () => {
+    const { readFileSync } = await import("node:fs");
+    const page = readFileSync("src/app/admin/marketplace/settings/page.tsx", "utf8");
+    assert.equal(page.split('name="reviewWindowHours"').length - 1, 1, "only the per-country override field remains");
+    assert.match(page, /Change it on Payment settings → Process clocks/);
+    const actions = readFileSync("src/app/admin/marketplace/actions.ts", "utf8");
+    const save = actions.slice(actions.indexOf("export async function actionSaveMarketplaceSettings"));
+    assert.equal(save.slice(0, save.indexOf("\n}\n")).includes("reviewWindowHours"), false);
+    const ledger = readFileSync("src/lib/marketplace-ledger.ts", "utf8");
+    assert.match(ledger, /\.\.\.\(hours == null \? \{\} : \{ reviewWindowHours: hours \}\)/);
+  });
+});

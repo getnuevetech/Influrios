@@ -1,6 +1,6 @@
 import { corridorCountryByCode } from "@/lib/corridor-countries";
 import { prisma } from "@/lib/db";
-import { decryptSecret, encryptSecret, secretStatus } from "@/lib/provider-secrets";
+import { encryptSecret, secretStatus } from "@/lib/provider-secrets";
 import { classifyStripeKey, stripePayoutRouteReady } from "@/lib/stripe-admin";
 
 export const AI_FUNCTIONS = [
@@ -840,91 +840,3 @@ export async function activeSigningProvider() {
   };
 }
 
-async function askSigningProvider(input: { baseUrl: string; secret: string; title: string; collaborationId: string }) {
-  if (!input.baseUrl) return { ok: true as const, externalId: "" };
-  if (!signingEndpointAllowed(input.baseUrl)) {
-    return { ok: false as const, error: "The signing API must be https. Nothing was signed." };
-  }
-  try {
-    const response = await fetch(input.baseUrl, {
-      method: "POST",
-      redirect: "manual",
-      signal: AbortSignal.timeout(8000),
-      headers: {
-        Authorization: `Bearer ${input.secret}`,
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ title: input.title, collaborationId: input.collaborationId }),
-    });
-    if (response.status < 200 || response.status >= 300) {
-      return { ok: false as const, error: "The signing API did not accept the request. Nothing was signed." };
-    }
-    const payload = (await response.json().catch(() => null)) as { id?: unknown } | null;
-    const externalId = payload && typeof payload.id === "string" ? payload.id.slice(0, 120) : "";
-    return { ok: true as const, externalId };
-  } catch {
-    return { ok: false as const, error: "The signing API did not accept the request. Nothing was signed." };
-  }
-}
-
-export async function queueSignatureRequest(input: { collaborationId: string; title: string; collaborationStatus: string }) {
-  const provider = await activeSigningProvider();
-  if (!provider) {
-    return {
-      ok: false as const,
-      error: "Enable Influrios in-app signing or DocuSign in admin (only one can be active). Nothing was sent.",
-    };
-  }
-  const code = provider.code.trim().toLowerCase();
-  const gate = signingCanQueue({
-    enabled: provider.enabled,
-    hasSecret: Boolean(provider.hasSecret),
-    collaborationStatus: input.collaborationStatus,
-    providerCode: code,
-  });
-  if (!gate.ok) return gate;
-  const secret = provider.secretCipher ? decryptSecret(provider.secretCipher) : null;
-  let externalId = "";
-  if (code === "demo" || code === "demo_sign") {
-    return { ok: false as const, error: "Use Influrios in-app signing or DocuSign. Nothing was sent." };
-  } else if (code === "influrios" || code === "native" || code === "in_app" || code === "in-app") {
-    externalId = `native_${input.collaborationId.slice(0, 40)}`;
-  } else if (code === "docusign" || code.includes("docusign")) {
-    return {
-      ok: false as const,
-      error:
-        "DocuSign envelopes are created when you send the collaboration agreement from the contract wizard. Open the agreement flow and send it there. Nothing was queued from this legacy action.",
-    };
-  } else if (!provider.baseUrl) {
-    return { ok: false as const, error: "Add the signing API base URL in admin. Nothing was signed." };
-  } else {
-    const asked = await askSigningProvider({
-      baseUrl: provider.baseUrl,
-      secret: secret ?? "",
-      title: input.title.slice(0, 160),
-      collaborationId: input.collaborationId,
-    });
-    if (!asked.ok) return asked;
-    if (!asked.externalId) {
-      return { ok: false as const, error: "The signing API did not return an envelope id. Nothing was sent." };
-    }
-    externalId = asked.externalId;
-  }
-  const row = await prisma.signatureRequest.create({
-    data: {
-      collaborationId: input.collaborationId,
-      providerId: provider.id,
-      status: "sent",
-      title: input.title.slice(0, 160),
-      externalId,
-      lastError: null,
-    },
-  });
-  return {
-    ok: true as const,
-    id: row.id,
-    status: row.status,
-    providerName: provider.name,
-  };
-}

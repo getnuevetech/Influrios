@@ -72,7 +72,7 @@ const SIDE_GROUPS: SideGroup[] = [
         anyModules: ["collaborations", "contracts", "marketplace"],
         icon: "collab",
       },
-      { href: "/admin/collaborations", label: "Collaborations", module: "collaborations", icon: "collab" },
+      { href: "/admin/collaborations", label: "Proposals", module: "collaborations", icon: "collab" },
       {
         href: "/admin/marketplace-listings",
         label: "Marketplace listings",
