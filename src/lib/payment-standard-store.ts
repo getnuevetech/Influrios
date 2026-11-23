@@ -475,7 +475,8 @@ export async function commitMilestoneReleasePlan(input: {
           milestoneId: input.milestoneId,
           agreementVersion: input.agreementVersion,
           operation: "release",
-          amountCents: plan.influencerNetCents + plan.operationsFeeCents,
+          // The release instruction is the influencer's net; the fees follow as a separate Operations transfer.
+          amountCents: plan.influencerNetCents,
           currency: input.currency,
           status: "pending",
           attemptCount: 0,

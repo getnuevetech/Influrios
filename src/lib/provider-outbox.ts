@@ -195,7 +195,16 @@ export async function claimProviderCommand(input: {
     };
   }
   if (row.amountCents !== input.amountCents || row.currency !== currency) {
-    return { dispatch: false, reason: "The stored command amount does not match this instruction." };
+    // A release recorded at approval but never sent may carry the older net-plus-fees total.
+    // Nothing has gone to the provider yet, so take the instruction amount.
+    const neverSent = row.attemptCount === 0 && !row.providerRef && row.currency === currency && input.operation === "release";
+    if (!neverSent) return { dispatch: false, reason: "The stored command amount does not match this instruction." };
+    const fixed = await prisma.providerCommand.updateMany({
+      where: { id: row.id, attemptCount: 0, status: row.status },
+      data: { amountCents: input.amountCents },
+    });
+    if (fixed.count !== 1) return { dispatch: false, reason: "Another worker claimed this command." };
+    row.amountCents = input.amountCents;
   }
   const claimed = await prisma.providerCommand.updateMany({
     where: { id: row.id, status: row.status, attemptCount: row.attemptCount },

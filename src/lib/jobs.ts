@@ -1302,6 +1302,15 @@ export async function enqueueFundingReconciliationSweep() {
 /** Shown in the admin release log so a payout that did not go out says why. */
 async function logReleaseFailure(milestoneId: string, fundingId: string, error: unknown) {
   const message = typeof error === "string" && error.trim() ? error.trim().slice(0, 300) : "The provider did not accept the payout.";
+  // The sweep runs every few minutes: record a reason once an hour, not on every pass.
+  const recent = await prisma.auditLog
+    .findFirst({
+      where: { action: "milestone_release_skipped", objectId: milestoneId, createdAt: { gte: new Date(Date.now() - 60 * 60_000) } },
+      orderBy: { createdAt: "desc" },
+      select: { after: true },
+    })
+    .catch(() => null);
+  if ((recent?.after as { error?: unknown } | null)?.error === message) return;
   await prisma.auditLog
     .create({
       data: {
@@ -1387,7 +1396,10 @@ export async function runScheduledReleaseSweep(now = new Date(), onlyMilestoneId
         OR: [{ milestoneId: milestone.id }, { milestoneId: null }],
       },
     });
-    if (openDispute) continue;
+    if (openDispute) {
+      await logReleaseFailure(milestone.id, milestone.fundingId, "An open dispute holds this payout.");
+      continue;
+    }
     if (!onlyMilestoneId && !providerOn) continue;
     if (
       !releasePushAuthorized({
@@ -1448,7 +1460,12 @@ export async function runScheduledReleaseSweep(now = new Date(), onlyMilestoneId
       amountCents: planned.amountCents,
       currency: milestone.funding.currency,
     });
-    if (!claim.dispatch) continue;
+    if (!claim.dispatch) {
+      if (claim.reason !== "This provider command was already sent.") {
+        await logReleaseFailure(milestone.id, milestone.fundingId, claim.reason);
+      }
+      continue;
+    }
     const parties = readShareSnapshot(milestone.funding.shareSnapshotJson);
     const legs = signed
       ? { creatorCents: planned.amountCents, feeCents: 0 }

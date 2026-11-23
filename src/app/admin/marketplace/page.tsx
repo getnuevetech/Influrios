@@ -257,10 +257,8 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                     {step.action === "wait_provider" || step.action === "wait_sweep" ? (
                       <p className="mt-1 text-xs text-muted">{step.label}</p>
                     ) : null}
-                    {failedAttempts.has(milestone.id) && lastFailure.get(milestone.id) ? (
-                      <p className="mt-1 text-xs font-semibold text-rose-700">
-                        Not sent ({failedAttempts.get(milestone.id)} {failedAttempts.get(milestone.id) === 1 ? "try" : "tries"}): {lastFailure.get(milestone.id)}
-                      </p>
+                    {lastFailure.get(milestone.id) && milestone.status === "release_scheduled" ? (
+                      <p className="mt-1 text-xs font-semibold text-rose-700">Not sent: {lastFailure.get(milestone.id)}</p>
                     ) : null}
                   </div>
                   {canManage && step.action === "wait_sweep" && failedAttempts.has(milestone.id) ? (
