@@ -1928,6 +1928,8 @@ model CollaborationLaunchGate {
   automaticReleaseApprovalEnabled   Boolean  @default(false)
   /// When on, the release sweep sends the payout instruction to the provider.
   automaticProviderReleaseEnabled   Boolean  @default(false)
+  /// Comma-separated emails. While Stripe uses test keys, a deal where every party is listed can be funded before launch approvals.
+  sandboxTestEmails                 String   @default("")
   updatedAt                         DateTime @updatedAt
 }
 
