@@ -1023,3 +1023,17 @@ export async function openConnectLink(input: { accountId: string; refreshUrl: st
     return { ok: false as const, error: "Stripe did not open an account link. Nothing was opened." };
   }
 }
+
+/** Read-only GET for list and balance objects, which carry no object id. */
+export async function stripeGet(path: string, secret: string): Promise<{ ok: true; payload: Record<string, unknown> } | { ok: false; error: string }> {
+  try {
+    const { status, payload } = await stripeJson("GET", path, secret);
+    if (status >= 200 && status < 300 && payload && typeof payload === "object") {
+      return { ok: true, payload: payload as Record<string, unknown> };
+    }
+    const message = (payload as { error?: { message?: string } } | null)?.error?.message;
+    return { ok: false, error: message || `Stripe answered ${status}.` };
+  } catch {
+    return { ok: false, error: "Stripe could not be reached." };
+  }
+}
