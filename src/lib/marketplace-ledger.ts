@@ -808,13 +808,13 @@ export async function requestPrefund(input: {
       return { ok: false as const, error: "Signed milestone shares must add up to 100%. Nothing was funded." };
     }
     prepared.push({
-      gross: signedCollection.businessPaysCents,
+      gross: signedCollection.collectCents,
       fx: {
         ok: true,
         currency,
         minorPerUsd: currency === "USD" ? 100 : 1,
-        usdCents: signedCollection.businessPaysCents,
-        convertedMinor: signedCollection.businessPaysCents,
+        usdCents: signedCollection.collectCents,
+        convertedMinor: signedCollection.collectCents,
         source: "identity",
         rate: null,
         minorDigits,

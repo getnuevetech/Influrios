@@ -112,9 +112,11 @@ export async function openFundingCollection(input: {
   }
   const plan = (funding.feeSnapshotJson as { financialPlan?: unknown } | null)?.financialPlan;
   const signed = readSignedDealMoney(plan);
+  const { signedCollectCents } = await import("@/lib/payment-engine");
   const planned = collectionInstructionAmount({
     fundingGrossCents: funding.grossCents,
-    signedBusinessPaysCents: signed?.businessPaysCents ?? null,
+    // The business is charged the signed amount plus business tax.
+    signedBusinessPaysCents: signed ? signedCollectCents(signed) : null,
   });
   if (!planned.ok) return planned;
   if (input.amountCents !== planned.amountCents || input.currency.trim().toUpperCase() !== funding.currency.trim().toUpperCase()) {
