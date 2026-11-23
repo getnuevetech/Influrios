@@ -96,10 +96,12 @@ export function createStripePaymentAdapter(options?: StripePaymentAdapterOptions
         checkedAt: access.checkedAt,
       });
       const funding = status.newCollaborationFunding === "sandbox_ledger_hold";
+      const { stripeReleaseConfig } = await import("@/lib/stripe-release");
+      const release = (await stripeReleaseConfig()).ok;
       return {
         code: "stripe",
         funding,
-        release: false,
+        release,
         partialRefund: true,
         webhook: true,
       };
@@ -127,6 +129,11 @@ export function createStripePaymentAdapter(options?: StripePaymentAdapterOptions
       return queueProviderInstruction({ instruction: "cancel", fundingId: reference });
     },
     async createReleaseOrTransfer(input) {
+      // Real transfers once Stripe and the Operations account are configured; otherwise the older recorded path.
+      const { releaseMilestoneOnStripe } = await import("@/lib/stripe-release");
+      const released = await releaseMilestoneOnStripe(input);
+      if (released.ok) return { ok: true, reference: released.reference, execution: "provider" };
+      if (released.configured) return { ok: false, error: released.error };
       return executeSandboxReleaseOrTransfer(input, { originOrHost, env }, releaseDeps);
     },
     async createPartialRefund(input) {

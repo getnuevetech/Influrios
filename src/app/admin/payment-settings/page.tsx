@@ -82,7 +82,19 @@ export default async function PaymentSettingsPage({
         <PaymentSettingsNav section={section} allowed={allowed} />
       </div>
       {section === "providers" ? <AdminGatewaysPanel searchParams={panelParams} /> : null}
-      {section === "roles" ? <AccountRolesPanel /> : null}
+      {section === "roles" ? (
+        <>
+          {typeof params.error === "string" ? (
+            <p className="mx-auto max-w-5xl rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{params.error}</p>
+          ) : null}
+          {params.saved === "operations-account" ? (
+            <p className="mx-auto max-w-5xl rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+              Operations account saved.
+            </p>
+          ) : null}
+          <AccountRolesPanel />
+        </>
+      ) : null}
       {section === "routes" ? (
         <>
           <CountryRoutesPanel searchParams={panelParams} canAddCountry={canFinance} />

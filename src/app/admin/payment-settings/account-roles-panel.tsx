@@ -1,3 +1,4 @@
+import { actionSaveOperationsAccount } from "@/app/admin/payment-settings/actions";
 import { verifyCollaborationCollectionAccess } from "@/lib/collaboration-collection-access";
 import { prisma } from "@/lib/db";
 import { maskAccountId, resolveSandboxDeploymentHost, stripeCapabilityStatus } from "@/lib/payment-account-routing";
@@ -24,6 +25,10 @@ export async function AccountRolesPanel() {
     collectionDecision: access,
     checkedAt: access.checkedAt,
   });
+  const settings = await prisma.marketplaceSettings
+    .findUnique({ where: { id: "default" }, select: { operationsStripeAccountId: true } })
+    .catch(() => null);
+  const operationsAccount = settings?.operationsStripeAccountId ?? "";
   const [connections, accounts, routes] = await Promise.all([
     prisma.providerConnection.findMany({ orderBy: { updatedAt: "desc" }, take: 40 }).catch(() => []),
     prisma.providerAccount.findMany({ orderBy: { updatedAt: "desc" }, take: 40, include: { connection: true } }).catch(() => []),
@@ -36,6 +41,35 @@ export async function AccountRolesPanel() {
         <h2 className="font-display text-2xl font-bold text-indigo">Account roles</h2>
         <p className="mt-2 max-w-3xl text-sm text-muted">
           Subscription, Collaboration Funds, Operations, and the influencer recipient are responsibilities. A saved note does not prove Stripe access, and this screen does not move money.
+        </p>
+      </div>
+      <div className="rounded-2xl border border-border bg-white p-5 text-sm">
+        <h3 className="font-display text-lg font-bold text-indigo">How collaboration money moves</h3>
+        <ol className="mt-2 list-decimal space-y-1 pl-5 text-muted">
+          <li>The business pays the full collaboration amount into the Influrios Stripe account (the Collaborations account).</li>
+          <li>
+            When a milestone is released, Stripe transfers the influencer&apos;s net amount for that milestone to their Stripe account,
+            and transfers that milestone&apos;s platform fees to the Operations account below.
+          </li>
+          <li>Each transfer is tied to the original charge and is posted to the Contract ledger only after Stripe returns it.</li>
+        </ol>
+        <p className="mt-3 font-semibold text-indigo">
+          Operations account: {operationsAccount ? maskAccountId(operationsAccount) || operationsAccount : "not set — releases stay recorded only"}
+        </p>
+        <form action={actionSaveOperationsAccount} className="mt-2 flex flex-wrap items-center gap-2">
+          <input
+            name="operationsStripeAccountId"
+            defaultValue={operationsAccount}
+            placeholder="acct_…"
+            aria-label="Operations Stripe account id"
+            className="w-64 rounded-lg border border-border px-3 py-2 text-sm"
+          />
+          <button type="submit" className="rounded-full bg-indigo px-4 py-2 text-xs font-bold text-white">
+            Save Operations account
+          </button>
+        </form>
+        <p className="mt-1 text-xs text-muted">
+          An Influrios-owned connected account in this Stripe platform. Saving checks with Stripe that the account exists.
         </p>
       </div>
       <div className="rounded-2xl border border-border bg-white p-5 text-sm">

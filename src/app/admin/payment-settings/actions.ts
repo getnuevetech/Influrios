@@ -191,3 +191,40 @@ export async function actionRecordProviderTrace(formData: FormData) {
   revalidatePath("/admin/payment-settings");
   redirect("/admin/payment-settings?section=routes&saved=provider-trace");
 }
+
+export async function actionSaveOperationsAccount(formData: FormData) {
+  const session = await requireAdminAction("collab_finance.manage");
+  const accountId = String(formData.get("operationsStripeAccountId") ?? "").trim();
+  try {
+    if (accountId && !/^acct_[A-Za-z0-9]+$/.test(accountId)) throw new Error("Enter a Stripe account id that starts with acct_.");
+    if (accountId) {
+      const { stripeCredentials, stripeGet } = await import("@/lib/stripe-admin");
+      const creds = await stripeCredentials();
+      if (!creds.ok) throw new Error("Connect Stripe first. Nothing was saved.");
+      const read = await stripeGet(`/v1/accounts/${accountId}`, creds.secret);
+      if (!read.ok) throw new Error(`Stripe did not find that connected account: ${read.error} Nothing was saved.`);
+    }
+    const { prisma } = await import("@/lib/db");
+    const before = await prisma.marketplaceSettings.findUnique({ where: { id: "default" }, select: { operationsStripeAccountId: true } });
+    await prisma.marketplaceSettings.upsert({
+      where: { id: "default" },
+      update: { operationsStripeAccountId: accountId },
+      create: { id: "default", reviewWindowHours: 72, operationsStripeAccountId: accountId },
+    });
+    await prisma.auditLog.create({
+      data: {
+        actor: session.email,
+        action: "operations_stripe_account.saved",
+        objectType: "MarketplaceSettings",
+        objectId: "default",
+        before: { operationsStripeAccountId: before?.operationsStripeAccountId ?? "" },
+        after: { operationsStripeAccountId: accountId },
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not save the Operations account.";
+    redirect(`/admin/payment-settings?section=roles&error=${encodeURIComponent(message)}`);
+  }
+  revalidatePath("/admin/payment-settings");
+  redirect("/admin/payment-settings?section=roles&saved=operations-account");
+}

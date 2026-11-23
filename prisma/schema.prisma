@@ -1905,6 +1905,8 @@ model MarketplaceSettings {
   staleFundingHours          Int      @default(48)
   reviewDeadlineLeadHours    Int      @default(12)
   teamProposalLifeDays       Int      @default(14)
+  /// Influrios-owned Stripe connected account (acct_) that receives each milestone's fees.
+  operationsStripeAccountId  String   @default("")
   updatedAt                  DateTime @updatedAt
 }
 
