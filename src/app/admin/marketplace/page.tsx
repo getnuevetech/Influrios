@@ -212,7 +212,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
         <p className="mt-1 text-xs text-muted">
           Every approved milestone stays in this list until the provider confirms <code className="text-[11px]">payout.released</code>.
           With a switch off, each row has its own button. With a switch on, the row stays visible and the release sweep does that step.
-          Saving the switches runs the sweep once. On Stripe, a send transfers the influencer's net to their connected account and the milestone fees to Operations.
+          Saving the switches runs the sweep once. On Stripe, a send transfers the influencer&apos;s net to their connected account and the milestone fees to Operations.
         </p>
         {canManage ? (
           <form action={actionSaveReleaseAutomation} className="mt-3 grid gap-2 text-sm">
