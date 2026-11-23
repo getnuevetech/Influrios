@@ -35,9 +35,7 @@ bash deploy/scripts/deploy.sh
 curl -fsS http://127.0.0.1:3000/api/health
 # http://127.0.0.1/ is nginx's default site (404). Check the public host.
 curl -fsSI "\${NEXT_PUBLIC_APP_URL:-https://influrios.com}"
-node scripts/staging-evidence-probe.mjs "\${NEXT_PUBLIC_APP_URL:-https://influrios.com}"
-# After green probe, continue Phase M E6:
-#   npm run staging:e6-marketplace-evidence
+curl -fsS "\${NEXT_PUBLIC_APP_URL:-https://influrios.com}/api/health"
 
 # Optional: auto-restart hung webs (Compose does not restart on unhealthy alone):
 #   */2 * * * * APP_DIR=${APP_DIR} ${APP_DIR}/deploy/scripts/watch-health.sh >>/var/log/influrios-watch-health.log 2>&1

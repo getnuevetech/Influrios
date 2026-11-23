@@ -196,10 +196,9 @@ describe("milestone delivery", () => {
     const work = readFileSync("src/app/collaboration/work/[fundingId]/page.tsx", "utf8");
     const panel = readFileSync("src/app/collaboration/work/[fundingId]/workspace-panel.tsx", "utf8");
     const fields = readFileSync("src/components/workspace-milestones.tsx", "utf8");
-    const review = readFileSync("src/components/version-review.tsx", "utf8");
     assert.match(work, /assertFundingAccess/);
     assert.match(panel, /!business && funding.status === "held"/);
-    assert.match(review, /Version \{row.version\}/);
+    assert.match(panel, /Version \$\{decision\.action\.version\}/);
     assert.match(readFileSync("src/components/deliverable-submit-form.tsx", "utf8"), /append\("files"/);
     assert.match(panel, /actionAddDeliverableFiles/);
     assert.match(panel, /WorkspaceMessages/);

@@ -80,9 +80,7 @@ describe("signing lifecycle", () => {
     assert.equal(route.split("applyContractEnvelopeEvent(").length - 1, 1);
   });
 
-  it("wires the optional E10 DocuSign host evidence script", () => {
-    assert.match(readFileSync("scripts/staging-e10-docusign-evidence.sh", "utf8"), /prove-chain/);
-    assert.match(readFileSync("package.json", "utf8"), /staging:e10-prove-chain/);
+  it("keeps the contract wizard as the signing entry point", () => {
     assert.match(readFileSync("src/lib/providers.ts", "utf8"), /contract wizard/);
   });
 

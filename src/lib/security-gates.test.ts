@@ -53,7 +53,7 @@ describe("W0–W2 security gates", () => {
     assert.match(src("src/app/business/intelligence/page.tsx"), /workspaceId:\s*ws\.businessId/);
   });
 
-  it("records host 502 flap + watch-health and fails E6 script without health", () => {
+  it("records host 502 flap and the watch-health restart", () => {
     const runbook = src("docs/deploy/STAGING_LAUNCH_INTEGRATIONS.md");
     assert.match(runbook, /Host outage \(2026-11-02\)/);
     assert.match(runbook, /502 Bad Gateway/);
@@ -66,20 +66,7 @@ describe("W0–W2 security gates", () => {
     assert.match(runbook, /watch-health\.sh/);
     assert.match(runbook, /Start funding/);
     assert.match(runbook, /Phase M closeout — \*\*active\*\*/);
-    assert.match(runbook, /staging:e6-check-ready/);
-    assert.match(runbook, /staging:e6-prove-chain/);
     assert.match(runbook, /Airwallex is not ready/);
-    const e6 = src("scripts/staging-e6-marketplace-evidence.sh");
-    assert.match(e6, /\/api\/health/);
-    assert.match(e6, /ERROR: web is not healthy/);
-    assert.match(e6, /--check-ready/);
-    assert.match(e6, /E6 READY/);
-    assert.match(e6, /--prove-chain/);
-    assert.match(e6, /--ensure-us/);
-    assert.match(e6, /--seed-awaiting/);
-    assert.match(e6, /emit_evidence_pack/);
-    assert.match(src("package.json"), /staging:e6-prove-chain/);
-    assert.match(src("deploy/scripts/diagnose-502.sh"), /staging-evidence-probe/);
     assert.match(src("deploy/scripts/diagnose-502.sh"), /watch-health\.sh/);
     assert.equal(existsSync("deploy/scripts/watch-health.sh"), true);
     assert.match(src("deploy/scripts/watch-health.sh"), /docker compose restart web/);

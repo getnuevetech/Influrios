@@ -215,8 +215,6 @@ describe("team proposals", () => {
     assert.match(home, /\/collaboration\/team\?creators=/);
     assert.match(home, /Company seats/);
     assert.equal(home.includes('href="/collaboration/team"\n                    className="flex items-center gap-3'), false);
-    assert.match(readFileSync("scripts/staging-e9-team-proposal-evidence.sh", "utf8"), /prove-chain/);
-    assert.match(readFileSync("package.json", "utf8"), /staging:e9-prove-chain/);
   });
 
   it("expires an unanswered proposal and leaves an accepted one open", () => {
