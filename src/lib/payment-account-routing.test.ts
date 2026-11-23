@@ -88,18 +88,16 @@ describe("payment account routing", () => {
     assert.equal(accepted.ok, true);
     assert.equal(collaborationCollectionGate({ allocatedFunds: false, treasury: false }).ok, false);
     assert.equal(selectStripeTopology({ providerCode: "stripe", evidence: null }).newCollectionsEnabled, false);
-    // Live stays closed even when capability flags are present — detection ≠ proven flow.
-    assert.equal(
-      resolveCollaborationCollectionRoute({
-        environment: "live",
-        stripeKeyMode: "live",
-        originOrHost: "https://influrios.com",
-        probe: { status: "checked", allocatedFunds: true, treasury: true, reason: "flags" },
-        trustedDeployment: true,
-        sandboxRouteEnabled: true,
-      }).ok,
-      false,
-    );
+    // Live keys open standard Stripe collection; launch approvals decide who may fund.
+    const liveRoute = resolveCollaborationCollectionRoute({
+      environment: "live",
+      stripeKeyMode: "live",
+      originOrHost: "https://influrios.com",
+      probe: { status: "checked", allocatedFunds: true, treasury: true, reason: "flags" },
+      trustedDeployment: true,
+      sandboxRouteEnabled: true,
+    });
+    assert.equal(liveRoute.ok && liveRoute.topology, "stripe_charges_and_transfers");
     assert.equal(isLiveProductCollectionHost("https://influrios.com"), true);
   });
 

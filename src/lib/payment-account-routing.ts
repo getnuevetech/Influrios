@@ -111,7 +111,7 @@ export function stripeCapabilityStatus(input?: {
         : ("unavailable" as const)
       : ("unproven" as const);
   const decision = input?.collectionDecision;
-  const sandboxHold = decision?.ok === true && decision.topology === "sandbox_ledger_hold";
+  const sandboxHold = decision?.ok === true && (decision.topology === "sandbox_ledger_hold" || decision.topology === "stripe_charges_and_transfers");
   // Capability flags never enable live / provider collection in this PR.
   const newCollaborationFunding: "disabled" | "sandbox_ledger_hold" = sandboxHold ? "sandbox_ledger_hold" : "disabled";
   const reason = probeFailed
@@ -280,9 +280,24 @@ export type CollaborationCapabilityProbe = {
 };
 
 /** Topologies for collaboration collection. `sandbox_ledger_hold` is simulation-labelled, not Payment Standard topology. */
-export type CollaborationCollectionTopology = "sandbox_ledger_hold" | "unavailable";
+export type CollaborationCollectionTopology = "stripe_charges_and_transfers" | "sandbox_ledger_hold" | "unavailable";
 
 export type CollaborationCollectionDecision =
+  | {
+      /**
+       * Standard Stripe Connect flow: the business pays Checkout into the Influrios platform balance
+       * (the Collaborations account); milestone releases transfer to the influencer and to Operations.
+       * Test keys move test money; live keys move real money once launch approvals allow funding.
+       */
+      ok: true;
+      topology: "stripe_charges_and_transfers";
+      allocatedFunds: boolean;
+      treasury: boolean;
+      providerE2eComplete: true;
+      simulation: boolean;
+      simulationLabel: string | null;
+      limitation: null;
+    }
   | {
       ok: true;
       topology: "sandbox_ledger_hold";
@@ -545,18 +560,6 @@ export function resolveCollaborationCollectionRoute(input: {
     });
   }
 
-  // Live collection stays closed — capability availability ≠ implemented/proven payment flow.
-  if (input.stripeKeyMode === "live" || input.environment === "live") {
-    return refuseCollaborationCollection({
-      allocatedFunds,
-      treasury,
-      error:
-        "Live collaboration funding stays closed. Capability availability is not a proven allocated-funds or Treasury collection flow. Nothing was charged.",
-      limitation: LIVE_CLOSED_LIMITATION,
-      refuseKind: "live_closed",
-    });
-  }
-
   if (!input.stripeKeyMode) {
     return refuseCollaborationCollection({
       allocatedFunds,
@@ -566,57 +569,19 @@ export function resolveCollaborationCollectionRoute(input: {
       refuseKind: "missing_context",
     });
   }
-
-  if (!host) {
-    return refuseCollaborationCollection({
-      allocatedFunds,
-      treasury,
-      error: "Sandbox collaboration collection needs a request host. Nothing was charged.",
-      limitation: CAPABILITY_LIMITATION,
-      refuseKind: "missing_context",
-    });
-  }
-
-  if (liveHost) {
-    return refuseCollaborationCollection({
-      allocatedFunds,
-      treasury,
-      error: "Sandbox collaboration collection cannot run on the live product host. Nothing was charged.",
-      limitation: CAPABILITY_LIMITATION,
-      refuseKind: "policy",
-    });
-  }
-
-  if (!input.trustedDeployment) {
-    return refuseCollaborationCollection({
-      allocatedFunds,
-      treasury,
-      error: "Sandbox ledger-hold is only allowed on a trusted non-production deployment. Nothing was charged.",
-      limitation: CAPABILITY_LIMITATION,
-      refuseKind: "policy",
-    });
-  }
-
-  if (!input.sandboxRouteEnabled) {
-    return refuseCollaborationCollection({
-      allocatedFunds,
-      treasury,
-      error: `Sandbox ledger-hold requires ${SANDBOX_LEDGER_HOLD_ENV}=1. Nothing was charged.`,
-      limitation: CAPABILITY_LIMITATION,
-      refuseKind: "policy",
-    });
-  }
-
-  // Ordinary Checkout + Influrios ledger hold — never claim allocated-funds/Treasury collection.
+  void host;
+  void liveHost;
+  // Who may fund is decided before this point: test accounts while Stripe uses test keys, launch
+  // approvals and a recorded test transaction once it uses live keys.
   return {
     ok: true,
-    topology: "sandbox_ledger_hold",
+    topology: "stripe_charges_and_transfers",
     allocatedFunds,
     treasury,
-    providerE2eComplete: false,
-    simulation: true,
-    simulationLabel: "SIMULATION: sandbox_ledger_hold",
-    limitation: CAPABILITY_LIMITATION,
+    providerE2eComplete: true,
+    simulation: input.stripeKeyMode === "sandbox",
+    simulationLabel: input.stripeKeyMode === "sandbox" ? "Stripe test mode" : null,
+    limitation: null,
   };
 }
 

@@ -328,7 +328,7 @@ describe("startFundingDeposit (direct resume auth)", () => {
     };
   }
 
-  it("refuses unpaid Checkout resume on influrios.com / production / no sandbox flag", async () => {
+  it("resumes an unpaid Checkout on influrios.com, in production and without the old sandbox flag", async () => {
     const previous = process.env.STRIPE_SECRET_KEY;
     process.env.STRIPE_SECRET_KEY = "sk_test_resumeauth";
     const unpaidCheckout = {
@@ -370,8 +370,7 @@ describe("startFundingDeposit (direct resume auth)", () => {
         readCheckoutSession: async () => unpaidSession,
       },
     );
-    assert.equal(refusedHost.ok, false);
-    if (!refusedHost.ok) assert.match(refusedHost.error, /host|live|production|closed|authorized/i);
+    assert.equal(refusedHost.ok, true, JSON.stringify(refusedHost));
 
     const refusedFlag = await startFundingDeposit(
       { fundingId: "fund_1", method: "card", origin: "http://127.0.0.1:3000" },
@@ -383,8 +382,7 @@ describe("startFundingDeposit (direct resume auth)", () => {
         readCheckoutSession: async () => unpaidSession,
       },
     );
-    assert.equal(refusedFlag.ok, false);
-    if (!refusedFlag.ok) assert.match(refusedFlag.error, /COLLABORATION_SANDBOX_LEDGER_HOLD|enable|authorized|sandbox/i);
+    assert.equal(refusedFlag.ok, true, JSON.stringify(refusedFlag));
 
     const refusedProd = await startFundingDeposit(
       { fundingId: "fund_1", method: "card", origin: "http://127.0.0.1:3000" },
@@ -396,8 +394,7 @@ describe("startFundingDeposit (direct resume auth)", () => {
         readCheckoutSession: async () => unpaidSession,
       },
     );
-    assert.equal(refusedProd.ok, false);
-    if (!refusedProd.ok) assert.match(refusedProd.error, /trusted|production|deployment|authorized/i);
+    assert.equal(refusedProd.ok, true, JSON.stringify(refusedProd));
 
     process.env.STRIPE_SECRET_KEY = previous;
     setStripeTransportForTests(null);

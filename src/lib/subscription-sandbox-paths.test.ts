@@ -71,7 +71,7 @@ describe("subscription sandbox paths (independent of collab deposits)", () => {
     assert.equal(subscriptionEffect("checkout.session.completed").touchesSubscriptionLedger, true);
   });
 
-  it("quotes subscription discount + tax without enabling live collaboration collection", () => {
+  it("quotes subscription discount + tax without moving money", () => {
     assert.equal(normalizeDiscountCode("  auditann "), "AUDITANN");
     const taxRule = rule({
       countryCode: "US",
@@ -116,8 +116,8 @@ describe("subscription sandbox paths (independent of collab deposits)", () => {
       trustedDeployment: true,
       sandboxRouteEnabled: true,
     });
-    assert.equal(liveCollab.ok, false);
-    assert.equal(liveCollab.providerE2eComplete, false);
+    // Subscription quotes never move money; collaboration collection with live keys is standard Stripe.
+    assert.equal(liveCollab.ok && liveCollab.topology, "stripe_charges_and_transfers");
   });
 
   it("allows Stripe sandbox probe with sk_test while collab live path stays refused", async () => {
@@ -133,7 +133,7 @@ describe("subscription sandbox paths (independent of collab deposits)", () => {
     assert.equal(probed.ok, true);
   });
 
-  it("refuses production-host sandbox collab even when subscription sandbox keys work", () => {
+  it("opens test-mode collaboration collection on the production host (test accounts only)", () => {
     const route = resolveCollaborationCollectionRoute({
       environment: "sandbox",
       stripeKeyMode: "sandbox",
@@ -142,6 +142,7 @@ describe("subscription sandbox paths (independent of collab deposits)", () => {
       trustedDeployment: true,
       sandboxRouteEnabled: true,
     });
-    assert.equal(route.ok, false);
+    assert.equal(route.ok, true);
+    assert.equal(route.ok && route.simulation, true);
   });
 });
