@@ -5,10 +5,8 @@ import { ReviewBeforeSave } from "@/components/review-before-save";
 import {
   actionDeleteFeeRule,
   actionDeleteFeeSnapshot,
-  actionDeleteJurisdictionGate,
   actionFreezeFeeSnapshot,
   actionSaveFeeRule,
-  actionSaveJurisdictionGate,
   actionSimulateFee,
 } from "@/app/admin/actions";
 import { AdminCollapse } from "@/components/admin-collapse";
@@ -58,7 +56,7 @@ export async function AdminFeesPanel({ searchParams }: Props) {
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
           Phase 12.1 — Admin-versioned fee matrix and immutable snapshots. Fee percentages are never
-          hard-coded in product flows (Addendum PA001 / PA002).
+          hard-coded in product flows.
         </p>
       </div>
 
@@ -198,121 +196,6 @@ export async function AdminFeesPanel({ searchParams }: Props) {
         ) : null}
       </section>
 
-      <section className="space-y-3">
-        <div>
-          <h2 className="font-display text-lg font-bold text-indigo">Jurisdiction gates</h2>
-          <p className="mt-1 text-xs text-muted">
-            Manage which markets allow protected payments and whether UI may say “escrow” (PA004). Deeper
-            capability flags also live under Marketplace.
-          </p>
-        </div>
-        {store.jurisdictions.map((j) => (
-          <AdminCollapse
-            key={j.code}
-            title={`${j.code} · ${j.label}`}
-            subtitle={`${j.protectedPaymentsEnabled ? "Protected payments on" : "Protected payments off"} · ${protectedPaymentLabel(j.escrowTermAllowed)}`}
-          >
-            {canManage ? (
-              <div className="space-y-3">
-                <form action={actionSaveJurisdictionGate} className="grid gap-3 sm:grid-cols-2">
-                  <input type="hidden" name="code" value={j.code} />
-                  <label className="text-xs font-semibold text-muted">
-                    Code
-                    <input
-                      value={j.code}
-                      readOnly
-                      className="mt-1 w-full rounded-lg border border-border bg-[#F7FAFF] px-3 py-2 text-sm text-indigo"
-                    />
-                  </label>
-                  <label className="text-xs font-semibold text-muted">
-                    Label
-                    <input
-                      name="label"
-                      defaultValue={j.label}
-                      required
-                      className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-                    />
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-indigo">
-                    <input
-                      type="checkbox"
-                      name="protectedPaymentsEnabled"
-                      defaultChecked={j.protectedPaymentsEnabled}
-                      className="accent-violet"
-                    />
-                    Protected payments enabled
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-indigo">
-                    <input
-                      type="checkbox"
-                      name="escrowTermAllowed"
-                      defaultChecked={j.escrowTermAllowed}
-                      className="accent-violet"
-                    />
-                    Allow the word escrow
-                  </label>
-                  <button type="submit" className="btn-primary w-fit !py-2 text-sm sm:col-span-2">
-                    Save jurisdiction
-                  </button>
-                </form>
-                <form action={actionDeleteJurisdictionGate}>
-                  <input type="hidden" name="code" value={j.code} />
-                  <button type="submit" className="text-xs font-semibold text-amber-800 hover:underline">
-                    Remove jurisdiction
-                  </button>
-                </form>
-              </div>
-            ) : (
-              <p className="text-sm text-muted">
-                {j.protectedPaymentsEnabled ? "Enabled" : "Disabled"} ·{" "}
-                {protectedPaymentLabel(j.escrowTermAllowed)}
-              </p>
-            )}
-          </AdminCollapse>
-        ))}
-        {canManage ? (
-          <form
-            action={actionSaveJurisdictionGate}
-            className="grid gap-3 rounded-2xl border border-dashed border-[#E4EBFF] bg-white p-4 sm:grid-cols-2"
-          >
-            <h3 className="font-semibold text-indigo sm:col-span-2">Add jurisdiction gate</h3>
-            <label className="text-xs font-semibold text-muted">
-              Code (ISO-2)
-              <input
-                name="code"
-                required
-                maxLength={2}
-                placeholder="KE"
-                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm uppercase text-indigo"
-              />
-            </label>
-            <label className="text-xs font-semibold text-muted">
-              Label
-              <input
-                name="label"
-                required
-                placeholder="Kenya"
-                className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo"
-              />
-            </label>
-            <label className="flex items-center gap-2 text-sm text-indigo">
-              <input type="checkbox" name="protectedPaymentsEnabled" className="accent-violet" />
-              Protected payments enabled
-            </label>
-            <label className="flex items-center gap-2 text-sm text-indigo">
-              <input type="checkbox" name="escrowTermAllowed" className="accent-violet" />
-              Allow the word escrow
-            </label>
-            <button type="submit" className="btn-secondary w-fit sm:col-span-2">
-              Create jurisdiction
-            </button>
-          </form>
-        ) : null}
-        <p className="text-xs text-muted">
-          PA004 — UI must not say “escrow” unless <code>escrowTermAllowed</code> is true for that
-          jurisdiction.
-        </p>
-      </section>
 
       <section className="space-y-3">
         <div>
@@ -381,11 +264,11 @@ export async function AdminFeesPanel({ searchParams }: Props) {
 
       <AdminCollapse
         title="Recent fee snapshots"
-        subtitle={`${store.snapshots.length} snapshot${store.snapshots.length === 1 ? "" : "s"} · PA006`}
+        subtitle={`${store.snapshots.length} snapshot${store.snapshots.length === 1 ? "" : "s"}`}
       >
         <p className="text-xs text-muted">
-          Accepted commercial quotes freeze here — later rule edits must not recalculate them
-          (PA006). Admins may remove snapshots when they are no longer needed for audit.
+          Accepted commercial quotes freeze here — later rule edits never recalculate them.
+          Admins may remove snapshots when they are no longer needed for audit.
         </p>
         <ul className="mt-3 space-y-2 text-sm">
           {store.snapshots.length === 0 ? (

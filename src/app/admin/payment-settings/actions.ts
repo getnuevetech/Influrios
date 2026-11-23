@@ -25,8 +25,6 @@ export async function actionSaveCanonicalCountryRoute(formData: FormData) {
     redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
   revalidatePath("/admin/payment-settings");
-  revalidatePath("/admin/corridors");
-  revalidatePath("/admin/gateways");
   revalidatePath("/admin/marketplace/settings");
   redirect(`/admin/payment-settings?section=routes&saved=${encodeURIComponent(countryCode.trim().toUpperCase())}`);
 }

@@ -28,7 +28,6 @@ export async function actionToggleCorridor(formData: FormData) {
     const message = error instanceof Error ? error.message : "Could not update corridor.";
     redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
-  revalidatePath("/admin/corridors");
   revalidatePath("/admin/payment-settings");
   revalidatePath("/admin/collaboration-ops");
   redirect(`/admin/payment-settings?section=routes&saved=${active ? "activated" : "suspended"}`);
@@ -52,7 +51,6 @@ export async function actionCreateCorridor(formData: FormData) {
     const message = error instanceof Error ? error.message : "Could not add that country.";
     redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
-  revalidatePath("/admin/corridors");
   revalidatePath("/admin/payment-settings");
   redirect("/admin/payment-settings?section=routes&saved=country");
 }
@@ -71,7 +69,6 @@ export async function actionSaveCorridorGroup(formData: FormData) {
     const message = error instanceof Error ? error.message : "Could not save that country group.";
     redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
-  revalidatePath("/admin/corridors");
   revalidatePath("/admin/payment-settings");
   redirect("/admin/payment-settings?section=routes&saved=group");
 }
@@ -84,7 +81,6 @@ export async function actionDeleteCorridorGroup(formData: FormData) {
     const message = error instanceof Error ? error.message : "Could not remove that country group.";
     redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
-  revalidatePath("/admin/corridors");
   revalidatePath("/admin/payment-settings");
   redirect("/admin/payment-settings?section=routes&saved=group-removed");
 }
@@ -97,7 +93,6 @@ export async function actionSavePayoutFallback(formData: FormData) {
     const message = error instanceof Error ? error.message : "Could not save the backup currency.";
     redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
-  revalidatePath("/admin/corridors");
   revalidatePath("/admin/payment-settings");
   redirect("/admin/payment-settings?section=routes&saved=backup");
 }
@@ -136,7 +131,6 @@ export async function actionUpdateCorridor(formData: FormData) {
     const message = error instanceof Error ? error.message : "Could not update corridor.";
     redirect(`/admin/payment-settings?section=routes&error=${encodeURIComponent(message)}`);
   }
-  revalidatePath("/admin/corridors");
   revalidatePath("/admin/payment-settings");
   redirect("/admin/payment-settings?section=routes&saved=updated");
 }

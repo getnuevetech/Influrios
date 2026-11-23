@@ -96,20 +96,15 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
         <Link href="/admin" className="text-sm font-semibold text-violet hover:underline">
           ← Admin
         </Link>
-        <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Marketplace ledger</h1>
+        <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Marketplace settings</h1>
         <p className="mt-2">
           <Link href="/admin/marketplace" className="text-sm font-semibold text-violet hover:underline">
-            ← Prefunds and releases
+            ← Marketplace ledger
           </Link>
         </p>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Provider setup, jurisdictions, exchange rates, templates, and catalogs. Prefunds and release actions stay on the ledger. A provider code named demo
-          cannot confirm a hold. Cancelling before confirmation posts no ledger entry. Dispute decisions do not
-          move the money the provider is holding.
-          Attribution is copied onto the prefund and is not rewritten when the source list changes. Gross is entered in USD. A new prefund
-          uses the currency saved on that country corridor when one is saved, and otherwise the jurisdiction currency.
-          A blank currency is not saved as USD. Revenue-share lines are written when the provider releases a
-          milestone. They are not cash.
+          Provider webhooks, jurisdictions, exchange rates, templates and catalogs. Funding and release actions are on the
+          Marketplace ledger. Saving here never moves money a provider is already holding.
         </p>
       </div>
 
@@ -386,7 +381,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
             </label>
             <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="collabOsV1" defaultChecked={collabOsOn} className="accent-violet" />
-              Collaboration OS hubs and contract wizard (`collab_os_v1`)
+              Collaboration hubs and contract wizard
             </label>
             <label className="flex items-center gap-2 text-sm text-indigo">
               <input type="checkbox" name="cancelUnconfirmed" defaultChecked={config.cancelUnconfirmed} className="accent-violet" />
@@ -547,7 +542,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
       <section className="card-surface space-y-4 p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Jurisdictions</h2>
         <p className="text-xs text-muted">
-          Capability flags override features even when a fee rule or provider adapter exists (PA007 / Dev §24).
+          Capability flags override features even when a fee rule or provider adapter exists.
           Managed introduction and managed campaign stay off until legal review is APPROVED and the matching toggle is on.
         </p>
         {config.jurisdictions.map((row) => (
@@ -717,88 +712,6 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
           </form>
           </AdminCollapse>
         ))}
-        {canManage ? (
-          <AdminCollapse title="Add jurisdiction" subtitle="New country capability set">
-          <form action={actionSaveJurisdiction} className="grid gap-3 sm:grid-cols-4">
-            <label className="text-xs font-semibold text-muted">
-              New code
-              <input name="code" maxLength={2} className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm uppercase" />
-            </label>
-            <label className="text-xs font-semibold text-muted sm:col-span-3">
-              Label
-              <input name="label" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
-            </label>
-            <label className="flex items-center gap-2 text-sm text-indigo">
-              <input type="checkbox" name="protectedPaymentsEnabled" className="accent-violet" />
-              Protected payments
-            </label>
-            <label className="flex items-center gap-2 text-sm text-indigo">
-              <input type="checkbox" name="escrowTermAllowed" className="accent-violet" />
-              Allow the word escrow
-            </label>
-            <label className="flex items-center gap-2 text-sm text-indigo">
-              <input type="checkbox" name="fullPrefundingEnabled" className="accent-violet" />
-              Full prefunding
-            </label>
-            <label className="flex items-center gap-2 text-sm text-indigo">
-              <input type="checkbox" name="managedIntroductionEnabled" className="accent-violet" />
-              Managed introduction
-            </label>
-            <label className="flex items-center gap-2 text-sm text-indigo">
-              <input type="checkbox" name="managedNegotiationEnabled" className="accent-violet" />
-              Managed negotiation / campaign
-            </label>
-            <label className="text-xs font-semibold text-muted">
-              Legal review
-              <select name="legalReviewStatus" required defaultValue="" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm text-indigo">
-                <option value="">Choose a legal review status</option>
-                <option value="APPROVED">APPROVED</option>
-                <option value="PENDING">PENDING</option>
-                <option value="BLOCKED">BLOCKED</option>
-              </select>
-            </label>
-            <ApprovedProvidersField
-              options={approvedProviderPickerOptions(providerOptions)}
-              selected={[]}
-            />
-            <label className="text-xs font-semibold text-muted">
-              Effective from
-              <input name="capabilitiesEffectiveFrom" type="date" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
-            </label>
-            <label className="text-xs font-semibold text-muted">
-              Effective to
-              <input name="capabilitiesEffectiveTo" type="date" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
-            </label>
-            <label className="text-xs font-semibold text-muted sm:col-span-2">
-              Capability notes
-              <input name="capabilityNotes" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
-            </label>
-            <label className="text-xs font-semibold text-muted">
-              Currency
-              <input name="currency" maxLength={3} required className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm uppercase" />
-            </label>
-            <label className="text-xs font-semibold text-muted">
-              Minor digits
-              <input name="minorDigits" type="number" min={0} max={4} required className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm" />
-            </label>
-            <label className="text-xs font-semibold text-muted">
-              Provider
-              <select name="providerCode" required defaultValue="" className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm">
-                <option value="">Choose a provider</option>
-                {providerOptions.map((provider) => (
-                  <option key={provider.code} value={provider.code}>
-                    {provider.name}
-                    {providersByCode.get(provider.code)?.ready ? " · ready" : " · configure webhook above first"}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit" className="btn-secondary !py-2 text-sm sm:col-span-4">
-              Add jurisdiction
-            </button>
-          </form>
-          </AdminCollapse>
-        ) : null}
       </section>
 
       <AdminCollapse title="Wise user rate" subtitle="FX quote tooling">

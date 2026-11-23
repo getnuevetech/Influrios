@@ -15,7 +15,7 @@ const MODULE_PATH: Record<AdminModule, string> = {
   billing: "/admin/billing",
   plans: "/admin/plans",
   taxonomy: "/admin/taxonomy",
-  payments: "/admin/payments",
+  payments: "/admin/marketplace",
   trust: "/admin/trust",
   agency: "/admin/agency",
   commerce: "/admin/payment-settings?section=fees",

@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { paymentSettingsHref, paymentSettingsParams } from "@/app/admin/payment-settings/owner";
 import {
-  actionDeleteCountryGroup,
   actionSaveConnect,
-  actionSaveCountryGroup,
   actionSaveGateway,
   actionSetDefaultBackupGateway,
 } from "@/app/admin/gateways/actions";
@@ -12,7 +10,6 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { AdminCollapse } from "@/components/admin-collapse";
 import { hasPermission } from "@/lib/admin-auth";
 import { corridorCountries, corridorCountryByCode } from "@/lib/corridor-countries";
-import { listPaymentCountryGroups } from "@/lib/payment-country-groups";
 import { productSwitch } from "@/lib/product-switches";
 import { countryDisplayName, gatewayCredentialLabels, getDefaultBackupGateway, listProviders, paymentRoutes } from "@/lib/providers";
 
@@ -45,16 +42,14 @@ export async function AdminGatewaysPanel({ searchParams }: Props) {
   let providers: Awaited<ReturnType<typeof listProviders>> = [];
   let connectProviders: Awaited<ReturnType<typeof listProviders>> = [];
   let routes: Awaited<ReturnType<typeof paymentRoutes>> = [];
-  let groups: Awaited<ReturnType<typeof listPaymentCountryGroups>> = [];
   let defaultBackup: Awaited<ReturnType<typeof getDefaultBackupGateway>> = null;
   let connectOn = false;
   let dbError = false;
   try {
-    [providers, connectProviders, routes, groups, defaultBackup, connectOn] = await Promise.all([
+    [providers, connectProviders, routes, defaultBackup, connectOn] = await Promise.all([
       listProviders("payment"),
       listProviders("connect"),
       paymentRoutes(),
-      listPaymentCountryGroups(),
       getDefaultBackupGateway(),
       productSwitch("stripe_connect"),
     ]);
@@ -68,13 +63,9 @@ export async function AdminGatewaysPanel({ searchParams }: Props) {
       ? "Gateway removed."
       : params.saved === "default"
         ? "Default backup gateway saved."
-        : params.saved === "group"
-          ? "Country group saved and routes updated."
-          : params.saved === "group-removed"
-            ? "Country group removed."
-            : params.saved
-              ? "Saved."
-              : null;
+        : params.saved
+          ? "Saved."
+          : null;
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -90,9 +81,8 @@ export async function AdminGatewaysPanel({ searchParams }: Props) {
         .
       </p>
       <p className="mt-2 max-w-3xl text-sm text-muted">
-        Save gateway credentials here. Plan checkouts use Stripe from this page. Country corridors pick which of these
-        gateways collect collaboration funding and which payout onboarding rail influencers see. Assign each country —
-        or a named country group — to one gateway, and set one default backup for failed country routes.
+        Save gateway credentials here. Plan checkouts use Stripe from this page. Each country&apos;s collection, holding
+        and payout gateway are chosen on Country routes. Set one default backup for failed country routes below.
       </p>
       {savedMessage ? <p className="mt-4 text-sm font-semibold text-emerald-700">{savedMessage}</p> : null}
       {params.error ? <p className="mt-4 text-sm font-semibold text-amber-800">{params.error}</p> : null}
@@ -136,96 +126,6 @@ export async function AdminGatewaysPanel({ searchParams }: Props) {
         )}
       </section>
 
-      <section className="mt-6 space-y-3">
-        <div>
-          <h2 className="font-display text-lg font-bold text-indigo">Country groups</h2>
-          <p className="mt-1 text-sm text-muted">
-            Group countries for reference. Saving a group does not change a country route. Edit each payout
-            gateway on Payment settings. Hold Ctrl/Cmd to select multiple countries.
-          </p>
-        </div>
-        {groups.map((group) => (
-          <AdminCollapse
-            key={group.id}
-            title={group.name}
-            subtitle={`${group.providerName} · ${
-              group.countryCodes
-                .map((code) => corridorCountryByCode(code)?.name ?? code)
-                .join(", ") || "No countries"
-            }`}
-          >
-            {canEdit ? (
-              <div className="space-y-3">
-                <form action={actionSaveCountryGroup} className="grid gap-3 sm:grid-cols-2">
-                  <input type="hidden" name="id" value={group.id} />
-                  <label className="text-sm font-semibold text-indigo">
-                    Group name
-                    <input name="name" defaultValue={group.name} required className={inputClass} />
-                  </label>
-                  <label className="text-sm font-semibold text-indigo">
-                    Gateway
-                    <select name="providerId" defaultValue={group.providerId} className={selectClass}>
-                      {providers.map((provider) => (
-                        <option key={provider.id} value={provider.id}>
-                          {provider.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="text-sm font-semibold text-indigo sm:col-span-2">
-                    Countries
-                    <CountryMultiSelect selected={group.countryCodes} />
-                  </label>
-                  <button type="submit" className="btn-primary w-fit">
-                    Save group
-                  </button>
-                </form>
-                <form action={actionDeleteCountryGroup}>
-                  <input type="hidden" name="id" value={group.id} />
-                  <button type="submit" className="text-xs font-semibold text-amber-800 hover:underline">
-                    Remove group
-                  </button>
-                </form>
-              </div>
-            ) : (
-              <p className="text-sm text-muted">
-                {group.providerName}:{" "}
-                {group.countryCodes.map((code) => corridorCountryByCode(code)?.name ?? code).join(", ")}
-              </p>
-            )}
-          </AdminCollapse>
-        ))}
-        {canEdit ? (
-          <form
-            action={actionSaveCountryGroup}
-            className="grid gap-3 rounded-2xl border border-dashed border-[#E4EBFF] bg-white p-4 sm:grid-cols-2"
-          >
-            <h3 className="font-semibold text-indigo sm:col-span-2">Add a country group</h3>
-            <label className="text-sm font-semibold text-indigo">
-              Group name
-              <input name="name" required placeholder="West Africa" className={inputClass} />
-            </label>
-            <label className="text-sm font-semibold text-indigo">
-              Gateway
-              <select name="providerId" required className={selectClass}>
-                {providers.map((provider) => (
-                  <option key={provider.id} value={provider.id}>
-                    {provider.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm font-semibold text-indigo sm:col-span-2">
-              Countries
-              <CountryMultiSelect selected={[]} />
-            </label>
-            <button type="submit" className="btn-secondary w-fit">
-              Create group
-            </button>
-          </form>
-        ) : null}
-      </section>
-
       <AdminCollapse
         title="Per-country routes"
         subtitle={`${routes.length} route${routes.length === 1 ? "" : "s"}`}
@@ -236,7 +136,7 @@ export async function AdminGatewaysPanel({ searchParams }: Props) {
             <thead className="border-b border-[#E4EBFF] text-xs uppercase tracking-wide text-muted">
               <tr>
                 <th className="px-4 py-3">Country</th>
-                <th className="px-4 py-3">Gateway</th>
+                <th className="px-4 py-3">Payout gateway</th>
                 <th className="px-4 py-3">Ready</th>
                 <th className="px-4 py-3">Backup</th>
               </tr>
@@ -271,7 +171,7 @@ export async function AdminGatewaysPanel({ searchParams }: Props) {
           <Link href={paymentSettingsHref("routes")} className="font-semibold text-violet hover:underline">
             Assign a country’s payout gateway on Payment settings
           </Link>
-          . Country groups below can still apply one gateway as a default.
+          .
         </p>
       </AdminCollapse>
 

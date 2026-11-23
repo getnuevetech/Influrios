@@ -1,6 +1,7 @@
 import { updateCorridor } from "@/lib/collab-control-plane";
 import { prisma } from "@/lib/db";
 import { ensureMarketplaceProviderForCode } from "@/lib/marketplace-ledger";
+import { corridorCountryByCode } from "@/lib/corridor-countries";
 import { storedCurrencyCode } from "@/lib/money";
 import { setCountryGateway } from "@/lib/providers";
 
@@ -25,9 +26,18 @@ export async function saveCanonicalCountryRoute(input: {
     throw new Error("Minor digits must be from 0 to 4.");
   }
   const corridor = await prisma.countryActivationCorridor.findUnique({ where: { countryCode } });
-  if (!corridor) throw new Error("Add this country on Corridors before saving its route.");
-  const jurisdiction = await prisma.collaborationJurisdiction.findUnique({ where: { code: countryCode } });
-  if (!jurisdiction) throw new Error("Add this jurisdiction on Marketplace settings before saving its route.");
+  if (!corridor) throw new Error("Add this country with Add country route first.");
+  const jurisdiction = await prisma.collaborationJurisdiction.upsert({
+    where: { code: countryCode },
+    update: {},
+    create: {
+      code: countryCode,
+      label: corridorCountryByCode(countryCode)?.name ?? countryCode,
+      currency,
+      minorDigits: input.minorDigits,
+      providerCode: "primary",
+    },
+  });
   const holding = input.holdingProviderCode.trim().toLowerCase();
   if (!holding) throw new Error("Choose a holding provider.");
   const holdingMarketplace = await prisma.integrationProvider.findFirst({ where: { kind: "marketplace", code: holding } });

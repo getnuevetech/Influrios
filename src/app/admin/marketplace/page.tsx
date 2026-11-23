@@ -461,8 +461,8 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
       <section className="card-surface p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Ledger totals</h2>
         <p className="mt-1 text-xs text-muted">
-          These figures are what the provider is holding, released, or refunded. Fees are quoted separately by fee type
-          (Product §5). Revenue shares are not cash.
+          These figures are what the provider is holding, released, or refunded. Fees are quoted separately by fee type.
+          Revenue shares are not cash.
         </p>
         {totals.length === 0 ? <p className="mt-3 text-sm text-muted">No prefunds yet.</p> : null}
         <ul className="mt-3 space-y-2 text-sm text-indigo">

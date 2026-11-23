@@ -53,7 +53,7 @@ export async function actionSaveCollabControlPlane(formData: FormData) {
     },
   });
   revalidatePath("/admin/collaboration-ops");
-  revalidatePath("/admin/corridors");
+  revalidatePath("/admin/payment-settings");
   redirect("/admin/collaboration-ops?saved=1");
 }
 

@@ -179,7 +179,6 @@ describe("campaign intent sources", () => {
       "src/app/collaboration/business/actions.ts",
       "src/app/collaboration/business/page.tsx",
       "src/app/business/actions.ts",
-      "src/app/business/workspace/actions.ts",
     ];
     for (const file of files) {
       const text = source(file);

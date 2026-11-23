@@ -209,7 +209,6 @@ export async function actionFreezeFeeSnapshot(formData: FormData) {
     jurisdiction: draft.jurisdiction,
     serviceLevel: draft.serviceLevel,
   });
-  revalidatePath("/admin/fees");
   revalidatePath("/admin/payment-settings");
   redirect(`/admin/payment-settings?section=fees&frozen=${encodeURIComponent(`${business.id} and ${influencer.id}`)}`);
 }
@@ -270,44 +269,8 @@ export async function actionSaveFeeRule(formData: FormData) {
     const message = error instanceof Error ? error.message : "Could not save the fee rule.";
     redirect(`/admin/payment-settings?section=fees&error=${encodeURIComponent(message)}`);
   }
-  revalidatePath("/admin/fees");
   revalidatePath("/admin/payment-settings");
   redirect("/admin/payment-settings?section=fees&saved=rule");
-}
-
-export async function actionSaveJurisdictionGate(formData: FormData) {
-  await requireAdminAction("commerce.manage");
-  try {
-    const { upsertJurisdictionGate } = await import("@/lib/collaboration-fees");
-    await upsertJurisdictionGate({
-      code: String(formData.get("code") || ""),
-      label: String(formData.get("label") || ""),
-      protectedPaymentsEnabled: formData.get("protectedPaymentsEnabled") === "on",
-      escrowTermAllowed: formData.get("escrowTermAllowed") === "on",
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not save the jurisdiction.";
-    redirect(`/admin/payment-settings?section=fees&error=${encodeURIComponent(message)}`);
-  }
-  revalidatePath("/admin/fees");
-  revalidatePath("/admin/payment-settings");
-  revalidatePath("/admin/marketplace");
-  redirect("/admin/payment-settings?section=fees&saved=jurisdiction");
-}
-
-export async function actionDeleteJurisdictionGate(formData: FormData) {
-  await requireAdminAction("commerce.manage");
-  try {
-    const { deleteJurisdictionGate } = await import("@/lib/collaboration-fees");
-    await deleteJurisdictionGate(String(formData.get("code") || ""));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Could not remove the jurisdiction.";
-    redirect(`/admin/payment-settings?section=fees&error=${encodeURIComponent(message)}`);
-  }
-  revalidatePath("/admin/fees");
-  revalidatePath("/admin/payment-settings");
-  revalidatePath("/admin/marketplace");
-  redirect("/admin/payment-settings?section=fees&removed=jurisdiction");
 }
 
 export async function actionDeleteFeeRule(formData: FormData) {
@@ -319,7 +282,6 @@ export async function actionDeleteFeeRule(formData: FormData) {
     const message = error instanceof Error ? error.message : "Could not remove the fee rule.";
     redirect(`/admin/payment-settings?section=fees&error=${encodeURIComponent(message)}`);
   }
-  revalidatePath("/admin/fees");
   revalidatePath("/admin/payment-settings");
   redirect("/admin/payment-settings?section=fees&removed=rule");
 }
@@ -358,7 +320,6 @@ export async function actionDeleteFeeSnapshot(formData: FormData) {
     const message = error instanceof Error ? error.message : "Could not remove the snapshot.";
     redirect(`/admin/payment-settings?section=fees&error=${encodeURIComponent(message)}`);
   }
-  revalidatePath("/admin/fees");
   revalidatePath("/admin/payment-settings");
   redirect("/admin/payment-settings?section=fees&removed=snapshot");
 }
