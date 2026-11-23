@@ -199,9 +199,6 @@ export async function SiteFooter() {
               </Link>
             </li>
             <li>
-              <Link href="/agency">Agency workspace</Link>
-            </li>
-            <li>
               <Link href="/business/intelligence">Intelligence</Link>
             </li>
             <li>
