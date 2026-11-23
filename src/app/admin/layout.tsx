@@ -107,6 +107,7 @@ const SIDE_GROUPS: SideGroup[] = [
         icon: "billing",
       },
       { href: "/admin/search", label: "Meilisearch", module: "gateways", icon: "stats" },
+      { href: "/admin/contract-ledger", label: "Contract ledger", module: "marketplace", icon: "billing" },
       { href: "/admin/kyc", label: "KYC", module: "collab_finance", icon: "cards" },
       { href: "/admin/finance", label: "Finance", module: "collab_finance", icon: "billing" },
     ],
