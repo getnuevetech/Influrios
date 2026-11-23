@@ -123,3 +123,20 @@ describe("collaboration email figures", () => {
     }
   });
 });
+
+describe("signing emails", () => {
+  it("use the branded template for each signing stage, by role when fully signed", async () => {
+    const { contractStageTemplate } = await import("@/lib/contract-document");
+    assert.equal(contractStageTemplate("sent", "influencer"), "contract.sign");
+    assert.equal(contractStageTemplate("party_signed", "business"), "contract.progress");
+    assert.equal(contractStageTemplate("signature_reminder", "influencer"), "contract.reminder");
+    assert.equal(contractStageTemplate("completed", "business"), "contract.signed_business");
+    assert.equal(contractStageTemplate("completed", "influencer"), "contract.signed_influencer");
+    assert.equal(contractStageTemplate("declined", "business"), "contract.declined");
+    assert.equal(contractStageTemplate("voided", "business"), "contract.voided");
+    assert.equal(contractStageTemplate("message", "influencer"), "contract.message");
+    for (const id of ["contract.sign", "contract.progress", "contract.reminder", "contract.signed_business", "contract.signed_influencer", "contract.declined", "contract.voided", "contract.message"]) {
+      assert.ok(catalog.templates.some((row) => row.id === id), `${id} is in the catalog`);
+    }
+  });
+});

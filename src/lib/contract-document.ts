@@ -1719,6 +1719,44 @@ export function contractStageEmailCopy(input: {
 }
 
 /** Email every listed party for a contract lifecycle stage (skips blank addresses). */
+/** Catalog template for a signing stage; the fully signed email differs for the business and the influencer. */
+export function contractStageTemplate(stage: ContractNotifyStage, role: string): string | null {
+  switch (stage) {
+    case "sent":
+      return "contract.sign";
+    case "party_signed":
+      return "contract.progress";
+    case "signature_reminder":
+      return "contract.reminder";
+    case "completed":
+      return role === "business" ? "contract.signed_business" : "contract.signed_influencer";
+    case "declined":
+      return "contract.declined";
+    case "voided":
+      return "contract.voided";
+    case "message":
+      return "contract.message";
+    default:
+      return null;
+  }
+}
+
+async function contractCatalogContext(documentId: string) {
+  const document = await prisma.contractDocument.findUnique({
+    where: { id: documentId },
+    select: { fundingId: true, versionLabel: true, parties: { select: { email: true, role: true, name: true, status: true } } },
+  });
+  if (!document) return null;
+  const roles = new Map(document.parties.map((party) => [party.email.trim().toLowerCase(), party.role === "business" ? "business" : "influencer"]));
+  const pendingNames = document.parties.filter((party) => party.status === "pending").map((party) => party.name || party.email);
+  let money: Record<string, string> = {};
+  if (document.fundingId) {
+    const { collabMoneyVars } = await import("@/lib/collab-email-links");
+    money = Object.fromEntries(Object.entries(await collabMoneyVars({ fundingId: document.fundingId })).filter(([, value]) => value));
+  }
+  return { fundingId: document.fundingId, version: document.versionLabel, roles, pendingNames, money };
+}
+
 export async function notifyContractStage(input: {
   documentId: string;
   title: string;
@@ -1751,7 +1789,37 @@ export async function notifyContractStage(input: {
     actorName: input.actorName,
     messageBody: input.messageBody,
   });
+  // Branded catalog email per recipient (by their role on the agreement); plain text only as a fallback.
+  const branded = await contractCatalogContext(input.documentId).catch(() => null);
   for (const to of emails) {
+    if (branded) {
+      const templateId = contractStageTemplate(input.stage, branded.roles.get(to) ?? "");
+      if (templateId) {
+        const { deliverCatalogEmail } = await import("@/lib/email-live");
+        const action = templateId === "contract.signed_business" && branded.fundingId
+          ? `${getAppOrigin()}/payments/checkout/${branded.fundingId}`
+          : link;
+        const remaining = branded.pendingNames.filter((name) => name !== input.actorName);
+        const delivered = await deliverCatalogEmail({
+          templateId,
+          to,
+          vars: {
+            ...branded.money,
+            contract_name: input.title,
+            collaboration_name: input.title,
+            agreement_version: branded.version,
+            signer_name: (input.actorName ?? "").trim() || "A party",
+            sender_name: (input.actorName ?? "").trim() || "A party",
+            remaining_signers_text: remaining.length ? `Still to sign: ${remaining.join(", ")}.` : "Everyone has signed.",
+            message_excerpt: (input.messageBody ?? "").slice(0, 280),
+            action_url: action,
+          },
+        }).catch(() => null);
+        if (delivered?.sent) continue;
+        // Paused, switched off or a recipient preference: respect it, do not fall back to plain text.
+        if (delivered && !delivered.sent && delivered.reason !== "render" && delivered.reason !== "smtp") continue;
+      }
+    }
     await prisma.job.create({
       data: {
         kind: "collab_notification",
