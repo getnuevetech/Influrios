@@ -1,6 +1,6 @@
 /**
- * Support contact: an admin-set support email address and the /support contact form.
- * Messages are emailed to the support address (falling back to active admins) with the sender as Reply-To.
+ * Support contact: the /support form opens a support ticket (see support-tickets.ts). The admin-set support
+ * email address is notified of new tickets and member replies (falling back to active admins).
  */
 import { prisma } from "@/lib/db";
 
@@ -62,42 +62,12 @@ export function validateSupportMessage(input: SupportMessageInput) {
   return { ok: true as const, value: { name, email, topic, message, reference } };
 }
 
-/** Email the message to support. Returns a short reference shown to the sender. */
+/** Open a support ticket from the contact form. Returns the ticket reference shown to the sender. */
 export async function sendSupportMessage(input: SupportMessageInput) {
   const checked = validateSupportMessage(input);
   if (!checked.ok) return checked;
-  const { name, email, topic, message, reference } = checked.value;
-  // A few messages per sender per hour is plenty; more is almost always a loop or abuse.
-  const recent = await prisma.auditLog
-    .count({ where: { action: "support.message", objectId: email, createdAt: { gte: new Date(Date.now() - 60 * 60_000) } } })
-    .catch(() => 0);
-  if (recent >= 5) return { ok: false as const, error: "We've received several messages from you in the last hour. We'll reply to those first." };
-  const settings = await getSupportSettings();
-  const recipients = settings.email
-    ? [settings.email]
-    : (await prisma.adminUser.findMany({ where: { active: true }, select: { email: true }, take: 3, orderBy: { createdAt: "asc" } }).catch(() => []))
-        .map((row) => row.email)
-        .filter(Boolean);
-  if (recipients.length === 0) return { ok: false as const, error: "Support is not set up yet. Please try again later." };
-  const ticket = `S-${Date.now().toString(36).toUpperCase()}`;
-  const { sendMail } = await import("@/lib/mail");
-  const text = [
-    `Support request ${ticket}`,
-    `From: ${name} <${email}>`,
-    `Topic: ${topic}`,
-    reference ? `Reference: ${reference}` : "",
-    input.accountId ? `Signed-in account: ${input.accountId}` : "Not signed in",
-    "",
-    message,
-  ]
-    .filter((line) => line !== "")
-    .join("\n");
-  for (const to of recipients) {
-    const sent = await sendMail({ to, subject: `[Support ${ticket}] ${topic}`, text, replyTo: email });
-    if (!sent.ok) return { ok: false as const, error: "Your message could not be sent right now. Please try again in a moment." };
-  }
-  await prisma.auditLog
-    .create({ data: { actor: email, action: "support.message", objectType: "Support", objectId: email, after: { ticket, topic } } })
-    .catch(() => undefined);
-  return { ok: true as const, ticket };
+  const { createSupportTicket, ticketRef } = await import("@/lib/support-tickets");
+  const created = await createSupportTicket({ ...checked.value, userId: input.accountId ?? null });
+  if (!created.ok) return created;
+  return { ok: true as const, ticket: ticketRef(created.number), id: created.id, token: created.token };
 }

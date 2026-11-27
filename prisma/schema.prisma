@@ -2956,3 +2956,41 @@ model ManagedIntroEvent {
 
   @@index([introId])
 }
+
+/// A support request from the /support form (member or visitor). Staff answer from Admin → Support tickets.
+model SupportTicket {
+  id             String                 @id @default(cuid())
+  number         Int                    @unique @default(autoincrement())
+  subject        String
+  topic          String
+  /// open | waiting_on_member | resolved | closed
+  status         String                 @default("open")
+  requesterName  String
+  requesterEmail String
+  userId         String?
+  reference      String                 @default("")
+  /// Lets the requester open the ticket from the emailed link without signing in.
+  accessToken    String                 @unique
+  assignedTo     String                 @default("")
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  lastActivityAt DateTime               @default(now())
+  messages       SupportTicketMessage[]
+
+  @@index([status, lastActivityAt])
+  @@index([requesterEmail])
+  @@index([userId])
+}
+
+model SupportTicketMessage {
+  id         String        @id @default(cuid())
+  ticketId   String
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  /// member | staff | note (staff-only internal note)
+  author     String
+  authorName String
+  body       String
+  createdAt  DateTime      @default(now())
+
+  @@index([ticketId, createdAt])
+}
