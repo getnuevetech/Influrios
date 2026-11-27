@@ -2,10 +2,11 @@ import Link from "next/link";
 import { actionRegister } from "@/app/account/actions";
 import { AccountAccessFrame } from "@/components/auth/access-frame";
 import { CardPreviewDialog } from "@/components/auth/card-preview-dialog";
-import { IconInstagram, IconTikTok, IconYouTube } from "@/components/icons";
+import { CompactInfluencerCard } from "@/components/creator-card";
 import { PasswordField } from "@/components/password-field";
 import { safeNextPath } from "@/lib/account-policy";
 import { freshExamplePortrait, listExampleCardPortraits } from "@/lib/example-portraits";
+import { demoCreators } from "@/lib/presentation-demo";
 import { currentLegalDocument } from "@/lib/legal";
 import { getSiteConfig } from "@/lib/site-config";
 
@@ -27,6 +28,11 @@ export default async function SignupPage({ searchParams }: Props) {
     listExampleCardPortraits(),
   ]);
   const portrait = freshExamplePortrait(portraits);
+  // The sample name matches who the example portrait shows (Admin → Example portraits).
+  const samples = demoCreators();
+  const base =
+    samples.find((row) => row.slug === (portrait?.gender === "male" ? "demo-daniel" : "demo-amara")) ?? samples[0];
+  const sampleCreator = base && portrait ? { ...base, image: portrait.src } : base;
 
   return (
     <AccountAccessFrame>
@@ -36,27 +42,11 @@ export default async function SignupPage({ searchParams }: Props) {
           <br />
           One profile.
         </h1>
-        <div className="mt-6 max-w-sm rounded-[28px] bg-gradient-to-br from-[#6D4AFF] to-[#8B5CF6] p-5 text-white shadow-lg">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-white/70">Example card</p>
-          <div className="mt-3 flex items-center gap-3">
-            <span className="inline-flex h-16 w-16 overflow-hidden rounded-2xl bg-white/20">
-              {portrait ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={portrait.src} alt="" className="h-full w-full object-cover" />
-              ) : null}
-            </span>
-            <div>
-              <p className="font-display text-xl font-bold">Amina Cole</p>
-              <p className="text-sm text-white/80">Lifestyle · Houston</p>
-            </div>
-          </div>
-          <div className="mt-4 flex gap-2 text-white/90" aria-hidden>
-            <IconInstagram size={16} />
-            <IconTikTok size={16} />
-            <IconYouTube size={16} />
-          </div>
+        {/* The full Influencer Card, as on the homepage and login page. The photo is one of the admin's example portraits. */}
+        <div className="mt-6 flex justify-center lg:justify-start">
+          {sampleCreator ? <CompactInfluencerCard creator={sampleCreator} /> : null}
         </div>
-        <p className="mt-3 text-xs text-[#667085]">Sample identity. Your card stays private until you publish it.</p>
+        <p className="mt-3 text-xs text-[#667085]">Sample card. Yours stays private until you publish it.</p>
         <div className="mt-4">
           <CardPreviewDialog source={params.source} utmSource={params.utm_source} utmCampaign={params.utm_campaign} />
         </div>

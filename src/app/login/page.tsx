@@ -2,11 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { actionLogin, actionLogout } from "@/app/account/actions";
 import { AccountAccessFrame } from "@/components/auth/access-frame";
-import { IconInstagram, IconTikTok, IconYouTube } from "@/components/icons";
+import { CompactInfluencerCard } from "@/components/creator-card";
 import { PasswordField } from "@/components/password-field";
 import { safeNextPath } from "@/lib/account-policy";
 import { getAccountSession, homePathForRole } from "@/lib/accounts";
-import { BRAND_AVATARS } from "@/lib/profile-media";
+import { demoCreators } from "@/lib/presentation-demo";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Log in" };
@@ -19,26 +19,19 @@ export default async function LoginPage({ searchParams }: Props) {
   const account = await getAccountSession().catch(() => null);
   const requestedNext = Boolean(params.next?.trim());
   if (account && !requestedNext) redirect(homePathForRole(account.role));
+  const sampleCreator = demoCreators()[0];
   return (
     <AccountAccessFrame>
-      <div className="relative hidden min-h-[28rem] overflow-hidden rounded-[32px] bg-[#F4EFFF] lg:block">
-        <p className="px-8 pt-10 font-display text-4xl font-bold leading-tight text-[#1B1464]">
+      <div className="relative hidden overflow-hidden rounded-[32px] bg-[#F4EFFF] px-8 pb-8 pt-10 lg:block">
+        <p className="font-display text-4xl font-bold leading-tight text-[#1B1464]">
           Welcome back
           <br />
           to your network.
         </p>
-        <div className="relative mt-6 h-64">
-          <span className="absolute left-16 top-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#6D4AFF] shadow">
-            <IconInstagram size={20} />
-          </span>
-          <span className="absolute left-1/2 top-0 flex h-14 w-14 -translate-x-1/2 items-center justify-center rounded-full bg-[#111] text-white shadow">
-            <IconTikTok size={22} />
-          </span>
-          <span className="absolute right-16 top-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#E11D48] shadow">
-            <IconYouTube size={20} />
-          </span>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={BRAND_AVATARS.female} alt="" className="absolute bottom-0 left-1/2 h-44 w-56 -translate-x-1/2 rounded-[28px] object-cover shadow-lg" />
+        {/* The full Influencer Card, as on the homepage: what members share and what brands see. */}
+        <div className="mt-8 flex flex-col items-center gap-2">
+          {sampleCreator ? <CompactInfluencerCard creator={sampleCreator} /> : null}
+          <p className="text-xs font-semibold text-violet">Sample card</p>
         </div>
       </div>
       <div className="rounded-[28px] bg-white p-6 shadow-sm ring-1 ring-[#E7ECF5]">
