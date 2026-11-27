@@ -100,7 +100,7 @@ export async function actionUpdateCard(formData: FormData) {
 }
 
 export async function actionUpdateValueProposition(formData: FormData) {
-  await requireAdminAction("banners.edit");
+  await requireAdminAction("homepage.edit");
   const { updateValueProposition } = await import("@/lib/cms");
   const keys = formData.getAll("itemKey").map(String);
   const items = keys.map((key, i) => ({
@@ -138,7 +138,7 @@ export async function actionUpdateValueProposition(formData: FormData) {
 }
 
 export async function actionRestoreValueProposition() {
-  await requireAdminAction("banners.edit");
+  await requireAdminAction("homepage.edit");
   const { restoreDefaultValueProposition } = await import("@/lib/cms");
   await restoreDefaultValueProposition();
   revalidatePath("/");

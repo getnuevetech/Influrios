@@ -78,7 +78,7 @@ export function PublicPlanPage({
         <CompareFeatures plans={matrix.plans.map((plan) => ({ code: plan.code, name: plan.name }))} rows={matrix.rows} />
         <p className="mt-4 text-center text-sm text-muted">{CHECKOUT_TAX_NOTE}</p>
         <p className="mt-2 text-center text-sm">
-          <Link href="/faq" className="font-semibold text-violet hover:underline">Resources</Link>
+          <Link href="/faq" className="font-semibold text-violet hover:underline">Questions about plans? Read the FAQ</Link>
         </p>
       </section>
     </div>

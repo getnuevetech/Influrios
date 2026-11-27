@@ -29,8 +29,8 @@ function demoPerson(input: {
     avatarColor: "#633CFF",
     image: input.image,
     coverImage: input.image,
-    badge: "Demo",
-    statusLabel: "Demo",
+    badge: "Example",
+    statusLabel: "Example profile",
     planTier: "PLUS",
     specialties: [input.specialty],
     socials: input.socials,
@@ -281,6 +281,23 @@ export function demoOpportunities(): DemoOpportunity[] {
     { id: "demo-opp-jordan", creatorSlug: "demo-jordan", lookingFor: "an apparel launch" },
     { id: "demo-opp-marcus", creatorSlug: "demo-marcus", lookingFor: "a training series" },
   ];
+}
+
+/** Real influencers in the homepage card strip and card promo. Off, and any read error, keeps the sample cards. */
+export async function featuredCardsUseLive(): Promise<boolean> {
+  return productSwitch("featured_cards_live");
+}
+
+/**
+ * The homepage card strip from real published influencers: those with their own photo first, most followers first.
+ * Falls back to the sample strip when there are fewer than 3.
+ */
+export function liveCardStrip(creators: SeedCreator[], limit = 10): { creator: SeedCreator; features: CardFeatureFlags }[] {
+  const features: CardFeatureFlags = { ...DEFAULT_FEATURES, showHeart: false };
+  const reach = (creator: SeedCreator) => creator.socials.reduce((sum, row) => sum + (row.followers || 0), 0);
+  const withPhoto = creators.filter((creator) => creator.image && !creator.image.includes("/brand/avatars/"));
+  const picked = withPhoto.sort((a, b) => Number(b.verified) - Number(a.verified) || reach(b) - reach(a)).slice(0, limit);
+  return picked.length >= 3 ? picked.map((creator) => ({ creator, features })) : demoCardStrip();
 }
 
 /** Stored public profiles. Off, and any read error, keeps the demo set. */

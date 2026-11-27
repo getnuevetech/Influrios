@@ -75,7 +75,7 @@ export async function actionLinkFeeTaxPolicy() {
 
 export async function actionTaxRegions(countryCode: string) {
   const session = await getAdminSession();
-  if (!session || !hasPermission(session, "collab_finance.manage")) return [];
+  if (!session || !hasPermission(session, "tax.edit")) return [];
   return countryRegions(countryCode);
 }
 
@@ -89,7 +89,7 @@ const CUSTOMER_ROLE: Record<ChargeFamily, string> = {
 
 export async function actionSaveTaxConfiguration(formData: FormData): Promise<{ ok: true; id: string; summary?: string } | { ok: false; error: string }> {
   const session = await getAdminSession();
-  if (!session || !hasPermission(session, "collab_finance.manage")) {
+  if (!session || !hasPermission(session, "tax.edit")) {
     return { ok: false, error: "You do not have access to tax settings." };
   }
   if (String(formData.get("ruleModel") ?? "") === "country") {
@@ -257,7 +257,7 @@ export async function actionSaveTaxConfiguration(formData: FormData): Promise<{ 
 
 export async function actionDeleteTaxRule(formData: FormData): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await getAdminSession();
-  if (!session || !hasPermission(session, "collab_finance.manage")) {
+  if (!session || !hasPermission(session, "tax.edit")) {
     return { ok: false, error: "You do not have access to tax settings." };
   }
   const policyId = String(formData.get("policyId") ?? "").trim();
@@ -291,7 +291,7 @@ export async function actionDeleteTaxRule(formData: FormData): Promise<{ ok: tru
 
 export async function actionPreviewTaxConfiguration(formData: FormData) {
   const session = await getAdminSession();
-  if (!session || !hasPermission(session, "collab_finance.manage")) {
+  if (!session || !hasPermission(session, "tax.edit")) {
     return { ok: false as const, error: "You do not have access to tax settings." };
   }
   const form = taxForm(formData);
@@ -338,7 +338,7 @@ export async function actionPreviewTaxConfiguration(formData: FormData) {
 
 export async function actionSyncTaxRegistration(formData: FormData) {
   const session = await getAdminSession();
-  if (!session || !hasPermission(session, "collab_finance.manage")) return { status: "unavailable" as const };
+  if (!session || !hasPermission(session, "tax.edit")) return { status: "unavailable" as const };
   const id = String(formData.get("policyId") ?? "").trim();
   const creds = await stripeCredentials();
   const status = creds.ok ? await requestStripeTaxRegistrations(creds.secret) : "unavailable";

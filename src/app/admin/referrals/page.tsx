@@ -13,8 +13,8 @@ const inputClass = "mt-1 w-full rounded-xl border border-border px-3 py-2 font-n
 type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
 
 export default async function AdminReferralsPage({ searchParams }: Props) {
-  const session = await requireAdminPage("shortlinks");
-  const canEdit = hasPermission(session, "shortlinks.edit");
+  const session = await requireAdminPage("referrals");
+  const canEdit = hasPermission(session, "referrals.edit");
   const params = await searchParams;
   const [program, rows, host] = await Promise.all([
     getReferralProgram().catch(() => null),

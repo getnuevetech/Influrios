@@ -3,7 +3,6 @@ import { buildBrandedQrSvg } from "@/lib/branded-qr";
 import { getDraftBySlug } from "@/lib/claim";
 import { getDirectoryCreator } from "@/lib/directory";
 import { isDemoCreatorSlug } from "@/lib/presentation-demo";
-import { entitlementsForPlan } from "@/lib/entitlements-db";
 import { qrPayloadForSlug } from "@/lib/short-link";
 
 function appOrigin(request: NextRequest) {
@@ -44,10 +43,9 @@ export async function GET(
 
   const creator = await getDirectoryCreator(slug);
   if (creator) {
-    const entitlements = await entitlementsForPlan(creator.planTier);
-    const paidQr = Boolean(entitlements.standardQr || entitlements.dynamicQr);
-    const paidTarget = paidQr ? await qrPayloadForSlug(creator.slug) : null;
-    const target = paidTarget || `${appOrigin(request)}/c/${encodeURIComponent(creator.slug)}`;
+    // The card link (inflr.me/{name}) whenever the plan includes a short link; otherwise the profile page.
+    const cardLink = await qrPayloadForSlug(creator.slug).catch(() => null);
+    const target = cardLink || `${appOrigin(request)}/c/${encodeURIComponent(creator.slug)}`;
 
     const svg = await buildBrandedQrSvg({ target, size, withLogo, margin: 1 });
     return new NextResponse(svg, {

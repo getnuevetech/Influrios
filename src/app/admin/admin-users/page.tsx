@@ -34,6 +34,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
   if (!canAccessModule(session, "access")) redirect("/admin?error=forbidden");
 
   const canManage = hasPermission(session, "access.manage_users");
+  const canSecurity = hasPermission(session, "access.security");
   const params = await searchParams;
   const store = await getAdminAuthStore();
   const roleById = new Map(store.roles.map((r) => [r.id, r]));
@@ -98,6 +99,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
       users={users}
       roles={roles}
       canManage={canManage}
+      canSecurity={canSecurity}
       activity={activity}
       filters={{ q: params.q || "", status, role: params.role || "all" }}
       manageId={params.manage || null}
@@ -117,7 +119,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
           <a href="/admin/security" className="font-semibold text-violet hover:underline">My sign-in security</a>, or at sign-in when it is
           required. Current setting: <span className="font-semibold text-indigo">{ADMIN_MFA_MODE_LABEL[mfaMode]}</span>.
         </p>
-        {canManage ? (
+        {canSecurity ? (
           <form action={actionSaveAdminMfaMode} className="flex flex-wrap items-end gap-3">
             <label className="text-xs font-semibold text-muted">
               Ask for a sign-in code

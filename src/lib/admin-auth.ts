@@ -70,6 +70,36 @@ export const ADMIN_PERMISSIONS = [
   "collab_finance.view",
   "collab_finance.manage",
   "collab_finance.high_risk",
+  "homepage.view",
+  "homepage.edit",
+  "landing.view",
+  "landing.edit",
+  "faq.view",
+  "faq.edit",
+  "site_stats.view",
+  "site_stats.edit",
+  "search.view",
+  "search.edit",
+  "referrals.view",
+  "referrals.edit",
+  "listings.view",
+  "listings.edit",
+  "kyc.view",
+  "kyc.review",
+  "tax.view",
+  "tax.edit",
+  "discounts.view",
+  "discounts.manage",
+  "payouts.view",
+  "payouts.release",
+  "support.view",
+  "support.reply",
+  "wallet.view",
+  "wallet.edit",
+  "billing.edit",
+  "contracts.void",
+  "contracts.delete",
+  "access.security",
 ] as const;
 
 export type AdminPermission = (typeof ADMIN_PERMISSIONS)[number];
@@ -100,7 +130,20 @@ export type AdminModule =
   | "mail"
   | "jobs"
   | "marketplace"
-  | "collab_finance";
+  | "collab_finance"
+  | "homepage"
+  | "landing"
+  | "faq"
+  | "site_stats"
+  | "search"
+  | "referrals"
+  | "listings"
+  | "kyc"
+  | "tax"
+  | "discounts"
+  | "payouts"
+  | "support"
+  | "wallet";
 
 export const ADMIN_PERMISSION_GROUPS: {
   module: AdminModule;
@@ -152,6 +195,7 @@ export const ADMIN_PERMISSION_GROUPS: {
     description: "Plan catalog and checkout session history",
     permissions: [
       { id: "billing.view", label: "View billing", hint: "Open billing ops console" },
+      { id: "billing.edit", label: "Edit billing settings", hint: "Billing switches, Stripe checks and the price list" },
     ],
   },
   {
@@ -170,15 +214,6 @@ export const ADMIN_PERMISSION_GROUPS: {
     permissions: [
       { id: "taxonomy.view", label: "View taxonomy", hint: "Open specialties and synonyms" },
       { id: "taxonomy.edit", label: "Edit taxonomy", hint: "Enable specialties and add synonyms" },
-    ],
-  },
-  {
-    module: "payments",
-    label: "Protected payments",
-    description: "Marketplace ledger. The JSON escrow console is removed.",
-    permissions: [
-      { id: "payments.view", label: "View payments", hint: "Open the marketplace ledger" },
-      { id: "payments.manage", label: "Manage payments", hint: "Manage marketplace funding" },
     ],
   },
   {
@@ -318,6 +353,8 @@ export const ADMIN_PERMISSION_GROUPS: {
         label: "Contract manager",
         hint: "Receive messages sent to the contract manager",
       },
+      { id: "contracts.void", label: "Void agreements", hint: "Void an agreement (Deals and Contracts)" },
+      { id: "contracts.delete", label: "Delete unused drafts", hint: "Delete an agreement draft that was never used" },
     ],
   },
   {
@@ -372,6 +409,124 @@ export const ADMIN_PERMISSION_GROUPS: {
     permissions: [
       { id: "access.manage_roles", label: "Manage roles", hint: "Create access levels / permission sets" },
       { id: "access.manage_users", label: "Manage users", hint: "Invite admins, set roles, enable/disable" },
+      { id: "access.security", label: "Sign-in security", hint: "Turn the admin sign-in code on or off and reset an admin's authenticator" },
+    ],
+  },
+  {
+    module: "homepage",
+    label: "Homepage",
+    description: "Homepage sections, menus, categories, value proposition and public-page switches",
+    permissions: [
+      { id: "homepage.view", label: "View homepage settings", hint: "Open the homepage editors" },
+      { id: "homepage.edit", label: "Edit homepage", hint: "Change sections, menus, value proposition and the live/sample switches" },
+    ],
+  },
+  {
+    module: "landing",
+    label: "Landing pages",
+    description: "Collaboration and business landing pages, influencer identity labels",
+    permissions: [
+      { id: "landing.view", label: "View landing pages", hint: "Open the landing page editors" },
+      { id: "landing.edit", label: "Edit landing pages", hint: "Change landing copy and images" },
+    ],
+  },
+  {
+    module: "faq",
+    label: "FAQ",
+    description: "Public FAQ answers",
+    permissions: [
+      { id: "faq.view", label: "View FAQ", hint: "Open the FAQ editor" },
+      { id: "faq.edit", label: "Edit FAQ", hint: "Add, change and remove answers" },
+    ],
+  },
+  {
+    module: "site_stats",
+    label: "Site stats",
+    description: "Audited footer counters",
+    permissions: [
+      { id: "site_stats.view", label: "View site stats", hint: "Open site stats" },
+      { id: "site_stats.edit", label: "Edit site stats", hint: "Change and publish counters" },
+    ],
+  },
+  {
+    module: "search",
+    label: "Search",
+    description: "Meilisearch host and index",
+    permissions: [
+      { id: "search.view", label: "View search settings", hint: "Open search settings" },
+      { id: "search.edit", label: "Edit search", hint: "Change the host and rebuild the index" },
+    ],
+  },
+  {
+    module: "referrals",
+    label: "Referrals",
+    description: "Referral reward and registrations",
+    permissions: [
+      { id: "referrals.view", label: "View referrals", hint: "See referral registrations" },
+      { id: "referrals.edit", label: "Edit referral reward", hint: "Change the reward" },
+    ],
+  },
+  {
+    module: "listings",
+    label: "Marketplace listings",
+    description: "Business requests and influencer opportunities published by admins",
+    permissions: [
+      { id: "listings.view", label: "View listings", hint: "Open marketplace listings" },
+      { id: "listings.edit", label: "Edit listings", hint: "Publish and change listings" },
+    ],
+  },
+  {
+    module: "kyc",
+    label: "KYC",
+    description: "Identity verification for influencer payouts",
+    permissions: [
+      { id: "kyc.view", label: "View KYC", hint: "Open KYC settings and submissions" },
+      { id: "kyc.review", label: "Review KYC", hint: "Approve or reject KYC, set requirements and the KYC gateway" },
+    ],
+  },
+  {
+    module: "tax",
+    label: "Tax",
+    description: "Tax rules, registrations and previews",
+    permissions: [
+      { id: "tax.view", label: "View tax", hint: "Open tax settings" },
+      { id: "tax.edit", label: "Edit tax", hint: "Change tax rules and registrations" },
+    ],
+  },
+  {
+    module: "discounts",
+    label: "Discount codes",
+    description: "Plan and checkout discount codes",
+    permissions: [
+      { id: "discounts.view", label: "View discount codes", hint: "See codes and usage" },
+      { id: "discounts.manage", label: "Manage discount codes", hint: "Issue and pause codes" },
+    ],
+  },
+  {
+    module: "payouts",
+    label: "Payout releases",
+    description: "Sending approved milestone payouts to influencers",
+    permissions: [
+      { id: "payouts.view", label: "View payout releases", hint: "See the release queue and log" },
+      { id: "payouts.release", label: "Release payouts", hint: "Approve, send, retry and schedule payouts, and set release automation" },
+    ],
+  },
+  {
+    module: "support",
+    label: "Support tickets",
+    description: "Requests from the support page",
+    permissions: [
+      { id: "support.view", label: "View support tickets", hint: "Read tickets" },
+      { id: "support.reply", label: "Reply to tickets", hint: "Reply, add notes, change status and assign" },
+    ],
+  },
+  {
+    module: "wallet",
+    label: "Wallet passes",
+    description: "Apple Wallet and Google Wallet credentials",
+    permissions: [
+      { id: "wallet.view", label: "View wallet passes", hint: "See setup status" },
+      { id: "wallet.edit", label: "Edit wallet passes", hint: "Upload and remove credentials" },
     ],
   },
 ];
@@ -458,7 +613,7 @@ const DEFAULT_ROLES: AdminRole[] = [
   {
     id: "role_content",
     name: "Content Admin",
-    description: "Landing banners and influencer card CMS (view + edit).",
+    description: "Homepage, landing pages, banners, FAQ, site stats, influencer cards and wallet passes.",
     permissions: [
       "banners.view",
       "banners.edit",
@@ -466,6 +621,16 @@ const DEFAULT_ROLES: AdminRole[] = [
       "cards.edit",
       "taxonomy.view",
       "taxonomy.edit",
+      "homepage.view",
+      "homepage.edit",
+      "landing.view",
+      "landing.edit",
+      "faq.view",
+      "faq.edit",
+      "site_stats.view",
+      "site_stats.edit",
+      "wallet.view",
+      "wallet.edit",
     ],
     system: true,
   },
@@ -511,6 +676,20 @@ const DEFAULT_ROLES: AdminRole[] = [
       "collab_finance.view",
       "collab_finance.manage",
       "collab_finance.high_risk",
+      "listings.view",
+      "listings.edit",
+      "referrals.view",
+      "referrals.edit",
+      "support.view",
+      "support.reply",
+      "kyc.view",
+      "kyc.review",
+      "tax.view",
+      "tax.edit",
+      "discounts.view",
+      "discounts.manage",
+      "payouts.view",
+      "payouts.release",
     ],
     system: true,
   },
@@ -518,7 +697,7 @@ const DEFAULT_ROLES: AdminRole[] = [
     id: "role_billing",
     name: "Billing Admin",
     description: "Billing catalog, checkout sessions, and country payment gateways.",
-    permissions: ["billing.view", "gateways.view", "gateways.edit"],
+    permissions: ["billing.view", "gateways.view", "gateways.edit", "billing.edit", "search.view", "search.edit", "discounts.view"],
     system: true,
   },
   {
@@ -535,6 +714,17 @@ const DEFAULT_ROLES: AdminRole[] = [
       "collab_finance.view",
       "collab_finance.manage",
       "collab_finance.high_risk",
+      "payouts.view",
+      "payouts.release",
+      "kyc.view",
+      "kyc.review",
+      "tax.view",
+      "tax.edit",
+      "discounts.view",
+      "discounts.manage",
+      "search.view",
+      "search.edit",
+      "billing.edit",
     ],
     system: true,
   },
@@ -556,6 +746,13 @@ const DEFAULT_ROLES: AdminRole[] = [
       "marketplace.view",
       "commerce.view",
       "trust.view",
+      "kyc.view",
+      "kyc.review",
+      "tax.view",
+      "tax.edit",
+      "discounts.view",
+      "discounts.manage",
+      "payouts.view",
     ],
     system: true,
   },
@@ -569,8 +766,8 @@ const DEFAULT_ROLES: AdminRole[] = [
   {
     id: "role_readonly",
     name: "Read-only Admin",
-    description: "View banners and cards only — no edits.",
-    permissions: ["banners.view", "cards.view"],
+    description: "View site content settings only, no edits.",
+    permissions: ["banners.view", "cards.view", "homepage.view", "landing.view", "faq.view", "site_stats.view", "wallet.view"],
     system: true,
   },
 ];

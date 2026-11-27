@@ -11,7 +11,7 @@ import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { getCms } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
-import { publicPagesUseLive } from "@/lib/presentation-demo";
+import { featuredCardsUseLive, publicPagesUseLive } from "@/lib/presentation-demo";
 import { publicCategoryImage, publicStoredImage } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
@@ -48,13 +48,14 @@ const CONTENT_LINKS = [
 ] as const;
 
 export default async function AdminHomepagePage({ searchParams }: Props) {
-  const session = await requireAdminPage("banners");
+  const session = await requireAdminPage("homepage");
   const query = await searchParams;
-  const canEdit = hasPermission(session, "banners.edit");
-  const [directory, cms, liveProfiles] = await Promise.all([
+  const canEdit = hasPermission(session, "homepage.edit");
+  const [directory, cms, liveProfiles, liveCards] = await Promise.all([
     getDirectory(),
     getCms(),
     publicPagesUseLive().catch(() => false),
+    featuredCardsUseLive().catch(() => false),
   ]);
   const sections = [...directory.sections].sort((a, b) => a.sortOrder - b.sortOrder);
   const menus = directory.menus.filter((item) => item.menu === "header" || item.menu === "footer_platform");
@@ -109,7 +110,8 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
         <p className="mt-2 max-w-2xl text-sm text-muted">
           Off shows sample profiles on the homepage, Discover, the collaboration landing, the business landing,
           and the influencer card page. On shows real influencer profiles, and an empty directory stays empty. The
-          Featured Influencers strip and the homepage influencer card always show sample cards.
+          Featured Influencers strip and the homepage influencer card show sample cards unless the second switch is on; it uses
+          published influencers with their own photo (at least 3, or the samples stay).
         </p>
         <form action={actionSavePresentationMode} className="mt-4 flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
@@ -121,6 +123,10 @@ export default async function AdminHomepagePage({ searchParams }: Props) {
               disabled={!canEdit}
             />
             Show live profiles
+          </label>
+          <label className="flex items-center gap-2 text-sm font-semibold text-indigo">
+            <input type="checkbox" name="liveCards" value="on" defaultChecked={liveCards} disabled={!canEdit} />
+            Real influencers in the Featured Influencers strip and homepage card
           </label>
           {canEdit ? (
             <button type="submit" className="btn-primary !px-4 !py-2 text-sm">

@@ -27,7 +27,7 @@ describe("presentation demo catalog", () => {
       assert.equal(isDemoCreatorSlug(creator.slug), true);
       assert.equal(demoCreatorBySlug(creator.slug)?.displayName, creator.displayName);
       assert.match(creator.bio, /demo/i);
-      assert.equal(creator.badge, "Demo");
+      assert.equal(creator.badge, "Example");
       assert.match(creator.image, /^\/demo\/creators\//);
     }
     assert.equal(isDemoCreatorSlug("sofia-martinez"), false);

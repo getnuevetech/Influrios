@@ -23,8 +23,8 @@ const selectClass = "mt-1 w-full rounded-lg border border-border px-3 py-2 text-
 type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
 
 export default async function AdminKycPage({ searchParams }: Props) {
-  const session = await requireAdminPage("collab_finance");
-  const canManage = hasPermission(session, "collab_finance.manage");
+  const session = await requireAdminPage("kyc");
+  const canManage = hasPermission(session, "kyc.review");
   const params = await searchParams;
   const [settings, requirements, providers, submissions, creators, countryReviews] = await Promise.all([
     loadKycSettings().catch(() => null),

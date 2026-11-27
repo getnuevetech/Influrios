@@ -34,6 +34,19 @@ const MODULE_PATH: Record<AdminModule, string> = {
   mail: "/admin/mail",
   jobs: "/admin/jobs",
   collab_finance: "/admin/collaboration-ops",
+  homepage: "/admin/homepage",
+  landing: "/admin/collaboration-landing",
+  faq: "/admin/faq",
+  site_stats: "/admin/stats",
+  search: "/admin/search",
+  referrals: "/admin/referrals",
+  listings: "/admin/marketplace-listings",
+  kyc: "/admin/kyc",
+  tax: "/admin/payment-settings?section=tax",
+  discounts: "/admin/payment-settings?section=discounts",
+  payouts: "/admin/marketplace",
+  support: "/admin/support",
+  wallet: "/admin/wallet",
 };
 
 /** Gate an admin page when any one of the modules is enough. */

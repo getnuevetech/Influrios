@@ -71,7 +71,7 @@ export async function actionRemoveMyAuthenticator(formData: FormData) {
 
 /** An admin who manages users resets another admin's authenticator (lost phone). */
 export async function actionResetAdminAuthenticator(formData: FormData) {
-  const session = await requireAdminAction("access.manage_users");
+  const session = await requireAdminAction("access.security");
   const userId = String(formData.get("userId") ?? "");
   if (!userId) redirect("/admin/admin-users");
   await resetAdminAuthenticator(userId);
@@ -80,7 +80,7 @@ export async function actionResetAdminAuthenticator(formData: FormData) {
 }
 
 export async function actionSaveAdminMfaMode(formData: FormData) {
-  const session = await requireAdminAction("access.manage_users");
+  const session = await requireAdminAction("access.security");
   const raw = String(formData.get("mode") ?? "off");
   const mode: AdminMfaMode = raw === "enrolled" || raw === "required" ? raw : "off";
   await saveAdminMfaMode(mode);

@@ -40,7 +40,7 @@ async function audit(actor: string, action: string) {
 }
 
 export async function actionSaveAppleWallet(formData: FormData) {
-  const session = await requireAdminAction("cards.edit");
+  const session = await requireAdminAction("wallet.edit");
   const saved = await saveAppleWalletConfig({
     passTypeIdentifier: String(formData.get("passTypeIdentifier") ?? ""),
     teamIdentifier: String(formData.get("teamIdentifier") ?? "").toUpperCase(),
@@ -56,7 +56,7 @@ export async function actionSaveAppleWallet(formData: FormData) {
 }
 
 export async function actionSaveGoogleWallet(formData: FormData) {
-  const session = await requireAdminAction("cards.edit");
+  const session = await requireAdminAction("wallet.edit");
   const saved = await saveGoogleWalletConfig({
     issuerId: String(formData.get("issuerId") ?? ""),
     serviceAccountJson: await fileOrText(formData, "serviceAccountFile", "serviceAccountJson"),
@@ -68,7 +68,7 @@ export async function actionSaveGoogleWallet(formData: FormData) {
 }
 
 export async function actionCheckGoogleWallet() {
-  await requireAdminAction("cards.edit");
+  await requireAdminAction("wallet.edit");
   const config = await getGoogleWalletConfig();
   if (!config) redirect(`/admin/wallet?error=${encodeURIComponent("Save the Google issuer ID and service account key first.")}`);
   const { checkGoogleCredentials } = await import("@/lib/wallet/google");
@@ -77,7 +77,7 @@ export async function actionCheckGoogleWallet() {
 }
 
 export async function actionClearWallet(formData: FormData) {
-  const session = await requireAdminAction("cards.edit");
+  const session = await requireAdminAction("wallet.edit");
   const which = formData.get("which") === "google" ? GOOGLE_WALLET_KEY : APPLE_WALLET_KEY;
   await clearWalletConfig(which);
   await audit(session.email, `${which}_cleared`);

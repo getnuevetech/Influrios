@@ -96,11 +96,46 @@ export async function SiteHeader() {
               <Link href="/login" className="hidden text-sm font-semibold text-indigo sm:inline">
                 Log in
               </Link>
-              <Link href="/signup" className="btn-primary !px-4 !py-2 text-sm">
-                Join Influrios →
+              <Link href="/signup" className="btn-primary whitespace-nowrap !px-4 !py-2 text-sm">
+                <span className="sm:hidden">Join</span>
+                <span className="hidden sm:inline">Join Influrios →</span>
               </Link>
             </>
           )}
+          {/* Phones and tablets: the page links live in this menu (no script needed). */}
+          <details className="group relative lg:hidden">
+            <summary
+              aria-label="Menu"
+              className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full text-indigo hover:bg-lavender/60 [&::-webkit-details-marker]:hidden"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" className="group-open:hidden">
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" className="hidden group-open:block">
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </summary>
+            <nav className="absolute right-0 top-12 z-50 w-64 rounded-2xl border border-border bg-white p-2 shadow-xl">
+              {links.map((item) => (
+                <Link key={item.href} href={item.href} className="block rounded-xl px-3 py-3 text-[15px] font-medium text-indigo hover:bg-lavender/60">
+                  {item.label}
+                </Link>
+              ))}
+              <div className="my-1 border-t border-border" />
+              {account ? (
+                <Link href={homePathForRole(account.role)} className="block rounded-xl px-3 py-3 text-[15px] font-semibold text-violet hover:bg-lavender/60">
+                  Your account
+                </Link>
+              ) : (
+                <Link href="/login" className="block rounded-xl px-3 py-3 text-[15px] font-semibold text-violet hover:bg-lavender/60">
+                  Log in
+                </Link>
+              )}
+              <Link href="/support" className="block rounded-xl px-3 py-3 text-[15px] font-medium text-indigo hover:bg-lavender/60">
+                Contact support
+              </Link>
+            </nav>
+          </details>
         </div>
       </div>
     </header>
@@ -194,15 +229,13 @@ export async function SiteFooter() {
               <Link href="/discover">Find Influencers</Link>
             </li>
             <li>
-              <Link href="/business" className="font-semibold text-violet hover:underline">
-                For Businesses
-              </Link>
+              <Link href="/business">For Businesses</Link>
             </li>
             <li>
               <Link href="/business/intelligence">Intelligence</Link>
             </li>
             <li>
-              <Link href="/business#pricing">Business Pro</Link>
+              <Link href="/business/plans">Business plans</Link>
             </li>
             <li>
               <Link href="/collaboration">Opportunities</Link>
@@ -219,13 +252,10 @@ export async function SiteFooter() {
               <Link href="/support">Contact support</Link>
             </li>
             <li>
-              <Link href="/card">Pricing</Link>
+              <Link href="/pricing">Pricing</Link>
             </li>
             <li>
-              <Link href="/billing">Checkout</Link>
-            </li>
-            <li>
-              <Link href="/payments">Protected payments</Link>
+              <Link href="/trust#payments">Protected payments</Link>
             </li>
             <li>
               <Link href="/trust">Trust &amp; disputes</Link>

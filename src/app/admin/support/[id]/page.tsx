@@ -20,8 +20,8 @@ const when = (date: Date) =>
 const area = "mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm font-normal text-indigo";
 
 export default async function AdminSupportTicketPage({ params, searchParams }: Props) {
-  const session = await requireAdminPage("accounts");
-  const canReply = hasPermission(session, "accounts.edit");
+  const session = await requireAdminPage("support");
+  const canReply = hasPermission(session, "support.reply");
   const { id } = await params;
   const query = await searchParams;
   const ticket = await ticketForStaff(id);
@@ -147,7 +147,7 @@ export default async function AdminSupportTicketPage({ params, searchParams }: P
           </form>
         </div>
       ) : (
-        <p className="text-sm text-muted">You can view tickets but not reply. Replying needs the &ldquo;accounts.edit&rdquo; permission.</p>
+        <p className="text-sm text-muted">You can view tickets but not reply. Replying needs the &ldquo;Reply to tickets&rdquo; feature on your access level.</p>
       )}
     </div>
   );

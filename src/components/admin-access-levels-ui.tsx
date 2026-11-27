@@ -27,11 +27,23 @@ export type AccessModuleGroup = {
 };
 
 const BUCKETS: { id: string; label: string; modules: string[] }[] = [
-  { id: "content", label: "Content", modules: ["banners", "cards", "taxonomy", "legal", "intelligence"] },
-  { id: "accounts", label: "User accounts", modules: ["accounts", "invitations"] },
-  { id: "collaborations", label: "Collaborations", modules: ["collaborations", "matching", "contracts", "signing", "social", "agency"] },
-  { id: "finance", label: "Finance", modules: ["billing", "payments", "gateways", "commerce", "marketplace", "collab_finance", "trust"] },
-  { id: "settings", label: "Settings", modules: ["plans", "ai", "mail", "jobs", "shortlinks"] },
+  {
+    id: "content",
+    label: "Content",
+    modules: ["homepage", "landing", "banners", "faq", "site_stats", "cards", "wallet", "taxonomy", "legal", "intelligence"],
+  },
+  { id: "accounts", label: "Users & support", modules: ["accounts", "invitations", "support", "kyc", "referrals"] },
+  {
+    id: "collaborations",
+    label: "Collaborations",
+    modules: ["collaborations", "listings", "matching", "contracts", "signing", "social", "agency"],
+  },
+  {
+    id: "finance",
+    label: "Finance",
+    modules: ["billing", "payments", "payouts", "gateways", "commerce", "discounts", "tax", "marketplace", "collab_finance", "trust"],
+  },
+  { id: "settings", label: "Settings", modules: ["plans", "ai", "mail", "jobs", "shortlinks", "search"] },
   { id: "access", label: "Access control", modules: ["access"] },
 ];
 

@@ -37,6 +37,9 @@ export function HomepageValuePropositionStrip({
   escrowTermAllowed?: boolean;
 }) {
   if (!strip.enabled) return null;
+  // The side tagline is hidden when it only repeats the headline.
+  const norm = (v: string) => v.trim().replace(/[.\s]+$/, "").toLowerCase();
+  const showTagline = Boolean(strip.closingTaglineLine2.trim()) && norm(strip.closingTaglineLine2) !== norm(strip.headlineHighlight);
 
   const items = enabledValuePropItems(
     applyMarketAwareProtectedPaymentsClaim(strip.items, {
@@ -75,7 +78,7 @@ export function HomepageValuePropositionStrip({
           ) : null}
         </div>
 
-        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(10rem,14rem)] xl:items-stretch">
+        <div className={`grid gap-8 xl:items-stretch ${showTagline ? "xl:grid-cols-[minmax(0,1fr)_minmax(10rem,14rem)]" : ""}`}>
           <div className={pillarGrid}>
             {items.map((item) => {
               const Icon = ICONS[item.iconKey] ?? IconIdCard;
@@ -107,18 +110,20 @@ export function HomepageValuePropositionStrip({
             })}
           </div>
 
+          {showTagline ? (
           <div className="flex flex-col items-center justify-center border-t border-[#E8ECF5] pt-5 text-center xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted">
-              {strip.closingTaglineLine1}
-            </p>
-            <p className="mt-2 font-display text-xl font-bold leading-tight brand-gradient-text sm:text-2xl">
-              {strip.closingTaglineLine2}
-            </p>
-            <span
-              aria-hidden
-              className="mt-3 h-1 w-12 rounded-full bg-gradient-to-r from-[#633CFF] to-[#2979FF]"
-            />
-          </div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted">
+                {strip.closingTaglineLine1}
+              </p>
+              <p className="mt-2 font-display text-xl font-bold leading-tight brand-gradient-text sm:text-2xl">
+                {strip.closingTaglineLine2}
+              </p>
+              <span
+                aria-hidden
+                className="mt-3 h-1 w-12 rounded-full bg-gradient-to-r from-[#633CFF] to-[#2979FF]"
+              />
+            </div>
+          ) : null}
         </div>
       </div>
     </section>

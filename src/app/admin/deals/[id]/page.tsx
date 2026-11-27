@@ -3,7 +3,7 @@ import { jobWhen } from "@/lib/job-labels";
 import { notFound } from "next/navigation";
 import { actionApproveDealAmendment, actionCompareProviderBalance, actionRecordFeeSettlement, actionVoidDealContract } from "@/app/admin/deals/actions";
 import { requireAnyAdminModule } from "@/app/admin/guard";
-import { hasPermission, isSuperAdmin } from "@/lib/admin-auth";
+import { hasPermission } from "@/lib/admin-auth";
 import { loadAdminDeal } from "@/lib/admin-deal";
 import { splitGross } from "@/lib/ledger";
 import { formatMoney } from "@/lib/money";
@@ -23,7 +23,7 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
   if (!deal) notFound();
   const { contract, funding, collaboration, relatedContracts, audits, progress, terms, termsRecovered } = deal;
   const anchor = contract?.id ?? funding?.id ?? collaboration?.id ?? id;
-  const canVoid = isSuperAdmin(session);
+  const canVoid = hasPermission(session, "contracts.void");
   const canAmend = canVoid || hasPermission(session, "contracts.manage");
   const canSettle = hasPermission(session, "marketplace.manage");
   const feesEarned = funding?.entries.some((entry) => entry.kind === "fee_earned") ?? false;

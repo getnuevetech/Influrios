@@ -18,7 +18,7 @@ type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
 
 export default async function AdminBillingPage({ searchParams }: Props) {
   const session = await requireAdminPage("billing");
-  const canEdit = hasPermission(session, "gateways.edit");
+  const canEdit = hasPermission(session, "billing.edit");
   const showPlans = canAccessModule(session, "plans");
   const params = await searchParams;
   const store = await getBillingStore();

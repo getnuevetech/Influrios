@@ -14,7 +14,7 @@ function done(id: string, query: string): never {
 }
 
 export async function actionStaffReply(formData: FormData) {
-  const session = await requireAdminAction("accounts.edit");
+  const session = await requireAdminAction("support.reply");
   const id = String(formData.get("ticketId") ?? "");
   const result = await staffReply({
     id,
@@ -28,7 +28,7 @@ export async function actionStaffReply(formData: FormData) {
 }
 
 export async function actionStaffNote(formData: FormData) {
-  const session = await requireAdminAction("accounts.edit");
+  const session = await requireAdminAction("support.reply");
   const id = String(formData.get("ticketId") ?? "");
   const result = await staffNote({ id, staffEmail: session.email, staffName: session.name, body: String(formData.get("body") ?? "") });
   if (!result.ok) redirect(back(id, `error=${encodeURIComponent(result.error)}`));
@@ -36,7 +36,7 @@ export async function actionStaffNote(formData: FormData) {
 }
 
 export async function actionStaffStatus(formData: FormData) {
-  const session = await requireAdminAction("accounts.edit");
+  const session = await requireAdminAction("support.reply");
   const id = String(formData.get("ticketId") ?? "");
   const result = await staffSetStatus({ id, staffEmail: session.email, status: String(formData.get("status") ?? "") });
   if (!result.ok) redirect(back(id, `error=${encodeURIComponent(result.error)}`));
@@ -44,7 +44,7 @@ export async function actionStaffStatus(formData: FormData) {
 }
 
 export async function actionStaffAssign(formData: FormData) {
-  const session = await requireAdminAction("accounts.edit");
+  const session = await requireAdminAction("support.reply");
   const id = String(formData.get("ticketId") ?? "");
   const assignee = formData.get("assignee") === "me" ? session.email : "";
   await staffAssign({ id, staffEmail: session.email, assignee });

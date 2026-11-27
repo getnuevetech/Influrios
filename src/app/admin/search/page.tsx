@@ -14,8 +14,8 @@ const inputClass = "mt-1 w-full rounded-xl border border-border px-3 py-2 font-n
 type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
 
 export default async function AdminSearchPage({ searchParams }: Props) {
-  const session = await requireAdminPage("gateways");
-  const canEdit = hasPermission(session, "gateways.edit");
+  const session = await requireAdminPage("search");
+  const canEdit = hasPermission(session, "search.edit");
   const params = await searchParams;
   let provider: Awaited<ReturnType<typeof listProviders>>[number] | null = null;
   let activeHost = "";

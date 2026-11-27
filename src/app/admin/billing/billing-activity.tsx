@@ -280,7 +280,7 @@ export function BillingActivity({
               </form>
             </>
           ) : (
-            <p className="mt-3 text-sm text-muted">Saving these needs the gateways edit permission.</p>
+            <p className="mt-3 text-sm text-muted">Saving these needs the “Edit billing settings” feature.</p>
           )}
           <div className="mt-6 space-y-3 rounded-xl border border-border bg-white p-4 text-sm">
             <p className="font-semibold text-indigo">Plan prices</p>

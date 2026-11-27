@@ -15,7 +15,7 @@ import { setProductSwitch } from "@/lib/product-switches";
 import { normalizeInfluencerRoleTitle } from "@/lib/terminology-copy";
 
 export async function actionUpdateSection(formData: FormData) {
-  const session = await requireAdminAction("banners.edit");
+  const session = await requireAdminAction("homepage.edit");
   const status = String(formData.get("status") ?? "published");
   try {
     await updateHomepageSection({
@@ -33,7 +33,7 @@ export async function actionUpdateSection(formData: FormData) {
 }
 
 export async function actionUpdateMenu(formData: FormData) {
-  const session = await requireAdminAction("banners.edit");
+  const session = await requireAdminAction("homepage.edit");
   try {
     await updateMenuItem({
       actor: session.email,
@@ -51,7 +51,7 @@ export async function actionUpdateMenu(formData: FormData) {
 }
 
 export async function actionSaveHomepageCategories(formData: FormData) {
-  await requireAdminAction("banners.edit");
+  await requireAdminAction("homepage.edit");
   const slugs = formData.getAll("slug").map(String);
   const images = formData.getAll("image").map(String);
   const files = formData.getAll("imageFile");
@@ -80,7 +80,7 @@ export async function actionSaveHomepageCategories(formData: FormData) {
 }
 
 export async function actionSaveHomepageCollaboration(formData: FormData) {
-  await requireAdminAction("banners.edit");
+  await requireAdminAction("homepage.edit");
   const titles = formData.getAll("matchTitle").map(String);
   const leftSlugs = formData.getAll("leftSlug").map(String);
   const rightSlugs = formData.getAll("rightSlug").map(String);
@@ -125,9 +125,10 @@ export async function actionSaveHomepageCollaboration(formData: FormData) {
 }
 
 export async function actionSavePresentationMode(formData: FormData) {
-  await requireAdminAction("banners.edit");
+  await requireAdminAction("homepage.edit");
   try {
     await setProductSwitch("public_pages_live", formData.get("live") === "on");
+    await setProductSwitch("featured_cards_live", formData.get("liveCards") === "on");
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not save the public page mode";
     redirect(`/admin/homepage?error=${encodeURIComponent(message)}`);

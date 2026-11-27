@@ -53,9 +53,9 @@ function Field({
 }
 
 export default async function AdminBusinessLandingPage({ searchParams }: Props) {
-  const session = await requireAdminPage("banners");
+  const session = await requireAdminPage("landing");
   const query = await searchParams;
-  const canEdit = hasPermission(session, "banners.edit");
+  const canEdit = hasPermission(session, "landing.edit");
   const landing = await getBusinessLanding();
 
   return (

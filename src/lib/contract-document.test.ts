@@ -69,7 +69,7 @@ describe("contract documents", () => {
     const adminView = readFileSync("src/app/admin/contracts/[id]/page.tsx", "utf8");
     const business = readFileSync("src/app/collaboration/contracts/[id]/page.tsx", "utf8");
     const memberList = readFileSync("src/app/collaboration/contracts/page.tsx", "utf8");
-    assert.match(admin, /isSuperAdmin/);
+    assert.match(admin, /hasPermission\(session, "contracts\.delete"\)/);
     assert.equal(business.includes("actionDeleteContractDocument"), false);
     assert.match(adminList, /\/admin\/contracts\/\$\{document\.id\}/);
     assert.equal(adminList.includes("href={`/collaboration/contracts/${document.id}`}"), false);
