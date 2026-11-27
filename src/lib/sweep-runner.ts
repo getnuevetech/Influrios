@@ -37,6 +37,12 @@ export function startSweepClock(log: Pick<Console, "error"> = console) {
     runSweepTick().catch((error) => log.error("sweep clock", error));
   };
   setTimeout(tick, 60_000).unref?.();
+  // Plan prices are Influrios amounts; make sure Stripe has a matching price for each (no admin step).
+  setTimeout(() => {
+    import("@/lib/stripe-plan-prices")
+      .then((mod) => mod.ensurePlanStripePrices())
+      .catch((error) => log.error("plan price sync", error));
+  }, 30_000).unref?.();
   setInterval(tick, TICK_MS).unref?.();
   return true;
 }

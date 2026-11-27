@@ -253,9 +253,11 @@ export default async function AdminMailPage({ searchParams }: Props) {
       <section className="card-surface space-y-3 p-5">
         <h2 className="font-display text-lg font-bold text-indigo">Support contact</h2>
         <p className="text-sm text-muted">
-          Every email&apos;s &ldquo;contact support&rdquo; link opens <Link href="/support" className="font-semibold text-violet hover:underline">/support</Link>.
-          Messages from that form go to this address (or to active admins when it is blank), with the sender as Reply-To. The address is
-          also shown on the support page.
+          Every email&apos;s &ldquo;contact support&rdquo; link opens <Link href="/support" className="font-semibold text-violet hover:underline">/support</Link>,
+          where members and visitors open a ticket. Tickets are answered in{" "}
+          <Link href="/admin/support" className="font-semibold text-violet hover:underline">Support tickets</Link>. This address is
+          emailed when a ticket is opened or a member replies (active admins are emailed when it is blank), and it is shown on the
+          support page.
         </p>
         {canEdit ? (
           <form action={actionSaveSupportSettings} className="flex flex-wrap items-end gap-3">

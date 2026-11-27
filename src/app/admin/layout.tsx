@@ -89,6 +89,7 @@ const SIDE_GROUPS: SideGroup[] = [
         icon: "collab",
       },
       { href: "/admin/trust", label: "Trust & Disputes", module: "trust", icon: "access" },
+      { href: "/admin/support", label: "Support tickets", module: "accounts", icon: "invites" },
     ],
   },
   {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { actionSendSupportMessage } from "@/app/support/actions";
 import { getAccountSession } from "@/lib/accounts";
 import { getSupportSettings, SUPPORT_TOPICS } from "@/lib/support";
+import { listTicketsForMember, ticketRef, ticketStatus, TICKET_STATUS_MEMBER_LABEL } from "@/lib/support-tickets";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Support" };
@@ -14,6 +15,7 @@ export default async function SupportPage({ searchParams }: Props) {
   const params = await searchParams;
   const [settings, account] = await Promise.all([getSupportSettings(), getAccountSession().catch(() => null)]);
   const topic = SUPPORT_TOPICS.find((row) => row === params.topic) ?? "";
+  const mine = account ? await listTicketsForMember({ userId: account.id, email: account.email }) : [];
   return (
     <div className="bg-[#F7FAFF]">
       <section className="hero-atmosphere text-white">
@@ -21,7 +23,7 @@ export default async function SupportPage({ searchParams }: Props) {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-lavender/80">Help</p>
           <h1 className="mt-2 font-display text-4xl font-bold">Contact support</h1>
           <p className="mt-3 text-white/75">
-            Send us a message and we&apos;ll reply by email. Many questions are already answered in the{" "}
+            Send us a message and we&apos;ll open a support ticket. We reply by email and on your ticket page. Many questions are already answered in the{" "}
             <Link href="/faq" className="font-semibold text-white underline">FAQ</Link>.
           </p>
         </div>
@@ -45,6 +47,21 @@ export default async function SupportPage({ searchParams }: Props) {
           <p role="alert" className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
             {params.error}
           </p>
+        ) : null}
+        {mine.length > 0 ? (
+          <section className="card-surface p-5">
+            <h2 className="font-display text-lg font-bold text-indigo">Your support requests</h2>
+            <ul className="mt-3 divide-y divide-[#EEEFF5] text-sm">
+              {mine.map((row) => (
+                <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+                  <Link href={`/support/tickets/${row.id}`} className="font-semibold text-violet hover:underline">
+                    {ticketRef(row.number)} · {row.subject}
+                  </Link>
+                  <span className="text-xs font-semibold text-muted">{TICKET_STATUS_MEMBER_LABEL[ticketStatus(row.status)]}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
         ) : null}
         <form action={actionSendSupportMessage} className="card-surface grid gap-4 p-5">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -84,7 +101,7 @@ export default async function SupportPage({ searchParams }: Props) {
             <input name="website" tabIndex={-1} autoComplete="off" />
           </label>
           <button type="submit" className="inline-flex h-11 w-fit items-center rounded-full bg-violet px-5 text-sm font-semibold text-white">
-            Send message
+            Open a support ticket
           </button>
         </form>
       </div>

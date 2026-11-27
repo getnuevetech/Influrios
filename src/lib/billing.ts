@@ -641,14 +641,20 @@ export async function startCheckout(input: {
 }): Promise<StartCheckoutResult> {
   const product = getProduct(input.sku);
   const { findActivePlan } = await import("@/lib/entitlements-db");
-  const custom = product ? null : await findActivePlan(input.sku);
+  let custom = product ? null : await findActivePlan(input.sku);
   if (!product && !custom) return { ok: false, error: "Unknown plan" };
   if (custom && custom.amountCents <= 0) {
     return { ok: false, error: "This plan has no monthly price. An admin assigns it." };
   }
+  if (custom && !custom.stripePriceId) {
+    // Create the plan's Stripe price from its Influrios amount, then read the plan again.
+    const { ensurePlanStripePrices } = await import("@/lib/stripe-plan-prices");
+    await ensurePlanStripePrices("checkout").catch(() => null);
+    custom = await findActivePlan(input.sku);
+  }
   const customPrice = custom?.stripePriceId && /^price_[A-Za-z0-9]+$/.test(custom.stripePriceId) ? custom.stripePriceId : "";
   if (custom && !customPrice) {
-    return { ok: false, error: "This plan's price is not set up yet. An admin saves the plan price to set it up. Nothing was charged." };
+    return { ok: false, error: "This plan can't be bought right now because Stripe is not reachable. Please try again shortly. Nothing was charged." };
   }
 
   // P8: telemetry only — SKUs stay creator_* for Stripe metadata compatibility.
@@ -684,7 +690,13 @@ export async function startCheckout(input: {
 
   if (creds.ok) {
     const interval: BillingInterval = input.interval === "year" ? "year" : "month";
-    const resolved = await recurringOfferFor(input.sku, interval);
+    let resolved = await recurringOfferFor(input.sku, interval);
+    if (!resolved.ok || (interval === "year" && resolved.offer.priceId === "")) {
+      // A plan saved before Stripe was connected may not have its Stripe price yet: create it now and retry once.
+      const { ensurePlanStripePrices } = await import("@/lib/stripe-plan-prices");
+      await ensurePlanStripePrices("checkout").catch(() => null);
+      resolved = await recurringOfferFor(input.sku, interval);
+    }
     if (!resolved.ok) return { ok: false, error: `${resolved.reason} Nothing was charged.` };
     if (interval === "year" && resolved.offer.priceId === "") {
       return { ok: false, error: "Annual billing is not available for this plan. Nothing was charged." };

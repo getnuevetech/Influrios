@@ -148,3 +148,34 @@ export async function syncAllPlanStripePrices(actor: string) {
     .catch(() => undefined);
   return results;
 }
+
+/** True when an active paid plan has a monthly or yearly amount without a Stripe price yet. */
+export async function planStripePricesMissing() {
+  const { prisma } = await import("@/lib/db");
+  const { listAnnualOffers } = await import("@/lib/billing");
+  const { annualOfferKey } = await import("@/lib/billing-interval");
+  const plans = await prisma.entitlementPlan.findMany({ where: { active: true, amountCents: { gt: 0 } }, select: { code: true, stripePriceId: true } });
+  const offers = await listAnnualOffers();
+  return plans.some((plan) => {
+    if (!plan.stripePriceId) return true;
+    const offer = offers[annualOfferKey(plan.code) ?? ""];
+    return Boolean(offer && offer.amountCents > 0 && !offer.priceId);
+  });
+}
+
+let inFlight: Promise<unknown> | null = null;
+
+/**
+ * Create any missing Stripe prices from the saved Influrios plan amounts. Runs on server start and before a
+ * checkout that needs a price, so no admin step is required. Does nothing when every price exists.
+ */
+export async function ensurePlanStripePrices(actor = "system") {
+  if (inFlight) return inFlight;
+  inFlight = (async () => {
+    if (!(await planStripePricesMissing().catch(() => false))) return [];
+    return syncAllPlanStripePrices(actor);
+  })().finally(() => {
+    inFlight = null;
+  });
+  return inFlight;
+}

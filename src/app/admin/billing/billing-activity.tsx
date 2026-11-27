@@ -287,8 +287,8 @@ export function BillingActivity({
             <p className="text-muted">
               Monthly and yearly prices are the Influrios prices set on{" "}
               <a href="/admin/plans" className="font-semibold text-violet hover:underline">Plans &amp; features</a>. Stripe prices are created from
-              them automatically when a plan is saved; nothing is pasted from Stripe. Existing subscribers keep their current price until
-              they change plan.
+              them automatically: when a plan is saved, when the site starts, and before a checkout that needs one. Nothing is pasted
+              from Stripe, and no button needs pressing. Existing subscribers keep their current price until they change plan.
             </p>
             {unpricedAnnualCodes.length > 0 ? (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-950">
@@ -322,7 +322,7 @@ export function BillingActivity({
             {canEdit ? (
               <form action={actionSyncPlanPrices}>
                 <button type="submit" className="btn-secondary w-fit !py-2 text-sm">
-                  Set up Stripe prices for all plans
+                  Check Stripe prices now
                 </button>
               </form>
             ) : null}

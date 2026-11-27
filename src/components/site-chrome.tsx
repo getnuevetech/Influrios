@@ -242,7 +242,7 @@ export async function SiteFooter() {
           <div className="text-sm font-semibold uppercase tracking-wide text-white/50">Company</div>
           <ul className="mt-3 space-y-2 text-sm text-white/80">
             <li>
-              <a href="mailto:hello@influrios.com">Contact</a>
+              <Link href="/support">Contact</Link>
             </li>
             <li>
               <a href="mailto:hello@influrios.com">About</a>
