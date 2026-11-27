@@ -30,12 +30,6 @@ import {
   IconWallet,
 } from "@/components/icons";
 
-function trendText(pct: number | null) {
-  if (pct == null) return "—";
-  const arrow = pct >= 0 ? "↑" : "↓";
-  return `${arrow} ${Math.abs(pct)}%`;
-}
-
 function money(cents: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -254,21 +248,21 @@ export function AdminUserAccountsView({
           {
             label: "Total Accounts",
             value: kpis.total.toLocaleString(),
-            trend: trendText(kpis.totalTrendPct),
+            trend: `${kpis.total30.toLocaleString()} new in 30 days`,
             icon: IconUsers,
             tone: "bg-[#EEE8FF] text-violet",
           },
           {
             label: "Influencers",
             value: kpis.influencers.toLocaleString(),
-            trend: trendText(kpis.influencersTrendPct),
+            trend: `${kpis.influencers30.toLocaleString()} new in 30 days`,
             icon: IconUser,
             tone: "bg-[#EEE8FF] text-violet",
           },
           {
             label: "Businesses",
             value: kpis.businesses.toLocaleString(),
-            trend: trendText(kpis.businessesTrendPct),
+            trend: `${kpis.businesses30.toLocaleString()} new in 30 days`,
             icon: IconBuilding,
             tone: "bg-[#E8F1FF] text-blue",
           },

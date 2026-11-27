@@ -72,10 +72,20 @@ export async function actionAdminLogin(formData: FormData) {
     redirect(`/admin/login?error=${encodeURIComponent(result.error)}&next=${encodeURIComponent(next)}`);
   }
   await recordAuthSuccess("admin-login", ip, email);
-  await writeAccessAudit(email, "admin.login", result.session.userId, { ip });
+  const safeNext = next.startsWith("/admin") ? next : "/admin";
   const jar = await cookies();
+  // Second step: a code from an authenticator app, when Admin users → Sign-in security asks for one.
+  const { ADMIN_MFA_CHALLENGE_COOKIE, adminMfaStep, issueMfaChallenge } = await import("@/lib/admin-mfa");
+  const step = await adminMfaStep(result.session.userId).catch(() => "none" as const);
+  if (step !== "none") {
+    const challenge = await issueMfaChallenge(result.session.userId, result.session.permissionVersion ?? 1, safeNext);
+    jar.set(ADMIN_MFA_CHALLENGE_COOKIE, challenge, await adminCookieOptions(10 * 60));
+    await writeAccessAudit(email, "admin.login_password_ok", result.session.userId, { ip, step });
+    redirect("/admin/login/verify");
+  }
+  await writeAccessAudit(email, "admin.login", result.session.userId, { ip });
   jar.set(ADMIN_COOKIE, result.token, await adminCookieOptions());
-  redirect(next.startsWith("/admin") ? next : "/admin");
+  redirect(safeNext);
 }
 
 export async function actionAdminLogout() {

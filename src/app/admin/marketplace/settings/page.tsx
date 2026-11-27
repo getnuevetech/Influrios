@@ -13,7 +13,6 @@ import {
   actionSaveWise,
   actionSaveMarketplaceProvider,
   actionSaveMarketplaceSettings,
-  actionSaveManualDepositInstructions,
   actionSaveDepositBands,
   actionSaveRevenueParties,
   actionSaveTemplates,
@@ -36,7 +35,6 @@ import { listFxRates, listRevenueParties } from "@/lib/settlement";
 import { wiseFxConfig } from "@/lib/wise-quote";
 import { formatMoney } from "@/lib/money";
 import { marketplaceConfig } from "@/lib/marketplace-ledger";
-import { getManualDepositInstructions } from "@/lib/funding-checkout";
 import { getDepositBands } from "@/lib/deposit-method-policy";
 import { productSwitch } from "@/lib/product-switches";
 import { AdminCollapse } from "@/components/admin-collapse";
@@ -60,7 +58,7 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
   const session = await requireAdminPage("marketplace");
   const canManage = hasPermission(session, "marketplace.manage");
   const params = await searchParams;
-  const [config, reasons, sources, claims, rates, parties, wise, reportsOn, collabOsOn, collabTypes, timeframes, paymentGateways, depositInstructions, depositBands] =
+  const [config, reasons, sources, claims, rates, parties, wise, reportsOn, collabOsOn, collabTypes, timeframes, paymentGateways, depositBands] =
     await Promise.all([
       marketplaceConfig(),
       listDisputeReasons(),
@@ -74,7 +72,6 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
       listAllCatalogOptions("collab_type"),
       listAllCatalogOptions("timeframe"),
       listProviders("payment").catch(() => []),
-      getManualDepositInstructions(),
       getDepositBands(),
     ]);
   const marketplaceProviders = config.providers.filter((row) => row.code !== "demo");
@@ -147,47 +144,6 @@ export default async function AdminMarketplaceSettingsPage({ searchParams }: Pro
           <p className="text-sm text-muted">
             Card up to {formatMoney(depositBands.cardMaxCents, "USD")} · wire from {formatMoney(depositBands.bankTransferMinCents, "USD")}.
           </p>
-        )}
-      </section>
-
-      <section className="card-surface space-y-3 p-5">
-        <h2 className="font-display text-lg font-bold text-indigo">Manual deposit instructions</h2>
-        <p className="max-w-3xl text-sm text-muted">
-          ACH wire and check payments show these details to the business. Recording the payment leaves the agreement
-          unfunded until finance confirms the deposit on the transaction.
-        </p>
-        {canManage ? (
-          <form action={actionSaveManualDepositInstructions} className="grid gap-3 sm:grid-cols-2">
-            <label className="text-xs font-semibold text-muted">
-              Bank name
-              <input name="bankName" defaultValue={depositInstructions.bankName} className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm font-normal text-indigo" />
-            </label>
-            <label className="text-xs font-semibold text-muted">
-              Account name
-              <input name="accountName" defaultValue={depositInstructions.accountName} className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm font-normal text-indigo" />
-            </label>
-            <label className="text-xs font-semibold text-muted">
-              Routing number
-              <input name="routingNumber" defaultValue={depositInstructions.routingNumber} className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm font-normal text-indigo" />
-            </label>
-            <label className="text-xs font-semibold text-muted">
-              Account number
-              <input name="accountNumber" defaultValue={depositInstructions.accountNumber} className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm font-normal text-indigo" />
-            </label>
-            <label className="text-xs font-semibold text-muted">
-              Check payable to
-              <input name="checkPayableTo" defaultValue={depositInstructions.checkPayableTo} className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm font-normal text-indigo" />
-            </label>
-            <label className="text-xs font-semibold text-muted sm:col-span-2">
-              Check mailing address
-              <input name="checkMailingAddress" defaultValue={depositInstructions.checkMailingAddress} className="mt-1 w-full rounded-lg border border-border px-3 py-2 text-sm font-normal text-indigo" />
-            </label>
-            <button type="submit" className="btn-primary w-fit text-sm">
-              Save deposit instructions
-            </button>
-          </form>
-        ) : (
-          <p className="text-sm text-muted">Finance saves the bank and check details.</p>
         )}
       </section>
 

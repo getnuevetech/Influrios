@@ -390,6 +390,7 @@ export async function loadAdminDashboard(session: {
       tone: "amber",
       trend: pctChange(kycPending, kycPrev),
       spark: [kycPrev, kycPending, kycPending],
+      note: kycPending > 0 ? "Waiting for a decision" : "Nothing waiting",
     },
     {
       key: "disputes",
@@ -400,6 +401,7 @@ export async function loadAdminDashboard(session: {
       // Lower disputes is an improvement — invert "up" for display color in UI.
       trend: pctChange(disputesOpen, disputesPrev),
       spark: [disputesPrev, disputesOpen, disputesOpen],
+      note: disputesOpen > 0 ? "Payouts held until decided" : "No open disputes",
     },
   ];
 

@@ -245,7 +245,7 @@ export async function SiteFooter() {
               <Link href="/support">Contact</Link>
             </li>
             <li>
-              <a href="mailto:hello@influrios.com">About</a>
+              <Link href="/about">About</Link>
             </li>
             <li>
               <Link href="/legal/privacy-policy">Privacy</Link>

@@ -55,8 +55,8 @@ export async function AdminFeesPanel({ searchParams }: Props) {
           Collaboration fee rules
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          Phase 12.1 — Admin-versioned fee matrix and immutable snapshots. Fee percentages are never
-          hard-coded in product flows.
+          Every change saves a new version. A signed agreement keeps a copy of the fees it was signed with, so later
+          edits never change an existing deal.
         </p>
       </div>
 
@@ -528,7 +528,7 @@ function FeeRuleForm({
           <option value="">Choose who pays</option>
           <option value="brand">Business, added to the gross</option>
           <option value="creator">Influencer, deducted from the gross</option>
-          <option value="split">Legacy split, not applied to either side</option>
+          
         </select>
         <span className="mt-1 block font-normal">
           Business Platform Fee uses Business. Influencer Platform Fee uses Influencer. A rule saved before fee purpose existed keeps the payer already chosen. Split is not applied to either side. The contract service level must match this rule, or the rule must be set to any service level.

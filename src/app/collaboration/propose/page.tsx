@@ -44,7 +44,7 @@ async function submitProposal(formData: FormData) {
   if (viewer && viewer.slug !== initiator?.slug) {
     const viewerLimits = await entitlementsForPlan(viewerPlan);
     if (viewerLimits.proposalsMax <= 0) {
-      redirect(`${returnTo}&error=${encodeURIComponent("Sending proposals is off for this plan (collaboration.proposals.max).")}`);
+      redirect(`${returnTo}&error=${encodeURIComponent("Sending proposals is off for this plan. Upgrade your plan to send more.")}`);
     }
   }
   const match =
@@ -132,7 +132,7 @@ export default async function ProposeCollaborationPage({ searchParams }: Props) 
     const denied =
       usage && !usage.decision.ok
         ? proposalDenialMessage(usage.decision, usage.settings.windowDays)
-        : "Sending proposals is off for this plan (collaboration.proposals.max).";
+        : "Sending proposals is off for this plan. Upgrade your plan to send more.";
     const blockedName = viewerBlocked ? from.displayName : initiator.displayName;
     const blockedPlan = viewerBlocked ? viewerPlan : plan;
     return (

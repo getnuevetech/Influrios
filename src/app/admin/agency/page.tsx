@@ -72,9 +72,15 @@ export default async function AdminAgencyPage({ searchParams }: Props) {
           </Link>
           <h1 className="mt-2 font-display text-3xl font-bold text-indigo">Agency</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted">
-            Roster, campaigns, and joint portfolios for <span className="font-semibold text-indigo">{store.name}</span>{" "}
-            ({store.agencyId}). Switch workspaces below for multi-tenant ops. Named seats stay off until you turn them
-            on.
+            {store.name ? (
+              <>
+                Roster, campaigns, and joint portfolios for <span className="font-semibold text-indigo">{store.name}</span>. Switch
+                workspaces below.
+              </>
+            ) : (
+              <>No agency workspace yet. Create one below.</>
+            )}{" "}
+            The Agency plan is not offered on the public pricing pages right now. Named seats stay off until you turn them on.
           </p>
         </div>
         <div className="flex flex-wrap gap-3 text-center text-xs">

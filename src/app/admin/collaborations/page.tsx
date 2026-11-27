@@ -86,7 +86,7 @@ export default async function AdminCollaborationsPage({ searchParams }: Props) {
             <span className="mt-1 block text-xs font-normal text-muted">
               A sent proposal inside this many days counts toward{" "}
               <Link href="/admin/plans" className="font-semibold text-violet">
-                collaboration.proposals.max
+                the plan&apos;s &ldquo;Proposals per window&rdquo; limit
               </Link>
               . This does not set a contract fee.
             </span>

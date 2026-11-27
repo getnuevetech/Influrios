@@ -43,7 +43,7 @@ export const PRODUCT_SWITCHES = [
     key: "public_pages_live",
     enabled: false,
     description:
-      "Public homepage (except the influencer card strip), Discover, collaboration landing, and business landing use stored profiles. Off shows the demo set. The homepage influencer card strip always shows the demo set.",
+      "Public homepage (except the influencer card strip), Discover, collaboration landing, and business landing use stored profiles. Off shows sample profiles. The homepage influencer card strip always shows the demo set.",
   },
   {
     key: "contract_ai_tailor",

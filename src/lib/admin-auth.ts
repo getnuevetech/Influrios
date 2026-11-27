@@ -978,6 +978,30 @@ export async function loginAdmin(email: string, password: string): Promise<
   return { ok: true, token: encodeSession(session), session };
 }
 
+/** Sign an arbitrary admin payload with the session secret (used by the sign-in second step). */
+export function signAdminPayload(payload: string) {
+  return signPayload(payload);
+}
+
+/** A fresh session token for an active admin, issued after the second sign-in step succeeds. */
+export async function adminSessionTokenFor(userId: string, permissionVersion: number) {
+  const store = await ensureStore();
+  const user = store.users.find((u) => u.id === userId && u.active);
+  if (!user || user.permissionVersion !== permissionVersion) return null;
+  const role = store.roles.find((r) => r.id === user.roleId) ?? DEFAULT_ROLES[0];
+  const session: AdminSession = {
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    roleId: role.id,
+    roleName: role.name,
+    permissions: expandPermissions(role.permissions as string[]),
+    permissionVersion: user.permissionVersion,
+    exp: Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000,
+  };
+  return { token: encodeSession(session), session };
+}
+
 /**
  * Re-check the signed cookie against live AdminUser / AdminRole.
  * Demote, deactivate, or a permissionVersion bump invalidates the session

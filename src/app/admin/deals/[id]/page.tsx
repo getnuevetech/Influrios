@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { jobWhen } from "@/lib/job-labels";
 import { notFound } from "next/navigation";
 import { actionApproveDealAmendment, actionCompareProviderBalance, actionRecordFeeSettlement, actionVoidDealContract } from "@/app/admin/deals/actions";
 import { requireAnyAdminModule } from "@/app/admin/guard";
@@ -120,7 +121,7 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
             <ul className="mt-2 space-y-1 text-xs text-muted">
               {funding.entries.map((entry) => (
                 <li key={entry.id}>
-                  {entry.createdAt.toISOString()} · {entry.kind} · {formatMoney(entry.amountCents, funding.currency)}
+                  {jobWhen(entry.createdAt)} · {entry.kind} · {formatMoney(entry.amountCents, funding.currency)}
                 </li>
               ))}
               {funding.entries.length === 0 ? <li>No provider event yet.</li> : null}
@@ -167,7 +168,7 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
             {funding.milestones.map((milestone) => (
               <li key={milestone.id}>
                 {milestone.title} · {formatMoney(milestone.amountCents, funding.currency)} · {milestone.status}
-                {milestone.releaseScheduledAt ? ` · release scheduled ${milestone.releaseScheduledAt.toISOString()}` : ""}
+                {milestone.releaseScheduledAt ? ` · release scheduled ${jobWhen(milestone.releaseScheduledAt)}` : ""}
                 {milestone.submissions.length > 0
                   ? ` · ${milestone.submissions.length} version${milestone.submissions.length === 1 ? "" : "s"}`
                   : ""}
@@ -291,7 +292,7 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
         <ul className="mt-3 space-y-1 text-xs text-muted">
           {audits.map((row) => (
             <li key={row.id}>
-              {row.createdAt.toISOString()} · {row.actor} · {row.action}
+              {jobWhen(row.createdAt)} · {row.actor} · {row.action}
             </li>
           ))}
           {audits.length === 0 ? <li>No audit rows for this deal yet.</li> : null}
@@ -363,7 +364,7 @@ export default async function AdminDealPage({ params, searchParams }: Props) {
           </button>
         </form>
       ) : null}
-      <p className="text-xs text-muted">Record id {anchor}. Open this deal again with that id.</p>
+      <p className="text-xs text-muted">Reference: {anchor}</p>
     </div>
   );
 }

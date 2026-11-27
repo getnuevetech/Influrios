@@ -125,7 +125,8 @@ describe("admin session cookie", () => {
   it("names MFA enabled, not enabled, or unavailable", () => {
     assert.equal(adminMfaPresentation({ offered: false, enabled: false }).label, "Unavailable");
     assert.match(adminMfaPresentation({ offered: false, enabled: false }).detail, /does not offer a second factor/);
-    assert.equal(adminMfaPresentation({ offered: true, enabled: false }).label, "Not enabled");
+    assert.equal(adminMfaPresentation({ offered: true, enabled: false }).label, "Not set up");
+    assert.equal(adminMfaPresentation({ offered: true, enabled: false, mode: "required" }).label, "Set up at next sign-in");
     assert.equal(adminMfaPresentation({ offered: true, enabled: true }).label, "Enabled");
     const ui = readFileSync("src/components/admin-users-ui.tsx", "utf8");
     const actions = readFileSync("src/app/admin/actions-auth.ts", "utf8");

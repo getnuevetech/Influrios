@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { jobWhen } from "@/lib/job-labels";
 import { notFound } from "next/navigation";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
@@ -94,7 +95,7 @@ export default async function AdminFundingTransactionPage({ params, searchParams
           <p className="text-xs text-muted">No matching Collaboration proposal row found.</p>
         )}
         <p className="text-[11px] text-muted">
-          Funding id <code>{funding.id}</code> · created {funding.createdAt}
+          Funding id <code>{funding.id}</code> · created {jobWhen(funding.createdAt)}
         </p>
       </section>
 
@@ -225,7 +226,7 @@ export default async function AdminFundingTransactionPage({ params, searchParams
             {audits.map((row) => (
               <li key={row.id} className="rounded-lg border border-[#E6ECFF] px-3 py-2">
                 <span className="font-semibold text-indigo">{row.action}</span> · {row.actor} · {row.objectType}{" "}
-                {row.objectId} · {row.createdAt}
+                {jobWhen(row.createdAt)}
               </li>
             ))}
           </ul>
