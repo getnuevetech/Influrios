@@ -88,9 +88,9 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
       </Link>
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Short links</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted">
-        inflr.me is redirect infrastructure. Influencer profiles stay on the canonical Influrios origin. QR codes encode
-        an opaque /q token and NFC tags encode an opaque /n token, so a slug or destination change does not require a
-        reprint. Campaign links use /c/{"{code}"} and keep their own destination. Sign in again if this page was
+        inflr.me is redirect infrastructure. Influencer profiles stay on the canonical Influrios origin. QR codes, NFC tags
+        and wallet passes use the influencer&apos;s card link, inflr.me/{"{name}"}. Older printed /q and /n links keep working. A
+        destination change does not require a reprint. Campaign links use /c/{"{code}"} and keep their own destination. Sign in again if this page was
         forbidden after the permission was added.
       </p>
       <p className="mt-2 text-xs text-muted">

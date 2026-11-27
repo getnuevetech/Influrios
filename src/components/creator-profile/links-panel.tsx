@@ -96,9 +96,9 @@ export function LinksManagementPanel({
                   {shortLink.nfcIdentities[0] ? (
                     <div className="space-y-2">
                       <p>
-                        NFC URL: https://{shortHost}/n/{shortLink.nfcIdentities[0].token}
+                        NFC URL: https://{shortHost}/{shortLink.slug}
                       </p>
-                      <NfcWriter url={`https://${shortHost}/n/${shortLink.nfcIdentities[0].token}`} />
+                      <NfcWriter url={`https://${shortHost}/${shortLink.slug}`} />
                       <p className="text-xs text-muted">
                         A tap opens the current destination. Changing the destination does not require writing the tag again.{" "}
                         <Link href="/faq?audience=creator#nfc-write" className="font-semibold text-violet hover:underline">
