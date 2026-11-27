@@ -10,9 +10,9 @@ export const metadata = { title: "Influencer identity · Admin" };
 type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
 
 export default async function AdminInfluencerIdentityPage({ searchParams }: Props) {
-  const session = await requireAdminPage("banners");
+  const session = await requireAdminPage("landing");
   const query = await searchParams;
-  const canEdit = hasPermission(session, "banners.edit");
+  const canEdit = hasPermission(session, "landing.edit");
   const identity = await getInfluencerIdentity();
 
   return (

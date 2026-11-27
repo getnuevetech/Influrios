@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminAction } from "@/app/admin/guard";
-import { getAdminSession, isSuperAdmin } from "@/lib/admin-auth";
+import { getAdminSession, hasPermission } from "@/lib/admin-auth";
 import { deleteContractDocumentAsSuperAdmin, saveContractTemplate } from "@/lib/contract-document";
 import { voidContractDocument } from "@/lib/signed-funding-apply";
 
@@ -19,10 +19,10 @@ export async function actionSaveContractTemplate(formData: FormData) {
 
 export async function actionDeleteContractDocument(formData: FormData) {
   const session = await getAdminSession();
-  if (!session || !isSuperAdmin(session)) {
+  if (!session || !hasPermission(session, "contracts.delete")) {
     redirect(
       "/admin/contracts?error=" +
-        encodeURIComponent("Only a super admin can delete a contract. Ask a super admin if this agreement was created twice."),
+        encodeURIComponent("Deleting a draft needs the “Delete unused drafts” feature on your access level."),
     );
   }
   if (formData.get("confirm") !== "on") {
@@ -39,10 +39,10 @@ export async function actionDeleteContractDocument(formData: FormData) {
 
 export async function actionVoidContractDocument(formData: FormData) {
   const session = await getAdminSession();
-  if (!session || !isSuperAdmin(session)) {
+  if (!session || !hasPermission(session, "contracts.void")) {
     redirect(
       "/admin/contracts?error=" +
-        encodeURIComponent("Only a super admin can void a contract. Ask a super admin if this agreement was created twice."),
+        encodeURIComponent("Voiding needs the “Void agreements” feature on your access level."),
     );
   }
   const id = String(formData.get("id") ?? "").trim();

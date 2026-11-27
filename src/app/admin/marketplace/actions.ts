@@ -579,7 +579,7 @@ export async function actionEnqueueScheduledReleaseSweep() {
 }
 
 export async function actionSaveReleaseAutomation(formData: FormData) {
-  const session = await requireAdminAction("marketplace.manage");
+  const session = await requireAdminAction("payouts.release");
   const automaticReleaseApprovalEnabled = formData.get("automaticReleaseApprovalEnabled") === "on";
   const automaticProviderReleaseEnabled = formData.get("automaticProviderReleaseEnabled") === "on";
   await saveReleaseAutomation({
@@ -594,7 +594,7 @@ export async function actionSaveReleaseAutomation(formData: FormData) {
 }
 
 export async function actionScheduleMilestoneRelease(formData: FormData) {
-  const session = await requireAdminAction("marketplace.manage");
+  const session = await requireAdminAction("payouts.release");
   const fundingId = String(formData.get("fundingId") ?? "").trim();
   const milestoneId = String(formData.get("milestoneId") ?? "").trim();
   const result = await scheduleMilestoneRelease({ fundingId, milestoneId, actor: session.email });
@@ -609,7 +609,7 @@ export async function actionScheduleMilestoneRelease(formData: FormData) {
 }
 
 export async function actionApproveReleasePush(formData: FormData) {
-  const session = await requireAdminAction("marketplace.manage");
+  const session = await requireAdminAction("payouts.release");
   const milestoneId = String(formData.get("milestoneId") ?? "").trim();
   const updated = await prisma.fundingMilestone.updateMany({
     where: { id: milestoneId, status: "release_scheduled", releaseApprovedAt: null },
@@ -636,7 +636,7 @@ export async function actionApproveReleasePush(formData: FormData) {
 }
 
 export async function actionPushProviderRelease(formData: FormData) {
-  await requireAdminAction("marketplace.manage");
+  await requireAdminAction("payouts.release");
   const milestoneId = String(formData.get("milestoneId") ?? "").trim();
   const result = await pushScheduledRelease(milestoneId);
   if (!result.ok) {
@@ -649,7 +649,7 @@ export async function actionPushProviderRelease(formData: FormData) {
 
 /** A payout whose automatic sends ran out of retries: try once more now. */
 export async function actionRetryProviderRelease(formData: FormData) {
-  const session = await requireAdminAction("marketplace.manage");
+  const session = await requireAdminAction("payouts.release");
   const milestoneId = String(formData.get("milestoneId") ?? "").trim();
   await resetFailedReleaseCommand(milestoneId);
   await prisma.auditLog

@@ -633,8 +633,8 @@ describe("saved tax rule identity", () => {
     assert.match(client, /COUNTRY_TAX_FIELDS\.confirmDelete/);
     assert.match(client, /canEdit \? <button/);
     const actionBody = sourceOf(action, "export async function actionDeleteTaxRule");
-    assert.match(actionBody, /hasPermission\(session, "collab_finance\.manage"\)/);
-    assert.ok(actionBody.indexOf("collab_finance.manage") < actionBody.indexOf("deleteTaxRule"));
+    assert.match(actionBody, /hasPermission\(session, "tax\.edit"\)/);
+    assert.ok(actionBody.indexOf("tax.edit") < actionBody.indexOf("deleteTaxRule"));
     assert.equal(actionBody.includes("entitlementPlan"), false);
     assert.equal(actionBody.includes("collaborationFeeRule"), false);
     assert.equal(actionBody.includes("milestoneSettlement"), false);

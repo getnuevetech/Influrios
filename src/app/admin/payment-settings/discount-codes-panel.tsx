@@ -7,8 +7,8 @@ import { listDiscountAudits, listDiscountOffers } from "@/lib/discount-store";
 
 export async function DiscountCodesPanel() {
   const session = await getAdminSession();
-  const canIssue = Boolean(session && (hasPermission(session, "commerce.manage") || hasPermission(session, "collab_finance.manage")));
-  const canViewRedemptions = Boolean(session && (hasPermission(session, "collab_finance.view") || hasPermission(session, "collab_finance.manage")));
+  const canIssue = Boolean(session && hasPermission(session, "discounts.manage"));
+  const canViewRedemptions = Boolean(session && (hasPermission(session, "discounts.view") || hasPermission(session, "discounts.manage")));
   const listed = await listDiscountOffers();
   const plans = await prisma.entitlementPlan.findMany({
     where: { active: true },

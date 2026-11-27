@@ -10,7 +10,7 @@ function fail(error: unknown) {
 }
 
 export async function actionSaveFaq(formData: FormData) {
-  await requireAdminAction("banners.edit");
+  await requireAdminAction("faq.edit");
   try {
     await saveFaqEntry({
       id: String(formData.get("id") ?? "").trim() || undefined,
@@ -28,7 +28,7 @@ export async function actionSaveFaq(formData: FormData) {
 }
 
 export async function actionDeleteFaq(formData: FormData) {
-  await requireAdminAction("banners.edit");
+  await requireAdminAction("faq.edit");
   const id = String(formData.get("id") ?? "");
   if (!id) redirect("/admin/faq?error=Missing+entry");
   try {

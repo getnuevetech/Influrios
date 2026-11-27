@@ -14,7 +14,7 @@ function statusFromForm(value: FormDataEntryValue | null): "draft" | "published"
 }
 
 export async function actionSaveBusinessRequest(formData: FormData) {
-  await requireAdminAction("collaborations.edit");
+  await requireAdminAction("listings.edit");
   try {
     const workspaceRaw = String(formData.get("workspaceId") ?? "").trim();
     await upsertBusinessRequest({
@@ -44,7 +44,7 @@ export async function actionSaveBusinessRequest(formData: FormData) {
 }
 
 export async function actionSaveCreatorOpportunity(formData: FormData) {
-  await requireAdminAction("collaborations.edit");
+  await requireAdminAction("listings.edit");
   try {
     await upsertCreatorOpportunity({
       id: String(formData.get("id") ?? "").trim() || undefined,

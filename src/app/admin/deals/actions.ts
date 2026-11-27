@@ -23,8 +23,8 @@ async function operator() {
 export async function actionVoidDealContract(formData: FormData) {
   const session = await operator();
   const id = String(formData.get("id") ?? "").trim();
-  if (!isSuperAdmin(session)) {
-    redirect(`/admin/deals/${id}?error=` + encodeURIComponent("Only a super admin can void an agreement."));
+  if (!hasPermission(session, "contracts.void")) {
+    redirect(`/admin/deals/${id}?error=` + encodeURIComponent("Voiding needs the “Void agreements” feature on your access level."));
   }
   const result = await voidContractDocument({
     id,

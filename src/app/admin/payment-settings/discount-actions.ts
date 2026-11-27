@@ -8,12 +8,12 @@ import { saveDiscountOffer, setDiscountLifecycle } from "@/lib/discount-store";
 import { loadCountryRules } from "@/lib/tax-settings";
 
 function canIssue(session: AdminSession | null) {
-  return Boolean(session && (hasPermission(session, "commerce.manage") || hasPermission(session, "collab_finance.manage")));
+  return Boolean(session && hasPermission(session, "discounts.manage"));
 }
 
 export async function actionSaveDiscountCode(formData: FormData) {
   const session = await getAdminSession();
-  if (!canIssue(session)) return { ok: false as const, error: "You can view discount codes. Issuing or pausing them needs finance or commerce manage access." };
+  if (!canIssue(session)) return { ok: false as const, error: "You can view discount codes. Issuing or pausing them needs the “Manage discount codes” feature." };
   const parsed = parseOfferDraft({
     code: String(formData.get("code") ?? ""),
     productCharge: String(formData.get("productCharge") ?? ""),

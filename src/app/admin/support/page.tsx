@@ -23,7 +23,7 @@ const TONE: Record<string, string> = {
 };
 
 export default async function AdminSupportPage({ searchParams }: Props) {
-  await requireAdminPage("accounts");
+  await requireAdminPage("support");
   const params = await searchParams;
   const status = params.status === "all" ? "all" : params.status ? ticketStatus(params.status) : "open";
   const { rows, countByStatus } = await listTicketsForStaff({ status, q: params.q });

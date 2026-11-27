@@ -10,7 +10,7 @@ import { probeStripeSandbox } from "@/lib/stripe-admin";
 const SKUS: BillingSku[] = ["creator_plus", "creator_pro", "business_pro", "agency"];
 
 export async function actionCheckStripeSandbox() {
-  await requireAdminAction("gateways.edit");
+  await requireAdminAction("billing.edit");
   const result = await probeStripeSandbox();
   if (!result.ok) redirect(`/admin/billing?error=${encodeURIComponent(result.error)}`);
   revalidatePath("/admin/billing");
@@ -19,7 +19,7 @@ export async function actionCheckStripeSandbox() {
 }
 
 export async function actionSaveBillingSwitches(formData: FormData) {
-  await requireAdminAction("gateways.edit");
+  await requireAdminAction("billing.edit");
   await setProductSwitch("customer_portal", formData.get("customer_portal") === "on");
   await setProductSwitch("paid_mentoring", formData.get("paid_mentoring") === "on");
   revalidatePath("/admin/billing");
@@ -52,7 +52,7 @@ export async function actionSyncPlanPrices() {
 }
 
 export async function actionSaveBillingPrices(formData: FormData) {
-  await requireAdminAction("gateways.edit");
+  await requireAdminAction("billing.edit");
   const prices: Partial<Record<BillingSku, string>> = {};
   for (const sku of SKUS) prices[sku] = String(formData.get(sku) ?? "");
   const annual = Object.fromEntries(

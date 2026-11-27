@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { jobLabel, jobWhen, JOB_STATUS_LABEL } from "@/lib/job-labels";
-import { requireAdminPage } from "@/app/admin/guard";
+import { requireAnyAdminModule } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { actionAcceptFundingSettlement, actionApproveReleasePush, actionCancelUnfundedPrefund, actionExecuteHeldCancellation, actionPushProviderRelease, actionRetryProviderRelease, actionSaveReleaseAutomation, actionScheduleMilestoneRelease } from "@/app/admin/marketplace/actions";
 import { prisma } from "@/lib/db";
@@ -73,8 +73,9 @@ function formatFeesByType(feesByType: FeeTypeAmount[], currency: string, totalCe
 }
 
 export default async function AdminMarketplacePage({ searchParams }: Props) {
-  const session = await requireAdminPage("marketplace");
+  const session = await requireAnyAdminModule(["marketplace", "payouts"]);
   const canManage = hasPermission(session, "marketplace.manage");
+  const canRelease = hasPermission(session, "payouts.release");
   const canHighRiskCancel = hasPermission(session, "collab_finance.high_risk");
   const params = await searchParams;
   const launchGate = await getLaunchGate().catch(() => null);
@@ -214,7 +215,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
           With a switch off, each row has its own button. With a switch on, the row stays visible and the release sweep does that step.
           Saving the switches runs the sweep once. On Stripe, a send transfers the influencer&apos;s net to their connected account and the milestone fees to Operations.
         </p>
-        {canManage ? (
+        {canRelease ? (
           <form action={actionSaveReleaseAutomation} className="mt-3 grid gap-2 text-sm">
             <label className="flex gap-2">
               <input type="checkbox" name="automaticReleaseApprovalEnabled" defaultChecked={approvalOn} />
@@ -261,26 +262,26 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
                       <p className="mt-1 text-xs font-semibold text-rose-700">Not sent: {lastFailure.get(milestone.id)}</p>
                     ) : null}
                   </div>
-                  {canManage && step.action === "wait_sweep" && failedAttempts.has(milestone.id) ? (
+                  {canRelease && step.action === "wait_sweep" && failedAttempts.has(milestone.id) ? (
                     <form action={actionRetryProviderRelease}>
                       <input type="hidden" name="milestoneId" value={milestone.id} />
                       <button type="submit" className="btn-secondary !py-1.5 text-xs">Send again</button>
                     </form>
                   ) : null}
-                  {canManage && step.action === "schedule" ? (
+                  {canRelease && step.action === "schedule" ? (
                     <form action={actionScheduleMilestoneRelease}>
                       <input type="hidden" name="fundingId" value={milestone.fundingId} />
                       <input type="hidden" name="milestoneId" value={milestone.id} />
                       <button type="submit" className="btn-secondary !py-1.5 text-xs">{step.label}</button>
                     </form>
                   ) : null}
-                  {canManage && step.action === "approve" ? (
+                  {canRelease && step.action === "approve" ? (
                     <form action={actionApproveReleasePush}>
                       <input type="hidden" name="milestoneId" value={milestone.id} />
                       <button type="submit" className="btn-secondary !py-1.5 text-xs">{step.label}</button>
                     </form>
                   ) : null}
-                  {canManage && step.action === "send" ? (
+                  {canRelease && step.action === "send" ? (
                     <form action={actionPushProviderRelease}>
                       <input type="hidden" name="milestoneId" value={milestone.id} />
                       <button type="submit" className="btn-primary !py-1.5 text-xs">{step.label}</button>

@@ -4,7 +4,7 @@ import { TaxSettingsClient } from "@/app/admin/payment-settings/tax-settings-cli
 
 export async function TaxPoliciesPanel() {
   const session = await getAdminSession();
-  const canEdit = hasPermission(session, "collab_finance.manage");
+  const canEdit = hasPermission(session, "tax.edit");
   const catalog = await loadTaxCatalog();
   return (
     <TaxSettingsClient

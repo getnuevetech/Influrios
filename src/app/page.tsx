@@ -17,7 +17,7 @@ import {
 import { getCms, publicBannerImages } from "@/lib/cms";
 import { getDirectory } from "@/lib/directory";
 import { marketplaceConfig } from "@/lib/marketplace-ledger";
-import { demoCardStrip, demoCollaborationPairs, demoCreators, publicPagesUseLive } from "@/lib/presentation-demo";
+import { demoCardStrip, demoCollaborationPairs, demoCreators, featuredCardsUseLive, liveCardStrip, publicPagesUseLive } from "@/lib/presentation-demo";
 import { formatFollowers, platformDisplayName, publicCategoryImage, specialtyLabel, totalFollowers } from "@/lib/seed-data";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +55,7 @@ export default async function HomePage() {
   const protectedPaymentsEnabled = homeJurisdiction?.protectedPaymentsEnabled !== false;
   const escrowTermAllowed = Boolean(homeJurisdiction?.escrowTermAllowed);
   const livePages = await publicPagesUseLive().catch(() => false);
+  const liveCards = await featuredCardsUseLive().catch(() => false);
   const taxonomy = directory.taxonomy
     .filter((node) => node.active)
     .map((node) => ({ ...node, children: node.children.filter((child) => child.active) }));
@@ -85,9 +86,10 @@ export default async function HomePage() {
 
   const baseCardWidth = 220;
   const widthPx = Math.round(baseCardWidth * cms.featuredCards.widthScale);
-  const featured = demoCardStrip();
+  const featured = liveCards ? liveCardStrip(directory.creators) : demoCardStrip();
   const proofAvatars = portraitCreators.slice(0, 5);
-  const featuredCreator = demoCreators()[0];
+  const featuredIsSample = !liveCards || featured === undefined || demoCreators().some((row) => row.slug === featured[0]?.creator.slug);
+  const featuredCreator = featuredIsSample ? demoCreators()[0] : featured[0]?.creator;
   const collabCards = livePages
     ? cms.collaborationMatches.matches.flatMap((match) => {
         const left = creatorBySlug(match.leftSlug);
@@ -499,7 +501,7 @@ export default async function HomePage() {
 
             <div className="flex flex-col items-center gap-2">
               {featuredCreator ? <CompactInfluencerCard creator={featuredCreator} /> : null}
-              {featuredCreator ? <p className="text-xs font-semibold text-violet">Demo card</p> : null}
+              {featuredCreator && featuredIsSample ? <p className="text-xs font-semibold text-violet">Sample card</p> : null}
             </div>
 
             <div className="relative mx-auto hidden max-w-[200px] lg:block">

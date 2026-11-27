@@ -12,8 +12,8 @@ export const metadata = { title: "Admin · Value proposition" };
 type Props = { searchParams: Promise<{ saved?: string; restored?: string }> };
 
 export default async function AdminValuePropPage({ searchParams }: Props) {
-  const session = await requireAdminPage("banners");
-  const canEdit = hasPermission(session, "banners.edit");
+  const session = await requireAdminPage("homepage");
+  const canEdit = hasPermission(session, "homepage.edit");
   const params = await searchParams;
   const strip = (await getCms()).valueProposition;
   const items = [...strip.items].sort((a, b) => a.sortOrder - b.sortOrder);

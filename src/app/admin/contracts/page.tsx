@@ -2,7 +2,7 @@ import Link from "next/link";
 import { actionDeleteContractDocument, actionSaveContractTemplate, actionVoidContractDocument } from "@/app/admin/contracts/actions";
 import { contractMayBeDeleted, contractMayBeVoided } from "@/lib/signed-funding";
 import { repairSignedAgreements } from "@/lib/signed-funding-apply";
-import { hasPermission, isSuperAdmin } from "@/lib/admin-auth";
+import { hasPermission } from "@/lib/admin-auth";
 import { requireAdminPage } from "@/app/admin/guard";
 import {
   CONTRACT_VARIABLES,
@@ -22,7 +22,7 @@ export default async function AdminContractsPage({ searchParams }: Props) {
   const params = await searchParams;
   const canView = hasPermission(session, "contracts.view");
   const canEdit = hasPermission(session, "contracts.templates");
-  const canDelete = isSuperAdmin(session);
+  const canDelete = hasPermission(session, "contracts.delete");
   const template = await ensureContractTemplate().catch(() => null);
   const page = Math.max(1, Number(params.page) || 1);
   const pageSize = 25;

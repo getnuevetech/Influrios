@@ -10,7 +10,7 @@ function clean(value: FormDataEntryValue | null) {
 }
 
 export async function actionSaveSearch(formData: FormData) {
-  await requireAdminAction("gateways.edit");
+  await requireAdminAction("search.edit");
   try {
     await saveProvider({
       id: clean(formData.get("id")) || undefined,
@@ -34,7 +34,7 @@ export async function actionSaveSearch(formData: FormData) {
 }
 
 export async function actionRebuildSearchIndex() {
-  await requireAdminAction("gateways.edit");
+  await requireAdminAction("search.edit");
   try {
     const { reindexCreatorsAndRecord } = await import("@/lib/creator-search");
     await reindexCreatorsAndRecord();

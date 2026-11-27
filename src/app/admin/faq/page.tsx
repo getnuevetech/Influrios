@@ -13,8 +13,8 @@ const inputClass = "mt-1 w-full rounded-xl border border-border px-3 py-2 font-n
 type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
 
 export default async function AdminFaqPage({ searchParams }: Props) {
-  const session = await requireAdminPage("banners");
-  const canEdit = hasPermission(session, "banners.edit");
+  const session = await requireAdminPage("faq");
+  const canEdit = hasPermission(session, "faq.edit");
   const params = await searchParams;
   let entries: Awaited<ReturnType<typeof listFaqEntries>> = [];
   let dbError = false;

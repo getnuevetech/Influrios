@@ -37,7 +37,7 @@ async function uploadedPageImage(formData: FormData): Promise<string> {
 }
 
 export async function actionUploadCollaborationHeroImage(formData: FormData) {
-  await requireAdminAction("banners.edit");
+  await requireAdminAction("landing.edit");
   try {
     await addCollaborationHeroImage(await uploadedPageImage(formData));
   } catch (error) {
@@ -48,13 +48,13 @@ export async function actionUploadCollaborationHeroImage(formData: FormData) {
 }
 
 export async function actionRemoveCollaborationHeroImage(formData: FormData) {
-  await requireAdminAction("banners.edit");
+  await requireAdminAction("landing.edit");
   await removeCollaborationHeroImage(String(formData.get("image") ?? ""));
   redirect("/admin/collaboration-landing?saved=image");
 }
 
 export async function actionUploadBusinessHeroImage(formData: FormData) {
-  await requireAdminAction("banners.edit");
+  await requireAdminAction("landing.edit");
   try {
     await addBusinessHeroImage(await uploadedPageImage(formData));
   } catch (error) {
@@ -65,13 +65,13 @@ export async function actionUploadBusinessHeroImage(formData: FormData) {
 }
 
 export async function actionRemoveBusinessHeroImage(formData: FormData) {
-  await requireAdminAction("banners.edit");
+  await requireAdminAction("landing.edit");
   await removeBusinessHeroImage(String(formData.get("image") ?? ""));
   redirect("/admin/business-landing?saved=image");
 }
 
 export async function actionUploadBusinessWhyImage(formData: FormData) {
-  await requireAdminAction("banners.edit");
+  await requireAdminAction("landing.edit");
   try {
     await setBusinessWhyImage(await uploadedPageImage(formData));
   } catch (error) {
@@ -82,13 +82,13 @@ export async function actionUploadBusinessWhyImage(formData: FormData) {
 }
 
 export async function actionRemoveBusinessWhyImage() {
-  await requireAdminAction("banners.edit");
+  await requireAdminAction("landing.edit");
   await clearBusinessWhyImage();
   redirect("/admin/business-landing?saved=image");
 }
 
 export async function actionSaveCollaborationLanding(formData: FormData) {
-  await requireAdminAction("banners.edit");
+  await requireAdminAction("landing.edit");
   try {
     const current = await getCollaborationLanding();
     const patch: Partial<CollaborationLandingConfig> = {
@@ -218,7 +218,7 @@ export async function actionSaveCollaborationLanding(formData: FormData) {
 }
 
 export async function actionSaveBusinessLanding(formData: FormData) {
-  await requireAdminAction("banners.edit");
+  await requireAdminAction("landing.edit");
   try {
     const current = await getBusinessLanding();
     const capabilityTitles = formData.getAll("capabilityTitle").map(String);
@@ -321,7 +321,7 @@ export async function actionSaveBusinessLanding(formData: FormData) {
 }
 
 export async function actionSaveInfluencerIdentity(formData: FormData) {
-  await requireAdminAction("banners.edit");
+  await requireAdminAction("landing.edit");
   try {
     await updateInfluencerIdentity({
       selfDescriptions: lines(formData.get("selfDescriptions")),

@@ -22,8 +22,8 @@ function Badge({ ready }: { ready: boolean }) {
 }
 
 export default async function AdminWalletPage({ searchParams }: Props) {
-  const session = await requireAdminPage("cards");
-  const canEdit = hasPermission(session, "cards.edit");
+  const session = await requireAdminPage("wallet");
+  const canEdit = hasPermission(session, "wallet.edit");
   const params = await searchParams;
   const [status, sample, registrations] = await Promise.all([
     walletConfigStatus(),

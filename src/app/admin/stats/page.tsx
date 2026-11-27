@@ -25,8 +25,8 @@ export default async function AdminStatsPage({
 }: {
   searchParams: Promise<{ saved?: string; restored?: string }>;
 }) {
-  const session = await requireAdminPage("banners");
-  const canEdit = hasPermission(session, "banners.edit");
+  const session = await requireAdminPage("site_stats");
+  const canEdit = hasPermission(session, "site_stats.edit");
   const params = await searchParams;
   const config = await getSiteConfig();
   const stats = config.stats.length ? config.stats : DEFAULT_FOOTER_STATS;

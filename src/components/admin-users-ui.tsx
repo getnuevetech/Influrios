@@ -69,6 +69,7 @@ export function AdminUsersView({
   users,
   roles,
   canManage,
+  canSecurity = false,
   activity,
   filters,
   manageId,
@@ -78,6 +79,7 @@ export function AdminUsersView({
   users: AdminUsersPageUser[];
   roles: AdminUsersPageRole[];
   canManage: boolean;
+  canSecurity?: boolean;
   activity: AdminUsersActivity[];
   filters: { q: string; status: "all" | "active" | "suspended"; role: string };
   manageId: string | null;
@@ -450,7 +452,7 @@ export function AdminUsersView({
                       <p className="mt-2 text-[13px] text-muted">MFA · {managed.mfaLabel}</p>
                       <p className="text-[12px] text-muted">{managed.mfaDetail}</p>
                       <p className="text-[12px] text-muted">Last updated {relativeTime(managed.updatedAt)}</p>
-                      {canManage && managed.mfaEnrolled ? (
+                      {canSecurity && managed.mfaEnrolled ? (
                         <form action={actionResetAdminAuthenticator} className="mt-3">
                           <input type="hidden" name="userId" value={managed.id} />
                           <button type="submit" className="text-[12px] font-semibold text-violet">

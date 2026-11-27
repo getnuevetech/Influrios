@@ -50,7 +50,9 @@ describe("payment settings owner", () => {
       "/admin/payment-settings?section=fees&saved=rule#payment-switches",
     );
     const commerceOnly = (module: AdminModule) => module === "commerce";
-    assert.deepEqual(visiblePaymentSettingsSections(commerceOnly), ["fees", "discounts"]);
+    assert.deepEqual(visiblePaymentSettingsSections(commerceOnly), ["fees"]);
+    assert.deepEqual(visiblePaymentSettingsSections((module) => module === "discounts"), ["discounts"]);
+    assert.deepEqual(visiblePaymentSettingsSections((module) => module === "tax"), ["tax"]);
   });
 
   it("reviews the route and the fee rule before they are saved", () => {

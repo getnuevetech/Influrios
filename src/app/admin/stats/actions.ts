@@ -29,7 +29,7 @@ function parseAsOf(raw: string): Date | null {
 }
 
 export async function actionSaveFooterStats(formData: FormData) {
-  await requireAdminSession("banners.edit");
+  await requireAdminSession("site_stats.edit");
   const keys = formData.getAll("key").map((value) => clean(value, 40)).filter(Boolean);
   const tagline = clean(formData.get("footerTagline"), 160) || DEFAULT_FOOTER_TAGLINE;
 
@@ -135,7 +135,7 @@ export async function actionSaveFooterStats(formData: FormData) {
 }
 
 export async function actionRestoreFooterStats() {
-  await requireAdminSession("banners.edit");
+  await requireAdminSession("site_stats.edit");
   await prisma.$transaction(async (tx) => {
     await tx.footerStat.deleteMany();
     await tx.footerStat.createMany({

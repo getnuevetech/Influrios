@@ -22,8 +22,8 @@ type Props = { searchParams: Promise<{ saved?: string; error?: string }> };
 const inputClass = "mt-1 w-full rounded-xl border border-border px-3 py-2 font-normal text-sm";
 
 export default async function AdminMarketplaceListingsPage({ searchParams }: Props) {
-  const session = await requireAdminPage("collaborations");
-  const canEdit = hasPermission(session, "collaborations.edit");
+  const session = await requireAdminPage("listings");
+  const canEdit = hasPermission(session, "listings.edit");
   const params = await searchParams;
   const [requests, opportunities, directory] = await Promise.all([
     listAdminBusinessRequests(),

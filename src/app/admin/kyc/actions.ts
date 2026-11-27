@@ -25,7 +25,7 @@ function revalidateKycSurfaces() {
 }
 
 export async function actionSaveKycGateway(formData: FormData) {
-  await requireAdminAction("collab_finance.manage");
+  await requireAdminAction("kyc.review");
   try {
     await saveKycGateway(String(formData.get("gatewayProviderId") ?? ""));
   } catch (error) {
@@ -37,7 +37,7 @@ export async function actionSaveKycGateway(formData: FormData) {
 }
 
 export async function actionAddKycRequirement(formData: FormData) {
-  await requireAdminAction("collab_finance.manage");
+  await requireAdminAction("kyc.review");
   try {
     await addKycRequirement({
       kind: String(formData.get("kind") ?? ""),
@@ -53,7 +53,7 @@ export async function actionAddKycRequirement(formData: FormData) {
 }
 
 export async function actionRemoveKycRequirement(formData: FormData) {
-  await requireAdminAction("collab_finance.manage");
+  await requireAdminAction("kyc.review");
   try {
     await removeKycRequirement(String(formData.get("id") ?? ""));
   } catch (error) {
@@ -65,7 +65,7 @@ export async function actionRemoveKycRequirement(formData: FormData) {
 }
 
 export async function actionReviewDocumentKyc(formData: FormData) {
-  await requireAdminAction("collab_finance.manage");
+  await requireAdminAction("kyc.review");
   const decision = String(formData.get("decision") ?? "");
   if (decision !== "verified" && decision !== "rejected") {
     redirect("/admin/kyc?error=Choose%20verified%20or%20rejected.");
@@ -87,7 +87,7 @@ export async function actionReviewDocumentKyc(formData: FormData) {
 
 /** Mark a creator account KYC-complete (or rejected) without a pending submission. */
 export async function actionAdminSetCreatorKyc(formData: FormData) {
-  await requireAdminAction("collab_finance.manage");
+  await requireAdminAction("kyc.review");
   const decision = String(formData.get("decision") ?? "");
   if (decision !== "verified" && decision !== "rejected") {
     redirect("/admin/kyc?error=Choose%20verified%20or%20rejected.");
@@ -106,7 +106,7 @@ export async function actionAdminSetCreatorKyc(formData: FormData) {
 }
 
 export async function actionReviewCountryChange(formData: FormData) {
-  const session = await requireAdminAction("collab_finance.manage");
+  const session = await requireAdminAction("kyc.review");
   const decision = String(formData.get("decision") ?? "");
   if (decision !== "approved" && decision !== "rejected") {
     redirect("/admin/kyc?error=Choose%20approved%20or%20rejected.");

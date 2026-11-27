@@ -6,7 +6,7 @@ import { requireAdminAction } from "@/app/admin/guard";
 import { saveReferralProgram } from "@/lib/referrals";
 
 export async function actionSaveReferralProgram(formData: FormData) {
-  await requireAdminAction("shortlinks.edit");
+  await requireAdminAction("referrals.edit");
   try {
     await saveReferralProgram({
       enabled: formData.get("enabled") === "1",
