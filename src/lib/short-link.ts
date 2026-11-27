@@ -319,13 +319,18 @@ export async function shortLinkPublicLabel(creatorSlug: string): Promise<string 
   return `${host}/${link.slug}`;
 }
 
-export async function qrPayloadForSlug(creatorSlug: string): Promise<string | null> {
+/**
+ * The influencer's card link: https://inflr.me/{name}. QR codes, NFC tags and wallet passes all use it.
+ * Older printed /q/{token} and /n/{token} links keep resolving.
+ */
+export async function cardLinkForSlug(creatorSlug: string): Promise<string | null> {
   const link = await ensureCreatorShortLink(creatorSlug);
-  const token = link?.qrIdentities[0]?.token;
-  if (!link || !token || link.status !== "active") return null;
+  if (!link || link.status !== "active") return null;
   const host = await primaryShortHost();
-  return `https://${host}/q/${token}`;
+  return `https://${host}/${link.slug}`;
 }
+
+export const qrPayloadForSlug = cardLinkForSlug;
 
 type ResolveHit =
   | { kind: "redirect"; status: 301 | 302; location: string; cacheControl: string; shortLinkId: string; eventType: string }

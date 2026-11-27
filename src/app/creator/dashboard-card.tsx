@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CopyTextButton } from "@/components/copy-text-button";
 import { PublicInfluencerCard } from "@/components/public-influencer-card";
+import { WalletButtons } from "@/components/wallet-buttons";
 import { draftToSeedCreator, getCreatorSessionDraft } from "@/lib/claim";
 import { loadPublicCreator } from "@/lib/directory";
 
@@ -44,6 +45,7 @@ export async function DashboardInfluencerCard({
           </Link>
         )}
       </div>
+      {published ? <WalletButtons slug={published.slug} className="mt-2" /> : null}
     </section>
   );
 }

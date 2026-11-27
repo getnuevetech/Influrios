@@ -3001,3 +3001,17 @@ model SupportTicketMessage {
 
   @@index([ticketId, createdAt])
 }
+
+/// An iPhone that added an Influrios Card to Apple Wallet. Used to push pass updates.
+model WalletPassRegistration {
+  id                 String   @id @default(cuid())
+  deviceLibraryId    String
+  pushToken          String
+  passTypeIdentifier String
+  serialNumber       String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([deviceLibraryId, passTypeIdentifier, serialNumber])
+  @@index([serialNumber])
+}

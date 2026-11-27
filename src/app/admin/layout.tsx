@@ -36,6 +36,7 @@ const SIDE_GROUPS: SideGroup[] = [
       { href: "/admin/faq", label: "FAQ", module: "banners", icon: "faq" },
       { href: "/admin/stats", label: "Site stats", module: "banners", icon: "stats" },
       { href: "/admin/cards", label: "Influencer cards", module: "cards", icon: "cards" },
+      { href: "/admin/wallet", label: "Wallet passes", module: "cards", icon: "cards" },
     ],
   },
   {

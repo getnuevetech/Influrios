@@ -33,7 +33,7 @@ export default async function AdminFaqPage({ searchParams }: Props) {
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">FAQ</h1>
       <p className="mt-2 max-w-3xl text-sm text-muted">
         These answers are the public FAQ at /faq. Audiences are general, creators, businesses, agencies, and visitors.
-        The NFC articles explain how a creator writes inflr.me/n/{"{token}"} onto a physical tag and how that tag is handed on.
+        The NFC articles explain how a creator writes their card link, inflr.me/{"{name}"}, onto a physical tag and how that tag is handed on.
         Editing an answer here replaces the stored text. A seed question is added only when its key is missing, so an edit is kept.
       </p>
       {params.saved ? <p className="mt-4 text-sm font-semibold text-emerald-700">Saved.</p> : null}

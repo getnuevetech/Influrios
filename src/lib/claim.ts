@@ -1207,6 +1207,8 @@ async function syncPublishedCreatorProfile(draft: ClaimDraft) {
   invalidateDirectoryCache();
   const { syncCreatorSearch } = await import("@/lib/creator-search");
   await syncCreatorSearch(draft.slug);
+  // Saved Apple/Google Wallet passes pick up the new name, photo and details (does not block the save).
+  void import("@/lib/wallet").then((mod) => mod.refreshWalletPasses(draft.slug)).catch(() => undefined);
 }
 
 export function completenessFor(draft: ClaimDraft): {

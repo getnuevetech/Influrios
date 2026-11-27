@@ -17,7 +17,7 @@ export const PLAN_FEATURE_META: Record<
   "card.nfc.enabled": {
     label: "NFC tag URL",
     kind: "bool",
-    hint: "Mints inflr.me/n/{token}. The creator writes that URL onto a physical tag.",
+    hint: "The creator writes their card link, inflr.me/{name}, onto a physical tag.",
   },
   "card.shortlink.enabled": { label: "Short link", kind: "bool" },
   "card.shortlink.max": {

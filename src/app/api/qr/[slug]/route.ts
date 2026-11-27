@@ -17,7 +17,7 @@ function appOrigin(request: NextRequest) {
 
 /**
  * QR image for an Influencer Card.
- * Published cards encode the opaque short-domain identity (https://inflr.me/q/{token}).
+ * Published cards encode the influencer's card link (https://inflr.me/{name}).
  * Unpublished claim drafts get a temporary QR that points at the claim preview URL
  * so the signup card is not a broken image.
  */

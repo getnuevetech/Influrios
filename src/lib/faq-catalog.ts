@@ -101,7 +101,7 @@ export const FAQ_SEED: FaqSeed[] = [
     sortOrder: 40,
     question: "How does the QR code work?",
     answer:
-      "When the plan includes a QR code, the dashboard shows an image. The image encodes https://inflr.me/q/{token}. The token is not your name.\n\nScanning it opens the current destination. If the plan includes a dynamic destination, you can change where it goes, or schedule that change, without printing a new code.",
+      "When the plan includes a QR code, the dashboard shows an image. The image encodes your card link, https://inflr.me/{your name}.\n\nScanning it opens the current destination. If the plan includes a dynamic destination, you can change where it goes, or schedule that change, without printing a new code.",
   },
   {
     key: "nfc-write",
@@ -109,7 +109,7 @@ export const FAQ_SEED: FaqSeed[] = [
     sortOrder: 50,
     question: "How do I put my NFC link on a phone or a tag?",
     answer:
-      "When your plan includes NFC, Your links on the dashboard shows a permanent address, https://inflr.me/n/{token}, and a Write to NFC tag button.\n\nOn an Android phone in Chrome, open the dashboard, tap Write to NFC tag, allow NFC if the browser asks, and hold a blank sticker, card, or key fob against the phone until the page says the tag was written. That button is the writer. You do not install a separate NFC app. Write the same URL onto as many blank tags as you need.\n\niPhone does not let a website write an NFC tag. On iPhone, open Shortcuts, create a shortcut that opens the NFC URL from the dashboard, and attach that shortcut to a tag. The address is the same one.\n\nA tap opens the current destination. Changing the destination does not require writing the tag again.\n\nThe visitor’s phone does not store the tag. It only opens the link for that tap. You can also send the URL by message or email.",
+      "When your plan includes NFC, Your links on the dashboard shows your card link, https://inflr.me/{your name}, and a Write to NFC tag button.\n\nOn an Android phone in Chrome, open the dashboard, tap Write to NFC tag, allow NFC if the browser asks, and hold a blank sticker, card, or key fob against the phone until the page says the tag was written. That button is the writer. You do not install a separate NFC app. Write the same URL onto as many blank tags as you need.\n\niPhone does not let a website write an NFC tag. On iPhone, open Shortcuts, create a shortcut that opens the NFC URL from the dashboard, and attach that shortcut to a tag. The address is the same one.\n\nA tap opens the current destination. Changing the destination does not require writing the tag again.\n\nThe visitor’s phone does not store the tag. It only opens the link for that tap. You can also send the URL by message or email.",
   },
   {
     key: "nfc-transfer",

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { FAQ_SEED, isFaqAudience, type FaqAudience } from "@/lib/faq-catalog";
 
-const REFRESH_WHEN = ["nfc-write", "nfc-transfer", "what-is-a-campaign-link-count"] as const;
+const REFRESH_WHEN = ["nfc-write", "nfc-transfer", "what-is-a-campaign-link-count", "creator-qr"] as const;
 
 export async function ensureFaqEntries() {
   const existing = await prisma.faqEntry.findMany({ select: { key: true, answer: true } });
@@ -11,7 +11,7 @@ export async function ensureFaqEntries() {
     const stale =
       current != null &&
       (REFRESH_WHEN as readonly string[]).includes(entry.key) &&
-      (current.includes("NFC Tools") || current.includes("Setting it to 4"));
+      (current.includes("NFC Tools") || current.includes("Setting it to 4") || current.includes("/q/{token}") || current.includes("/n/{token}"));
     if (current && !stale) continue;
     if (current && stale) {
       await prisma.faqEntry.update({
