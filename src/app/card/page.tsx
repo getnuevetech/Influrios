@@ -35,8 +35,8 @@ export default async function CardMarketingPage() {
             Your Influencer Card, <span className="brand-gradient-text">everywhere.</span>
           </h1>
           <p className="mt-4 text-lg text-muted">
-            One portable commercial identity for social links, specialties, and business reachability. The
-            price and the tools on each plan are the ones saved for that plan.
+            One link for your socials, specialties and contact details. Share it as inflr.me/your-name, a QR code, an NFC tag or a
+            wallet pass, and let brands reach you in one tap.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href="/claim" className="btn-primary">

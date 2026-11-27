@@ -4,6 +4,7 @@ import { BusinessMarketingPage } from "@/components/business-marketing";
 import { getAccountSession } from "@/lib/accounts";
 import { getDirectory, profilePlace } from "@/lib/directory";
 import { getBusinessLanding } from "@/lib/landing-pages";
+import { loadPlanMatrix } from "@/lib/plan-matrix";
 import { currentLegalDocument } from "@/lib/legal";
 import { demoCreators, publicPagesUseLive } from "@/lib/presentation-demo";
 import { formatFollowers, publicStoredImage, specialtyLabel } from "@/lib/seed-data";
@@ -19,7 +20,7 @@ type Props = { searchParams: Promise<{ error?: string; plan?: string }> };
 
 export default async function BusinessPage({ searchParams }: Props) {
   const params = await searchParams;
-  const [account, directory, landing, livePages, terms, electronicConsent, businessTerms, privacy] =
+  const [account, directory, landing, livePages, terms, electronicConsent, businessTerms, privacy, matrix] =
     await Promise.all([
       getAccountSession().catch(() => null),
       getDirectory().catch(() => null),
@@ -29,6 +30,7 @@ export default async function BusinessPage({ searchParams }: Props) {
       currentLegalDocument("electronic-consent").catch(() => null),
       currentLegalDocument("business-terms").catch(() => null),
       currentLegalDocument("privacy-policy").catch(() => null),
+      loadPlanMatrix("business").catch(() => null),
     ]);
   const source = livePages ? (directory?.creators ?? []) : demoCreators();
   const recommended = source.slice(0, 4).map((creator) => {
@@ -59,13 +61,28 @@ export default async function BusinessPage({ searchParams }: Props) {
     redirect("/creator");
   }
 
+  // Plan cards show the real business plans (Admin → Plans & features), not placeholder copy.
+  const realPlans = (matrix?.plans ?? []).map((plan) => ({
+    code: plan.code,
+    name: plan.name,
+    price:
+      plan.amountCents > 0
+        ? `$${(plan.amountCents / 100).toLocaleString("en-US", { maximumFractionDigits: 2 })}`
+        : plan.priceLabel || "Free",
+    detail: plan.amountCents > 0 ? "/month" : "",
+    points: plan.highlights.slice(0, 5),
+    ctaLabel: plan.amountCents > 0 ? `Choose ${plan.name}` : "Start free",
+    href: plan.amountCents > 0 ? "/business/plans" : `/business?plan=${encodeURIComponent(plan.code)}#create-profile`,
+    popular: plan.recommended,
+  }));
+  const withPlans = realPlans.length > 0 ? { ...landing, plans: { ...landing.plans, items: realPlans } } : landing;
   const landingView =
-    livePages || landing.hero.images.length > 0
-      ? landing
+    livePages || withPlans.hero.images.length > 0
+      ? withPlans
       : {
-          ...landing,
+          ...withPlans,
           hero: {
-            ...landing.hero,
+            ...withPlans.hero,
             images: demoCreators().slice(0, 4).map((creator) => creator.image),
           },
         };

@@ -2,11 +2,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { BusinessSignupForm } from "@/components/business-signup-form";
 import {
-  CategoryGlyph,
   IconArrowRight,
   IconBuilding,
   IconCheck,
+  IconGlobe,
+  IconHandshake,
+  IconIntelligence,
+  IconMegaphone,
   IconSearch,
+  IconShieldPay,
   IconUsers,
   SocialIcon,
 } from "@/components/icons";
@@ -14,6 +18,8 @@ import type { BusinessLandingConfig } from "@/lib/landing-pages";
 import { SPECIALTY_TAXONOMY } from "@/lib/seed-data";
 
 /** Pricing buttons always enter business registration, even if a stored CMS href still points at /register. */
+const CAPABILITY_ICONS = [IconSearch, IconIntelligence, IconMegaphone, IconHandshake, IconShieldPay, IconBuilding, IconUsers, IconGlobe];
+
 export function businessPlanHref(href: string, code: string) {
   const plan = code.trim().toUpperCase();
   if (!href || href.startsWith("/register") || href.startsWith("/login")) {
@@ -106,7 +112,6 @@ export function BusinessMarketingPage({
                     href={`/discover?specialty=${encodeURIComponent(slug)}`}
                     className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-indigo ring-1 ring-[#E4E9F5]"
                   >
-                    <CategoryGlyph slug={slug} size={14} />
                     {name}
                   </Link>
                 );
@@ -143,7 +148,7 @@ export function BusinessMarketingPage({
             <div className="absolute bottom-24 right-0 max-w-[160px] rounded-2xl bg-[#2979FF] px-3 py-2 text-[11px] font-bold text-white shadow-lg">
               {hero.floatingNotes[1]}
             </div>
-            <p className="absolute -right-2 top-4 rotate-6 font-display text-sm font-bold text-violet">
+            <p className="absolute -top-7 right-0 font-display text-sm font-bold text-violet">
               {hero.collageNote}
             </p>
           </div>
@@ -153,15 +158,18 @@ export function BusinessMarketingPage({
       <section className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6 lg:px-10">
         <h2 className="font-display text-2xl font-bold text-indigo">{landing.capabilities.title}</h2>
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {landing.capabilities.items.map((item) => (
+          {landing.capabilities.items.map((item, index) => {
+            const Icon = CAPABILITY_ICONS[index % CAPABILITY_ICONS.length]!;
+            return (
             <article key={item.title} className="rounded-2xl border border-[#E4E9F5] bg-white p-5 shadow-sm">
               <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[#EAE4FF] text-violet">
-                <IconBuilding size={18} />
+                <Icon size={18} />
               </span>
               <h3 className="mt-3 font-display text-lg font-bold text-indigo">{item.title}</h3>
               <p className="mt-1 text-sm text-muted">{item.copy}</p>
             </article>
-          ))}
+            );
+          })}
         </div>
       </section>
 
@@ -265,8 +273,16 @@ export function BusinessMarketingPage({
             {landing.whyChoose.image ? (
               <Image src={landing.whyChoose.image} alt="" fill className="object-cover" sizes="520px" />
             ) : (
-              <div className="flex h-full items-center justify-center bg-gradient-to-br from-[#633CFF] to-[#2979FF] text-white">
-                <IconUsers size={40} />
+              <div className="grid h-full grid-cols-2 grid-rows-2 gap-1 bg-gradient-to-br from-[#633CFF] to-[#2979FF]">
+                {recommended.slice(0, 4).map((item) =>
+                  item.image ? (
+                    <div key={item.slug} className="relative">
+                      <Image src={item.image} alt="" fill className="object-cover" sizes="260px" />
+                    </div>
+                  ) : (
+                    <div key={item.slug} />
+                  ),
+                )}
               </div>
             )}
             <p className="absolute bottom-4 left-4 right-4 rounded-2xl bg-white/95 px-4 py-3 font-display text-lg font-bold text-indigo shadow">
@@ -278,7 +294,11 @@ export function BusinessMarketingPage({
 
       <section className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6 lg:px-10">
         <h2 className="font-display text-2xl font-bold text-indigo">{landing.plans.title}</h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div
+          className={`mt-6 grid gap-4 md:grid-cols-2 ${
+            landing.plans.items.length >= 4 ? "xl:grid-cols-4" : landing.plans.items.length === 3 ? "xl:grid-cols-3" : "mx-auto max-w-4xl"
+          }`}
+        >
           {landing.plans.items.map((plan) => (
             <article
               key={plan.code}
@@ -308,10 +328,15 @@ export function BusinessMarketingPage({
             </article>
           ))}
         </div>
+        <p className="mt-4 text-center text-sm">
+          <Link href="/business/plans" className="font-semibold text-violet hover:underline">
+            Compare all business plan features →
+          </Link>
+        </p>
       </section>
 
       <section id="create-profile" className="mx-auto max-w-[90rem] px-4 py-12 sm:px-6 lg:px-10">
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
           <BusinessSignupForm
             title={landing.signup.title}
             subtitle={landing.signup.subtitle}

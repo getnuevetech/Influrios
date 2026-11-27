@@ -121,9 +121,9 @@ export default async function HomePage() {
           <div className="pointer-events-none absolute inset-0">
             <div className="absolute -left-16 top-10 h-72 w-72 rounded-full bg-violet/40 blur-3xl" />
             <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-blue/30 blur-3xl" />
-            <IconInstagram className="absolute left-[12%] top-[22%] opacity-25" size={28} />
-            <IconTikTok className="absolute right-[22%] top-[18%] opacity-20" size={26} />
-            <IconYouTube className="absolute bottom-[28%] left-[28%] opacity-20" size={30} />
+            <IconInstagram className="absolute left-[12%] top-[22%] hidden opacity-25 lg:block" size={28} />
+            <IconTikTok className="absolute right-[22%] top-[18%] hidden opacity-20 lg:block" size={26} />
+            <IconYouTube className="absolute bottom-[28%] left-[28%] hidden opacity-20 lg:block" size={30} />
           </div>
 
           {heroFloats.map((item) => (
@@ -302,7 +302,7 @@ export default async function HomePage() {
               <h2 className="font-display text-2xl font-bold text-indigo sm:text-3xl">
                 Featured Influencers
               </h2>
-              <p className="mt-2 text-sm text-muted">Demo cards. These profiles stay on this strip.</p>
+              <p className="mt-2 text-sm text-muted">Example profiles that show how Influencer Cards look.</p>
             </div>
             <Link
               href="/discover"
@@ -540,10 +540,7 @@ export default async function HomePage() {
                   </div>
                 </div>
               </div>
-              <p
-                className="mt-4 text-center font-display text-sm font-bold italic leading-snug text-violet"
-                style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-              >
+              <p className="mt-4 text-center font-display text-sm font-bold leading-snug text-violet">
                 One Card
                 <br />
                 Endless Opportunities
