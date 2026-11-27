@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { jobWhen } from "@/lib/job-labels";
 import { actionQueueApplicationExpireSweep, actionSaveCollabControlPlane } from "@/app/admin/collaboration-ops/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { AdminCollapse } from "@/components/admin-collapse";
@@ -334,7 +335,7 @@ export default async function AdminCollaborationOpsPage({ searchParams }: Props)
             {recentAudits.map((row) => (
               <li key={row.id}>
                 <span className="font-semibold text-indigo">{row.action}</span> · {row.objectId ?? "—"} ·{" "}
-                {row.actor} · {row.createdAt.toISOString()}
+                {row.actor} · {jobWhen(row.createdAt)}
               </li>
             ))}
           </ul>

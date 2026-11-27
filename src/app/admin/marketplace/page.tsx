@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { jobLabel, jobWhen, JOB_STATUS_LABEL } from "@/lib/job-labels";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
 import { actionAcceptFundingSettlement, actionApproveReleasePush, actionCancelUnfundedPrefund, actionExecuteHeldCancellation, actionPushProviderRelease, actionRetryProviderRelease, actionSaveReleaseAutomation, actionScheduleMilestoneRelease } from "@/app/admin/marketplace/actions";
@@ -174,7 +175,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
           <ul className="mt-2 space-y-1 text-xs text-muted">
             {sweeps.map((job) => (
               <li key={job.id}>
-                {job.updatedAt.toISOString()} · {job.kind} · {job.status}
+                {jobWhen(job.updatedAt)} · {jobLabel(job.kind)} · {JOB_STATUS_LABEL[job.status] ?? job.status}
                 {job.lastError ? ` · ${job.lastError}` : ""}
               </li>
             ))}
@@ -182,8 +183,7 @@ export default async function AdminMarketplacePage({ searchParams }: Props) {
           </ul>
         </div>
         <p className="mt-1 max-w-2xl text-sm text-muted">
-          A prefund stays unfunded until a signed provider webhook confirms it. A provider code named demo
-          cannot confirm a hold. Cancelling before confirmation posts no ledger entry. Dispute decisions do not
+          A prefund stays unfunded until a signed provider webhook confirms it. Cancelling before confirmation posts no ledger entry. Dispute decisions do not
           move the money the provider is holding.
           Attribution is copied onto the prefund and is not rewritten when the source list changes. Gross is entered in USD. A new prefund
           uses the currency saved on that country corridor when one is saved, and otherwise the jurisdiction currency.

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { jobWhen } from "@/lib/job-labels";
 import {
   actionAdminDestination,
   actionMakePrimaryDomain,
@@ -129,7 +130,7 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
         <section className="card-surface mt-6 p-5">
           <h2 className="font-display text-lg font-bold text-indigo">Resolver metrics (last {resolverMetrics.windowHours}h)</h2>
           <p className="mt-1 text-xs text-muted">
-            Ops outcomes from every resolve — including misses and errors (INFLR.me Spec §20). Response header{" "}
+            Ops outcomes from every resolve — including misses and errors. Response header{" "}
             <code className="rounded bg-[#F4F7FF] px-1">x-influrios-resolve-outcome</code>.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-4">
@@ -360,7 +361,7 @@ export default async function AdminShortLinksPage({ searchParams }: Props) {
         <ul className="mt-3 space-y-1 text-xs text-muted">
           {events.map((event) => (
             <li key={event.id}>
-              {event.createdAt.toISOString()} · {event.eventType}
+              {jobWhen(event.createdAt)} · {event.eventType}
             </li>
           ))}
         </ul>

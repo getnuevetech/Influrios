@@ -26,6 +26,10 @@ export type AccountListFilters = {
 export type AccountKpis = {
   total: number;
   totalTrendPct: number | null;
+  /** Accounts created in the last 30 days (shown as "N new" instead of a percentage). */
+  total30: number;
+  influencers30: number;
+  businesses30: number;
   influencers: number;
   influencersTrendPct: number | null;
   businesses: number;
@@ -271,6 +275,9 @@ export async function loadAccountKpis(): Promise<AccountKpis> {
   return {
     total,
     totalTrendPct: pctChange(total30, totalPrev),
+    total30,
+    influencers30,
+    businesses30,
     influencers,
     influencersTrendPct: pctChange(influencers30, influencersPrev),
     businesses,

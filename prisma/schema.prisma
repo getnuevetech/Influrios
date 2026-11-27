@@ -2541,6 +2541,13 @@ model AdminUser {
   permissionVersion Int       @default(1)
   /// Rotated each time a setup link is issued. An older link no longer matches.
   setupNonce        String    @default("")
+  /// Authenticator app secret (encrypted). Null until the admin finishes setup.
+  totpSecret        String?
+  /// Secret shown during setup, kept until the first code is confirmed.
+  totpPendingSecret String?
+  totpEnabledAt     DateTime?
+  /// Last accepted 30-second step, so a code cannot be used twice.
+  totpLastStep      Int?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 

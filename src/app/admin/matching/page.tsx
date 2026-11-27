@@ -96,7 +96,7 @@ export default async function AdminMatchingPage({ searchParams }: Props) {
             Influencer opt-in, shortlist delivery, facilitated intros, and intro-fee tracking.
           </p>
           <p className="mt-2 max-w-2xl rounded-xl border border-[#E4E9F5] bg-[#F7FAFF] px-3 py-2 text-xs text-indigo">
-            <strong>R073:</strong> {MATCHING_PRODUCT_BOUNDARY.summary}{" "}
+            {MATCHING_PRODUCT_BOUNDARY.summary}{" "}
             {MATCHING_PRODUCT_BOUNDARY.nextStepHint}
           </p>
         </div>

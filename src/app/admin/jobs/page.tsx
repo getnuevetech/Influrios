@@ -2,6 +2,7 @@ import Link from "next/link";
 import { actionRetryJob } from "@/app/admin/jobs/actions";
 import { requireAdminPage } from "@/app/admin/guard";
 import { hasPermission } from "@/lib/admin-auth";
+import { jobLabel, jobWhen, JOB_STATUS_LABEL } from "@/lib/job-labels";
 import { listJobs, listSweepStatus } from "@/lib/jobs";
 
 export const dynamic = "force-dynamic";
@@ -25,27 +26,25 @@ export default async function AdminJobsPage({ searchParams }: Props) {
       </Link>
       <h1 className="mt-2 font-display text-2xl font-bold text-indigo">Jobs</h1>
       <p className="mt-2 text-sm text-muted">
-        Mail, verification, milestone auto-approval, and provider records. A failed mail job can be queued again.
-        Invitation mail is marked delivered only after SMTP accepts it. The sweep clock enqueues each money sweep
-        from POST /api/cron/sweeps. Auto-approval sweeps skip disputed milestones.
+        Background work: emails, milestone auto-approval, payout sends and reminders. The server runs the scheduled
+        checks every few minutes. A failed email can be sent again. Auto-approval skips milestones with an open dispute.
       </p>
       {sweeps ? (
         <ul className="mt-4 grid gap-2 sm:grid-cols-2">
           {sweeps.map((sweep) => (
             <li key={sweep.kind} className="rounded-xl border border-[#E4EBFF] bg-white px-3 py-2 text-xs text-indigo">
-              <span className="font-semibold">{sweep.kind}</span>
+              <span className="font-semibold">{jobLabel(sweep.kind)}</span>
               <span className="mt-1 block text-muted">
-                latest: {sweep.status}
-                {sweep.at ? ` · ${sweep.at}` : ""}
+                Last run: {JOB_STATUS_LABEL[sweep.status] ?? sweep.status}
+                {sweep.at ? ` · ${jobWhen(sweep.at)}` : ""}
                 {sweep.lastError ? ` · ${sweep.lastError}` : ""}
               </span>
               {sweep.succeededId ? (
-                <span className="mt-1 block font-mono text-[11px] text-emerald-800">
-                  succeeded id {sweep.succeededId}
-                  {sweep.succeededAt ? ` · ${sweep.succeededAt}` : ""}
+                <span className="mt-1 block text-[11px] text-emerald-800">
+                  Last success{sweep.succeededAt ? `: ${jobWhen(sweep.succeededAt)}` : ""}
                 </span>
               ) : (
-                <span className="mt-1 block text-amber-800">No succeeded row yet — confirm crontab + CRON_SECRET.</span>
+                <span className="mt-1 block text-amber-800">Has not succeeded yet. It runs a few minutes after the server starts.</span>
               )}
             </li>
           ))}
@@ -58,12 +57,12 @@ export default async function AdminJobsPage({ searchParams }: Props) {
         {jobs?.map((job) => (
           <article key={job.id} className="card-surface flex flex-wrap items-start justify-between gap-3 p-4">
             <div>
-              <p className="font-semibold text-indigo">{job.kind}</p>
+              <p className="font-semibold text-indigo">{jobLabel(job.kind)}</p>
               <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-violet">
-                {job.status} · {job.attempts} attempts
+                {JOB_STATUS_LABEL[job.status] ?? job.status} · {job.attempts} {job.attempts === 1 ? "attempt" : "attempts"}
               </p>
               {job.lastError ? <p className="mt-2 text-sm text-amber-800">{job.lastError}</p> : null}
-              <p className="mt-1 text-xs text-muted">{job.createdAt.toISOString()}</p>
+              <p className="mt-1 text-xs text-muted">{jobWhen(job.createdAt)}</p>
             </div>
             {job.status === "failed" && canRetry ? (
               <form action={actionRetryJob}>

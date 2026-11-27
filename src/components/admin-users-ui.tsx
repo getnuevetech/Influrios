@@ -1,4 +1,5 @@
 "use client";
+import { actionResetAdminAuthenticator } from "@/app/admin/mfa-actions";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -29,6 +30,7 @@ export type AdminUsersPageUser = {
   active: boolean;
   mfaLabel: string;
   mfaDetail: string;
+  mfaEnrolled: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -448,6 +450,14 @@ export function AdminUsersView({
                       <p className="mt-2 text-[13px] text-muted">MFA · {managed.mfaLabel}</p>
                       <p className="text-[12px] text-muted">{managed.mfaDetail}</p>
                       <p className="text-[12px] text-muted">Last updated {relativeTime(managed.updatedAt)}</p>
+                      {canManage && managed.mfaEnrolled ? (
+                        <form action={actionResetAdminAuthenticator} className="mt-3">
+                          <input type="hidden" name="userId" value={managed.id} />
+                          <button type="submit" className="text-[12px] font-semibold text-violet">
+                            Reset authenticator (lost phone)
+                          </button>
+                        </form>
+                      ) : null}
                       {canManage ? (
                         <form action={actionResendAdminSetup} className="mt-3">
                           <input type="hidden" name="userId" value={managed.id} />
